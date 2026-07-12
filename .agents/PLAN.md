@@ -137,3 +137,52 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - ESLint ciblé
 - Vitest pertinent
 - `git diff --check`
+
+## 7. Pages communautaires et progression — à venir
+
+### 7.1 Amis — `/friends`
+
+- [ ] Ajouter les contrats mock : liste d’amis, invitations reçues/envoyées, statut et dernière activité.
+- [ ] Construire le registre d’amis avec recherche, filtres et états vides.
+- [ ] Permettre l’ajout, l’acceptation, le refus et la suppression via modales centrées.
+- [ ] Exposer les raccourcis « voir collection », « écrire » et « proposer un échange ».
+
+### 7.2 Messages — `/messages`
+
+- [ ] Remplacer le registre temporaire de partage par une boîte de réception complète : conversations, messages et widgets interactifs.
+- [ ] Ajouter les mocks de canaux privés/guilde, pagination et accusés de lecture.
+- [ ] Prévoir le composeur mobile-first, les réponses et l’ouverture des partages de wishlist.
+
+### 7.3 Marché — `/market`
+
+- [ ] Créer les contrats d’annonces, enchères, offres et historique de transaction.
+- [ ] Construire le catalogue filtrable par carte, rareté, prix, type de vente et vendeur.
+- [ ] Ajouter les parcours centrés de mise en vente, achat, enchère et annulation.
+- [ ] Brancher les actions existantes « Voir le marché » et « Mettre en vente » sur ces flux.
+
+### 7.4 Guilde — `/guild`
+
+- [ ] Ajouter la guilde mock, ses membres, rôles, fil d’activité et objectifs collectifs.
+- [ ] Créer le tableau de guilde : présentation, membres, invitations et annonces.
+- [ ] Relier le canal de guilde de Messages et les partages de wishlist.
+
+### 7.5 Succès — `/achievements`
+
+- [ ] Définir les contrats de succès, progression, récompenses et catégories.
+- [ ] Construire la vitrine de succès avec filtres, progression et détail en modale.
+- [ ] Alimenter les états mock depuis collection, échanges, boosters et interactions sociales.
+
+### 7.6 Classement — `/leaderboard`
+
+- [ ] Ajouter les classements mock par collection, échanges, marché, guilde et période.
+- [ ] Construire les tableaux responsive, podium et recherche de joueur.
+- [ ] Exposer les liens vers les profils publics et les critères de calcul.
+
+### Ordre de livraison proposé
+
+1. `feat(friends): build social friend registry`
+2. `feat(messages): build conversations and guild shares`
+3. `feat(market): build listings and bidding flows`
+4. `feat(guild): build guild workspace`
+5. `feat(achievements): build progression registry`
+6. `feat(leaderboard): build competitive rankings`
