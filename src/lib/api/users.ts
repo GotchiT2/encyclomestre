@@ -1,8 +1,17 @@
 import { apiRequest, type RequestOptions } from './client';
-import type { Friendship, UpdateUserInput, UpdateUserPreferencesInput, User } from '$lib/types';
+import type {
+	CardRecord,
+	Friendship,
+	UpdateUserInput,
+	UpdateUserPreferencesInput,
+	User
+} from '$lib/types';
 
 export const getUser = (id: string, options?: RequestOptions) =>
 	apiRequest<User>(`/users/${encodeURIComponent(id)}`, options);
+
+export const getUserCollection = (id: string, options?: RequestOptions) =>
+	apiRequest<CardRecord[]>(`/users/${encodeURIComponent(id)}/collection`, options);
 
 export const getTradePartners = (userId: string, options?: RequestOptions) =>
 	apiRequest<User[]>(`/users?excludeId=${encodeURIComponent(userId)}`, options);

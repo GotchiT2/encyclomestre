@@ -53,12 +53,21 @@
 					class="border-4 border-double border-primary/30 bg-card p-4"
 				>
 					<div class="flex items-center justify-between gap-3">
-						<div class="min-w-0">
-							<h2 class="font-serif text-xl font-black uppercase">@{friendship.user.username}</h2>
-							<p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-primary">
-								{$_(`friends.status_${friendship.status}`)}
-							</p>
-						</div>
+						<a href={`/users/${friendship.user.id}`} class="flex min-w-0 items-center gap-3">
+							<img
+								src={friendship.user.avatarUrl ?? ''}
+								alt=""
+								class="size-11 border border-primary/40 bg-background object-cover"
+							/>
+							<div class="min-w-0">
+								<h2 class="truncate font-serif text-xl font-black uppercase">
+									@{friendship.user.username}
+								</h2>
+								<p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-primary">
+									{$_(`friends.status_${friendship.status}`)}
+								</p>
+							</div>
+						</a>
 						<div class="flex flex-wrap justify-end gap-2">
 							{#if friendship.status === 'received'}<Button
 									size="sm"

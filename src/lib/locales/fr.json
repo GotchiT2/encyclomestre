@@ -276,7 +276,11 @@
 		"decline": "Refuser",
 		"trade": "Échanger",
 		"message": "Écrire",
-		"remove": "Supprimer"
+		"remove": "Supprimer",
+		"profile": "Profil public",
+		"collection": "Collection",
+		"empty_collection": "Cette collection ne contient aucune carte visible.",
+		"error": "Ce profil est indisponible."
 	},
 	"trades": {
 		"eyebrow": "Registre des transactions",

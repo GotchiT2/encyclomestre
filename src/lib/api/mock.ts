@@ -176,7 +176,7 @@ for (const [index, username] of [
 		username,
 		displayName: username,
 		email: `${username.toLowerCase()}@example.test`,
-		avatarUrl: null,
+		avatarUrl: mockCards[index].imageUrl,
 		bio: 'Collectionneur du registre impérial.',
 		role: 'user',
 		preferences: { ...defaultPreferences },
@@ -674,6 +674,18 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			rareCards: ownedCards.filter((card) => card.rarity !== 'Commune').length,
 			publicTags: mockCollectionTags
 		});
+	}
+	const userCollectionMatch = /^\/users\/([^/]+)\/collection$/.exec(pathname);
+	if (userCollectionMatch && normalizedMethod === 'GET') {
+		const userId = decodeURIComponent(userCollectionMatch[1]);
+		if (!users.has(userId)) return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
+		return json(
+			mockCards.filter((card) =>
+				userId === 'demo-user'
+					? card.ownedCount > 0
+					: card.friendsWhoOwn.some((friend) => friend.friendId === userId)
+			)
+		);
 	}
 	const cardMatch = /^\/cards\/([^/]+)(?:\/(price-history))?$/.exec(pathname);
 	if (cardMatch && normalizedMethod === 'GET') {
