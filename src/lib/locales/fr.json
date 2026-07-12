@@ -9,6 +9,7 @@
 		"cards": "Cartes",
 		"collection": "Collection",
 		"wishlist": "Wishlist",
+		"friends": "Amis",
 		"trades": "Échanges",
 		"boosters": "Paquets",
 		"profile": "Mon profil",
@@ -260,6 +261,22 @@
 		"empty": "Aucun registre de souhaits n’a encore été transmis à la Guilde.",
 		"guild_share": "Registre partagé",
 		"open_share": "Ouvrir le registre"
+	},
+	"friends": {
+		"eyebrow": "Réseau social",
+		"title": "Mes amis",
+		"description": "Gérez vos contacts et vos opportunités d’échange.",
+		"search": "Rechercher un ami",
+		"loading": "Chargement des amis…",
+		"empty": "Aucun ami ne correspond à cette recherche.",
+		"status_received": "Invitation reçue",
+		"status_sent": "Invitation envoyée",
+		"status_accepted": "Ami",
+		"accept": "Accepter",
+		"decline": "Refuser",
+		"trade": "Échanger",
+		"message": "Écrire",
+		"remove": "Supprimer"
 	},
 	"trades": {
 		"eyebrow": "Registre des transactions",

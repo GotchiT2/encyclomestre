@@ -13,7 +13,8 @@ import type {
 	BoosterOpenResult,
 	WishlistEntry,
 	WishlistRegistry,
-	GuildWishlistShare
+	GuildWishlistShare,
+	Friendship
 } from '$lib/types';
 import { mockCards } from './mocks/cards';
 import { mockCollectionTags } from './mocks/collection-tags';
@@ -114,6 +115,7 @@ const wishlists = new Map<string, WishlistRegistry[]>([
 	]
 ]);
 const guildWishlistShares: GuildWishlistShare[] = [];
+const friendships = new Map<string, Friendship[]>();
 const boosterReserve = new Map<string, { available: number; lastRechargeAt: number }>([
 	['demo-user', { available: 10, lastRechargeAt: Date.now() }]
 ]);
@@ -182,6 +184,23 @@ for (const [index, username] of [
 		updatedAt: now
 	});
 }
+
+friendships.set('demo-user', [
+	{
+		id: 'friendship-001',
+		user: { ...users.get('friend-0')! },
+		status: 'accepted',
+		createdAt: now,
+		lastActiveAt: now
+	},
+	{
+		id: 'friendship-002',
+		user: { ...users.get('friend-1')! },
+		status: 'received',
+		createdAt: now,
+		lastActiveAt: now
+	}
+]);
 
 function json(payload: unknown, status = 200): Response {
 	return new Response(status === 204 ? undefined : JSON.stringify(payload), {
@@ -665,6 +684,46 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	}
 
 	const userMatch = /^\/users\/([^/]+)(?:\/(preferences))?$/.exec(pathname);
+	if (normalizedMethod === 'GET' && pathname === '/friends') {
+		return json(friendships.get(url.searchParams.get('userId') ?? 'demo-user') ?? []);
+	}
+	if (normalizedMethod === 'POST' && pathname === '/friends') {
+		const input = asObject(body);
+		const userId = typeof input?.userId === 'string' ? input.userId : 'demo-user';
+		const recipientId = typeof input?.recipientId === 'string' ? input.recipientId : '';
+		const recipient = users.get(recipientId);
+		if (!recipient) return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
+		const friendship: Friendship = {
+			id: `friendship-${Date.now()}`,
+			user: recipient,
+			status: 'sent',
+			createdAt: new Date().toISOString(),
+			lastActiveAt: now
+		};
+		friendships.set(userId, [...(friendships.get(userId) ?? []), friendship]);
+		return json(friendship, 201);
+	}
+	const friendshipMatch = /^\/friends\/([^/]+)$/.exec(pathname);
+	if (friendshipMatch) {
+		const id = decodeURIComponent(friendshipMatch[1]);
+		for (const [userId, entries] of friendships) {
+			const friendship = entries.find((entry) => entry.id === id);
+			if (!friendship) continue;
+			if (normalizedMethod === 'PATCH') {
+				const status = asObject(body)?.status;
+				if (status === 'accepted' || status === 'received') friendship.status = status;
+				return json(friendship);
+			}
+			if (normalizedMethod === 'DELETE') {
+				friendships.set(
+					userId,
+					entries.filter((entry) => entry.id !== id)
+				);
+				return json(undefined, 204);
+			}
+		}
+		return error(404, 'Invitation introuvable.', 'FRIENDSHIP_NOT_FOUND');
+	}
 	if (userMatch) {
 		const [, encodedId, resource] = userMatch;
 		const user = users.get(decodeURIComponent(encodedId));

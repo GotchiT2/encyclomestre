@@ -186,3 +186,5 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 4. `feat(guild): build guild workspace`
 5. `feat(achievements): build progression registry`
 6. `feat(leaderboard): build competitive rankings`
+
+- [x] Démarrer le registre d’amis, ses invitations et raccourcis sociaux — `feat(friends): build social friend registry`

@@ -2,6 +2,7 @@ export * from './auth';
 export * from './booster';
 export * from './card';
 export * from './common';
+export * from './friend';
 export * from './profile';
 export * from './sales';
 export * from './tag';

@@ -12,6 +12,7 @@
 	import GalleryVerticalEndIcon from '@lucide/svelte/icons/gallery-vertical-end';
 	import HandshakeIcon from '@lucide/svelte/icons/handshake';
 	import HeartIcon from '@lucide/svelte/icons/heart';
+	import UsersIcon from '@lucide/svelte/icons/users';
 	import LibraryBigIcon from '@lucide/svelte/icons/library-big';
 	import LogInIcon from '@lucide/svelte/icons/log-in';
 	import MenuIcon from '@lucide/svelte/icons/menu';
@@ -25,6 +26,7 @@
 		{ href: '/', label: 'navigation.home', icon: GalleryVerticalEndIcon },
 		{ href: '/cards', label: 'navigation.cards', icon: BookOpenIcon },
 		{ href: '/collection', label: 'navigation.collection', icon: LibraryBigIcon },
+		{ href: '/friends', label: 'navigation.friends', icon: UsersIcon },
 		{ href: '/wishlists', label: 'navigation.wishlist', icon: HeartIcon },
 		{ href: '/trades', label: 'navigation.trades', icon: HandshakeIcon },
 		{ href: '/boosters', label: 'navigation.boosters', icon: PackageOpenIcon }
