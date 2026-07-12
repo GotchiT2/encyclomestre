@@ -29,6 +29,20 @@ npm run dev
 npm run dev -- --open
 ```
 
+## API mock
+
+Le client API peut intercepter tous les appels avant qu'ils ne partent vers le backend. Créez un fichier `.env` à la racine du projet avec :
+
+```env
+PUBLIC_API_MOCK_ENABLED=true
+# Optionnel : simule la latence réseau en millisecondes.
+PUBLIC_API_MOCK_DELAY_MS=250
+```
+
+Le mock répond avec de vraies réponses HTTP JSON et les mêmes objets que les fonctions de `src/lib/api` attendent. Les routes actuellement couvertes sont `POST /auth/login`, `POST /auth/logout`, `POST /users`, `GET/PATCH /users/:id`, `PATCH /users/:id/preferences`, `GET /cards/:id` et `GET /cards/:id/price-history`.
+
+Utilisez les identifiants `demo-user` et `demo-card` pour afficher les données de démonstration. Une route absente renvoie un `404`, les données invalides un `422` et un utilisateur déjà existant un `409`, ce qui permet aussi de tester les états d'erreur.
+
 ## Building
 
 To create a production version of your app:
