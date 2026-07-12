@@ -188,3 +188,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 6. `feat(leaderboard): build competitive rankings`
 
 - [x] Démarrer le registre d’amis, ses invitations et raccourcis sociaux — `feat(friends): build social friend registry`
+- [x] Ajouter les profils publics et collections des amis — `feat(friends): show friend profiles and collections`
