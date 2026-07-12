@@ -1,0 +1,102 @@
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn-svelte/tailwind.css';
+@import '@fontsource-variable/source-sans-3';
+
+:root {
+	--background: #080a09;
+	--foreground: #e4e8e6;
+	--card: #0e1210;
+	--card-foreground: #e4e8e6;
+	--popover: #0e1210;
+	--popover-foreground: #e4e8e6;
+	--primary: #c19a6b;
+	--primary-foreground: #080a09;
+	--secondary: #121614;
+	--secondary-foreground: #e4e8e6;
+	--muted: #121614;
+	--muted-foreground: #9ca59f;
+	--accent: #121614;
+	--accent-foreground: #e4e8e6;
+	--destructive: #d88472;
+	--border: color-mix(in srgb, #c19a6b 24%, transparent);
+	--input: color-mix(in srgb, #c19a6b 32%, transparent);
+	--ring: #c19a6b;
+	--radius: 0rem;
+}
+
+@theme inline {
+	--font-sans: 'Source Sans 3 Variable', sans-serif;
+	--font-serif: Georgia, Cambria, 'Times New Roman', serif;
+	--font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+	--font-heading: Georgia, Cambria, 'Times New Roman', serif;
+	--color-ring: var(--ring);
+	--color-input: var(--input);
+	--color-border: var(--border);
+	--color-destructive: var(--destructive);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-accent: var(--accent);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-muted: var(--muted);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-secondary: var(--secondary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-primary: var(--primary);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-popover: var(--popover);
+	--color-card-foreground: var(--card-foreground);
+	--color-card: var(--card);
+	--color-foreground: var(--foreground);
+	--color-background: var(--background);
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	html {
+		@apply font-sans;
+		overflow-x: hidden;
+	}
+	body {
+		@apply bg-background text-foreground antialiased;
+		overflow-x: hidden;
+		background-image:
+			radial-gradient(circle at 50% -20%, rgb(193 154 107 / 12%), transparent 36rem),
+			linear-gradient(90deg, rgb(193 154 107 / 3%) 1px, transparent 1px),
+			linear-gradient(rgb(193 154 107 / 3%) 1px, transparent 1px);
+		background-size:
+			auto,
+			4rem 4rem,
+			4rem 4rem;
+	}
+	::selection {
+		background: var(--primary);
+		color: var(--primary-foreground);
+	}
+}
+
+@utility alchemy-frame {
+	@apply border-4 border-double border-primary/30 bg-card;
+}
+@utility alchemy-label {
+	@apply border border-primary/40 bg-card px-2 py-1 font-mono text-[9px] tracking-widest text-primary uppercase;
+}
+
+@keyframes booster-legendary-seal {
+	0%,
+	100% {
+		box-shadow: 0 0 0 rgb(229 169 60 / 0%);
+		transform: scale(1);
+	}
+	50% {
+		box-shadow: 0 0 3rem rgb(229 169 60 / 70%);
+		transform: scale(1.035);
+	}
+}
+
+.booster-legendary {
+	animation: booster-legendary-seal 1.4s ease-in-out infinite;
+}

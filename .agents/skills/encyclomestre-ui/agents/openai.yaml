@@ -1,0 +1,4 @@
+interface:
+  display_name: "Encyclomestre UI"
+  short_description: "Interface atomique Alchimie Sombre."
+  default_prompt: "Use $encyclomestre-ui to implement this SvelteKit interface."
