@@ -192,6 +192,8 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Ajouter les registres de ventes et la persistance des enchères — `feat(market): add auction registers and bid persistence`
 - [x] Ajuster les actions et favoris des registres d’enchères — `fix(market): refine auction register actions and favorites`
 4. `feat(guild): build guild workspace`
+
+- [x] Démarrer l’espace de Guilde avec objectif, membres et accès au canal — `feat(guild): start guild workspace`
 5. `feat(achievements): build progression registry`
 6. `feat(leaderboard): build competitive rankings`
 
