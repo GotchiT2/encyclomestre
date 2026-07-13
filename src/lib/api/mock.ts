@@ -99,6 +99,7 @@ const saleBids: SaleBid[] = [
 		id: 'bid-2',
 		saleId: 'sale-003',
 		bidderName: 'SoneS9',
+		bidderId: 'demo-user',
 		amount: 46,
 		createdAt: '2026-07-13T13:28:00.000Z'
 	},
@@ -803,12 +804,15 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const query = url.searchParams.get('q')?.toLocaleLowerCase('fr-FR') ?? '';
 		const type = url.searchParams.get('type');
 		const maxPrice = Number(url.searchParams.get('maxPrice') ?? 0);
+		const bidderId = url.searchParams.get('bidderId');
 		return json(
 			sales
 				.filter(
 					(sale) =>
 						(!sellerId || sale.sellerId === sellerId) &&
 						(!cardId || sale.cardId === cardId) &&
+						(!bidderId ||
+							saleBids.some((bid) => bid.saleId === sale.id && bid.bidderId === bidderId)) &&
 						(!type || sale.type === type) &&
 						(!maxPrice || sale.price <= maxPrice) &&
 						(!query ||
@@ -826,6 +830,22 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		);
 	}
 	const saleDetailMatch = /^\/sales\/([^/]+)(?:\/(bids))?$/.exec(pathname);
+	if (saleDetailMatch && normalizedMethod === 'POST' && saleDetailMatch[2] === 'bids') {
+		const sale = sales.find((entry) => entry.id === decodeURIComponent(saleDetailMatch[1]));
+		const amount = Number(asObject(body)?.amount ?? 0);
+		if (!sale || amount <= sale.price) return error(422, 'Mise invalide.', 'BID_INVALID');
+		sale.price = amount;
+		const bid: SaleBid = {
+			id: `bid-${crypto.randomUUID()}`,
+			saleId: sale.id,
+			bidderId: 'demo-user',
+			bidderName: 'collectionneur-demo',
+			amount,
+			createdAt: new Date().toISOString()
+		};
+		saleBids.push(bid);
+		return json(bid, 201);
+	}
 	if (saleDetailMatch && normalizedMethod === 'GET') {
 		const [, encodedId, resource] = saleDetailMatch;
 		const sale = sales.find((entry) => entry.id === decodeURIComponent(encodedId));

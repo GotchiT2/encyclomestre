@@ -14,6 +14,7 @@ export interface SaleBid {
 	id: string;
 	saleId: string;
 	bidderName: string;
+	bidderId?: string;
 	amount: number;
 	createdAt: string;
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import CardTile from '$lib/components/card-tile.svelte';
+	import { placeBid } from '$lib/api';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
@@ -16,6 +17,11 @@
 	function updateBid(value: string, currentBid: number) {
 		const minimum = minimumBid(currentBid);
 		bidAmount = Math.max(minimum, Number(value) || minimum);
+	}
+
+	async function submitBid(saleId: string, currentBid: number) {
+		await placeBid(saleId, Math.max(bidAmount, minimumBid(currentBid)));
+		location.reload();
 	}
 </script>
 
@@ -72,7 +78,10 @@
 								min={minimumBid(sale.price)}
 								placeholder={$_('market.bid_amount')}
 								oninput={(event) => updateBid(event.currentTarget.value, sale.price)}
-							/><Button disabled={bidAmount < minimumBid(sale.price)}>{$_('market.bid')}</Button>
+							/><Button
+								disabled={bidAmount < minimumBid(sale.price)}
+								onclick={() => void submitBid(sale.id, sale.price)}>{$_('market.bid')}</Button
+							>
 						</div>
 					</section>
 				</div>

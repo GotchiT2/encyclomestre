@@ -14,6 +14,8 @@
 	let maxPrice = $state('');
 	let loading = $state(true);
 	let selectedListing = $state<SaleListing | null>(null);
+	let activeTab = $state<'all' | 'mine' | 'bids' | 'history'>('all');
+	let historyTab = $state<'sold' | 'bought'>('sold');
 
 	onMount(async () => {
 		cards = (await getCards({ page: 1, pageSize: 100 })).items;
@@ -24,8 +26,16 @@
 		loading = true;
 		listings = await getMarketListings({
 			query,
-			type,
-			maxPrice: Number(maxPrice) || undefined
+			type: 'auction',
+			maxPrice: Number(maxPrice) || undefined,
+			sellerId:
+				activeTab === 'mine' || (activeTab === 'history' && historyTab === 'sold')
+					? 'demo-user'
+					: undefined,
+			bidderId:
+				activeTab === 'bids' || (activeTab === 'history' && historyTab === 'bought')
+					? 'demo-user'
+					: undefined
 		});
 		loading = false;
 	}
@@ -43,6 +53,34 @@
 		</h1>
 		<p class="mt-3 font-serif italic text-muted-foreground">{$_('market.description')}</p>
 	</header>
+	<div class="flex flex-wrap border border-primary/30 bg-card p-1" role="tablist">
+		{#each [['all', 'market.tab_all'], ['mine', 'market.tab_mine'], ['bids', 'market.tab_bids'], ['history', 'market.tab_history']] as tab (tab[0])}<button
+				class="h-10 px-3 font-mono text-[10px] uppercase tracking-widest {activeTab === tab[0]
+					? 'bg-primary text-primary-foreground'
+					: 'text-primary'}"
+				onclick={() => {
+					activeTab = tab[0] as typeof activeTab;
+					void refresh();
+				}}>{$_(tab[1])}</button
+			>{/each}
+	</div>
+	{#if activeTab === 'history'}<div class="flex gap-2">
+			<Button
+				size="sm"
+				variant={historyTab === 'sold' ? 'default' : 'outline'}
+				onclick={() => {
+					historyTab = 'sold';
+					void refresh();
+				}}>{$_('market.history_sold')}</Button
+			><Button
+				size="sm"
+				variant={historyTab === 'bought' ? 'default' : 'outline'}
+				onclick={() => {
+					historyTab = 'bought';
+					void refresh();
+				}}>{$_('market.history_bought')}</Button
+			>
+		</div>{/if}
 	<form
 		class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_8rem_auto]"
 		onsubmit={(event) => {
