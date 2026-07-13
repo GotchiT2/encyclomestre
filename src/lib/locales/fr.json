@@ -283,6 +283,12 @@
 	"market": {
 		"eyebrow": "Annonces actives",
 		"title": "Marché des cartes",
+		"tab_all": "Toutes les ventes",
+		"tab_mine": "Mes ventes",
+		"tab_bids": "Mes enchères",
+		"tab_history": "Historique",
+		"history_sold": "Vendu",
+		"history_bought": "Acheté",
 		"description": "Consultez les ventes directes et les enchères en cours.",
 		"search": "Rechercher une carte ou un vendeur",
 		"all_types": "Tous les types",

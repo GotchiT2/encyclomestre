@@ -189,6 +189,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 
 - [x] Créer le catalogue d’annonces du marché, ses filtres et son détail — `feat(market): build listing catalogue and filters`
 - [x] Ajouter le détail des enchères, l’historique des mises et la modale de prix — `feat(market): add auction detail and price telemetry`
+- [x] Ajouter les registres de ventes et la persistance des enchères — `feat(market): add auction registers and bid persistence`
 4. `feat(guild): build guild workspace`
 5. `feat(achievements): build progression registry`
 6. `feat(leaderboard): build competitive rankings`
