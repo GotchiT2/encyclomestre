@@ -17,6 +17,7 @@
 	import LogInIcon from '@lucide/svelte/icons/log-in';
 	import MenuIcon from '@lucide/svelte/icons/menu';
 	import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
+	import StoreIcon from '@lucide/svelte/icons/store';
 	import UserRoundIcon from '@lucide/svelte/icons/user-round';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import { onMount } from 'svelte';
@@ -29,6 +30,7 @@
 		{ href: '/collection', label: 'navigation.collection', icon: LibraryBigIcon },
 		{ href: '/friends', label: 'navigation.friends', icon: UsersIcon },
 		{ href: '/messages', label: 'navigation.messages', icon: MessageCircleIcon },
+		{ href: '/market', label: 'navigation.market', icon: StoreIcon },
 		{ href: '/wishlists', label: 'navigation.wishlist', icon: HeartIcon },
 		{ href: '/trades', label: 'navigation.trades', icon: HandshakeIcon },
 		{ href: '/boosters', label: 'navigation.boosters', icon: PackageOpenIcon }
