@@ -181,6 +181,8 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 ### Ordre de livraison proposé
 
 1. `feat(friends): build social friend registry`
+
+- [x] Brancher l’authentification WikiForge avec session locale et renouvellement de jeton — `feat(api): connect WikiForge authentication`
 2. `feat(messages): build conversations and guild shares`
 
 - [x] Créer la boîte de réception, les conversations mockées et les widgets de wishlist de guilde — `feat(messages): build conversations and guild shares`

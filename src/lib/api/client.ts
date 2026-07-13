@@ -1,5 +1,6 @@
 import { env } from '$env/dynamic/public';
 import { createMockApiResponse } from './mock';
+import { clearSession, restoreSession, persistSession, sessionStorageKey } from '$lib/auth/session';
 
 export type Fetcher = typeof fetch;
 
@@ -20,7 +21,7 @@ export class ApiError extends Error {
 }
 
 function apiUrl(path: string): string {
-	const baseUrl = (env.PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
+	const baseUrl = (env.PUBLIC_API_BASE_URL ?? 'http://localhost:8080').replace(/\/$/, '');
 	return baseUrl ? `${baseUrl}${path}` : path;
 }
 
@@ -36,6 +37,10 @@ function mockDelay(): number {
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+	return request<T>(path, options, false);
+}
+
+async function request<T>(path: string, options: RequestOptions, didRefresh: boolean): Promise<T> {
 	const { body, fetch: fetcher = fetch, headers, ...init } = options;
 	const response = isMockApiEnabled()
 		? await (async () => {
@@ -45,14 +50,31 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 			})()
 		: await fetcher(apiUrl(path), {
 				credentials: 'include',
-				headers: {
-					accept: 'application/json',
+			headers: {
+				accept: 'application/json',
+				...(typeof localStorage !== 'undefined' && restoreSession(localStorage)?.accessToken
+					? { authorization: `Bearer ${restoreSession(localStorage)!.accessToken}` }
+					: {}),
 					...(body === undefined ? {} : { 'content-type': 'application/json' }),
 					...headers
 				},
 				body: body === undefined ? undefined : JSON.stringify(body),
 				...init
-			});
+		});
+
+	if (!didRefresh && (response.status === 401 || response.status === 403) && typeof localStorage !== 'undefined') {
+		const session = restoreSession(localStorage);
+		if (session?.refreshToken) {
+			const refreshed = await fetcher(apiUrl('/api/auth/refresh'), { method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/json' }, body: JSON.stringify({ refreshToken: session.refreshToken }) });
+			if (refreshed.ok) {
+				const tokens = await refreshed.json();
+				persistSession(localStorage, { ...session, ...tokens });
+				return request<T>(path, options, true);
+			}
+		}
+		clearSession(localStorage);
+		if (typeof window !== 'undefined') window.location.assign(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+	}
 
 	if (response.status === 204) return undefined as T;
 

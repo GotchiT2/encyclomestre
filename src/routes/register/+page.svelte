@@ -21,8 +21,8 @@
 		error = undefined;
 		isSubmitting = true;
 		try {
-			await register({ username, email, password });
-			persistSession(localStorage, await login({ email, password }));
+			const tokens = await register({ email, password });
+			persistSession(localStorage, { ...tokens, user: { id: email, username, displayName: username, role: 'user', createdAt: '', updatedAt: '' } });
 			await goto(resolve('/'));
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : $_('auth.register.failure');
