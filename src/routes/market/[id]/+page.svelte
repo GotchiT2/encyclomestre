@@ -7,7 +7,16 @@
 
 	let { data }: { data: PageData } = $props();
 	let showPrices = $state(false);
-	let bidAmount = $state('');
+	let bidAmount = $state(0);
+
+	function minimumBid(currentBid: number) {
+		return Math.ceil(currentBid * 1.1);
+	}
+
+	function updateBid(value: string, currentBid: number) {
+		const minimum = minimumBid(currentBid);
+		bidAmount = Math.max(minimum, Number(value) || minimum);
+	}
 </script>
 
 {#await Promise.all([data.sale, data.bids, data.cards])}
@@ -53,16 +62,17 @@
 							<p class="font-serif text-sm">{$_('market.wallet')} <strong>33 714</strong></p>
 							<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 								{$_('market.minimum_bid')}
-								{sale.price + 1}
+								{minimumBid(sale.price)}
 							</p>
 						</div>
 						<div class="mt-3 flex gap-2">
 							<Input
-								bind:value={bidAmount}
+								value={bidAmount || minimumBid(sale.price)}
 								type="number"
-								min={sale.price + 1}
+								min={minimumBid(sale.price)}
 								placeholder={$_('market.bid_amount')}
-							/><Button disabled={Number(bidAmount) <= sale.price}>{$_('market.bid')}</Button>
+								oninput={(event) => updateBid(event.currentTarget.value, sale.price)}
+							/><Button disabled={bidAmount < minimumBid(sale.price)}>{$_('market.bid')}</Button>
 						</div>
 					</section>
 				</div>
