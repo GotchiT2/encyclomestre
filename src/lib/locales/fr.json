@@ -278,8 +278,13 @@
 		"message": "Écrire",
 		"remove": "Supprimer",
 		"profile": "Profil public",
+		"profile_tabs": "Sections du profil public",
+		"showcase_tab": "Vitrine",
+		"collection_tab": "Collection",
 		"collection": "Collection",
 		"empty_collection": "Cette collection ne contient aucune carte visible.",
+		"empty_wanted": "Aucune carte recherchée n’est affichée sur ce profil.",
+		"empty_sales": "Aucune vente active n’est affichée sur ce profil.",
 		"error": "Ce profil est indisponible."
 	},
 	"trades": {

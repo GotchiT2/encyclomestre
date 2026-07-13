@@ -18,6 +18,7 @@
 		rarities,
 		untaggedOption,
 		newTagOption,
+		allowTagCreation = true,
 		onTagFilterChange,
 		onClear
 	}: {
@@ -29,6 +30,7 @@
 		rarities: RarityOption[];
 		untaggedOption: string;
 		newTagOption: string;
+		allowTagCreation?: boolean;
 		onTagFilterChange: () => void;
 		onClear: () => void;
 	} = $props();
@@ -91,9 +93,10 @@
 				class="min-h-24 w-full border border-primary/20 bg-card px-3 py-2 font-mono text-xs uppercase tracking-[0.16em] text-foreground outline-none"
 				aria-describedby="collection-tags-hint"
 				><option value={untaggedOption}>{$_('collection.untagged')}</option
-				>{#each tags as tag (tag.id)}<option value={tag.id}>{tag.name}</option>{/each}<option
-					value={newTagOption}>{$_('collection.addTagOption')}</option
-				></select
+				>{#each tags as tag (tag.id)}<option value={tag.id}>{tag.name}</option
+					>{/each}{#if allowTagCreation}<option value={newTagOption}
+						>{$_('collection.addTagOption')}</option
+					>{/if}</select
 			>
 		</div>
 		<Field.FieldDescription id="collection-tags-hint"
