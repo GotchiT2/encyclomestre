@@ -14,7 +14,9 @@ import type {
 	WishlistEntry,
 	WishlistRegistry,
 	GuildWishlistShare,
-	Friendship
+	Friendship,
+	Conversation,
+	MessageRecord
 } from '$lib/types';
 import { mockCards } from './mocks/cards';
 import { mockCollectionTags } from './mocks/collection-tags';
@@ -131,6 +133,60 @@ const wishlists = new Map<string, WishlistRegistry[]>([
 	]
 ]);
 const guildWishlistShares: GuildWishlistShare[] = [];
+const conversations: Conversation[] = [
+	{
+		id: 'conversation-guild',
+		kind: 'guild',
+		title: 'Guilde du Registre',
+		participantIds: ['demo-user', 'friend-0', 'friend-1'],
+		preview: 'Les souhaits de la guilde sont disponibles.',
+		unreadCount: 1,
+		updatedAt: now
+	},
+	{
+		id: 'conversation-friend-0',
+		kind: 'direct',
+		title: 'SoneS9',
+		participantIds: ['demo-user', 'friend-0'],
+		preview: 'Je peux regarder mes doubles.',
+		unreadCount: 0,
+		updatedAt: '2026-07-10T15:00:00.000Z'
+	}
+];
+const messages = new Map<string, MessageRecord[]>([
+	[
+		'conversation-guild',
+		[
+			{
+				id: 'message-guild-1',
+				conversationId: 'conversation-guild',
+				senderId: 'friend-0',
+				content: 'Les souhaits de la guilde sont disponibles.',
+				createdAt: now,
+				readAt: null,
+				wishlistShare: {
+					registryId: 'desiderata-priorities',
+					title: 'Priorités K-Pop',
+					description: 'Les pièces à obtenir avant la prochaine lune.',
+					cardCount: 3
+				}
+			}
+		]
+	],
+	[
+		'conversation-friend-0',
+		[
+			{
+				id: 'message-friend-0-1',
+				conversationId: 'conversation-friend-0',
+				senderId: 'friend-0',
+				content: 'Je peux regarder mes doubles.',
+				createdAt: '2026-07-10T15:00:00.000Z',
+				readAt: '2026-07-10T15:02:00.000Z'
+			}
+		]
+	]
+]);
 const friendships = new Map<string, Friendship[]>();
 const boosterReserve = new Map<string, { available: number; lastRechargeAt: number }>([
 	['demo-user', { available: 10, lastRechargeAt: Date.now() }]
@@ -430,6 +486,45 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	if (normalizedMethod === 'GET' && pathname === '/messages/guild-wishlists') {
 		return json(guildWishlistShares);
 	}
+	if (normalizedMethod === 'GET' && pathname === '/messages') {
+		const userId = url.searchParams.get('userId') ?? 'demo-user';
+		return json(
+			conversations
+				.filter((conversation) => conversation.participantIds.includes(userId))
+				.toSorted((first, second) => second.updatedAt.localeCompare(first.updatedAt))
+		);
+	}
+	const messageMatch = /^\/messages\/([^/]+)(?:\/(read))?$/.exec(pathname);
+	if (messageMatch) {
+		const [, encodedId, action] = messageMatch;
+		const conversation = conversations.find((entry) => entry.id === decodeURIComponent(encodedId));
+		if (!conversation) return error(404, 'Conversation introuvable.', 'CONVERSATION_NOT_FOUND');
+		if (normalizedMethod === 'GET' && !action) return json(messages.get(conversation.id) ?? []);
+		if (normalizedMethod === 'PATCH' && action === 'read') {
+			conversation.unreadCount = 0;
+			return json(conversation);
+		}
+		if (normalizedMethod === 'POST' && !action) {
+			const input = asObject(body);
+			const senderId = typeof input?.senderId === 'string' ? input.senderId : '';
+			const content = typeof input?.content === 'string' ? input.content.trim() : '';
+			if (!conversation.participantIds.includes(senderId) || !content)
+				return error(422, 'Message invalide.', 'MESSAGE_VALIDATION_ERROR');
+			const createdAt = new Date().toISOString();
+			const message: MessageRecord = {
+				id: `message-${crypto.randomUUID()}`,
+				conversationId: conversation.id,
+				senderId,
+				content,
+				createdAt,
+				readAt: senderId === 'demo-user' ? createdAt : null
+			};
+			messages.set(conversation.id, [...(messages.get(conversation.id) ?? []), message]);
+			conversation.preview = content;
+			conversation.updatedAt = createdAt;
+			return json(message, 201);
+		}
+	}
 	if (normalizedMethod === 'POST' && pathname === '/wishlists/import') {
 		const input = asObject(body);
 		const userId = typeof input?.userId === 'string' ? input.userId : 'demo-user';
@@ -484,14 +579,39 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		}
 		if (normalizedMethod === 'POST' && action === 'share') {
 			if (asObject(body)?.target === 'guild') {
-				guildWishlistShares.unshift({
+				const share: GuildWishlistShare = {
 					id: `guild-share-${Date.now()}`,
 					registryId: registry.id,
 					title: registry.title,
 					description: registry.description,
 					cardCount: registry.cardIds.length,
 					createdAt: new Date().toISOString()
-				});
+				};
+				guildWishlistShares.unshift(share);
+				const createdAt = new Date().toISOString();
+				const message: MessageRecord = {
+					id: `message-${crypto.randomUUID()}`,
+					conversationId: 'conversation-guild',
+					senderId: userId,
+					content: `Wishlist partagée : ${registry.title}`,
+					createdAt,
+					readAt: createdAt,
+					wishlistShare: {
+						registryId: registry.id,
+						title: registry.title,
+						description: registry.description,
+						cardCount: registry.cardIds.length
+					}
+				};
+				messages.set('conversation-guild', [
+					...(messages.get('conversation-guild') ?? []),
+					message
+				]);
+				const guildConversation = conversations.find((entry) => entry.id === 'conversation-guild');
+				if (guildConversation) {
+					guildConversation.preview = message.content;
+					guildConversation.updatedAt = createdAt;
+				}
 			}
 			return json({ sealUrl: `https://encyclomestre.test/seals/${registry.id}-${Date.now()}` });
 		}
