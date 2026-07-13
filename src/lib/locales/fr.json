@@ -10,6 +10,7 @@
 		"collection": "Collection",
 		"wishlist": "Wishlist",
 		"friends": "Amis",
+		"messages": "Messages",
 		"trades": "Échanges",
 		"boosters": "Paquets",
 		"profile": "Mon profil",
@@ -255,6 +256,15 @@
 		"page": "Page"
 	},
 	"messages": {
+		"react": "Ajouter une réaction",
+		"reply": "Répondre",
+		"replying_to": "Réponse à un message",
+		"cancel_reply": "Annuler la réponse",
+		"trade_offer": "Offre d’échange",
+		"trade_offered": "Cartes proposées",
+		"trade_requested": "Cartes demandées",
+		"trade_credits": "Crédits",
+		"open_trade": "Voir l’offre",
 		"description": "Échangez avec vos amis et consultez les partages de la guilde.",
 		"search": "Rechercher une conversation",
 		"conversations": "Conversations",

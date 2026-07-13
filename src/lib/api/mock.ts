@@ -164,6 +164,7 @@ const messages = new Map<string, MessageRecord[]>([
 				content: 'Les souhaits de la guilde sont disponibles.',
 				createdAt: now,
 				readAt: null,
+				reactions: [{ emoji: '❤️', userIds: ['demo-user'] }],
 				wishlistShare: {
 					registryId: 'desiderata-priorities',
 					title: 'Priorités K-Pop',
@@ -182,7 +183,16 @@ const messages = new Map<string, MessageRecord[]>([
 				senderId: 'friend-0',
 				content: 'Je peux regarder mes doubles.',
 				createdAt: '2026-07-10T15:00:00.000Z',
-				readAt: '2026-07-10T15:02:00.000Z'
+				readAt: '2026-07-10T15:02:00.000Z',
+				reactions: [],
+				tradeOffer: {
+					offerId: 'trade-001',
+					offeredCardIds: ['twice-groupe-1'],
+					requestedCardIds: ['girls-generation-1'],
+					offeredCredits: 15,
+					requestedCredits: 0,
+					status: 'pending'
+				}
 			}
 		]
 	]
@@ -494,6 +504,25 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				.toSorted((first, second) => second.updatedAt.localeCompare(first.updatedAt))
 		);
 	}
+	const reactionMatch = /^\/messages\/reactions\/([^/]+)$/.exec(pathname);
+	if (reactionMatch && normalizedMethod === 'PATCH') {
+		const input = asObject(body);
+		const userId = typeof input?.userId === 'string' ? input.userId : '';
+		const emoji = typeof input?.emoji === 'string' ? input.emoji : '';
+		const message = [...messages.values()]
+			.flat()
+			.find((entry) => entry.id === decodeURIComponent(reactionMatch[1]));
+		if (!message) return error(404, 'Message introuvable.', 'MESSAGE_NOT_FOUND');
+		if (!message.reactions) message.reactions = [];
+		const reaction = message.reactions.find((entry) => entry.emoji === emoji);
+		if (reaction?.userIds.includes(userId)) {
+			reaction.userIds = reaction.userIds.filter((id) => id !== userId);
+			if (!reaction.userIds.length)
+				message.reactions = message.reactions.filter((entry) => entry !== reaction);
+		} else if (reaction) reaction.userIds.push(userId);
+		else message.reactions.push({ emoji, userIds: [userId] });
+		return json(message);
+	}
 	const messageMatch = /^\/messages\/([^/]+)(?:\/(read))?$/.exec(pathname);
 	if (messageMatch) {
 		const [, encodedId, action] = messageMatch;
@@ -517,7 +546,10 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				senderId,
 				content,
 				createdAt,
-				readAt: senderId === 'demo-user' ? createdAt : null
+				readAt: senderId === 'demo-user' ? createdAt : null,
+				replyToMessageId:
+					typeof input?.replyToMessageId === 'string' ? input.replyToMessageId : null,
+				reactions: []
 			};
 			messages.set(conversation.id, [...(messages.get(conversation.id) ?? []), message]);
 			conversation.preview = content;
@@ -596,6 +628,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 					content: `Wishlist partagée : ${registry.title}`,
 					createdAt,
 					readAt: createdAt,
+					reactions: [],
 					wishlistShare: {
 						registryId: registry.id,
 						title: registry.title,

@@ -3,7 +3,8 @@
 		getConversationMessages,
 		getConversations,
 		markConversationRead,
-		sendMessage
+		sendMessage,
+		toggleMessageReaction
 	} from '$lib/api';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -21,6 +22,8 @@
 	let draft = $state('');
 	let loading = $state(true);
 	let sending = $state(false);
+	let replyToMessageId = $state<string | null>(null);
+	const reactionEmojis = ['👍', '❤️', '😂', '😮', '🎉'];
 
 	const visibleConversations = $derived(
 		conversations.filter((conversation) =>
@@ -63,11 +66,27 @@
 	async function submit() {
 		if (!selectedConversationId || !draft.trim() || sending) return;
 		sending = true;
-		const message = await sendMessage(selectedConversationId, { senderId: userId, content: draft });
+		const message = await sendMessage(selectedConversationId, {
+			senderId: userId,
+			content: draft,
+			replyToMessageId
+		});
 		thread = [...thread, message];
 		draft = '';
+		replyToMessageId = null;
 		sending = false;
 		await loadConversations();
+	}
+
+	function quotedMessage(message: MessageRecord) {
+		return message.replyToMessageId
+			? (thread.find((candidate) => candidate.id === message.replyToMessageId) ?? null)
+			: null;
+	}
+
+	async function react(message: MessageRecord, emoji: string) {
+		const updated = await toggleMessageReaction(message.id, { userId, emoji });
+		thread = thread.map((item) => (item.id === updated.id ? updated : item));
 	}
 </script>
 
@@ -128,11 +147,17 @@
 			</header>
 			<div class="flex min-h-72 flex-1 flex-col gap-3 overflow-y-auto p-4">
 				{#each thread as message (message.id)}
+					{@const quoted = quotedMessage(message)}
 					<article
 						class="max-w-[88%] border p-3 {message.senderId === userId
 							? 'ml-auto border-primary/60 bg-primary/15'
 							: 'border-primary/20 bg-background'}"
 					>
+						{#if quoted}<blockquote
+								class="mb-2 border-l-2 border-primary/60 pl-2 font-serif text-xs italic text-muted-foreground"
+							>
+								{quoted.content}
+							</blockquote>{/if}
 						<p class="font-serif text-sm leading-relaxed text-foreground">{message.content}</p>
 						{#if message.wishlistShare}<div class="mt-3 border-2 border-primary/40 bg-card p-3">
 								<p class="font-mono text-[9px] uppercase tracking-widest text-primary">
@@ -154,6 +179,70 @@
 									class="mt-3">{$_('messages.open_share')}</Button
 								>
 							</div>{/if}
+						{#if message.tradeOffer}<section class="mt-3 border-2 border-primary/50 bg-card p-3">
+								<p class="font-mono text-[9px] uppercase tracking-widest text-primary">
+									{$_('messages.trade_offer')}
+								</p>
+								<div class="mt-3 grid gap-3 sm:grid-cols-2">
+									<div>
+										<p class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+											{$_('messages.trade_offered')}
+										</p>
+										<p class="mt-1 font-mono text-xs text-primary">
+											{message.tradeOffer.offeredCardIds.length} · {message.tradeOffer
+												.offeredCredits}
+											{$_('messages.trade_credits')}
+										</p>
+									</div>
+									<div>
+										<p class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+											{$_('messages.trade_requested')}
+										</p>
+										<p class="mt-1 font-mono text-xs text-primary">
+											{message.tradeOffer.requestedCardIds.length} · {message.tradeOffer
+												.requestedCredits}
+											{$_('messages.trade_credits')}
+										</p>
+									</div>
+								</div>
+								<Button
+									href={`/trades?offer=${message.tradeOffer.offerId}`}
+									size="sm"
+									variant="outline"
+									class="mt-3">{$_('messages.open_trade')}</Button
+								>
+							</section>{/if}
+						<div class="mt-3 flex flex-wrap items-center gap-1">
+							<Button
+								size="sm"
+								variant="ghost"
+								class="h-7 px-2 text-[10px]"
+								onclick={() => (replyToMessageId = message.id)}>{$_('messages.reply')}</Button
+							>{#each message.reactions as reaction (reaction.emoji)}<Button
+									size="sm"
+									variant="outline"
+									class="h-7 gap-1 px-2 text-xs"
+									aria-pressed={reaction.userIds.includes(userId)}
+									onclick={() => void react(message, reaction.emoji)}
+									>{reaction.emoji} {reaction.userIds.length}</Button
+								>{/each}
+							<details class="relative">
+								<summary
+									class="cursor-pointer list-none border border-primary/40 px-2 py-1 font-mono text-[10px] text-primary"
+									aria-label={$_('messages.react')}>+</summary
+								>
+								<div
+									class="absolute right-0 bottom-full z-10 mb-1 flex border border-primary/40 bg-card p-1 shadow-xl"
+								>
+									{#each reactionEmojis as emoji (emoji)}<Button
+											size="icon-xs"
+											variant="ghost"
+											aria-label={$_('messages.react')}
+											onclick={() => void react(message, emoji)}>{emoji}</Button
+										>{/each}
+								</div>
+							</details>
+						</div>
 						<p class="mt-2 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
 							{new Date(message.createdAt).toLocaleString('fr-FR')}
 						</p>
@@ -167,6 +256,18 @@
 					void submit();
 				}}
 			>
+				{#if replyToMessageId}
+					<div
+						class="mb-2 flex items-center justify-between gap-2 border border-primary/30 bg-background px-3 py-2"
+					>
+						<span class="font-mono text-[10px] uppercase tracking-widest text-primary"
+							>{$_('messages.replying_to')}</span
+						>
+						<Button size="sm" variant="ghost" onclick={() => (replyToMessageId = null)}
+							>{$_('messages.cancel_reply')}</Button
+						>
+					</div>
+				{/if}
 				<label for="message-draft" class="sr-only">{$_('messages.compose_placeholder')}</label>
 				<div class="flex gap-2">
 					<textarea
