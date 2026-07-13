@@ -86,5 +86,5 @@
 			onLogout={logoutFromSettings}
 			onDelete={deleteAccount}
 		/>
-		/>{/if}
+		{/if}
 </section>
