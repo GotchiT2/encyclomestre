@@ -16,8 +16,13 @@
 <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
 	{#each listings as listing (listing.id)}
 		{@const card = cardsById.get(listing.cardId)}
-		{#if card}<article class="border border-primary/30 bg-card p-2">
+		{#if card}<article class="relative border border-primary/30 bg-card p-2">
 				<CardTile {card} showFriendOwners={false} />
+				<a
+					href={`/market/${listing.id}`}
+					class="absolute inset-x-0 top-0 z-10 aspect-[5/7]"
+					aria-label={$_('market.open_listing')}
+				></a>
 				<div class="mt-2 border-t border-dashed border-primary/20 pt-2">
 					<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 						{listing.type === 'auction' ? $_('market.auction') : $_('market.direct_sale')}
@@ -29,7 +34,11 @@
 					<p class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
 						@{listing.sellerName}
 					</p>
-					<Button size="sm" variant="outline" class="mt-2 w-full" onclick={() => onAction(listing)}
+					<Button
+						size="sm"
+						variant="outline"
+						class="relative z-20 mt-2 w-full"
+						onclick={() => onAction(listing)}
 						>{listing.type === 'auction' ? $_('market.bid') : $_('market.buy')}</Button
 					>
 				</div>

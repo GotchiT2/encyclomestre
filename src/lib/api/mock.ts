@@ -16,7 +16,8 @@ import type {
 	GuildWishlistShare,
 	Friendship,
 	Conversation,
-	MessageRecord
+	MessageRecord,
+	SaleBid
 } from '$lib/types';
 import { mockCards } from './mocks/cards';
 import { mockCollectionTags } from './mocks/collection-tags';
@@ -84,6 +85,29 @@ const sales: SaleListing[] = [
 		price: 39,
 		currency: 'EUR',
 		type: 'direct'
+	}
+];
+const saleBids: SaleBid[] = [
+	{
+		id: 'bid-1',
+		saleId: 'sale-003',
+		bidderName: 'OnMyGhost',
+		amount: 38,
+		createdAt: '2026-07-13T13:05:00.000Z'
+	},
+	{
+		id: 'bid-2',
+		saleId: 'sale-003',
+		bidderName: 'SoneS9',
+		amount: 46,
+		createdAt: '2026-07-13T13:28:00.000Z'
+	},
+	{
+		id: 'bid-3',
+		saleId: 'sale-003',
+		bidderName: 'Assassinblanc',
+		amount: 54,
+		createdAt: '2026-07-13T14:08:00.000Z'
 	}
 ];
 const wishlist = new Map<string, WishlistEntry[]>([
@@ -800,6 +824,19 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 					status: 'active'
 				}))
 		);
+	}
+	const saleDetailMatch = /^\/sales\/([^/]+)(?:\/(bids))?$/.exec(pathname);
+	if (saleDetailMatch && normalizedMethod === 'GET') {
+		const [, encodedId, resource] = saleDetailMatch;
+		const sale = sales.find((entry) => entry.id === decodeURIComponent(encodedId));
+		if (!sale) return error(404, 'Annonce introuvable.', 'SALE_NOT_FOUND');
+		if (resource === 'bids')
+			return json(saleBids.filter((bid) => bid.saleId === sale.id).toReversed());
+		return json({
+			...sale,
+			sellerName: users.get(sale.sellerId)?.username ?? sale.sellerId,
+			status: 'active'
+		});
 	}
 	if (normalizedMethod === 'GET' && pathname === '/trades') {
 		const userId = url.searchParams.get('userId');

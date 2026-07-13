@@ -10,7 +10,7 @@
 	let cards = $state<CardRecord[]>([]);
 	let listings = $state<SaleListing[]>([]);
 	let query = $state('');
-	let type = $state<'all' | SaleListing['type']>('all');
+	let type = $state<SaleListing['type']>('auction');
 	let maxPrice = $state('');
 	let loading = $state(true);
 	let selectedListing = $state<SaleListing | null>(null);
@@ -24,7 +24,7 @@
 		loading = true;
 		listings = await getMarketListings({
 			query,
-			type: type === 'all' ? undefined : type,
+			type,
 			maxPrice: Number(maxPrice) || undefined
 		});
 		loading = false;
