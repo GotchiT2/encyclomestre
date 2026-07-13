@@ -17,6 +17,20 @@ export interface WishlistShareWidget {
 	cardCount: number;
 }
 
+export interface TradeOfferWidget {
+	offerId: string;
+	offeredCardIds: string[];
+	requestedCardIds: string[];
+	offeredCredits: number;
+	requestedCredits: number;
+	status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
+}
+
+export interface MessageReaction {
+	emoji: string;
+	userIds: string[];
+}
+
 export interface MessageRecord {
 	id: string;
 	conversationId: string;
@@ -24,5 +38,8 @@ export interface MessageRecord {
 	content: string;
 	createdAt: string;
 	readAt: string | null;
+	replyToMessageId?: string | null;
+	reactions: MessageReaction[];
 	wishlistShare?: WishlistShareWidget;
+	tradeOffer?: TradeOfferWidget;
 }
