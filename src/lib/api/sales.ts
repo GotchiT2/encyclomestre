@@ -1,5 +1,5 @@
 import { apiRequest, type RequestOptions } from './client';
-import type { SaleListing } from '$lib/types';
+import type { SaleBid, SaleListing } from '$lib/types';
 
 export const getSales = (sellerId: string, options?: RequestOptions) =>
 	apiRequest<SaleListing[]>(`/sales?sellerId=${encodeURIComponent(sellerId)}`, options);
@@ -17,3 +17,9 @@ export const getMarketListings = (
 	if (input.maxPrice) parameters.set('maxPrice', String(input.maxPrice));
 	return apiRequest<SaleListing[]>(`/sales?${parameters}`, options);
 };
+
+export const getSale = (id: string, options?: RequestOptions) =>
+	apiRequest<SaleListing>(`/sales/${encodeURIComponent(id)}`, options);
+
+export const getSaleBids = (id: string, options?: RequestOptions) =>
+	apiRequest<SaleBid[]>(`/sales/${encodeURIComponent(id)}/bids`, options);

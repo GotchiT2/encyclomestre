@@ -9,3 +9,11 @@ export interface SaleListing {
 	bidCount?: number;
 	status?: 'active' | 'sold' | 'cancelled';
 }
+
+export interface SaleBid {
+	id: string;
+	saleId: string;
+	bidderName: string;
+	amount: number;
+	createdAt: string;
+}
