@@ -66,6 +66,22 @@ const sales: SaleListing[] = [
 		price: 65,
 		currency: 'EUR',
 		type: 'auction'
+	},
+	{
+		id: 'sale-003',
+		sellerId: 'friend-0',
+		cardId: 'girls-generation-2',
+		price: 54,
+		currency: 'EUR',
+		type: 'auction'
+	},
+	{
+		id: 'sale-004',
+		sellerId: 'friend-1',
+		cardId: 'blackpink-1',
+		price: 39,
+		currency: 'EUR',
+		type: 'direct'
 	}
 ];
 const wishlist = new Map<string, WishlistEntry[]>([
@@ -184,6 +200,40 @@ for (const [index, username] of [
 		updatedAt: now
 	});
 }
+
+profileSettings.set('friend-0', {
+	username: 'SoneS9',
+	avatarCardId: 'girls-generation-2',
+	accentColor: '#C19A6B',
+	bioTags: ['collection', 'generation-2'],
+	showcases: [
+		{
+			id: 'friend-0-gallery-1',
+			title: 'Pièces favorites',
+			cardIds: ['girls-generation-2', 'twice-groupe-1', 'kara-groupe-1']
+		}
+	],
+	wantedCardIds: ['girls-generation-1', 'red-velvet-1'],
+	nsfwEnabled: false,
+	censoredKeywords: []
+});
+
+profileSettings.set('friend-1', {
+	username: 'TaeyeonFan',
+	avatarCardId: 'blackpink-1',
+	accentColor: '#A855F7',
+	bioTags: ['vocal', 'full-art'],
+	showcases: [
+		{
+			id: 'friend-1-gallery-1',
+			title: 'Archives en lumière',
+			cardIds: ['blackpink-1', 'red-velvet-1']
+		}
+	],
+	wantedCardIds: ['girls-generation-1', '2ne1-1'],
+	nsfwEnabled: false,
+	censoredKeywords: []
+});
 
 friendships.set('demo-user', [
 	{
@@ -667,7 +717,12 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const [, userId] = profileSummaryMatch;
 		if (!users.has(decodeURIComponent(userId)))
 			return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
-		const ownedCards = mockCards.filter((card) => card.ownedCount > 0);
+		const id = decodeURIComponent(userId);
+		const ownedCards = mockCards.filter((card) =>
+			id === 'demo-user'
+				? card.ownedCount > 0
+				: card.friendsWhoOwn.some((friend) => friend.friendId === id)
+		);
 		return json({
 			ownedCards: ownedCards.length,
 			totalCopies: ownedCards.reduce((total, card) => total + card.ownedCount, 0),

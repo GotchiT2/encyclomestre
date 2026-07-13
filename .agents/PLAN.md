@@ -187,5 +187,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 5. `feat(achievements): build progression registry`
 6. `feat(leaderboard): build competitive rankings`
 
+- [x] Aligner les profils publics sur le cabinet avec vitrines, recherches, ventes et collection filtrable — `feat(friends): align public profiles with showcase and collection tabs`
+
 - [x] Démarrer le registre d’amis, ses invitations et raccourcis sociaux — `feat(friends): build social friend registry`
 - [x] Ajouter les profils publics et collections des amis — `feat(friends): show friend profiles and collections`
