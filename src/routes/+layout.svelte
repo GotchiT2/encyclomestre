@@ -31,6 +31,7 @@
 		{ href: '/friends', label: 'navigation.friends', icon: UsersIcon },
 		{ href: '/messages', label: 'navigation.messages', icon: MessageCircleIcon },
 		{ href: '/market', label: 'navigation.market', icon: StoreIcon },
+		{ href: '/guild', label: 'navigation.guild', icon: UsersIcon },
 		{ href: '/wishlists', label: 'navigation.wishlist', icon: HeartIcon },
 		{ href: '/trades', label: 'navigation.trades', icon: HandshakeIcon },
 		{ href: '/boosters', label: 'navigation.boosters', icon: PackageOpenIcon }

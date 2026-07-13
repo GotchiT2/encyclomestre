@@ -12,6 +12,7 @@
 		"friends": "Amis",
 		"messages": "Messages",
 		"market": "Marché",
+		"guild": "Guilde",
 		"trades": "Échanges",
 		"boosters": "Paquets",
 		"profile": "Mon profil",
@@ -315,6 +316,17 @@
 		"metric_high": "Maximum",
 		"none": "Aucun",
 		"action_hint": "La confirmation de cette action sera disponible avec le cycle complet du marché."
+	},
+	"guild": {
+		"eyebrow": "Espace collectif",
+		"title": "Ma guilde",
+		"description": "Coordonnez la collection et les échanges avec votre groupe.",
+		"objective": "Objectif collectif",
+		"objective_title": "Compléter les archives de génération 2",
+		"objective_description": "Chaque carte ajoutée par les membres rapproche la guilde de son objectif.",
+		"progress": "64 % complété",
+		"open_channel": "Ouvrir le canal de guilde",
+		"members": "Membres"
 	},
 	"friends": {
 		"eyebrow": "Réseau social",
