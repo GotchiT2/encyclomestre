@@ -776,10 +776,29 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	if (normalizedMethod === 'GET' && pathname === '/sales') {
 		const sellerId = url.searchParams.get('sellerId');
 		const cardId = url.searchParams.get('cardId');
+		const query = url.searchParams.get('q')?.toLocaleLowerCase('fr-FR') ?? '';
+		const type = url.searchParams.get('type');
+		const maxPrice = Number(url.searchParams.get('maxPrice') ?? 0);
 		return json(
-			sales.filter(
-				(sale) => (!sellerId || sale.sellerId === sellerId) && (!cardId || sale.cardId === cardId)
-			)
+			sales
+				.filter(
+					(sale) =>
+						(!sellerId || sale.sellerId === sellerId) &&
+						(!cardId || sale.cardId === cardId) &&
+						(!type || sale.type === type) &&
+						(!maxPrice || sale.price <= maxPrice) &&
+						(!query ||
+							mockCards
+								.find((card) => card.id === sale.cardId)
+								?.title.toLocaleLowerCase('fr-FR')
+								.includes(query) ||
+							users.get(sale.sellerId)?.username.toLocaleLowerCase('fr-FR').includes(query))
+				)
+				.map((sale) => ({
+					...sale,
+					sellerName: users.get(sale.sellerId)?.username ?? sale.sellerId,
+					status: 'active'
+				}))
 		);
 	}
 	if (normalizedMethod === 'GET' && pathname === '/trades') {
