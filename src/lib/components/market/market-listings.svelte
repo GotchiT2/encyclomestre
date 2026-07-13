@@ -7,9 +7,18 @@
 	let {
 		listings,
 		cards,
-		onAction
-	}: { listings: SaleListing[]; cards: CardRecord[]; onAction: (listing: SaleListing) => void } =
-		$props();
+		onAction,
+		showAction = true,
+		favoriteIds = [],
+		onToggleFavorite
+	}: {
+		listings: SaleListing[];
+		cards: CardRecord[];
+		onAction: (listing: SaleListing) => void;
+		showAction?: boolean;
+		favoriteIds?: string[];
+		onToggleFavorite?: (listingId: string) => void;
+	} = $props();
 	const cardsById = $derived(new Map(cards.map((card) => [card.id, card])));
 </script>
 
@@ -24,6 +33,13 @@
 					aria-label={$_('market.open_listing')}
 				></a>
 				<div class="mt-2 border-t border-dashed border-primary/20 pt-2">
+					<Button
+						size="icon-xs"
+						variant={favoriteIds.includes(listing.id) ? 'default' : 'outline'}
+						class="relative z-20 float-right"
+						aria-label={$_('market.favorite')}
+						onclick={() => onToggleFavorite?.(listing.id)}>♥</Button
+					>
 					<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 						{listing.type === 'auction' ? $_('market.auction') : $_('market.direct_sale')}
 					</p>
@@ -34,13 +50,13 @@
 					<p class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
 						@{listing.sellerName}
 					</p>
-					<Button
-						size="sm"
-						variant="outline"
-						class="relative z-20 mt-2 w-full"
-						onclick={() => onAction(listing)}
-						>{listing.type === 'auction' ? $_('market.bid') : $_('market.buy')}</Button
-					>
+					{#if showAction}<Button
+							size="sm"
+							variant="outline"
+							class="relative z-20 mt-2 w-full"
+							onclick={() => onAction(listing)}
+							>{listing.type === 'auction' ? $_('market.bid') : $_('market.buy')}</Button
+						>{/if}
 				</div>
 			</article>{/if}
 	{/each}

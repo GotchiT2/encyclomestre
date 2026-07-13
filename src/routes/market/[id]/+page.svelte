@@ -9,6 +9,7 @@
 	let { data }: { data: PageData } = $props();
 	let showPrices = $state(false);
 	let bidAmount = $state(0);
+	let favoriteIds = $state<string[]>([]);
 
 	function minimumBid(currentBid: number) {
 		return Math.ceil(currentBid * 1.1);
@@ -17,6 +18,13 @@
 	function updateBid(value: string, currentBid: number) {
 		const minimum = minimumBid(currentBid);
 		bidAmount = Math.max(minimum, Number(value) || minimum);
+	}
+
+	function toggleFavorite(id: string) {
+		favoriteIds = favoriteIds.includes(id)
+			? favoriteIds.filter((item) => item !== id)
+			: [...favoriteIds, id];
+		localStorage.setItem('market-favorites', JSON.stringify(favoriteIds));
 	}
 
 	async function submitBid(saleId: string, currentBid: number) {
@@ -43,12 +51,19 @@
 								{$_('market.sold_by')} @{sale.sellerName}
 							</p>
 						</div>
-						<Button
-							size="icon-sm"
-							variant="outline"
-							aria-label={$_('market.price_history')}
-							onclick={() => (showPrices = true)}>↗</Button
-						>
+						<div class="flex shrink-0 items-center gap-2">
+							<Button
+								size="icon-sm"
+								variant="outline"
+								aria-label={$_('market.price_history')}
+								onclick={() => (showPrices = true)}>↗</Button
+							><Button
+								size="sm"
+								variant={favoriteIds.includes(sale.id) ? 'default' : 'outline'}
+								onclick={() => toggleFavorite(sale.id)}
+								>{favoriteIds.includes(sale.id) ? '♥' : '♡'} {$_('market.favorite')}</Button
+							>
+						</div>
 					</div>
 					<section class="mt-6 border-4 border-double border-primary/30 bg-card p-4">
 						<p class="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">

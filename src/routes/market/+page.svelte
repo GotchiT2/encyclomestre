@@ -16,8 +16,10 @@
 	let selectedListing = $state<SaleListing | null>(null);
 	let activeTab = $state<'all' | 'mine' | 'bids' | 'history'>('all');
 	let historyTab = $state<'sold' | 'bought'>('sold');
+	let favoriteIds = $state<string[]>([]);
 
 	onMount(async () => {
+		favoriteIds = JSON.parse(localStorage.getItem('market-favorites') ?? '[]');
 		cards = (await getCards({ page: 1, pageSize: 100 })).items;
 		await refresh();
 	});
@@ -38,6 +40,13 @@
 					: undefined
 		});
 		loading = false;
+	}
+
+	function toggleFavorite(id: string) {
+		favoriteIds = favoriteIds.includes(id)
+			? favoriteIds.filter((item) => item !== id)
+			: [...favoriteIds, id];
+		localStorage.setItem('market-favorites', JSON.stringify(favoriteIds));
 	}
 </script>
 
@@ -106,6 +115,9 @@
 		</p>{:else if listings.length}<MarketListings
 			{listings}
 			{cards}
+			showAction={activeTab === 'all' || activeTab === 'bids'}
+			{favoriteIds}
+			onToggleFavorite={toggleFavorite}
 			onAction={(listing) => (selectedListing = listing)}
 		/>{:else}<p
 			class="border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
