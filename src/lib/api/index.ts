@@ -4,6 +4,7 @@ export * from './cards';
 export * from './collection';
 export * from './client';
 export * from './mock';
+export * from './messages';
 export * from './profile';
 export * from './sales';
 export * from './trades';

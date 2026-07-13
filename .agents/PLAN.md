@@ -182,6 +182,8 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 
 1. `feat(friends): build social friend registry`
 2. `feat(messages): build conversations and guild shares`
+
+- [x] Créer la boîte de réception, les conversations mockées et les widgets de wishlist de guilde — `feat(messages): build conversations and guild shares`
 3. `feat(market): build listings and bidding flows`
 4. `feat(guild): build guild workspace`
 5. `feat(achievements): build progression registry`

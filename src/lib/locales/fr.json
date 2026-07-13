@@ -255,6 +255,13 @@
 		"page": "Page"
 	},
 	"messages": {
+		"description": "Échangez avec vos amis et consultez les partages de la guilde.",
+		"search": "Rechercher une conversation",
+		"conversations": "Conversations",
+		"guild_channel": "Canal de guilde",
+		"direct_channel": "Conversation directe",
+		"compose_placeholder": "Écrire un message…",
+		"send": "Envoyer",
 		"eyebrow": "Canal de Guilde",
 		"title": "Messages du registre",
 		"loading": "Lecture des transmissions…",
