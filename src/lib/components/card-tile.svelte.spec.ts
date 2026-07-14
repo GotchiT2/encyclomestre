@@ -30,6 +30,9 @@ describe('CardTile', () => {
 		await expect
 			.element(page.getByRole('link'))
 			.toHaveAttribute('href', '/cards/girls-generation-1');
+		await expect
+			.element(page.getByRole('link'))
+			.toHaveAttribute('data-sveltekit-preload-data', 'off');
 	});
 
 	it('renders the data inside the legendary full-art frame', async () => {

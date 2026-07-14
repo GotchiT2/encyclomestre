@@ -83,6 +83,7 @@
 	</div>
 	<a
 		href={resolve('/cards/[id]', { id: card.id })}
+		data-sveltekit-preload-data="off"
 		class="absolute inset-0 rounded-none outline-offset-[-4px] focus-visible:outline-2 focus-visible:outline-primary"
 		aria-label={card.title}
 		onclick={handleOpen}
