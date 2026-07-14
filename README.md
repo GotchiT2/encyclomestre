@@ -29,7 +29,7 @@ npm run dev
 npm run dev -- --open
 ```
 
-## Building
+
 
 To create a production version of your app:
 
@@ -40,3 +40,22 @@ npm run build
 You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+
+## DA
+### Colors
+- Dark blue : #080f19
+- Blue : #0a1422
+- Yellow : #feb823
+- Orange : #fd790c
+- Commune : #d3e4f8
+- Peu Commune : #1d71cf
+- Rare : #5c1dcf
+- Super Rare : #b41dcf
+- Ultra Rare : #cf7d1d
+- Légendaire : #cf1d1d
+- KTD : #1dcf47
+
+### Typos
+- Logo : DBacks Regular
+- Titles : Palatino Linotype Bold
+- Texts : Lato Regular
