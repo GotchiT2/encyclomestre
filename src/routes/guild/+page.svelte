@@ -7,7 +7,7 @@
 
 	const members = [
 		{ id: 'demo-user', name: 'collectionneur-demo', role: 'Membre' },
-		{ id: 'friend-0', name: 'SoneS9', role: 'Gardien' },
+		{ id: 'friend-0', name: 'SoneS9', role: 'Administrateur' },
 		{ id: 'friend-1', name: 'TaeyeonFan', role: 'Membre' }
 	];
 </script>

@@ -10,10 +10,8 @@ describe('landing page', () => {
 
 		await expect
 			.element(page.getByRole('heading', { level: 1 }))
-			.toHaveTextContent('Le savoir devient une carte.');
-		await expect
-			.element(page.getByRole('link', { name: 'Commencer le registre' }))
-			.toBeInTheDocument();
+			.toHaveTextContent('Collectionnez des cartes issues de Wikipédia.');
+		await expect.element(page.getByRole('link', { name: 'Créer un compte' })).toBeInTheDocument();
 		await expect.element(page.getByTestId('full-art-frame')).toHaveClass('max-w-sm');
 		await expect
 			.element(page.getByTestId('full-art-frame').getByTestId('card-tile'))

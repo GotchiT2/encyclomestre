@@ -18,6 +18,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Recomposer l’accueil, les galeries, le détail de carte et la chambre de booster — `feat(ui): reforge core card experiences`
 - [x] Harmoniser les espaces marché, échanges, social, profil et paramètres — `feat(ui): harmonize forge workspaces`
 - [x] Valider la refonte complète, les tests et les états responsive — `test(ui): validate forge astral interactions`
+- [x] Neutraliser les textes ésotériques et les références K-pop de l’interface — `fix(i18n): clarify factual interface copy`
 
 ## Plan de support — atomisation de l’interface
 

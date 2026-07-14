@@ -139,8 +139,8 @@ const wishlists = new Map<string, WishlistRegistry[]>([
 			{
 				id: 'desiderata-priorities',
 				userId: 'demo-user',
-				title: 'Priorités K-Pop',
-				description: 'Les pièces à obtenir avant la prochaine lune.',
+				title: 'Cartes prioritaires',
+				description: 'Les cartes à obtenir en priorité.',
 				cardIds: ['girls-generation-1', 'blackpink-1', 'red-velvet-1'],
 				createdAt: now,
 				updatedAt: now
@@ -149,7 +149,7 @@ const wishlists = new Map<string, WishlistRegistry[]>([
 				id: 'desiderata-generation-2',
 				userId: 'demo-user',
 				title: 'Génération 2',
-				description: 'Archives de la seconde génération.',
+				description: 'Cartes de la seconde génération.',
 				cardIds: ['girls-generation-2', '2ne1-1', 'kara-groupe-1'],
 				createdAt: now,
 				updatedAt: now
@@ -162,7 +162,7 @@ const conversations: Conversation[] = [
 	{
 		id: 'conversation-guild',
 		kind: 'guild',
-		title: 'Guilde du Registre',
+		title: 'Guilde WikiForge',
 		participantIds: ['demo-user', 'friend-0', 'friend-1'],
 		preview: 'Les souhaits de la guilde sont disponibles.',
 		unreadCount: 1,
@@ -192,8 +192,8 @@ const messages = new Map<string, MessageRecord[]>([
 				reactions: [{ emoji: '❤️', userIds: ['demo-user'] }],
 				wishlistShare: {
 					registryId: 'desiderata-priorities',
-					title: 'Priorités K-Pop',
-					description: 'Les pièces à obtenir avant la prochaine lune.',
+					title: 'Cartes prioritaires',
+					description: 'Les cartes à obtenir en priorité.',
 					cardCount: 3
 				}
 			}
@@ -284,7 +284,7 @@ for (const [index, username] of [
 		displayName: username,
 		email: `${username.toLowerCase()}@example.test`,
 		avatarUrl: mockCards[index].imageUrl,
-		bio: 'Collectionneur du registre impérial.',
+		bio: 'Collectionneur de cartes.',
 		role: 'user',
 		preferences: { ...defaultPreferences },
 		createdAt: '2025-01-01T00:00:00.000Z',
@@ -300,7 +300,7 @@ profileSettings.set('friend-0', {
 	showcases: [
 		{
 			id: 'friend-0-gallery-1',
-			title: 'Pièces favorites',
+			title: 'Cartes favorites',
 			cardIds: ['girls-generation-2', 'twice-groupe-1', 'kara-groupe-1']
 		}
 	],
@@ -317,7 +317,7 @@ profileSettings.set('friend-1', {
 	showcases: [
 		{
 			id: 'friend-1-gallery-1',
-			title: 'Archives en lumière',
+			title: 'Sélection principale',
 			cardIds: ['blackpink-1', 'red-velvet-1']
 		}
 	],
@@ -609,7 +609,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const userId = url.searchParams.get('userId') ?? 'demo-user';
 		const registries = wishlists.get(userId) ?? [];
 		const registry = registries.find((entry) => entry.id === decodeURIComponent(encodedId));
-		if (!registry) return error(404, 'Registre introuvable.', 'WISHLIST_NOT_FOUND');
+		if (!registry) return error(404, 'Wishlist introuvable.', 'WISHLIST_NOT_FOUND');
 		if (normalizedMethod === 'GET' && !action) return json(registry);
 		if (normalizedMethod === 'DELETE' && !action) {
 			wishlists.set(
