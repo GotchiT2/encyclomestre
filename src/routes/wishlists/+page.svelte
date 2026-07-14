@@ -1,5 +1,7 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-navigation-without-resolve -- dynamic query parameters are appended to resolved routes */
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page as currentPage } from '$app/state';
 	import { onMount } from 'svelte';
 	import { currentSession } from '$lib/auth/session';
@@ -130,7 +132,7 @@
 		if (!tradeCard || !tradeFriend) return;
 		tradeOpen = false;
 		goto(
-			`/trades?partner=${encodeURIComponent(tradeFriend.friendId)}&cards=${encodeURIComponent(tradeCardIds.join(','))}`
+			`${resolve('/trades')}?partner=${encodeURIComponent(tradeFriend.friendId)}&cards=${encodeURIComponent(tradeCardIds.join(','))}`
 		);
 	}
 
@@ -145,7 +147,7 @@
 		if (!activeRegistry) return;
 		await shareWishlistRegistry(activeRegistry.id, userId, 'guild');
 		shareOpen = false;
-		await goto('/messages');
+		await goto(resolve('/messages'));
 	}
 
 	async function importRegistryLink(sealUrl: string) {

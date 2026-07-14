@@ -48,6 +48,7 @@
 </script>
 
 <script lang="ts">
+	/* eslint-disable svelte/no-navigation-without-resolve -- external links intentionally bypass SvelteKit resolution */
 	import { resolve } from '$app/paths';
 
 	let {

@@ -1,5 +1,7 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-navigation-without-resolve -- dynamic query parameters are appended to resolved routes */
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { currentSession } from '$lib/auth/session';
 	import { getFriends, respondToFriendRequest, removeFriend } from '$lib/api';
@@ -49,7 +51,10 @@
 		</p>{:else if visibleFriendships.length}<div class="grid gap-3 lg:grid-cols-2">
 			{#each visibleFriendships as friendship (friendship.id)}<article class="forge-panel p-4">
 					<div class="flex items-center justify-between gap-3">
-						<a href={`/users/${friendship.user.id}`} class="flex min-w-0 items-center gap-3">
+						<a
+							href={resolve('/users/[id]', { id: friendship.user.id })}
+							class="flex min-w-0 items-center gap-3"
+						>
 							<img
 								src={friendship.user.avatarUrl ?? ''}
 								alt=""
@@ -75,12 +80,12 @@
 								>{:else}<Button
 									size="sm"
 									variant="outline"
-									onclick={() => goto(`/trades?partner=${friendship.user.id}`)}
+									onclick={() => goto(`${resolve('/trades')}?partner=${friendship.user.id}`)}
 									>{$_('friends.trade')}</Button
 								><Button
 									size="sm"
 									variant="outline"
-									onclick={() => goto(`/messages?user=${friendship.user.id}`)}
+									onclick={() => goto(`${resolve('/messages')}?user=${friendship.user.id}`)}
 									>{$_('friends.message')}</Button
 								>{/if}<Button size="sm" variant="destructive" onclick={() => remove(friendship.id)}
 								>{$_('friends.remove')}</Button

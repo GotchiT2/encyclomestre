@@ -17,7 +17,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Installer les fondations Forge Astrale et la navigation de jeu responsive — `feat(ui): build forge astral design foundation`
 - [x] Recomposer l’accueil, les galeries, le détail de carte et la chambre de booster — `feat(ui): reforge core card experiences`
 - [x] Harmoniser les espaces marché, échanges, social, profil et paramètres — `feat(ui): harmonize forge workspaces`
-- [ ] Valider la refonte complète, les tests et les états responsive
+- [x] Valider la refonte complète, les tests et les états responsive — `test(ui): validate forge astral interactions`
 
 ## Plan de support — atomisation de l’interface
 

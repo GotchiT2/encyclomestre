@@ -2,7 +2,6 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { register } from '$lib/api';
-	import { login } from '$lib/api';
 	import { persistSession } from '$lib/auth/session';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';

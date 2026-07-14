@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
@@ -28,7 +29,7 @@
 		{#if card}<article class="forge-panel-flat relative p-2">
 				<CardTile {card} showFriendOwners={false} />
 				<a
-					href={`/market/${listing.id}`}
+					href={resolve('/market/[id]', { id: listing.id })}
 					class="absolute inset-x-0 top-0 z-10 aspect-[5/7]"
 					aria-label={$_('market.open_listing')}
 				></a>

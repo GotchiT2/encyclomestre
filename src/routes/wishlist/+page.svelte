@@ -67,11 +67,7 @@
 	);
 
 	$effect(() => {
-		query;
-		selectedRarities;
-		priority;
-		hasAlert;
-		page = 1;
+		if (query || selectedRarities.length || priority || hasAlert || page !== 1) page = 1;
 	});
 
 	onMount(async () => {

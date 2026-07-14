@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { Button } from '$lib/components/ui/button';
 	import ForgePanel from '$lib/components/layout/forge-panel.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
@@ -39,9 +40,9 @@
 				{#each members as member (member.id)}<li
 						class="flex items-center justify-between gap-3 py-3"
 					>
-						<a href={`/users/${member.id}`} class="font-serif font-bold">@{member.name}</a><span
-							class="forge-label text-[9px]">{member.role}</span
-						>
+						<a href={resolve('/users/[id]', { id: member.id })} class="font-serif font-bold"
+							>@{member.name}</a
+						><span class="forge-label text-[9px]">{member.role}</span>
 					</li>{/each}
 			</ul></ForgePanel
 		>

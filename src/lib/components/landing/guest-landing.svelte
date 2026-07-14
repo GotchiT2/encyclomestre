@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { Button } from '$lib/components/ui/button';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import ForgePanel from '$lib/components/layout/forge-panel.svelte';
@@ -53,7 +54,7 @@
 		</div>
 		<ForgePanel class="absolute right-3 bottom-4 z-30 hidden p-3 sm:block">
 			<a
-				href="/boosters"
+				href={resolve('/boosters')}
 				class="flex items-center gap-2 text-[10px] font-bold tracking-widest text-primary uppercase"
 			>
 				<PackageOpenIcon class="size-4" />{$_('landing.openPack')}

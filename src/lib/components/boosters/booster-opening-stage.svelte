@@ -6,7 +6,6 @@
 	import { _ } from '$lib/i18n';
 	import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
-	import PackageOpenIcon from '@lucide/svelte/icons/package-open';
 	import type { CardRecord } from '$lib/types';
 
 	let {
@@ -27,14 +26,9 @@
 		onReset: () => void;
 	} = $props();
 
-	let currentIndex = $state(0);
+	let currentIndex = $derived(cards?.length ? 0 : 0);
 	const currentCard = $derived(cards?.[currentIndex]);
 	const complete = $derived(Boolean(cards?.length && currentIndex === cards.length - 1));
-
-	$effect(() => {
-		cards;
-		currentIndex = 0;
-	});
 </script>
 
 <ForgePanel class="relative min-h-[34rem] overflow-hidden p-5 sm:p-8">
@@ -53,7 +47,7 @@
 			<p class="forge-label">{opening ? $_('boosters.opening') : $_('boosters.chamberReady')}</p>
 			<h2 class="mt-3 font-serif text-3xl font-bold sm:text-4xl">{$_('boosters.stageTitle')}</h2>
 			<button
-				class="forge-energy-orbit mt-4 w-56 cursor-pointer border-0 bg-transparent p-4 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45 sm:w-72"
+				class="forge-energy-orbit mt-4 flex w-56 cursor-pointer flex-col items-center border-0 bg-transparent p-4 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45 sm:w-72"
 				disabled={!available || opening}
 				onclick={onOpen}
 				aria-label={opening ? $_('boosters.opening') : $_('boosters.open')}
@@ -65,10 +59,11 @@
 					class:forge-booster-idle={!opening}
 					class:animate-pulse={opening}
 				/>
+				<span
+					class="mt-3 border border-accent bg-gradient-to-b from-primary to-accent px-6 py-3 text-[11px] font-bold tracking-[0.12em] text-primary-foreground uppercase"
+					>{opening ? $_('boosters.opening') : $_('boosters.open')}</span
+				>
 			</button>
-			<Button disabled={!available || opening} onclick={onOpen} size="lg"
-				><PackageOpenIcon />{opening ? $_('boosters.opening') : $_('boosters.open')}</Button
-			>
 			{#if !available}<p class="mt-4 text-sm text-muted-foreground">
 					{$_('boosters.emptyReserve')}
 				</p>{/if}
@@ -92,7 +87,7 @@
 					aria-label={$_('boosters.previous')}><ChevronLeftIcon /></Button
 				>
 				<div class="flex gap-1" aria-hidden="true">
-					{#each cards as _, index (index)}<span
+					{#each cards as revealedCard, index (revealedCard.id)}<span
 							class="h-1.5 w-7"
 							class:bg-primary={index <= currentIndex}
 							class:bg-secondary={index > currentIndex}
