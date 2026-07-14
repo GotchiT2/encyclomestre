@@ -2,6 +2,7 @@
 	import TagEditor from '$lib/components/collection/tag-editor.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
+	import { applyWikiForgeTag, removeWikiForgeTag } from '$lib/api';
 	import type { CollectionTag, CollectionTagAssignments } from '$lib/types';
 
 	let {
@@ -17,8 +18,9 @@
 	let tagToAdd = $state('');
 	const assignedTags = $derived(tags.filter((tag) => (assignments[cardId] ?? []).includes(tag.id)));
 
-	function addTag() {
+	async function addTag() {
 		if (!tagToAdd) return;
+		await applyWikiForgeTag(tagToAdd, [cardId]);
 		assignments = {
 			...assignments,
 			[cardId]: [...new Set([...(assignments[cardId] ?? []), tagToAdd])]
@@ -26,7 +28,8 @@
 		tagToAdd = '';
 	}
 
-	function removeTag(tagId: string) {
+	async function removeTag(tagId: string) {
+		await removeWikiForgeTag(tagId, [cardId]);
 		assignments = {
 			...assignments,
 			[cardId]: (assignments[cardId] ?? []).filter((id) => id !== tagId)

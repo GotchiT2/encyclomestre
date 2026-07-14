@@ -3,6 +3,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import * as Sheet from '$lib/components/ui/sheet';
 	import { _ } from '$lib/i18n';
+	import { createWikiForgeTag, deleteWikiForgeTag, updateWikiForgeTag } from '$lib/api';
 	import type { CollectionTag, CollectionTagAssignments } from '$lib/types';
 
 	let {
@@ -21,28 +22,29 @@
 	let editingTagName = $state('');
 	let editingTagColor = $state('#C19A6B');
 
-	function createTag() {
+	async function createTag() {
 		const name = draftTagName.trim();
 		if (
 			!name ||
 			tags.some((tag) => tag.name.localeCompare(name, 'fr', { sensitivity: 'accent' }) === 0)
 		)
 			return;
-		tags = [...tags, { id: crypto.randomUUID(), name, color: draftTagColor }];
+		const created = await createWikiForgeTag({ name, color: draftTagColor });
+		tags = [...tags, created];
 		draftTagName = '';
 		draftTagColor = '#C19A6B';
 	}
 
-	function saveTag() {
+	async function saveTag() {
 		const name = editingTagName.trim();
 		if (!editingTagId || !name) return;
-		tags = tags.map((tag) =>
-			tag.id === editingTagId ? { ...tag, name, color: editingTagColor } : tag
-		);
+		const updated = await updateWikiForgeTag(editingTagId, { name, color: editingTagColor });
+		tags = tags.map((tag) => (tag.id === editingTagId ? updated : tag));
 		editingTagId = null;
 	}
 
-	function deleteTag(tagId: string) {
+	async function deleteTag(tagId: string) {
+		await deleteWikiForgeTag(tagId);
 		tags = tags.filter((tag) => tag.id !== tagId);
 		assignments = Object.fromEntries(
 			Object.entries(assignments)

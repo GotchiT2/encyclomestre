@@ -24,6 +24,10 @@ export interface Card {
 	globalSupply: number;
 	friendsWhoOwn: FriendOwnerInfo[];
 	isFullArt?: boolean;
+	category?: string;
+	qScore?: number;
+	acquiredAt?: string;
+	collectionTags?: import('./tag').CollectionTag[];
 }
 
 export interface CardRecord extends Card {

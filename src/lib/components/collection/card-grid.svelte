@@ -11,7 +11,8 @@
 		assignments,
 		isSelectionMode,
 		selectedCardIds,
-		onToggleCard
+		onToggleCard,
+		onOpenCard
 	}: {
 		cards: CardRecord[];
 		tags: CollectionTag[];
@@ -19,6 +20,7 @@
 		isSelectionMode: boolean;
 		selectedCardIds: string[];
 		onToggleCard: (cardId: string) => void;
+		onOpenCard?: (card: CardRecord) => void;
 	} = $props();
 
 	function cardTags(cardId: string) {
@@ -34,6 +36,7 @@
 				{card}
 				tags={cardTags(card.id)}
 				showFriendOwners={false}
+				onOpen={isSelectionMode ? undefined : onOpenCard}
 			/>{#if isSelectionMode}<Button
 					variant="ghost"
 					class={cn(

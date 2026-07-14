@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import CardGrid from '$lib/components/collection/card-grid.svelte';
+	import CardDetailModal from '$lib/components/cards/card-detail-modal.svelte';
 	import FilterControls from '$lib/components/collection/filter-controls.svelte';
 	import SelectionPanel from '$lib/components/collection/selection-panel.svelte';
 	import TagEditor from '$lib/components/collection/tag-editor.svelte';
@@ -10,6 +11,7 @@
 	} from '$lib/collection/tag-persistence';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
+	import { applyWikiForgeTag } from '$lib/api';
 	import type { CardRarity, CardRecord, CollectionTag, CollectionTagAssignments } from '$lib/types';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
@@ -37,9 +39,21 @@
 	let bulkTagId = $state('');
 	let isTagEditorOpen = $state(false);
 	let hasHydrated = $state(false);
+	let selectedCard = $state<CardRecord | null>(null);
+	let wishlistedCardIds = $state<string[]>([]);
 
-	onMount(() => {
+	onMount(async () => {
 		({ tags, assignments } = restoreCollectionTagState(localStorage));
+		wishlistedCardIds = JSON.parse(localStorage.getItem('encyclomestre.wishlist-cards') ?? '[]');
+		const collection = await data.collection;
+		const apiTags = collection.items.flatMap((card) => card.collectionTags ?? []);
+		tags = [...new Map([...tags, ...apiTags].map((tag) => [tag.id, tag])).values()];
+		assignments = {
+			...assignments,
+			...Object.fromEntries(
+				collection.items.map((card) => [card.id, (card.collectionTags ?? []).map((tag) => tag.id)])
+			)
+		};
 		hasHydrated = true;
 	});
 
@@ -70,14 +84,22 @@
 			: [...new Set([...selectedCardIds, ...visibleCardIds])];
 	}
 
-	function applyTagToSelection() {
+	async function applyTagToSelection() {
 		if (!bulkTagId || !selectedCardIds.length) return;
+		await applyWikiForgeTag(bulkTagId, selectedCardIds);
 		const nextAssignments = { ...assignments };
 		for (const cardId of selectedCardIds) {
 			nextAssignments[cardId] = [...new Set([...(nextAssignments[cardId] ?? []), bulkTagId])];
 		}
 		assignments = nextAssignments;
 		selectedCardIds = [];
+	}
+
+	function toggleWishlist(cardId: string) {
+		wishlistedCardIds = wishlistedCardIds.includes(cardId)
+			? wishlistedCardIds.filter((id) => id !== cardId)
+			: [...wishlistedCardIds, cardId];
+		localStorage.setItem('encyclomestre.wishlist-cards', JSON.stringify(wishlistedCardIds));
 	}
 
 	function clearFilters() {
@@ -166,6 +188,7 @@
 				{isSelectionMode}
 				{selectedCardIds}
 				onToggleCard={toggleCardSelection}
+				onOpenCard={(card) => (selectedCard = card)}
 			/>
 		{:else}<p class="border border-primary/30 bg-card p-5 font-serif italic text-muted-foreground">
 				{$_('collection.empty')}
@@ -175,7 +198,7 @@
 				{tags}
 				bind:bulkTagId
 				onSelectAll={() => toggleSelectAll(visibleCards(collection.items))}
-				onApply={applyTagToSelection}
+				onApply={() => void applyTagToSelection()}
 				onCancel={() => {
 					isSelectionMode = false;
 					selectedCardIds = [];
@@ -187,3 +210,15 @@
 			{$_('collection.error')}
 		</p>{/await}
 </section>
+
+{#if selectedCard}
+	<CardDetailModal
+		card={selectedCard}
+		owned
+		isWishlisted={wishlistedCardIds.includes(selectedCard.id)}
+		bind:tags
+		bind:assignments
+		onToggleWishlist={() => toggleWishlist(selectedCard!.id)}
+		onClose={() => (selectedCard = null)}
+	/>
+{/if}
