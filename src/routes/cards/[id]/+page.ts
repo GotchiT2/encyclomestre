@@ -1,8 +1,8 @@
 import type { PageLoad } from './$types';
-import { getCard, getCardPriceHistory, getCardSales } from '$lib/api';
+import { getWikiForgeCard, toCardRecord } from '$lib/api';
 
 export const load: PageLoad = ({ params, fetch }) => ({
-	card: getCard(params.id, { fetch }),
-	priceHistory: getCardPriceHistory(params.id, { fetch }),
-	sales: getCardSales(params.id, { fetch })
+	card: getWikiForgeCard(params.id, { fetch }).then(toCardRecord),
+	sales: Promise.resolve([]),
+	priceHistory: Promise.resolve({ cardId: params.id, points: [] })
 });

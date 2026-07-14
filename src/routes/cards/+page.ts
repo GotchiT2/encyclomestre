@@ -1,5 +1,5 @@
 import type { PageLoad } from './$types';
-import { getCards } from '$lib/api';
+import { getWikiForgeCards, toCardPage } from '$lib/api';
 import type { CardRarity } from '$lib/types';
 
 const rarities = new Set<CardRarity>([
@@ -13,16 +13,11 @@ const rarities = new Set<CardRarity>([
 
 export const load: PageLoad = ({ fetch, url }) => {
 	const query = url.searchParams.get('q')?.trim() ?? '';
-	const candidateRarity = url.searchParams.get('rarity');
-	const rarity =
-		candidateRarity && rarities.has(candidateRarity as CardRarity)
-			? (candidateRarity as CardRarity)
-			: undefined;
+	const selectedRarities = url.searchParams.getAll('rarity').filter((rarity) => rarities.has(rarity as CardRarity)) as CardRarity[];
+	const sortBy = url.searchParams.get('sortBy') === 'name' ? 'name' : 'rarity';
+	const sortDirection = url.searchParams.get('sortDirection') === 'ASC' ? 'ASC' : 'DESC';
 	return {
-		cards: getCards(
-			{ page: Math.max(1, Number(url.searchParams.get('page') ?? 1)), pageSize: 12, query, rarity },
-			{ fetch }
-		),
-		filters: { query, rarity }
+		cards: getWikiForgeCards({ page: Math.max(0, Number(url.searchParams.get('page') ?? 1) - 1), size: 50, q: query, sortBy, sortDirection, rarities: selectedRarities.map((rarity) => ({ 'Commune': 'C', 'Peu Commune': 'PC', 'Rare': 'R', 'Super-Rare': 'SR', 'Ultra-Rare': 'UR', 'Légendaire': 'L' })[rarity] as 'C' | 'PC' | 'R' | 'SR' | 'UR' | 'L') }, { fetch }).then(toCardPage),
+		filters: { query, selectedRarities, sortBy, sortDirection }
 	};
 };

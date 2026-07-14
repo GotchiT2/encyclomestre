@@ -4,84 +4,10 @@
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
 	import type { PageData } from './$types';
+	import type { CardRarity } from '$lib/types';
 	let { data }: { data: PageData } = $props();
-	const rarities = ['Légendaire', 'Ultra-Rare', 'Super-Rare', 'Rare', 'Peu Commune', 'Commune'];
-
-	function pageHref(page: number) {
-		const params = new URLSearchParams({ page: String(page) });
-		if (data.filters.query) params.set('q', data.filters.query);
-		if (data.filters.rarity) params.set('rarity', data.filters.rarity);
-		return `/cards?${params}`;
-	}
+	const rarities: CardRarity[] = ['Commune', 'Peu Commune', 'Rare', 'Super-Rare', 'Ultra-Rare', 'Légendaire'];
+	function pageHref(page: number) { const params = new URLSearchParams({ page: String(page), q: data.filters.query, sortBy: data.filters.sortBy, sortDirection: data.filters.sortDirection }); data.filters.selectedRarities.forEach((rarity) => params.append('rarity', rarity)); return `/cards?${params}`; }
 </script>
 
-<section class="flex flex-col gap-8">
-	<header class="border-b border-dashed border-primary/30 pb-6">
-		<p class="font-mono text-[10px] uppercase tracking-[0.24em] text-primary">
-			{$_('codex.eyebrow')}
-		</p>
-		<h1
-			class="mt-3 font-serif text-4xl font-black uppercase tracking-tight text-foreground sm:text-5xl"
-		>
-			{$_('codex.title')}
-		</h1>
-		<p class="mt-3 max-w-2xl font-serif italic leading-relaxed text-muted-foreground">
-			{$_('codex.description')}
-		</p>
-		<Button variant="outline" class="mt-5 w-full sm:w-auto" disabled>{$_('codex.social')}</Button>
-	</header>
-	<form
-		method="GET"
-		class="grid gap-2 border-4 border-double border-primary/30 bg-card p-3 sm:grid-cols-[minmax(0,1fr)_12rem_auto]"
-	>
-		<Input
-			name="q"
-			value={data.filters.query}
-			placeholder={$_('codex.search')}
-			aria-label={$_('codex.search')}
-		/>
-		<select
-			name="rarity"
-			class="h-10 border-2 border-primary/40 bg-background px-3 font-mono text-xs uppercase tracking-wider text-primary outline-none focus:border-primary"
-			aria-label={$_('codex.rarities')}
-			><option value="">{$_('codex.allRarities')}</option>{#each rarities as rarity (rarity)}<option
-					value={rarity}
-					selected={data.filters.rarity === rarity}>{rarity}</option
-				>{/each}</select
-		>
-		<Button type="submit">{$_('common.filter')}</Button>
-	</form>
-	{#await data.cards}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-			{$_('codex.loading')}
-		</p>
-	{:then result}
-		<div
-			class="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7"
-		>
-			{#each result.items as card (card.id)}<CardTile {card} />{/each}
-		</div>
-		<nav
-			class="flex items-center justify-between border-t border-dashed border-primary/30 pt-5"
-			aria-label={$_('codex.page')}
-		>
-			<Button
-				href={pageHref(Math.max(1, result.meta.page - 1))}
-				variant="outline"
-				disabled={result.meta.page === 1}>{$_('codex.previous')}</Button
-			>
-			<p class="font-mono text-sm uppercase tracking-widest text-primary">
-				{$_('codex.page')}
-				{result.meta.page} / {result.meta.totalPages}
-			</p>
-			<Button
-				href={pageHref(Math.min(result.meta.totalPages, result.meta.page + 1))}
-				variant="outline"
-				disabled={result.meta.page === result.meta.totalPages}>{$_('codex.next')}</Button
-			>
-		</nav>
-	{:catch}<p
-			class="border border-destructive/40 bg-destructive/10 p-4 font-serif italic text-destructive"
-		>
-			{$_('codex.error')}
-		</p>{/await}
-</section>
+<section class="flex flex-col gap-8"><header class="border-b border-dashed border-primary/30 pb-6"><p class="font-mono text-[10px] uppercase tracking-widest text-primary">{$_('codex.eyebrow')}</p><h1 class="mt-3 font-serif text-4xl font-black uppercase tracking-tight text-foreground sm:text-5xl">{$_('codex.title')}</h1><p class="mt-3 font-serif italic text-muted-foreground">{$_('codex.description')}</p></header><form method="GET" class="border-4 border-double border-primary/30 bg-card p-3"><div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_9rem_auto]"><Input name="q" value={data.filters.query} placeholder={$_('codex.search')} /><select name="sortBy" class="h-10 border-2 border-primary/40 bg-background px-3 font-mono text-[10px] uppercase tracking-widest text-primary"><option value="rarity" selected={data.filters.sortBy === 'rarity'}>{$_('collection.sortRarity')}</option><option value="name" selected={data.filters.sortBy === 'name'}>{$_('collection.sortName')}</option></select><select name="sortDirection" class="h-10 border-2 border-primary/40 bg-background px-3 font-mono text-[10px] uppercase tracking-widest text-primary"><option value="DESC" selected={data.filters.sortDirection === 'DESC'}>DESC</option><option value="ASC" selected={data.filters.sortDirection === 'ASC'}>ASC</option></select><Button type="submit">{$_('common.filter')}</Button></div><div class="mt-3 flex flex-wrap gap-2">{#each rarities as rarity (rarity)}<label class="cursor-pointer border border-primary/40 px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-primary"><input type="checkbox" name="rarity" value={rarity} checked={data.filters.selectedRarities.includes(rarity)} /> {rarity}</label>{/each}</div></form>{#await data.cards}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">{$_('codex.loading')}</p>{:then result}{#if result.items.length}<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5 xl:grid-cols-6">{#each result.items as card (card.id)}<CardTile {card} />{/each}</div>{:else}<p class="border border-dashed border-primary/30 p-5 font-serif italic text-muted-foreground">{$_('collection.empty')}</p>{/if}<nav class="flex justify-between"><Button href={pageHref(Math.max(1,result.meta.page-1))} disabled={result.meta.page===1}>{$_('codex.previous')}</Button><span class="font-mono text-xs text-primary">{result.meta.page} / {result.meta.totalPages}</span><Button href={pageHref(Math.min(result.meta.totalPages,result.meta.page+1))} disabled={result.meta.page===result.meta.totalPages}>{$_('codex.next')}</Button></nav>{:catch}<p class="text-destructive">{$_('codex.error')}</p>{/await}</section>

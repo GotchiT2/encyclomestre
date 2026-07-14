@@ -182,6 +182,8 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 
 1. `feat(friends): build social friend registry`
 
+- [x] Commencer le branchement WikiForge du catalogue, de la collection, des boosters et du détail carte — `feat(api): start WikiForge catalogue collection and boosters integration`
+
 - [x] Brancher l’authentification WikiForge avec session locale et renouvellement de jeton — `feat(api): connect WikiForge authentication`
 2. `feat(messages): build conversations and guild shares`
 

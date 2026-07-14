@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
+	import { getWikiForgeCard } from '$lib/api';
 	import { cn } from '$lib/utils';
 	import type { CardRecord, CollectionTag } from '$lib/types';
 	let {
@@ -7,6 +8,14 @@
 		showFriendOwners = true,
 		tags = []
 	}: { card: CardRecord; showFriendOwners?: boolean; tags?: CollectionTag[] } = $props();
+	let detail = $state<CardRecord | null>(null);
+	async function openDetail(event: MouseEvent) {
+		event.preventDefault();
+		try {
+			const response = await getWikiForgeCard(card.id);
+			detail = { ...card, title: response.wikipediaTitle, imageUrl: response.imageUrl || card.imageUrl, rarity: response.rarity as CardRecord['rarity'], attack: response.atk ?? 0, defense: response.def ?? 0, shortDescription: response.category ?? '' };
+		} catch { detail = card; }
+	}
 </script>
 
 <article
@@ -18,6 +27,7 @@
 	<a
 		href={`/cards/${card.id}`}
 		class="group flex h-full flex-col transition-colors hover:border-primary/70"
+		onclick={openDetail}
 	>
 		<div
 			class={cn(
@@ -112,4 +122,5 @@
 			</ul>
 		</details>
 	{/if}
+{#if detail}<div class="fixed inset-0 z-50 bg-black/75 p-4" onclick={() => (detail = null)}><dialog open class="fixed top-1/2 left-1/2 m-0 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto border-4 border-double border-primary/40 bg-card p-5 text-foreground" onclick={(event) => event.stopPropagation()}><button class="absolute top-4 right-4 border border-primary/50 bg-card px-3 py-1 font-mono text-primary" onclick={() => (detail = null)}>×</button><section class="grid gap-5 sm:grid-cols-[minmax(12rem,.45fr)_minmax(0,1fr)]"><div class="border border-primary/30 bg-black p-2"><img src={detail.imageUrl} alt={detail.title} class="aspect-[4/3] w-full object-cover" /></div><div><p class="font-mono text-xs uppercase tracking-widest" style={`color:${detail.rarityColor}`}>{detail.rarityInitials} · {detail.rarity}</p><h2 class="mt-2 font-serif text-3xl font-black uppercase">{detail.title}</h2><p class="mt-3 font-serif italic leading-relaxed text-muted-foreground">{detail.shortDescription}</p><dl class="mt-5 grid grid-cols-2 divide-x divide-primary/20 border-y border-primary/20"><div class="py-3"><dt class="font-mono text-[9px] text-muted-foreground">ATTAQUE</dt><dd class="font-mono text-xl text-primary">{detail.attack}</dd></div><div class="pl-3 py-3"><dt class="font-mono text-[9px] text-muted-foreground">DÉFENSE</dt><dd class="font-mono text-xl text-primary">{detail.defense}</dd></div></dl>{#if tags.length}<div class="mt-4 flex flex-wrap gap-1">{#each tags as tag (tag.id)}<span class="border px-2 py-1 font-mono text-[9px] uppercase" style={`border-color:${tag.color};color:${tag.color}`}>{tag.name}</span>{/each}</div>{/if}</div></section></dialog></div>{/if}
 </article>

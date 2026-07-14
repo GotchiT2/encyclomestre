@@ -1,4 +1,4 @@
 import type { PageLoad } from './$types';
-import { getCollection } from '$lib/api';
+import { getWikiForgeCollection, toCardPage } from '$lib/api';
 
-export const load: PageLoad = ({ fetch }) => ({ collection: getCollection({ fetch }) });
+export const load: PageLoad = ({ fetch }) => ({ collection: getWikiForgeCollection({}, { fetch }).then(toCardPage) });
