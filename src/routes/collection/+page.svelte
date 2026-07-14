@@ -18,7 +18,6 @@
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 
-	const newTagOption = '__new_tag__';
 	const untaggedOption = '__untagged__';
 	const rarities: { value: CardRarity; initials: string; color: string }[] = [
 		{ value: 'KTD', initials: 'KTD', color: '#1dcf47' },
@@ -63,13 +62,6 @@
 	$effect(() => {
 		if (browser && hasHydrated) persistCollectionTagState(localStorage, { tags, assignments });
 	});
-
-	function handleTagFilterChange() {
-		if (tagFilterIds.includes(newTagOption)) {
-			tagFilterIds = tagFilterIds.filter((id) => id !== newTagOption);
-			isTagEditorOpen = true;
-		}
-	}
 
 	function toggleCardSelection(cardId: string) {
 		selectedCardIds = selectedCardIds.includes(cardId)
@@ -155,8 +147,7 @@
 			{tags}
 			{rarities}
 			{untaggedOption}
-			{newTagOption}
-			onTagFilterChange={handleTagFilterChange}
+			onOpenTagEditor={() => (isTagEditorOpen = true)}
 			onClear={clearFilters}
 		/>
 	</div>

@@ -19,7 +19,6 @@
 	type ProfileTab = 'showcase' | 'collection';
 
 	const untaggedOption = '__untagged__';
-	const unusedNewTagOption = '__no_new_tag__';
 	const rarities: { value: CardRarity; initials: string; color: string }[] = [
 		{ value: 'KTD', initials: 'KTD', color: '#1dcf47' },
 		{ value: 'Légendaire', initials: 'L', color: '#cf1d1d' },
@@ -251,9 +250,8 @@
 				{tags}
 				{rarities}
 				{untaggedOption}
-				newTagOption={unusedNewTagOption}
 				allowTagCreation={false}
-				onTagFilterChange={() => undefined}
+				onOpenTagEditor={() => undefined}
 				onClear={clearFilters}
 			/>
 			{#if visibleCards().length}<CardGrid

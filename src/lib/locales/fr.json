@@ -104,7 +104,9 @@
 		"next": "Suivant",
 		"page": "Page",
 		"ascending": "Croissant",
-		"descending": "Décroissant"
+		"descending": "Décroissant",
+		"sortDirection": "Ordre",
+		"filtersUpdating": "Mise à jour des résultats…"
 	},
 	"collection": {
 		"eyebrow": "Inventaire personnel",
@@ -130,7 +132,7 @@
 		"createTag": "Créer l’étiquette",
 		"manageTag": "Gérer",
 		"noTagSelected": "Aucune étiquette sélectionnée",
-		"renameTag": "Renommer",
+		"renameTag": "Modifier",
 		"deleteTag": "Supprimer",
 		"assignTag": "Attribuer l’étiquette sélectionnée",
 		"removeTag": "Retirer l’étiquette sélectionnée",
@@ -144,6 +146,8 @@
 		"applyTag": "Appliquer l’étiquette",
 		"moreTags": "{count} étiquettes supplémentaires",
 		"clearFilters": "Réinitialiser les filtres",
+		"allTags": "Toutes les étiquettes",
+		"selectedTagCount": "{count} étiquette(s) sélectionnée(s)",
 		"error": "La collection est indisponible."
 	},
 	"common": {

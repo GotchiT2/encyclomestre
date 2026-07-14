@@ -43,7 +43,7 @@
 </script>
 
 <article
-	class="wikiforge-card-size group/card relative overflow-hidden bg-background shadow-[0_16px_38px_rgb(0_0_0_/_42%)] transition-[transform,filter] duration-300 hover:-translate-y-1 hover:drop-shadow-[0_0_1.25rem_rgb(25_167_170_/_18%)]"
+	class="wikiforge-card-size group/card relative overflow-hidden bg-transparent transition-[transform,filter] duration-300 hover:-translate-y-1 hover:drop-shadow-[0_0_1.25rem_rgb(25_167_170_/_18%)]"
 	data-testid="card-tile"
 	data-frame={frameSource}
 >
@@ -55,7 +55,7 @@
 		<img
 			src={frameSource}
 			alt=""
-			class="pointer-events-none absolute inset-0 z-10 size-full transition-[filter] duration-300 group-hover/card:drop-shadow-[0_0_0.7rem_rgb(254_184_35_/_18%)]"
+			class="pointer-events-none absolute inset-0 z-10 size-full drop-shadow-[0_14px_16px_rgb(0_0_0_/_45%)] transition-[filter] duration-300 group-hover/card:drop-shadow-[0_0_0.7rem_rgb(254_184_35_/_18%)]"
 		/>
 		<p
 			class="absolute top-[55.9%] right-[15%] left-[15%] z-20 flex h-[8.6%] items-center whitespace-nowrap font-serif font-bold text-[length:var(--card-title-mobile)] text-[#f8cf51] drop-shadow-[0_2px_1px_rgb(0_0_0_/_85%)] lg:text-[length:var(--card-title-desktop)]"

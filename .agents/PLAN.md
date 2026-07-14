@@ -19,6 +19,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Harmoniser les espaces marché, échanges, social, profil et paramètres — `feat(ui): harmonize forge workspaces`
 - [x] Valider la refonte complète, les tests et les états responsive — `test(ui): validate forge astral interactions`
 - [x] Neutraliser les textes ésotériques et les références K-pop de l’interface — `fix(i18n): clarify factual interface copy`
+- [x] Corriger les cartes, modales, filtres, raretés et étiquettes — `fix(ui): refine cards filters and tag controls`
 
 ## Plan de support — atomisation de l’interface
 

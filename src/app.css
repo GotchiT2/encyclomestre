@@ -260,8 +260,30 @@
 
 [data-slot='input'] {
 	min-height: 2.75rem;
+	height: 2.75rem;
 	border-color: color-mix(in srgb, var(--primary) 28%, transparent);
 	background: rgb(5 10 18 / 64%);
+}
+
+select:not([multiple]),
+.forge-control {
+	height: 2.75rem !important;
+	min-height: 2.75rem;
+	border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent) !important;
+	background-color: rgb(5 10 18 / 72%) !important;
+	padding-inline: 0.75rem;
+	font-family: 'Lato', Arial, sans-serif;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	color: var(--foreground);
+	outline: none;
+}
+
+select:not([multiple]):focus,
+.forge-control:focus-visible {
+	border-color: var(--energy-soft) !important;
+	box-shadow: 0 0 0 2px rgb(124 228 222 / 14%);
 }
 
 .forge-energy-orbit {

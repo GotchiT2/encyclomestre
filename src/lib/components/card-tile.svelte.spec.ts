@@ -26,6 +26,7 @@ const card: CardRecord = {
 describe('CardTile', () => {
 	it('links directly to the card detail route', async () => {
 		render(CardTile, { card });
+		await expect.element(page.getByTestId('card-tile')).toHaveClass('bg-transparent');
 		await expect
 			.element(page.getByRole('link'))
 			.toHaveAttribute('href', '/cards/girls-generation-1');

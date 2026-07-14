@@ -50,7 +50,7 @@
 >
 	<dialog
 		open
-		class="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none overflow-y-auto border-0 bg-card p-4 text-foreground shadow-2xl sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[calc(100dvh-2.5rem)] sm:w-[calc(100%-2.5rem)] sm:max-w-screen-xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:border sm:border-primary/40 sm:p-6"
+		class="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none overflow-y-auto border-0 bg-card p-4 text-foreground shadow-2xl sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[calc(100dvh-2.5rem)] sm:w-[calc(100%-2.5rem)] sm:max-w-screen-xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:border sm:border-primary/40 sm:p-6 lg:h-[calc(100dvh-3rem)] lg:overflow-hidden"
 		aria-labelledby="card-detail-modal-title"
 		onclick={(event) => event.stopPropagation()}
 	>
@@ -62,7 +62,9 @@
 				><XIcon /></Button
 			>
 		</div>
-		<section class="relative grid gap-7 lg:grid-cols-[minmax(17rem,0.42fr)_minmax(0,1fr)]">
+		<section
+			class="relative grid gap-7 lg:h-[calc(100%-4rem)] lg:grid-cols-[minmax(17rem,0.42fr)_minmax(0,1fr)]"
+		>
 			<div class="mx-auto w-fit lg:sticky lg:top-0 lg:self-start">
 				<CardTile
 					{card}
@@ -71,7 +73,7 @@
 					onOpen={() => undefined}
 				/>
 			</div>
-			<div class="flex min-w-0 flex-col gap-5">
+			<div class="flex min-h-0 min-w-0 flex-col gap-5">
 				<header class="forge-divider">
 					<p class="forge-label" style={`color:${card.rarityColor}`}>
 						{card.rarityInitials} · {card.rarity}
@@ -111,7 +113,7 @@
 					{/each}
 				</div>
 
-				<div class="forge-panel-flat p-4 sm:p-5">
+				<div class="forge-panel-flat min-h-0 overflow-y-auto p-4 sm:p-5 lg:flex-1">
 					{#if activeTab === 'data'}
 						{#if owned}<CardTagControls cardId={card.id} bind:tags bind:assignments />{/if}
 						<div class:mt-5={owned}><CardTelemetry {card} /></div>

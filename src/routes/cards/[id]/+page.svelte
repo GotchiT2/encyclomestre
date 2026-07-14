@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-navigation-without-resolve -- card actions append dynamic query parameters */
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
@@ -65,14 +66,16 @@
 	<div class="fixed inset-0 z-50 bg-black/75 p-4" role="presentation" onclick={closeDetail}>
 		<dialog
 			open
-			class="fixed top-1/2 left-1/2 m-0 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-screen-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto border-4 border-double border-primary/40 bg-card p-4 text-foreground shadow-2xl sm:p-6"
+			class="fixed top-1/2 left-1/2 m-0 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-screen-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto border-4 border-double border-primary/40 bg-card p-4 text-foreground shadow-2xl sm:p-6 lg:h-[calc(100dvh-3rem)] lg:overflow-hidden"
 			aria-labelledby="card-detail-title"
 			onclick={(event) => event.stopPropagation()}
 		>
 			<div class="mb-5 flex justify-end">
 				<Button size="sm" variant="outline" onclick={closeDetail}>{$_('cardDetail.close')}</Button>
 			</div>
-			<section class="grid gap-6 lg:grid-cols-[minmax(15rem,0.42fr)_minmax(0,1fr)]">
+			<section
+				class="grid gap-6 lg:h-[calc(100%-4rem)] lg:grid-cols-[minmax(15rem,0.42fr)_minmax(0,1fr)]"
+			>
 				<div class="mx-auto w-full max-w-xs">
 					<CardTile
 						{card}
@@ -80,7 +83,7 @@
 						showFriendOwners={false}
 					/>
 				</div>
-				<div class="flex min-w-0 flex-col gap-5">
+				<div class="flex min-h-0 min-w-0 flex-col gap-5 overflow-y-auto">
 					<header class="border-b border-dashed border-primary/30 pb-5">
 						<h1
 							id="card-detail-title"

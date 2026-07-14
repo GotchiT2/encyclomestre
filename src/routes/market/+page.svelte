@@ -11,13 +11,14 @@
 	let cards = $state<CardRecord[]>([]);
 	let listings = $state<SaleListing[]>([]);
 	let query = $state('');
-	let type = $state<SaleListing['type']>('auction');
+	let type = $state<SaleListing['type'] | 'all'>('all');
 	let maxPrice = $state('');
 	let loading = $state(true);
 	let selectedListing = $state<SaleListing | null>(null);
 	let activeTab = $state<'all' | 'mine' | 'bids' | 'history'>('all');
 	let historyTab = $state<'sold' | 'bought'>('sold');
 	let favoriteIds = $state<string[]>([]);
+	let filterTimer: number | undefined;
 
 	onMount(async () => {
 		favoriteIds = JSON.parse(localStorage.getItem('market-favorites') ?? '[]');
@@ -29,7 +30,7 @@
 		loading = true;
 		listings = await getMarketListings({
 			query,
-			type: 'auction',
+			type: type === 'all' ? undefined : type,
 			maxPrice: Number(maxPrice) || undefined,
 			sellerId:
 				activeTab === 'mine' || (activeTab === 'history' && historyTab === 'sold')
@@ -41,6 +42,11 @@
 					: undefined
 		});
 		loading = false;
+	}
+
+	function scheduleRefresh(delay = 400) {
+		window.clearTimeout(filterTimer);
+		filterTimer = window.setTimeout(() => void refresh(), delay);
 	}
 
 	function toggleFavorite(id: string) {
@@ -86,15 +92,17 @@
 			>
 		</div>{/if}
 	<form
-		class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_8rem_auto]"
+		class="forge-panel grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_12rem_12rem]"
 		onsubmit={(event) => {
 			event.preventDefault();
 			void refresh();
 		}}
 	>
-		<Input bind:value={query} placeholder={$_('market.search')} /><select
-			bind:value={type}
-			class="h-10 border-2 border-primary/40 bg-card px-3 font-mono text-[10px] uppercase tracking-widest text-primary"
+		<Input
+			bind:value={query}
+			placeholder={$_('market.search')}
+			oninput={() => scheduleRefresh(450)}
+		/><select bind:value={type} onchange={() => scheduleRefresh(80)}
 			><option value="all">{$_('market.all_types')}</option><option value="auction"
 				>{$_('market.auction')}</option
 			><option value="direct">{$_('market.direct_sale')}</option></select
@@ -103,7 +111,8 @@
 			type="number"
 			min="0"
 			placeholder={$_('market.max_price')}
-		/><Button type="submit">{$_('common.filter')}</Button>
+			oninput={() => scheduleRefresh(350)}
+		/>
 	</form>
 	{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('market.loading')}

@@ -30,8 +30,8 @@
 	</header>
 
 	<div class="grid gap-5 xl:grid-cols-[minmax(22rem,0.8fr)_minmax(0,1.2fr)]">
-		<ForgePanel class="relative min-h-[28rem] overflow-hidden p-6">
-			<div class="relative z-10 max-w-sm">
+		<ForgePanel class="relative min-h-[28rem] min-w-0 overflow-hidden p-6">
+			<div class="relative z-10 w-full max-w-sm">
 				<p class="forge-label">{$_('dashboard.boosterReady')}</p>
 				<h2 class="mt-3 font-serif text-3xl font-bold">{$_('dashboard.boosterTitle')}</h2>
 				<p class="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -48,7 +48,7 @@
 			/>
 		</ForgePanel>
 
-		<ForgePanel class="p-5 sm:p-6">
+		<ForgePanel class="min-w-0 p-5 sm:p-6">
 			<div class="flex items-end justify-between gap-4">
 				<div>
 					<p class="forge-label">{$_('dashboard.recentEyebrow')}</p>

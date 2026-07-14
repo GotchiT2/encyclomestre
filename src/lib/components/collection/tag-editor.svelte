@@ -60,15 +60,15 @@
 	>
 	<Sheet.Content
 		side="bottom"
-		class="data-[side=bottom]:right-auto data-[side=bottom]:bottom-auto data-[side=bottom]:left-1/2 data-[side=bottom]:-translate-x-1/2 top-1/2 max-h-[85vh] w-[calc(100%-2rem)] max-w-xl -translate-y-1/2 overflow-y-auto border-4 border-double border-primary/30 bg-card"
+		class="data-[side=bottom]:right-auto data-[side=bottom]:bottom-auto data-[side=bottom]:left-1/2 data-[side=bottom]:-translate-x-1/2 top-1/2 max-h-[85dvh] w-[calc(100%-2rem)] max-w-2xl -translate-y-1/2 overflow-y-auto border-4 border-double border-primary/30 bg-card lg:max-h-[calc(100dvh-3rem)] lg:overflow-hidden"
 	>
 		<Sheet.Header
 			><Sheet.Title>{$_('collection.tags')}</Sheet.Title><Sheet.Description
 				>{$_('collection.tagsDescription')}</Sheet.Description
 			></Sheet.Header
 		>
-		<div class="flex flex-col gap-4 px-4">
-			<div class="flex flex-col gap-2 sm:flex-row">
+		<div class="flex min-h-0 flex-col gap-4 px-4">
+			<div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_4rem_auto]">
 				<Input
 					bind:value={draftTagName}
 					placeholder={$_('collection.tagName')}
@@ -78,29 +78,30 @@
 					bind:value={draftTagColor}
 					type="color"
 					aria-label={$_('collection.tagColor')}
-					class="size-10 border-2 border-primary/40 bg-card p-1"
+					class="h-11 w-full border border-primary/35 bg-background/70 p-1"
 				/><Button onclick={createTag}>{$_('collection.createTag')}</Button>
 			</div>
-			{#if tags.length}<ul class="flex flex-col gap-2">
+			{#if tags.length}<ul
+					class="flex max-h-[48dvh] flex-col gap-2 overflow-y-auto pr-1 lg:max-h-[52dvh]"
+				>
 					{#each tags as tag (tag.id)}<li
 							class="flex flex-wrap items-center gap-2 border-t border-dashed border-primary/20 pt-2"
 						>
-							{#if editingTagId === tag.id}<Input
-									bind:value={editingTagName}
-									aria-label={$_('collection.tagName')}
-								/><label
-									class="flex h-10 items-center gap-2 border-2 border-primary/40 bg-card px-2 font-mono text-[10px] uppercase tracking-wider text-primary"
-									><span>{$_('collection.tagColor')}</span><input
+							{#if editingTagId === tag.id}<div
+									class="grid w-full gap-2 sm:grid-cols-[minmax(0,1fr)_4rem_auto_auto]"
+								>
+									<Input bind:value={editingTagName} aria-label={$_('collection.tagName')} />
+									<input
 										bind:value={editingTagColor}
 										type="color"
 										aria-label={$_('collection.tagColor')}
-										class="size-6 border border-primary/40 bg-card p-0.5"
-									/></label
-								><Button size="sm" onclick={saveTag}>{$_('common.save')}</Button><Button
-									size="sm"
-									variant="ghost"
-									onclick={() => (editingTagId = null)}>{$_('common.cancel')}</Button
-								>
+										class="h-11 w-full border border-primary/35 bg-background/70 p-1"
+									/>
+									<Button size="sm" onclick={saveTag}>{$_('common.save')}</Button>
+									<Button size="sm" variant="ghost" onclick={() => (editingTagId = null)}
+										>{$_('common.cancel')}</Button
+									>
+								</div>
 							{:else}<span
 									class="size-4 border border-primary/70"
 									style={`background-color:${tag.color}`}

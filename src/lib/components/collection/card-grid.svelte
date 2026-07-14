@@ -29,7 +29,7 @@
 </script>
 
 <div class="wikiforge-card-grid">
-	{#each cards as card (card.id)}<div class="wikiforge-card-size relative">
+	{#each cards as card (card.id)}<div class="wikiforge-card-size relative isolate">
 			<CardTile
 				{card}
 				tags={cardTags(card.id)}
@@ -38,7 +38,7 @@
 			/>{#if isSelectionMode}<Button
 					variant="ghost"
 					class={cn(
-						'absolute inset-0 size-auto rounded-none border-2 border-primary/60 bg-transparent p-0 hover:bg-primary/15',
+						'absolute inset-0 z-30 size-auto rounded-none border-2 border-primary/60 bg-transparent p-0 hover:bg-primary/15',
 						selectedCardIds.includes(card.id) && 'bg-primary/30 hover:bg-primary/35'
 					)}
 					aria-pressed={selectedCardIds.includes(card.id)}
@@ -48,7 +48,7 @@
 					onclick={() => onToggleCard(card.id)}
 					><span
 						class={cn(
-							'absolute top-2 left-2 flex size-10 items-center justify-center border-2 border-primary bg-card/95 font-mono text-base font-black text-primary',
+							'absolute top-3 left-3 z-40 flex size-10 items-center justify-center border-2 border-primary bg-card font-mono text-base font-black text-primary shadow-[0_0_18px_rgb(0_0_0_/_70%)]',
 							selectedCardIds.includes(card.id) && 'bg-primary text-primary-foreground'
 						)}>{selectedCardIds.includes(card.id) ? '✓' : ''}</span
 					></Button
