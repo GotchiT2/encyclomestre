@@ -223,3 +223,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 ## 8. Branchement API WikiForge
 
 - [x] Brancher les contrats OpenAPI pour l'authentification, les cartes, la collection, les profils, les amis, le marché, les échanges, les wishlists, la messagerie, le dashboard, les guildes, les boosters, les tags et les filtres — `feat(api): connect complete WikiForge platform`
+- [x] Renouveler les sessions expirées sur les réponses 401/403 et rediriger les sessions irrécupérables — `fix(auth): recover expired API sessions`

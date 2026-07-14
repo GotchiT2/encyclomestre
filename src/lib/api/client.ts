@@ -36,12 +36,53 @@ function mockDelay(): number {
 	return Number.isFinite(value) ? Math.max(0, value) : 0;
 }
 
+let refreshSessionPromise: Promise<boolean> | null = null;
+
+async function refreshSession(fetcher: Fetcher): Promise<boolean> {
+	if (refreshSessionPromise) return refreshSessionPromise;
+
+	refreshSessionPromise = (async () => {
+		const session = restoreSession(localStorage);
+		if (!session?.refreshToken) return false;
+
+		try {
+			const response = await fetcher(apiUrl('/api/auth/refresh'), {
+				method: 'POST',
+				credentials: 'include',
+				headers: { accept: 'application/json', 'content-type': 'application/json' },
+				body: JSON.stringify({ refreshToken: session.refreshToken })
+			});
+			if (!response.ok) return false;
+
+			const tokens = await response.json();
+			persistSession(localStorage, { ...session, ...tokens });
+			return true;
+		} catch {
+			return false;
+		}
+	})();
+
+	try {
+		return await refreshSessionPromise;
+	} finally {
+		refreshSessionPromise = null;
+	}
+}
+
+function redirectToLogin() {
+	if (typeof window === 'undefined' || window.location.pathname === '/login') return;
+	const redirectTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+	window.location.assign(`/login?redirectTo=${encodeURIComponent(redirectTo)}`);
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
 	return request<T>(path, options, false);
 }
 
 async function request<T>(path: string, options: RequestOptions, didRefresh: boolean): Promise<T> {
 	const { body, fetch: fetcher = fetch, headers, ...init } = options;
+	const session = typeof localStorage === 'undefined' ? null : restoreSession(localStorage);
+	const accessToken = session?.accessToken;
 	const response = isMockApiEnabled()
 		? await (async () => {
 				const delay = mockDelay();
@@ -52,9 +93,7 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 				credentials: 'include',
 				headers: {
 					accept: 'application/json',
-					...(typeof localStorage !== 'undefined' && restoreSession(localStorage)?.accessToken
-						? { authorization: `Bearer ${restoreSession(localStorage)!.accessToken}` }
-						: {}),
+					...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
 					...(body === undefined ? {} : { 'content-type': 'application/json' }),
 					...headers
 				},
@@ -62,23 +101,22 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 				...init
 			});
 
-	if (!didRefresh && response.status === 401 && typeof localStorage !== 'undefined') {
-		const session = restoreSession(localStorage);
-		if (session?.refreshToken) {
-			const refreshed = await fetcher(apiUrl('/api/auth/refresh'), {
-				method: 'POST',
-				headers: { accept: 'application/json', 'content-type': 'application/json' },
-				body: JSON.stringify({ refreshToken: session.refreshToken })
-			});
-			if (refreshed.ok) {
-				const tokens = await refreshed.json();
-				persistSession(localStorage, { ...session, ...tokens });
-				return request<T>(path, options, true);
-			}
-		}
+	const isAuthenticationFailure = response.status === 401 || response.status === 403;
+	const canRefresh =
+		!didRefresh &&
+		isAuthenticationFailure &&
+		typeof localStorage !== 'undefined' &&
+		!path.startsWith('/api/auth/');
+
+	if (canRefresh) {
+		const currentSession = restoreSession(localStorage);
+		const tokenWasAlreadyRenewed =
+			Boolean(accessToken) && currentSession?.accessToken !== accessToken;
+		const refreshed = tokenWasAlreadyRenewed || (await refreshSession(fetcher));
+		if (refreshed) return request<T>(path, options, true);
+
 		clearSession(localStorage);
-		if (typeof window !== 'undefined')
-			window.location.assign(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+		redirectToLogin();
 	}
 
 	if (response.status === 204) return undefined as T;
