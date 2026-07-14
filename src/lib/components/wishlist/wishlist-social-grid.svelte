@@ -16,7 +16,7 @@
 </script>
 
 {#if cards.length}
-	<div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+	<div class="wikiforge-card-grid">
 		{#each cards as card (card.id)}
 			<article class="border border-primary/25 bg-card p-2">
 				<div class="relative">

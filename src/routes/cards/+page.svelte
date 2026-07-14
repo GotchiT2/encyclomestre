@@ -17,7 +17,8 @@
 		'Rare',
 		'Super-Rare',
 		'Ultra-Rare',
-		'Légendaire'
+		'Légendaire',
+		'KTD'
 	];
 	let selectedCard = $state<CardRecord | null>(null);
 	let wishlistedCardIds = $state<string[]>([]);
@@ -109,7 +110,7 @@
 		</p>
 	{:then result}
 		{#if result.items.length}
-			<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5 xl:grid-cols-6">
+			<div class="wikiforge-card-grid">
 				{#each result.items as card (card.id)}
 					<CardTile {card} onOpen={openCard} />
 				{/each}

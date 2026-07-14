@@ -6,14 +6,14 @@ export interface FriendOwnerInfo {
 }
 
 export type CardRarity =
-	'Légendaire' | 'Ultra-Rare' | 'Super-Rare' | 'Rare' | 'Peu Commune' | 'Commune';
+	'Légendaire' | 'Ultra-Rare' | 'Super-Rare' | 'Rare' | 'Peu Commune' | 'Commune' | 'KTD';
 
 export interface Card {
 	title: string;
 	shortDescription: string;
 	longDescription: string;
 	rarity: CardRarity;
-	rarityInitials: 'L' | 'UR' | 'SR' | 'R' | 'PC' | 'C';
+	rarityInitials: 'L' | 'UR' | 'SR' | 'R' | 'PC' | 'C' | 'KTD';
 	rarityColor: string;
 	viewCount: number;
 	imageUrl: string;

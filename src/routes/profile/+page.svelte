@@ -22,7 +22,7 @@
 	let settings = $state<ProfileSettings>({
 		username: '',
 		avatarCardId: null,
-		accentColor: '#C19A6B',
+		accentColor: '#feb823',
 		bioTags: [],
 		showcases: [],
 		wantedCardIds: [],

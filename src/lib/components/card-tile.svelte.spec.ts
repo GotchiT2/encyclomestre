@@ -12,7 +12,7 @@ const card: CardRecord = {
 	longDescription: 'Notice encyclopédique complète.',
 	rarity: 'Légendaire',
 	rarityInitials: 'L',
-	rarityColor: '#E5A93C',
+	rarityColor: '#cf1d1d',
 	viewCount: 100,
 	imageUrl: '',
 	wikipediaUrl: 'https://fr.wikipedia.org',
@@ -29,5 +29,34 @@ describe('CardTile', () => {
 		await expect
 			.element(page.getByRole('link'))
 			.toHaveAttribute('href', '/cards/girls-generation-1');
+	});
+
+	it('renders the data inside the legendary full-art frame', async () => {
+		render(CardTile, { card: { ...card, isFullArt: true } });
+		await expect
+			.element(page.getByTestId('card-tile'))
+			.toHaveAttribute('data-frame', '/images/card-L---Overframe-empty.png');
+		await expect.element(page.getByLabelText('ATK 9500')).toBeVisible();
+		await expect.element(page.getByLabelText('DEF 9800')).toBeVisible();
+		await expect.element(page.getByText('Notice encyclopédique.')).toBeVisible();
+	});
+
+	it('keeps a long title in its dedicated card zone', async () => {
+		const title = 'Girls Generation Archives impériales de collection';
+		render(CardTile, { card: { ...card, title } });
+		await expect.element(page.getByText(title)).toBeVisible();
+	});
+
+	it.each([
+		['Commune', 'C', '/images/card-C-empty.png'],
+		['Peu Commune', 'PC', '/images/card-PC-empty.png'],
+		['Rare', 'R', '/images/card-R-empty.png'],
+		['Super-Rare', 'SR', '/images/card-SR-empty.png'],
+		['Ultra-Rare', 'UR', '/images/card-UR-empty.png'],
+		['Légendaire', 'L', '/images/card-L-empty.png'],
+		['KTD', 'KTD', '/images/card-KTD-empty.png']
+	] as const)('selects the %s frame', async (rarity, rarityInitials, frame) => {
+		render(CardTile, { card: { ...card, rarity, rarityInitials, isFullArt: false } });
+		await expect.element(page.getByTestId('card-tile')).toHaveAttribute('data-frame', frame);
 	});
 });

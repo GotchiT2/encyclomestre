@@ -21,12 +21,13 @@
 	const untaggedOption = '__untagged__';
 	const unusedNewTagOption = '__no_new_tag__';
 	const rarities: { value: CardRarity; initials: string; color: string }[] = [
-		{ value: 'Légendaire', initials: 'L', color: '#E5A93C' },
-		{ value: 'Ultra-Rare', initials: 'UR', color: '#A855F7' },
-		{ value: 'Super-Rare', initials: 'SR', color: '#10B981' },
-		{ value: 'Rare', initials: 'R', color: '#3B82F6' },
-		{ value: 'Peu Commune', initials: 'PC', color: '#B45309' },
-		{ value: 'Commune', initials: 'C', color: '#6B7280' }
+		{ value: 'KTD', initials: 'KTD', color: '#1dcf47' },
+		{ value: 'Légendaire', initials: 'L', color: '#cf1d1d' },
+		{ value: 'Ultra-Rare', initials: 'UR', color: '#cf7d1d' },
+		{ value: 'Super-Rare', initials: 'SR', color: '#b41dcf' },
+		{ value: 'Rare', initials: 'R', color: '#5c1dcf' },
+		{ value: 'Peu Commune', initials: 'PC', color: '#1d71cf' },
+		{ value: 'Commune', initials: 'C', color: '#d3e4f8' }
 	];
 
 	let {
@@ -200,9 +201,7 @@
 					<h2 class="font-serif text-2xl font-black uppercase tracking-tight text-foreground">
 						{$_('profile.wanted_title')}
 					</h2>
-					{#if wantedCards.length}<div
-							class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4"
-						>
+					{#if wantedCards.length}<div class="wikiforge-card-grid mt-4">
 							{#each wantedCards as card (card.id)}<CardTile
 									{card}
 									showFriendOwners={false}

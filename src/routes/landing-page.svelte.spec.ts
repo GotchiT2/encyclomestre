@@ -14,7 +14,10 @@ describe('landing page', () => {
 		await expect
 			.element(page.getByRole('link', { name: 'Commencer le registre' }))
 			.toBeInTheDocument();
-		await expect.element(page.getByTestId('full-art-frame')).toHaveClass('alchemy-frame');
+		await expect.element(page.getByTestId('full-art-frame')).toHaveClass('max-w-sm');
+		await expect
+			.element(page.getByTestId('full-art-frame').getByTestId('card-tile'))
+			.toHaveAttribute('data-frame', '/images/card-L---Overframe-empty.png');
 		await expect.element(page.getByText('Articles indexés')).toBeInTheDocument();
 	});
 });

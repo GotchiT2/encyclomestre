@@ -260,7 +260,7 @@ const profileSettings = new Map<string, ProfileSettings>([
 		{
 			username: 'collectionneur-demo',
 			avatarCardId: null,
-			accentColor: '#C19A6B',
+			accentColor: '#feb823',
 			bioTags: [],
 			showcases: [],
 			wantedCardIds: [],
@@ -295,7 +295,7 @@ for (const [index, username] of [
 profileSettings.set('friend-0', {
 	username: 'SoneS9',
 	avatarCardId: 'girls-generation-2',
-	accentColor: '#C19A6B',
+	accentColor: '#feb823',
 	bioTags: ['collection', 'generation-2'],
 	showcases: [
 		{
@@ -312,7 +312,7 @@ profileSettings.set('friend-0', {
 profileSettings.set('friend-1', {
 	username: 'TaeyeonFan',
 	avatarCardId: 'blackpink-1',
-	accentColor: '#A855F7',
+	accentColor: '#b41dcf',
 	bioTags: ['vocal', 'full-art'],
 	showcases: [
 		{

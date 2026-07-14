@@ -3,35 +3,53 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn-svelte/tailwind.css';
-@import '@fontsource-variable/source-sans-3';
+@font-face {
+	font-family: 'DBacks';
+	src: url('/fonts/MLB%20Diamondbacks%20Regular.ttf') format('truetype');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Palatino Linotype';
+	src: url('/fonts/palatino-linotype-bold.ttf') format('truetype');
+	font-weight: 700;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Lato';
+	src: url('/fonts/Lato-Regular.ttf') format('truetype');
+	font-weight: 400;
+	font-display: swap;
+}
 
 :root {
-	--background: #080a09;
-	--foreground: #e4e8e6;
-	--card: #0e1210;
-	--card-foreground: #e4e8e6;
-	--popover: #0e1210;
-	--popover-foreground: #e4e8e6;
-	--primary: #c19a6b;
-	--primary-foreground: #080a09;
-	--secondary: #121614;
-	--secondary-foreground: #e4e8e6;
-	--muted: #121614;
-	--muted-foreground: #9ca59f;
-	--accent: #121614;
-	--accent-foreground: #e4e8e6;
-	--destructive: #d88472;
-	--border: color-mix(in srgb, #c19a6b 24%, transparent);
-	--input: color-mix(in srgb, #c19a6b 32%, transparent);
-	--ring: #c19a6b;
+	--background: #080f19;
+	--foreground: #f4f7fb;
+	--card: #0a1422;
+	--card-foreground: #f4f7fb;
+	--popover: #0a1422;
+	--popover-foreground: #f4f7fb;
+	--primary: #feb823;
+	--primary-foreground: #080f19;
+	--secondary: #122238;
+	--secondary-foreground: #f4f7fb;
+	--muted: #122238;
+	--muted-foreground: #a9b8cc;
+	--accent: #fd790c;
+	--accent-foreground: #080f19;
+	--destructive: #cf1d1d;
+	--border: color-mix(in srgb, #feb823 30%, transparent);
+	--input: color-mix(in srgb, #feb823 40%, transparent);
+	--ring: #feb823;
 	--radius: 0rem;
 }
 
 @theme inline {
-	--font-sans: 'Source Sans 3 Variable', sans-serif;
-	--font-serif: Georgia, Cambria, 'Times New Roman', serif;
-	--font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
-	--font-heading: Georgia, Cambria, 'Times New Roman', serif;
+	--font-sans: 'Lato', Arial, sans-serif;
+	--font-serif: 'Palatino Linotype', Palatino, Georgia, serif;
+	--font-mono: 'Lato', Arial, sans-serif;
+	--font-heading: 'DBacks', Impact, sans-serif;
 	--color-ring: var(--ring);
 	--color-input: var(--input);
 	--color-border: var(--border);
@@ -64,9 +82,9 @@
 		@apply bg-background text-foreground antialiased;
 		overflow-x: hidden;
 		background-image:
-			radial-gradient(circle at 50% -20%, rgb(193 154 107 / 12%), transparent 36rem),
-			linear-gradient(90deg, rgb(193 154 107 / 3%) 1px, transparent 1px),
-			linear-gradient(rgb(193 154 107 / 3%) 1px, transparent 1px);
+			radial-gradient(circle at 50% -20%, rgb(253 121 12 / 18%), transparent 36rem),
+			linear-gradient(90deg, rgb(254 184 35 / 4%) 1px, transparent 1px),
+			linear-gradient(rgb(254 184 35 / 4%) 1px, transparent 1px);
 		background-size:
 			auto,
 			4rem 4rem,
@@ -76,6 +94,18 @@
 		background: var(--primary);
 		color: var(--primary-foreground);
 	}
+}
+
+@utility wikiforge-title {
+	@apply font-heading tracking-wide uppercase;
+}
+
+@utility wikiforge-card-grid {
+	@apply grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] justify-items-center gap-4 lg:grid-cols-[repeat(auto-fit,minmax(17rem,1fr))];
+}
+
+@utility wikiforge-card-size {
+	@apply w-44 lg:w-[17rem];
 }
 
 @utility alchemy-frame {

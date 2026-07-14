@@ -11,6 +11,10 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Collection, étiquettes colorées et sélection multiple — série `feat(collection): …`
 - [x] Éditeur d’étiquettes et panneau de sélection extraits — `refactor(collection): extract reusable interaction modules`
 
+## Refonte visuelle WikiForge
+
+- [x] Refonte de l’identité, des cartes, des grilles et de l’ouverture de booster — `feat(ui): redesign WikiForge cards and visual system`
+
 ## Plan de support — atomisation de l’interface
 
 - [x] Extraire les contrôles de filtrage de la Collection — `refactor(collection): extract filter controls and card grid`

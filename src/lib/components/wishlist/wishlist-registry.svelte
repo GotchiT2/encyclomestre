@@ -26,11 +26,9 @@
 </script>
 
 {#if entries.length}
-	<div
-		class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7"
-	>
+	<div class="wikiforge-card-grid">
 		{#each entries as entry (entry.cardId)}
-			<div class="relative min-w-0">
+			<div class="wikiforge-card-size relative">
 				<CardTile card={entry.card} showFriendOwners={false} />
 				<div class="absolute top-2 right-2 z-20 flex gap-1">
 					<Button

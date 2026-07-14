@@ -27,7 +27,8 @@ const articles: BaseArticle[] = [
 	['Sunmi', 'Ultra-Rare', 8600, 8800, 870000],
 	['Hyuna', 'Ultra-Rare', 8800, 8100, 1190000],
 	['SM Entertainment', 'Commune', 5500, 4500, 940000],
-	['Vague coréenne', 'Commune', 4800, 5200, 1100000]
+	['Vague coréenne', 'Commune', 4800, 5200, 1100000],
+	['WikiForge', 'KTD', 10000, 10000, 2000000]
 ];
 
 const editions = ['', ' · Édition Codex', ' · Variante holographique', ' · Archives impériales'];
@@ -46,12 +47,13 @@ const imageUrls = [
 	'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/K-pop_worldmark.svg/512px-K-pop_worldmark.svg.png'
 ];
 const meta: Record<CardRarity, [CardRecord['rarityInitials'], string]> = {
-	Légendaire: ['L', '#E5A93C'],
-	'Ultra-Rare': ['UR', '#A855F7'],
-	'Super-Rare': ['SR', '#10B981'],
-	Rare: ['R', '#3B82F6'],
-	'Peu Commune': ['PC', '#B45309'],
-	Commune: ['C', '#6B7280']
+	Commune: ['C', '#d3e4f8'],
+	'Peu Commune': ['PC', '#1d71cf'],
+	Rare: ['R', '#5c1dcf'],
+	'Super-Rare': ['SR', '#b41dcf'],
+	'Ultra-Rare': ['UR', '#cf7d1d'],
+	Légendaire: ['L', '#cf1d1d'],
+	KTD: ['KTD', '#1dcf47']
 };
 
 export const mockCards: CardRecord[] = articles.flatMap(
@@ -78,7 +80,7 @@ export const mockCards: CardRecord[] = articles.flatMap(
 				attack: Math.min(10000, Math.round(attack * (1 + editionIndex * 0.03))),
 				defense: Math.min(10000, Math.round(defense * (1 + editionIndex * 0.03))),
 				ownedCount: index % 7 === 0 ? (index % 3) + 1 : 0,
-				isFullArt: index % 4 === 2,
+				isFullArt: rarity === 'Légendaire' && index % 4 === 2,
 				globalSupply: Math.max(20, Math.round(1200 / (editionIndex + 1))),
 				friendsWhoOwn:
 					index === 0

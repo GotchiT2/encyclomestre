@@ -42,7 +42,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<meta name="theme-color" content="#080A09" />
+	<meta name="theme-color" content="#080f19" />
 	<title>{$_('app.title')}</title>
 </svelte:head>
 
@@ -60,7 +60,7 @@
 					><GalleryVerticalEndIcon /></span
 				>
 				<span class="flex flex-col">
-					<span class="font-serif text-lg font-black uppercase tracking-tight text-foreground"
+					<span class="font-heading text-lg uppercase tracking-wide text-foreground"
 						>{$_('navigation.brand')}</span
 					>
 					<span class="font-mono text-[9px] uppercase tracking-[0.24em] text-primary"
@@ -150,7 +150,8 @@
 			><span class="grid size-10 place-items-center border border-primary/60 bg-card text-primary"
 				><GalleryVerticalEndIcon /></span
 			><span
-				><span class="block font-serif text-lg font-black uppercase">{$_('navigation.brand')}</span
+				><span class="block font-heading text-lg uppercase tracking-wide"
+					>{$_('navigation.brand')}</span
 				><span class="font-mono text-[9px] uppercase tracking-widest text-primary"
 					>{$_('navigation.registry')}</span
 				></span

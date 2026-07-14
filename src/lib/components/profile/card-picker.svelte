@@ -47,10 +47,17 @@
 </script>
 
 <Sheet.Root bind:open>
-	<Sheet.Content side="bottom" class="max-h-[90dvh] border-4 border-double border-primary/40 bg-card p-0 sm:inset-x-[8%] sm:bottom-6 sm:max-w-none">
+	<Sheet.Content
+		side="bottom"
+		class="max-h-[90dvh] border-4 border-double border-primary/40 bg-card p-0 sm:inset-x-[8%] sm:bottom-6 sm:max-w-none"
+	>
 		<div class="border-b border-primary/20 p-4 pr-14">
-			<p class="font-mono text-[10px] uppercase tracking-widest text-primary">{$_('profile.select_cards')}</p>
-			<Sheet.Title class="mt-1 font-serif text-2xl font-black uppercase tracking-tight">{title}</Sheet.Title>
+			<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
+				{$_('profile.select_cards')}
+			</p>
+			<Sheet.Title class="mt-1 font-serif text-2xl font-black uppercase tracking-tight"
+				>{title}</Sheet.Title
+			>
 		</div>
 		<div class="overflow-y-auto p-4">
 			<Input bind:value={query} placeholder={$_('collection.search')} class="mb-3" />
@@ -60,9 +67,11 @@
 					<Button
 						variant={rarities.includes(rarity) ? 'default' : 'outline'}
 						size="xs"
-						style={rarities.includes(rarity) ? `background-color:${reference.rarityColor};border-color:${reference.rarityColor}` : `color:${reference.rarityColor};border-color:${reference.rarityColor}`}
-						onclick={() => (rarities = toggle(rarities, rarity))}
-					>{reference.rarityInitials}</Button>
+						style={rarities.includes(rarity)
+							? `background-color:${reference.rarityColor};border-color:${reference.rarityColor}`
+							: `color:${reference.rarityColor};border-color:${reference.rarityColor}`}
+						onclick={() => (rarities = toggle(rarities, rarity))}>{reference.rarityInitials}</Button
+					>
 				{/each}
 			</div>
 			<div class="mb-4 flex flex-wrap gap-1.5" aria-label={$_('collection.tags')}>
@@ -70,14 +79,16 @@
 					<Button
 						variant={tagIds.includes(tag.id) ? 'default' : 'outline'}
 						size="xs"
-						style={tagIds.includes(tag.id) ? `background-color:${tag.color};border-color:${tag.color}` : `color:${tag.color};border-color:${tag.color}`}
-						onclick={() => (tagIds = toggle(tagIds, tag.id))}
-					>{tag.name}</Button>
+						style={tagIds.includes(tag.id)
+							? `background-color:${tag.color};border-color:${tag.color}`
+							: `color:${tag.color};border-color:${tag.color}`}
+						onclick={() => (tagIds = toggle(tagIds, tag.id))}>{tag.name}</Button
+					>
 				{/each}
 			</div>
-			<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+			<div class="wikiforge-card-grid">
 				{#each filteredCards as card (card.id)}
-					<div class="relative min-w-0">
+					<div class="wikiforge-card-size relative">
 						<CardTile {card} showFriendOwners={false} />
 						<Button
 							aria-label={card.title}

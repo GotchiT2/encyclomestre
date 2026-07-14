@@ -30,7 +30,7 @@ export interface WikiForgeQuery {
 	size?: number;
 	sortBy?: 'name' | 'rarity';
 	sortDirection?: 'ASC' | 'DESC';
-	rarities?: Array<'C' | 'PC' | 'R' | 'SR' | 'UR' | 'L'>;
+	rarities?: Array<'C' | 'PC' | 'R' | 'SR' | 'UR' | 'L' | 'KTD'>;
 }
 
 function queryPath(endpoint: '/api/cards' | '/api/collection', query: WikiForgeQuery) {
@@ -100,12 +100,13 @@ export function toCardPage(source: WikiForgePage<WikiForgeCard>): PaginatedRespo
 		string,
 		{ name: CardRecord['rarity']; initials: CardRecord['rarityInitials']; color: string }
 	> = {
-		C: { name: 'Commune', initials: 'C', color: '#6B7280' },
-		PC: { name: 'Peu Commune', initials: 'PC', color: '#B45309' },
-		R: { name: 'Rare', initials: 'R', color: '#3B82F6' },
-		SR: { name: 'Super-Rare', initials: 'SR', color: '#10B981' },
-		UR: { name: 'Ultra-Rare', initials: 'UR', color: '#A855F7' },
-		L: { name: 'Légendaire', initials: 'L', color: '#E5A93C' }
+		C: { name: 'Commune', initials: 'C', color: '#d3e4f8' },
+		PC: { name: 'Peu Commune', initials: 'PC', color: '#1d71cf' },
+		R: { name: 'Rare', initials: 'R', color: '#5c1dcf' },
+		SR: { name: 'Super-Rare', initials: 'SR', color: '#b41dcf' },
+		UR: { name: 'Ultra-Rare', initials: 'UR', color: '#cf7d1d' },
+		L: { name: 'Légendaire', initials: 'L', color: '#cf1d1d' },
+		KTD: { name: 'KTD', initials: 'KTD', color: '#1dcf47' }
 	};
 	return {
 		items: source.results.map((card) => {

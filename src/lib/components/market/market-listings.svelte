@@ -22,7 +22,7 @@
 	const cardsById = $derived(new Map(cards.map((card) => [card.id, card])));
 </script>
 
-<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
+<div class="wikiforge-card-grid">
 	{#each listings as listing (listing.id)}
 		{@const card = cardsById.get(listing.cardId)}
 		{#if card}<article class="relative border border-primary/30 bg-card p-2">

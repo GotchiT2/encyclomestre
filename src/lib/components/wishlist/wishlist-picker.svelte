@@ -117,11 +117,9 @@
 					>
 				{/each}
 			</div>
-			<div
-				class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7"
-			>
+			<div class="wikiforge-card-grid mt-4">
 				{#each visibleCards as card (card.id)}
-					<div class="relative min-w-0">
+					<div class="wikiforge-card-size relative">
 						<CardTile {card} showFriendOwners={false} />
 						<Button
 							aria-label={card.title}

@@ -1,9 +1,9 @@
 {
 	"app": {
-		"title": "Encyclomestre · Le Grand Registre"
+		"title": "WikiForge · Le Grand Registre"
 	},
 	"navigation": {
-		"brand": "Encyclomestre",
+		"brand": "WikiForge",
 		"registry": "Registre impérial · 01",
 		"home": "Accueil",
 		"cards": "Cartes",
@@ -29,7 +29,7 @@
 	"landing": {
 		"eyebrow": "Archives connectées · Collection 01",
 		"title": "Le savoir devient une carte.",
-		"manifest": "Encyclomestre transforme les grands récits de Wikipédia en un registre vivant à collectionner, échanger et transmettre.",
+		"manifest": "WikiForge transforme les grands récits de Wikipédia en un registre vivant à collectionner, échanger et transmettre.",
 		"primaryCta": "Commencer le registre",
 		"secondaryCta": "Consulter le codex",
 		"ledger": "Registre vivant",
@@ -179,6 +179,9 @@
 		"reserve": "Paquets disponibles",
 		"open": "Ouvrir le paquet",
 		"opening": "Ouverture en cours…",
+		"next_available": "Prochain booster dans {delay}",
+		"revealed_title": "Cartes révélées",
+		"revealed_count": "{count} cartes obtenues",
 		"last_opening": "Dernière ouverture",
 		"new_copy": "Nouvel exemplaire",
 		"duplicate": "Doublon · ×{count}",
@@ -429,7 +432,7 @@
 		},
 		"register": {
 			"title": "Créer un compte",
-			"description": "Rejoignez les collectionneurs d’Encyclomestre.",
+			"description": "Rejoignez les collectionneurs de WikiForge.",
 			"loginLink": "Se connecter",
 			"submit": "Créer mon compte",
 			"submitting": "Création…",

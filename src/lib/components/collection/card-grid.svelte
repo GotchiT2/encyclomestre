@@ -28,10 +28,8 @@
 	}
 </script>
 
-<div
-	class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7"
->
-	{#each cards as card (card.id)}<div class="relative">
+<div class="wikiforge-card-grid">
+	{#each cards as card (card.id)}<div class="wikiforge-card-size relative">
 			<CardTile
 				{card}
 				tags={cardTags(card.id)}

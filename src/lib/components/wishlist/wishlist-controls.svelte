@@ -5,12 +5,13 @@
 	import type { CardRarity, WishlistPriority } from '$lib/types';
 
 	const rarities: { value: CardRarity; initials: string; color: string }[] = [
-		{ value: 'Légendaire', initials: 'L', color: '#E5A93C' },
-		{ value: 'Ultra-Rare', initials: 'UR', color: '#A855F7' },
-		{ value: 'Super-Rare', initials: 'SR', color: '#10B981' },
-		{ value: 'Rare', initials: 'R', color: '#3B82F6' },
-		{ value: 'Peu Commune', initials: 'PC', color: '#B45309' },
-		{ value: 'Commune', initials: 'C', color: '#6B7280' }
+		{ value: 'KTD', initials: 'KTD', color: '#1dcf47' },
+		{ value: 'Légendaire', initials: 'L', color: '#cf1d1d' },
+		{ value: 'Ultra-Rare', initials: 'UR', color: '#cf7d1d' },
+		{ value: 'Super-Rare', initials: 'SR', color: '#b41dcf' },
+		{ value: 'Rare', initials: 'R', color: '#5c1dcf' },
+		{ value: 'Peu Commune', initials: 'PC', color: '#1d71cf' },
+		{ value: 'Commune', initials: 'C', color: '#d3e4f8' }
 	];
 
 	let {
@@ -62,7 +63,7 @@
 				value={rarity.value}
 				aria-label={rarity.value}
 				class="h-7 min-w-8 px-1.5 font-mono text-[10px] font-bold"
-				style={`background-color:${rarity.color};color:#080A09`}>{rarity.initials}</ToggleGroup.Item
+				style={`background-color:${rarity.color};color:#080f19`}>{rarity.initials}</ToggleGroup.Item
 			>
 		{/each}
 	</ToggleGroup.Root>
