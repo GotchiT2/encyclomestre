@@ -25,14 +25,14 @@
 <div class="wikiforge-card-grid">
 	{#each listings as listing (listing.id)}
 		{@const card = cardsById.get(listing.cardId)}
-		{#if card}<article class="relative border border-primary/30 bg-card p-2">
+		{#if card}<article class="forge-panel-flat relative p-2">
 				<CardTile {card} showFriendOwners={false} />
 				<a
 					href={`/market/${listing.id}`}
 					class="absolute inset-x-0 top-0 z-10 aspect-[5/7]"
 					aria-label={$_('market.open_listing')}
 				></a>
-				<div class="mt-2 border-t border-dashed border-primary/20 pt-2">
+				<div class="mt-2 border-t border-primary/20 px-1 pt-3 pb-1">
 					<Button
 						size="icon-xs"
 						variant={favoriteIds.includes(listing.id) ? 'default' : 'outline'}
@@ -40,10 +40,10 @@
 						aria-label={$_('market.favorite')}
 						onclick={() => onToggleFavorite?.(listing.id)}>♥</Button
 					>
-					<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
+					<p class="forge-label">
 						{listing.type === 'auction' ? $_('market.auction') : $_('market.direct_sale')}
 					</p>
-					<p class="mt-1 font-serif text-lg font-black text-foreground">
+					<p class="mt-1 font-heading text-xl tracking-wide text-foreground">
 						{listing.price}
 						{listing.currency}
 					</p>

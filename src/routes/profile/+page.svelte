@@ -110,7 +110,7 @@
 		class="flex flex-col gap-6 pb-12 sm:gap-8"
 		style={`--profile-accent:${settings.accentColor}`}
 	>
-		<header class="border-4 border-double border-primary/30 bg-card p-4 sm:p-6">
+		<header class="forge-panel p-4 sm:p-6">
 			<div class="flex items-center gap-4">
 				<button
 					class="grid size-18 shrink-0 place-items-center border border-primary/40 bg-black p-1 text-2xl font-serif font-black text-primary"
@@ -132,7 +132,7 @@
 					<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 						{$_('profile.title')}
 					</p>
-					<h1 class="truncate font-serif text-3xl font-black uppercase tracking-tight sm:text-5xl">
+					<h1 class="truncate font-serif text-3xl font-bold tracking-tight sm:text-5xl">
 						{settings.username}
 					</h1>
 					<div class="mt-2 flex flex-wrap gap-1">

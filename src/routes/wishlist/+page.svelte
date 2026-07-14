@@ -15,6 +15,7 @@
 	import WishlistRegistry, {
 		type WishlistCard
 	} from '$lib/components/wishlist/wishlist-registry.svelte';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
 	import type {
@@ -118,29 +119,22 @@
 </script>
 
 <section class="flex flex-col gap-6 pb-12 sm:gap-8">
-	<header class="border-b border-dashed border-primary/30 pb-6">
-		<p class="font-mono text-[10px] uppercase tracking-[0.24em] text-primary">
-			{$_('wishlist.eyebrow')}
-		</p>
-		<div class="mt-3 flex flex-wrap items-end justify-between gap-4">
-			<div>
-				<h1
-					class="font-serif text-4xl font-black uppercase tracking-tight text-foreground sm:text-5xl"
-				>
-					{$_('wishlist.title')}
-				</h1>
-				<p class="mt-3 max-w-2xl font-serif italic leading-relaxed text-muted-foreground">
-					{$_('wishlist.description')}
-				</p>
-			</div>
-			<Button onclick={() => (pickerOpen = true)}>{$_('wishlist.add_card')}</Button>
-		</div>
-		<p class="mt-4 font-mono text-[10px] uppercase tracking-widest text-primary">
+	<PageHeader
+		eyebrow={$_('wishlist.eyebrow')}
+		title={$_('wishlist.title')}
+		description={$_('wishlist.description')}
+	>
+		{#snippet actions()}<Button onclick={() => (pickerOpen = true)}
+				>{$_('wishlist.add_card')}</Button
+			>{/snippet}
+	</PageHeader>
+	<div class="forge-panel-flat p-3">
+		<p class="forge-label">
 			{$_('wishlist.total', { values: { count: entries.length } })} · {$_('wishlist.alert_count', {
 				values: { count: alerts.length }
 			})}
 		</p>
-	</header>
+	</div>
 
 	<WishlistControls bind:query bind:selectedRarities bind:priority bind:hasAlert />
 	{#if loading}

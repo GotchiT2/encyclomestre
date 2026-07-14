@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { getCards, getMarketListings } from '$lib/api';
 	import MarketListings from '$lib/components/market/market-listings.svelte';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
@@ -51,20 +52,14 @@
 </script>
 
 <section class="flex flex-col gap-6 pb-12">
-	<header class="border-b border-dashed border-primary/30 pb-6">
-		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-			{$_('market.eyebrow')}
-		</p>
-		<h1
-			class="mt-3 font-serif text-4xl font-black uppercase tracking-tight text-foreground sm:text-5xl"
-		>
-			{$_('market.title')}
-		</h1>
-		<p class="mt-3 font-serif italic text-muted-foreground">{$_('market.description')}</p>
-	</header>
-	<div class="flex flex-wrap border border-primary/30 bg-card p-1" role="tablist">
+	<PageHeader
+		eyebrow={$_('market.eyebrow')}
+		title={$_('market.title')}
+		description={$_('market.description')}
+	/>
+	<div class="forge-panel-flat flex flex-wrap gap-1 p-1" role="tablist">
 		{#each [['all', 'market.tab_all'], ['mine', 'market.tab_mine'], ['bids', 'market.tab_bids'], ['history', 'market.tab_history']] as tab (tab[0])}<button
-				class="h-10 px-3 font-mono text-[10px] uppercase tracking-widest {activeTab === tab[0]
+				class="min-h-11 px-4 text-[10px] font-bold uppercase tracking-widest {activeTab === tab[0]
 					? 'bg-primary text-primary-foreground'
 					: 'text-primary'}"
 				onclick={() => {

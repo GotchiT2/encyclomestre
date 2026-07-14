@@ -22,6 +22,7 @@
 	import WishlistShareModal from '$lib/components/wishlist/wishlist-share-modal.svelte';
 	import WishlistSocialGrid from '$lib/components/wishlist/wishlist-social-grid.svelte';
 	import WishlistTradeDrawer from '$lib/components/wishlist/wishlist-trade-drawer.svelte';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
 	import type {
@@ -154,14 +155,11 @@
 </script>
 
 <section class="flex flex-col gap-6 pb-12 sm:gap-8">
-	<header class="border-b border-dashed border-primary/30 pb-6">
-		<p class="font-mono text-[10px] uppercase tracking-[0.24em] text-primary">
-			{$_('wishlist.registry')}
-		</p>
-		<h1 class="mt-3 font-serif text-4xl font-black uppercase tracking-tight sm:text-5xl">
-			{$_('wishlist.hub_title')}
-		</h1>
-	</header>
+	<PageHeader
+		eyebrow={$_('wishlist.registry')}
+		title={$_('wishlist.hub_title')}
+		description={$_('wishlist.description')}
+	/>
 	{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('wishlist.loading')}
 		</p>{:else}

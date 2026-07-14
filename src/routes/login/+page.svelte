@@ -32,38 +32,42 @@
 	}
 </script>
 
-<Card.Root
-	class="mx-auto w-full max-w-md border-4 border-double border-primary/30 bg-card shadow-none"
->
-	<Card.Header>
-		<Card.Title>{$_('auth.login.title')}</Card.Title>
-		<Card.Description>{$_('auth.login.description')}</Card.Description>
-		<Card.Action
-			><Button href="/register" variant="link">{$_('auth.login.registerLink')}</Button></Card.Action
-		>
-	</Card.Header>
-	<Card.Content>
-		<form onsubmit={handleSubmit}>
-			<Field.Group>
-				<Field.Field>
-					<Field.Label for="email">{$_('auth.fields.email')}</Field.Label>
-					<Input id="email" type="email" autocomplete="email" required bind:value={email} />
-				</Field.Field>
-				<Field.Field>
-					<Field.Label for="password">{$_('auth.fields.password')}</Field.Label>
-					<Input
-						id="password"
-						type="password"
-						autocomplete="current-password"
-						required
-						bind:value={password}
-					/>
-				</Field.Field>
-				{#if error}<Field.Error>{error}</Field.Error>{/if}
-				<Button type="submit" class="w-full" disabled={isSubmitting}
-					>{isSubmitting ? $_('auth.login.submitting') : $_('auth.login.submit')}</Button
+<section class="grid min-h-[calc(100dvh-10rem)] place-items-center py-6">
+	<div class="w-full max-w-md">
+		<p class="forge-wordmark mb-5 text-center text-4xl">{$_('navigation.brand')}</p>
+		<Card.Root class="forge-panel w-full border-0 bg-card shadow-none">
+			<Card.Header>
+				<Card.Title>{$_('auth.login.title')}</Card.Title>
+				<Card.Description>{$_('auth.login.description')}</Card.Description>
+				<Card.Action
+					><Button href="/register" variant="link">{$_('auth.login.registerLink')}</Button
+					></Card.Action
 				>
-			</Field.Group>
-		</form>
-	</Card.Content>
-</Card.Root>
+			</Card.Header>
+			<Card.Content>
+				<form onsubmit={handleSubmit}>
+					<Field.Group>
+						<Field.Field>
+							<Field.Label for="email">{$_('auth.fields.email')}</Field.Label>
+							<Input id="email" type="email" autocomplete="email" required bind:value={email} />
+						</Field.Field>
+						<Field.Field>
+							<Field.Label for="password">{$_('auth.fields.password')}</Field.Label>
+							<Input
+								id="password"
+								type="password"
+								autocomplete="current-password"
+								required
+								bind:value={password}
+							/>
+						</Field.Field>
+						{#if error}<Field.Error>{error}</Field.Error>{/if}
+						<Button type="submit" class="w-full" disabled={isSubmitting}
+							>{isSubmitting ? $_('auth.login.submitting') : $_('auth.login.submit')}</Button
+						>
+					</Field.Group>
+				</form>
+			</Card.Content>
+		</Card.Root>
+	</div>
+</section>

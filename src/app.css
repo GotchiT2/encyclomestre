@@ -239,6 +239,31 @@
 	box-shadow: inset 0 -2px var(--accent);
 }
 
+/* Transitional treatment for dense domain components that still use the legacy frame utilities. */
+.border-double {
+	border-width: 1px !important;
+	border-style: solid !important;
+	border-color: color-mix(in srgb, var(--primary) 30%, transparent) !important;
+	background-color: color-mix(in srgb, var(--card) 94%, transparent);
+	box-shadow:
+		inset 0 1px rgb(255 255 255 / 4%),
+		0 14px 38px rgb(0 0 0 / 20%);
+}
+
+.border-dashed {
+	border-style: solid !important;
+}
+
+[data-slot='card'] {
+	background-image: linear-gradient(145deg, rgb(124 228 222 / 7%), transparent 30%);
+}
+
+[data-slot='input'] {
+	min-height: 2.75rem;
+	border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+	background: rgb(5 10 18 / 64%);
+}
+
 .forge-energy-orbit {
 	position: relative;
 }

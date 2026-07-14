@@ -5,6 +5,8 @@
 	import { getFriends, respondToFriendRequest, removeFriend } from '$lib/api';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import EmptyState from '$lib/components/layout/empty-state.svelte';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { _ } from '$lib/i18n';
 	import type { Friendship } from '$lib/types';
 
@@ -36,22 +38,16 @@
 </script>
 
 <section class="flex flex-col gap-6 pb-12">
-	<header class="border-b border-dashed border-primary/30 pb-6">
-		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-			{$_('friends.eyebrow')}
-		</p>
-		<h1 class="mt-3 font-serif text-4xl font-black uppercase tracking-tight sm:text-5xl">
-			{$_('friends.title')}
-		</h1>
-		<p class="mt-3 font-serif italic text-muted-foreground">{$_('friends.description')}</p>
-	</header>
-	<Input bind:value={query} placeholder={$_('friends.search')} />
+	<PageHeader
+		eyebrow={$_('friends.eyebrow')}
+		title={$_('friends.title')}
+		description={$_('friends.description')}
+	/>
+	<div class="forge-panel p-4"><Input bind:value={query} placeholder={$_('friends.search')} /></div>
 	{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('friends.loading')}
 		</p>{:else if visibleFriendships.length}<div class="grid gap-3 lg:grid-cols-2">
-			{#each visibleFriendships as friendship (friendship.id)}<article
-					class="border-4 border-double border-primary/30 bg-card p-4"
-				>
+			{#each visibleFriendships as friendship (friendship.id)}<article class="forge-panel p-4">
 					<div class="flex items-center justify-between gap-3">
 						<a href={`/users/${friendship.user.id}`} class="flex min-w-0 items-center gap-3">
 							<img
@@ -92,9 +88,5 @@
 						</div>
 					</div>
 				</article>{/each}
-		</div>{:else}<p
-			class="border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
-		>
-			{$_('friends.empty')}
-		</p>{/if}
+		</div>{:else}<EmptyState title={$_('friends.empty')} />{/if}
 </section>

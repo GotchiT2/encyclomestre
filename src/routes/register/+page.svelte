@@ -22,7 +22,17 @@
 		isSubmitting = true;
 		try {
 			const tokens = await register({ email, password });
-			persistSession(localStorage, { ...tokens, user: { id: email, username, displayName: username, role: 'user', createdAt: '', updatedAt: '' } });
+			persistSession(localStorage, {
+				...tokens,
+				user: {
+					id: email,
+					username,
+					displayName: username,
+					role: 'user',
+					createdAt: '',
+					updatedAt: ''
+				}
+			});
 			await goto(resolve('/'));
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : $_('auth.register.failure');
@@ -32,50 +42,54 @@
 	}
 </script>
 
-<Card.Root
-	class="mx-auto w-full max-w-md border-4 border-double border-primary/30 bg-card shadow-none"
->
-	<Card.Header>
-		<Card.Title>{$_('auth.register.title')}</Card.Title>
-		<Card.Description>{$_('auth.register.description')}</Card.Description>
-		<Card.Action
-			><Button href="/login" variant="link">{$_('auth.register.loginLink')}</Button></Card.Action
-		>
-	</Card.Header>
-	<Card.Content>
-		<form onsubmit={handleSubmit}>
-			<Field.Group>
-				<Field.Field>
-					<Field.Label for="username">{$_('auth.fields.username')}</Field.Label>
-					<Input
-						id="username"
-						autocomplete="username"
-						required
-						minlength={3}
-						bind:value={username}
-					/>
-				</Field.Field>
-				<Field.Field>
-					<Field.Label for="email">{$_('auth.fields.email')}</Field.Label>
-					<Input id="email" type="email" autocomplete="email" required bind:value={email} />
-				</Field.Field>
-				<Field.Field>
-					<Field.Label for="password">{$_('auth.fields.password')}</Field.Label>
-					<Input
-						id="password"
-						type="password"
-						autocomplete="new-password"
-						required
-						minlength={8}
-						bind:value={password}
-					/>
-					<Field.Description>{$_('auth.register.passwordHint')}</Field.Description>
-				</Field.Field>
-				{#if error}<Field.Error>{error}</Field.Error>{/if}
-				<Button type="submit" class="w-full" disabled={isSubmitting}
-					>{isSubmitting ? $_('auth.register.submitting') : $_('auth.register.submit')}</Button
+<section class="grid min-h-[calc(100dvh-10rem)] place-items-center py-6">
+	<div class="w-full max-w-md">
+		<p class="forge-wordmark mb-5 text-center text-4xl">{$_('navigation.brand')}</p>
+		<Card.Root class="forge-panel w-full border-0 bg-card shadow-none">
+			<Card.Header>
+				<Card.Title>{$_('auth.register.title')}</Card.Title>
+				<Card.Description>{$_('auth.register.description')}</Card.Description>
+				<Card.Action
+					><Button href="/login" variant="link">{$_('auth.register.loginLink')}</Button
+					></Card.Action
 				>
-			</Field.Group>
-		</form>
-	</Card.Content>
-</Card.Root>
+			</Card.Header>
+			<Card.Content>
+				<form onsubmit={handleSubmit}>
+					<Field.Group>
+						<Field.Field>
+							<Field.Label for="username">{$_('auth.fields.username')}</Field.Label>
+							<Input
+								id="username"
+								autocomplete="username"
+								required
+								minlength={3}
+								bind:value={username}
+							/>
+						</Field.Field>
+						<Field.Field>
+							<Field.Label for="email">{$_('auth.fields.email')}</Field.Label>
+							<Input id="email" type="email" autocomplete="email" required bind:value={email} />
+						</Field.Field>
+						<Field.Field>
+							<Field.Label for="password">{$_('auth.fields.password')}</Field.Label>
+							<Input
+								id="password"
+								type="password"
+								autocomplete="new-password"
+								required
+								minlength={8}
+								bind:value={password}
+							/>
+							<Field.Description>{$_('auth.register.passwordHint')}</Field.Description>
+						</Field.Field>
+						{#if error}<Field.Error>{error}</Field.Error>{/if}
+						<Button type="submit" class="w-full" disabled={isSubmitting}
+							>{isSubmitting ? $_('auth.register.submitting') : $_('auth.register.submit')}</Button
+						>
+					</Field.Group>
+				</form>
+			</Card.Content>
+		</Card.Root>
+	</div>
+</section>

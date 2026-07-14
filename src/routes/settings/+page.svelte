@@ -15,6 +15,7 @@
 	import SettingsPreferences from '$lib/components/settings/settings-preferences.svelte';
 	import SettingsAccount from '$lib/components/settings/settings-account.svelte';
 	import CensoredKeywords from '$lib/components/settings/censored-keywords.svelte';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import type { ProfileSettings, UserPreferences } from '$lib/types';
 
@@ -62,20 +63,14 @@
 </script>
 
 <section class="flex flex-col gap-6">
-	<header class="border-b border-dashed border-primary/30 pb-6">
-		<p class="font-mono text-[10px] uppercase tracking-[0.24em] text-primary">
-			{$_('settings.eyebrow')}
-		</p>
-		<h1 class="mt-3 font-serif text-4xl font-black uppercase tracking-tight sm:text-5xl">
-			{$_('settings.title')}
-		</h1>
-		<p class="mt-3 max-w-2xl font-serif italic leading-relaxed text-muted-foreground">
-			{$_('settings.description')}
-		</p>
-		{#if !loading && profile}
-			<div class="mt-4 flex justify-end"><Button onclick={save}>{$_('common.save')}</Button></div>
-		{/if}
-	</header>
+	<PageHeader
+		eyebrow={$_('settings.eyebrow')}
+		title={$_('settings.title')}
+		description={$_('settings.description')}
+	>
+		{#snippet actions()}{#if !loading && profile}<Button onclick={save}>{$_('common.save')}</Button
+				>{/if}{/snippet}
+	</PageHeader>
 	{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('settings.loading')}
 		</p>{:else if profile}<SettingsPreferences
@@ -86,5 +81,5 @@
 			onLogout={logoutFromSettings}
 			onDelete={deleteAccount}
 		/>
-		{/if}
+	{/if}
 </section>

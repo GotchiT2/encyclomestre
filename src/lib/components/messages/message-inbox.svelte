@@ -90,10 +90,8 @@
 	}
 </script>
 
-<div
-	class="grid min-h-[34rem] overflow-hidden border-4 border-double border-primary/30 bg-card lg:grid-cols-[19rem_minmax(0,1fr)]"
->
-	<aside class="border-b border-primary/20 bg-background p-3 lg:border-r lg:border-b-0">
+<div class="forge-panel-flat grid min-h-[34rem] overflow-hidden lg:grid-cols-[19rem_minmax(0,1fr)]">
+	<aside class="border-b border-primary/20 bg-background/55 p-3 lg:border-r lg:border-b-0">
 		<Input
 			bind:value={query}
 			placeholder={$_('messages.search')}
@@ -117,14 +115,13 @@
 						onclick={() => (selectedConversationId = conversation.id)}
 					>
 						<div class="flex items-center justify-between gap-2">
-							<span class="truncate font-serif text-base font-black uppercase"
-								>{conversation.title}</span
+							<span class="truncate font-serif text-base font-bold">{conversation.title}</span
 							>{#if conversation.unreadCount}<span
 									class="flex size-5 shrink-0 items-center justify-center bg-primary font-mono text-[9px] text-primary-foreground"
 									>{conversation.unreadCount}</span
 								>{/if}
 						</div>
-						<p class="mt-1 truncate font-serif text-xs italic opacity-75">{conversation.preview}</p>
+						<p class="mt-1 truncate text-xs opacity-70">{conversation.preview}</p>
 					</button>
 				{/each}
 			</nav>
@@ -141,7 +138,7 @@
 						? $_('messages.guild_channel')
 						: $_('messages.direct_channel')}
 				</p>
-				<h2 class="mt-1 font-serif text-xl font-black uppercase text-foreground">
+				<h2 class="mt-1 font-serif text-xl font-bold text-foreground">
 					{selectedConversation.title}
 				</h2>
 			</header>
@@ -158,7 +155,7 @@
 							>
 								{quoted.content}
 							</blockquote>{/if}
-						<p class="font-serif text-sm leading-relaxed text-foreground">{message.content}</p>
+						<p class="text-sm leading-relaxed text-foreground">{message.content}</p>
 						{#if message.wishlistShare}<div class="mt-3 border-2 border-primary/40 bg-card p-3">
 								<p class="font-mono text-[9px] uppercase tracking-widest text-primary">
 									{$_('messages.guild_share')}

@@ -14,6 +14,7 @@
 	import TradeEditor from '$lib/components/trades/trade-editor.svelte';
 	import TradePartnerPicker from '$lib/components/trades/trade-partner-picker.svelte';
 	import TradeLedger from '$lib/components/trades/trade-ledger.svelte';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import type { CardRecord, CreateTradeOfferInput, TradeOffer, User } from '$lib/types';
 	import type { PageData } from './$types';
@@ -94,30 +95,21 @@
 </script>
 
 <section class="flex flex-col gap-6 sm:gap-8">
-	<header
-		class="flex flex-wrap items-end justify-between gap-4 border-b border-dashed border-primary/30 pb-6"
+	<PageHeader
+		eyebrow={$_('trades.eyebrow')}
+		title={$_('trades.title')}
+		description={$_('trades.description')}
 	>
-		<div>
-			<p class="font-mono text-[10px] uppercase tracking-[0.24em] text-primary">
-				{$_('trades.eyebrow')}
-			</p>
-			<h1
-				class="mt-3 font-serif text-4xl font-black uppercase tracking-tight text-foreground sm:text-5xl"
+		{#snippet actions()}
+			<Button
+				onclick={() => {
+					editorDraft = {};
+					selectedPartner = null;
+					partnerPickerOpen = true;
+				}}>{$_('trades.create_offer')}</Button
 			>
-				{$_('trades.title')}
-			</h1>
-			<p class="mt-3 max-w-2xl font-serif italic leading-relaxed text-muted-foreground">
-				{$_('trades.description')}
-			</p>
-		</div>
-		<Button
-			onclick={() => {
-				editorDraft = {};
-				selectedPartner = null;
-				partnerPickerOpen = true;
-			}}>{$_('trades.create_offer')}</Button
-		>
-	</header>
+		{/snippet}
+	</PageHeader>
 	{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('trades.loading')}
 		</p>{:else}<TradeLedger
