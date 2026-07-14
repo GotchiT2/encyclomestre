@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import CardTile from '$lib/components/card-tile.svelte';
 	import CardActions from './card-actions.svelte';
 	import CardMarketSummary from './card-market-summary.svelte';
 	import CardTagControls from './card-tag-controls.svelte';
@@ -8,6 +9,7 @@
 	import FriendOwnerLedger from '$lib/components/social/friend-owner-ledger.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
+	import XIcon from '@lucide/svelte/icons/x';
 	import type {
 		CardPriceHistory,
 		CardRecord,
@@ -37,40 +39,50 @@
 		onToggleWishlist: () => void;
 		onClose: () => void;
 	} = $props();
+
+	let activeTab = $state<'data' | 'market' | 'social'>('data');
 </script>
 
-<div class="fixed inset-0 z-50 bg-black/75 p-4" role="presentation" onclick={onClose}>
+<div
+	class="fixed inset-0 z-50 bg-[rgb(1_5_10_/_88%)] p-0 backdrop-blur-sm sm:p-5"
+	role="presentation"
+	onclick={onClose}
+>
 	<dialog
 		open
-		class="fixed top-1/2 left-1/2 m-0 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-screen-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto border-4 border-double border-primary/40 bg-card p-4 text-foreground shadow-2xl sm:p-6"
+		class="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none overflow-y-auto border-0 bg-card p-4 text-foreground shadow-2xl sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[calc(100dvh-2.5rem)] sm:w-[calc(100%-2.5rem)] sm:max-w-screen-xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:border sm:border-primary/40 sm:p-6"
 		aria-labelledby="card-detail-modal-title"
 		onclick={(event) => event.stopPropagation()}
 	>
-		<div class="mb-5 flex justify-end">
-			<Button size="sm" variant="outline" onclick={onClose}>{$_('cardDetail.close')}</Button>
+		<div
+			class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_35%,rgb(25_167_170_/_13%),transparent_32rem)]"
+		></div>
+		<div class="relative mb-4 flex justify-end">
+			<Button size="icon" variant="outline" onclick={onClose} aria-label={$_('cardDetail.close')}
+				><XIcon /></Button
+			>
 		</div>
-		<section class="grid gap-6 lg:grid-cols-[minmax(15rem,0.42fr)_minmax(0,1fr)]">
-			<div class="mx-auto w-full max-w-xs border border-primary/30 bg-black p-3">
-				<div class="border border-primary/20 bg-card p-2">
-					<img src={card.imageUrl} alt={card.title} class="aspect-[4/3] w-full object-cover" />
-					<p
-						class="mt-3 font-mono text-[10px] uppercase tracking-widest"
-						style={`color:${card.rarityColor}`}
-					>
-						{card.rarityInitials} · {card.rarity}
-					</p>
-					<h2 class="mt-1 font-serif text-xl font-black uppercase tracking-tight">{card.title}</h2>
-				</div>
+		<section class="relative grid gap-7 lg:grid-cols-[minmax(17rem,0.42fr)_minmax(0,1fr)]">
+			<div class="mx-auto w-fit lg:sticky lg:top-0 lg:self-start">
+				<CardTile
+					{card}
+					tags={tags.filter((tag) => (assignments[card.id] ?? []).includes(tag.id))}
+					showFriendOwners={false}
+					onOpen={() => undefined}
+				/>
 			</div>
 			<div class="flex min-w-0 flex-col gap-5">
-				<header class="border-b border-dashed border-primary/30 pb-5">
+				<header class="forge-divider">
+					<p class="forge-label" style={`color:${card.rarityColor}`}>
+						{card.rarityInitials} · {card.rarity}
+					</p>
 					<h1
 						id="card-detail-modal-title"
-						class="font-serif text-3xl font-black uppercase tracking-tight sm:text-4xl"
+						class="mt-2 font-serif text-3xl font-bold tracking-tight sm:text-5xl"
 					>
 						{card.title}
 					</h1>
-					<p class="mt-3 font-serif italic leading-relaxed text-muted-foreground">
+					<p class="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
 						{card.longDescription}
 					</p>
 				</header>
@@ -82,15 +94,36 @@
 					onMarket={() => goto(resolve('/market'))}
 					onSell={() => goto(resolve('/market'))}
 				/>
-				{#if owned}
-					<CardTagControls cardId={card.id} bind:tags bind:assignments />
-				{/if}
-				<CardTelemetry {card} />
-				<CardMarketSummary {sales} {history} onMarket={() => goto(resolve('/market'))} />
-				<FriendOwnerLedger friends={card.friendsWhoOwn} />
-				{#if card.wikipediaUrl}
-					<Button href={card.wikipediaUrl} target="_blank">{$_('codex.wikipedia')}</Button>
-				{/if}
+
+				<div
+					class="flex gap-1 overflow-x-auto border-b border-primary/20"
+					role="tablist"
+					aria-label={$_('cardDetail.tabs')}
+				>
+					{#each [{ id: 'data', label: 'cardDetail.data' }, { id: 'market', label: 'cardDetail.market_tab' }, { id: 'social', label: 'cardDetail.social' }] as tab (tab.id)}
+						<Button
+							variant="ghost"
+							class={activeTab === tab.id ? 'forge-nav-active' : ''}
+							onclick={() => (activeTab = tab.id as typeof activeTab)}
+							role="tab"
+							aria-selected={activeTab === tab.id}>{$_(tab.label)}</Button
+						>
+					{/each}
+				</div>
+
+				<div class="forge-panel-flat p-4 sm:p-5">
+					{#if activeTab === 'data'}
+						{#if owned}<CardTagControls cardId={card.id} bind:tags bind:assignments />{/if}
+						<div class:mt-5={owned}><CardTelemetry {card} /></div>
+						{#if card.wikipediaUrl}<Button href={card.wikipediaUrl} target="_blank" class="mt-5"
+								>{$_('codex.wikipedia')}</Button
+							>{/if}
+					{:else if activeTab === 'market'}
+						<CardMarketSummary {sales} {history} onMarket={() => goto(resolve('/market'))} />
+					{:else}
+						<FriendOwnerLedger friends={card.friendsWhoOwn} />
+					{/if}
+				</div>
 			</div>
 		</section>
 	</dialog>

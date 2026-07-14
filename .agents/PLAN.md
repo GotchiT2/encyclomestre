@@ -15,7 +15,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 
 - [x] Refonte de l’identité, des cartes, des grilles et de l’ouverture de booster — `feat(ui): redesign WikiForge cards and visual system`
 - [x] Installer les fondations Forge Astrale et la navigation de jeu responsive — `feat(ui): build forge astral design foundation`
-- [ ] Recomposer l’accueil, les galeries, le détail de carte et la chambre de booster
+- [x] Recomposer l’accueil, les galeries, le détail de carte et la chambre de booster — `feat(ui): reforge core card experiences`
 - [ ] Harmoniser les espaces marché, échanges, social, profil et paramètres
 - [ ] Valider la refonte complète, les tests et les états responsive
 

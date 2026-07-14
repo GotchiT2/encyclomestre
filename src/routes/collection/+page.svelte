@@ -5,6 +5,8 @@
 	import FilterControls from '$lib/components/collection/filter-controls.svelte';
 	import SelectionPanel from '$lib/components/collection/selection-panel.svelte';
 	import TagEditor from '$lib/components/collection/tag-editor.svelte';
+	import EmptyState from '$lib/components/layout/empty-state.svelte';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import {
 		persistCollectionTagState,
 		restoreCollectionTagState
@@ -138,32 +140,26 @@
 </script>
 
 <section class="flex flex-col gap-6 pb-28 sm:gap-8">
-	<header class="border-b border-dashed border-primary/30 pb-6">
-		<p class="font-mono text-[10px] uppercase tracking-[0.24em] text-primary">
-			{$_('collection.eyebrow')}
-		</p>
-		<h1
-			class="mt-3 font-serif text-4xl font-black uppercase tracking-tight text-foreground sm:text-5xl"
-		>
-			{$_('collection.title')}
-		</h1>
-		<p class="mt-3 max-w-2xl font-serif italic leading-relaxed text-muted-foreground">
-			{$_('collection.description')}
-		</p>
-	</header>
-
-	<FilterControls
-		bind:query
-		bind:sortBy
-		bind:selectedRarities
-		bind:tagFilterIds
-		{tags}
-		{rarities}
-		{untaggedOption}
-		{newTagOption}
-		onTagFilterChange={handleTagFilterChange}
-		onClear={clearFilters}
+	<PageHeader
+		eyebrow={$_('collection.eyebrow')}
+		title={$_('collection.title')}
+		description={$_('collection.description')}
 	/>
+
+	<div class="forge-panel p-4 sm:p-5">
+		<FilterControls
+			bind:query
+			bind:sortBy
+			bind:selectedRarities
+			bind:tagFilterIds
+			{tags}
+			{rarities}
+			{untaggedOption}
+			{newTagOption}
+			onTagFilterChange={handleTagFilterChange}
+			onClear={clearFilters}
+		/>
+	</div>
 
 	<div class="flex flex-wrap items-center gap-2">
 		<TagEditor bind:open={isTagEditorOpen} bind:tags bind:assignments />
@@ -191,9 +187,7 @@
 				onToggleCard={toggleCardSelection}
 				onOpenCard={(card) => (selectedCard = card)}
 			/>
-		{:else}<p class="border border-primary/30 bg-card p-5 font-serif italic text-muted-foreground">
-				{$_('collection.empty')}
-			</p>{/if}
+		{:else}<EmptyState title={$_('collection.empty')} />{/if}
 		{#if isSelectionMode}<SelectionPanel
 				selectedCount={selectedCardIds.length}
 				{tags}

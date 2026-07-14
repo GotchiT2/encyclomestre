@@ -43,7 +43,7 @@
 </script>
 
 <article
-	class="wikiforge-card-size relative overflow-hidden bg-background shadow-[0_12px_28px_rgb(0_0_0_/_32%)] transition-transform duration-200 hover:-translate-y-1"
+	class="wikiforge-card-size group/card relative overflow-hidden bg-background shadow-[0_16px_38px_rgb(0_0_0_/_42%)] transition-[transform,filter] duration-300 hover:-translate-y-1 hover:drop-shadow-[0_0_1.25rem_rgb(25_167_170_/_18%)]"
 	data-testid="card-tile"
 	data-frame={frameSource}
 >
@@ -52,7 +52,11 @@
 			class="absolute top-[7%] right-[9%] bottom-[45.2%] left-[9%] overflow-hidden bg-cover bg-center bg-no-repeat bg-white"
 			style={`background-image:url(${JSON.stringify(card.imageUrl)})`}
 		></div>
-		<img src={frameSource} alt="" class="pointer-events-none absolute inset-0 z-10 size-full" />
+		<img
+			src={frameSource}
+			alt=""
+			class="pointer-events-none absolute inset-0 z-10 size-full transition-[filter] duration-300 group-hover/card:drop-shadow-[0_0_0.7rem_rgb(254_184_35_/_18%)]"
+		/>
 		<p
 			class="absolute top-[55.9%] right-[15%] left-[15%] z-20 flex h-[8.6%] items-center whitespace-nowrap font-serif font-bold text-[length:var(--card-title-mobile)] text-[#f8cf51] drop-shadow-[0_2px_1px_rgb(0_0_0_/_85%)] lg:text-[length:var(--card-title-desktop)]"
 			style={titleFontStyle}

@@ -3,8 +3,10 @@
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardDetailModal from '$lib/components/cards/card-detail-modal.svelte';
+	import CatalogueFilters from '$lib/components/cards/catalogue-filters.svelte';
+	import EmptyState from '$lib/components/layout/empty-state.svelte';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
 	import { getWikiForgeCard, toCardRecord } from '$lib/api';
 	import { _ } from '$lib/i18n';
 	import type { CardRarity, CardRecord } from '$lib/types';
@@ -56,54 +58,18 @@
 </script>
 
 <section class="flex flex-col gap-8">
-	<header class="border-b border-dashed border-primary/30 pb-6">
-		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-			{$_('codex.eyebrow')}
-		</p>
-		<h1 class="mt-3 font-serif text-4xl font-black uppercase tracking-tight sm:text-5xl">
-			{$_('codex.title')}
-		</h1>
-		<p class="mt-3 font-serif italic text-muted-foreground">{$_('codex.description')}</p>
-	</header>
-	<form method="GET" class="border-4 border-double border-primary/30 bg-card p-3">
-		<div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_9rem_auto]">
-			<Input name="q" value={data.filters.query} placeholder={$_('codex.search')} />
-			<select
-				name="sortBy"
-				class="h-10 border-2 border-primary/40 bg-background px-3 font-mono text-[10px] uppercase tracking-widest text-primary"
-			>
-				<option value="rarity" selected={data.filters.sortBy === 'rarity'}
-					>{$_('collection.sortRarity')}</option
-				>
-				<option value="name" selected={data.filters.sortBy === 'name'}
-					>{$_('collection.sortName')}</option
-				>
-			</select>
-			<select
-				name="sortDirection"
-				class="h-10 border-2 border-primary/40 bg-background px-3 font-mono text-[10px] uppercase tracking-widest text-primary"
-			>
-				<option value="DESC" selected={data.filters.sortDirection === 'DESC'}>DESC</option>
-				<option value="ASC" selected={data.filters.sortDirection === 'ASC'}>ASC</option>
-			</select>
-			<Button type="submit">{$_('common.filter')}</Button>
-		</div>
-		<div class="mt-3 flex flex-wrap gap-2">
-			{#each rarities as rarity (rarity)}
-				<label
-					class="cursor-pointer border border-primary/40 px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-primary"
-				>
-					<input
-						type="checkbox"
-						name="rarity"
-						value={rarity}
-						checked={data.filters.selectedRarities.includes(rarity)}
-					/>
-					{rarity}
-				</label>
-			{/each}
-		</div>
-	</form>
+	<PageHeader
+		eyebrow={$_('codex.eyebrow')}
+		title={$_('codex.title')}
+		description={$_('codex.description')}
+	/>
+	<CatalogueFilters
+		query={data.filters.query}
+		sortBy={data.filters.sortBy}
+		sortDirection={data.filters.sortDirection}
+		selectedRarities={data.filters.selectedRarities}
+		{rarities}
+	/>
 	{#await data.cards}
 		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('codex.loading')}
@@ -116,11 +82,9 @@
 				{/each}
 			</div>
 		{:else}
-			<p class="border border-dashed border-primary/30 p-5 font-serif italic text-muted-foreground">
-				{$_('collection.empty')}
-			</p>
+			<EmptyState title={$_('collection.empty')} />
 		{/if}
-		<nav class="flex items-center justify-between border-t border-dashed border-primary/30 pt-5">
+		<nav class="flex items-center justify-between border-t border-primary/20 pt-5">
 			<Button href={pageHref(Math.max(1, result.meta.page - 1))} disabled={result.meta.page === 1}
 				>{$_('codex.previous')}</Button
 			>
