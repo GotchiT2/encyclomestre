@@ -9,6 +9,7 @@ export type CardRarity =
 	'Légendaire' | 'Ultra-Rare' | 'Super-Rare' | 'Rare' | 'Peu Commune' | 'Commune' | 'KTD';
 
 export interface Card {
+	catalogueId?: string;
 	title: string;
 	shortDescription: string;
 	longDescription: string;

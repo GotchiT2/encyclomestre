@@ -7,7 +7,13 @@
 	import EmptyState from '$lib/components/layout/empty-state.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { getWikiForgeCard, toCardRecord } from '$lib/api';
+	import {
+		addWishlistEntry,
+		getWikiForgeCard,
+		getWishlist,
+		removeWishlistEntry,
+		toCardRecord
+	} from '$lib/api';
 	import { _ } from '$lib/i18n';
 	import type { CardRarity, CardRecord } from '$lib/types';
 	import type { PageData } from './$types';
@@ -25,8 +31,10 @@
 	let selectedCard = $state<CardRecord | null>(null);
 	let wishlistedCardIds = $state<string[]>([]);
 
-	onMount(() => {
-		wishlistedCardIds = JSON.parse(localStorage.getItem('encyclomestre.wishlist-cards') ?? '[]');
+	onMount(async () => {
+		wishlistedCardIds = (await getWishlist('', { page: 1, pageSize: 100 })).items.map(
+			(entry) => entry.cardId
+		);
 	});
 
 	async function openCard(card: CardRecord) {
@@ -38,11 +46,14 @@
 		}
 	}
 
-	function toggleWishlist(cardId: string) {
-		wishlistedCardIds = wishlistedCardIds.includes(cardId)
-			? wishlistedCardIds.filter((id) => id !== cardId)
-			: [...wishlistedCardIds, cardId];
-		localStorage.setItem('encyclomestre.wishlist-cards', JSON.stringify(wishlistedCardIds));
+	async function toggleWishlist(cardId: string) {
+		if (wishlistedCardIds.includes(cardId)) {
+			await removeWishlistEntry('', cardId);
+			wishlistedCardIds = wishlistedCardIds.filter((id) => id !== cardId);
+		} else {
+			await addWishlistEntry('', cardId);
+			wishlistedCardIds = [...wishlistedCardIds, cardId];
+		}
 	}
 
 	function pageHref(page: number) {
@@ -105,7 +116,7 @@
 	<CardDetailModal
 		card={selectedCard}
 		isWishlisted={wishlistedCardIds.includes(selectedCard.id)}
-		onToggleWishlist={() => toggleWishlist(selectedCard!.id)}
+		onToggleWishlist={() => void toggleWishlist(selectedCard!.id)}
 		onClose={() => (selectedCard = null)}
 	/>
 {/if}

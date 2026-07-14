@@ -134,7 +134,7 @@
 				<h1
 					class="mt-1 font-serif text-4xl font-black uppercase tracking-tight text-foreground sm:text-5xl"
 				>
-					@{settings.username}
+					@{settings.username || user.username}
 				</h1>
 				{#if user.bio}<p class="mt-2 font-serif italic text-muted-foreground">{user.bio}</p>{/if}
 			</div>

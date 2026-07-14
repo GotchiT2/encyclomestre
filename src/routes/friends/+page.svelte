@@ -4,18 +4,28 @@
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { currentSession } from '$lib/auth/session';
-	import { getFriends, respondToFriendRequest, removeFriend } from '$lib/api';
+	import {
+		createFriendRequest,
+		getFriends,
+		getTradePartners,
+		respondToFriendRequest,
+		removeFriend
+	} from '$lib/api';
+	import FriendInvitePanel from '$lib/components/friends/friend-invite-panel.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import EmptyState from '$lib/components/layout/empty-state.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { _ } from '$lib/i18n';
-	import type { Friendship } from '$lib/types';
+	import type { Friendship, User } from '$lib/types';
 
 	let userId = $state('demo-user');
 	let friendships = $state<Friendship[]>([]);
 	let query = $state('');
 	let loading = $state(true);
+	let candidates = $state<User[]>([]);
+	let selectedCandidateId = $state('');
+	let inviting = $state(false);
 	const visibleFriendships = $derived(
 		friendships.filter((friendship) =>
 			friendship.user.username.toLocaleLowerCase('fr-FR').includes(query.toLocaleLowerCase('fr-FR'))
@@ -24,13 +34,28 @@
 
 	onMount(async () => {
 		userId = $currentSession?.user.id ?? 'demo-user';
-		friendships = await getFriends(userId);
+		[friendships, candidates] = await Promise.all([getFriends(userId), getTradePartners(userId)]);
+		const existingIds = new Set(friendships.map((friendship) => friendship.user.id));
+		candidates = candidates.filter((candidate) => !existingIds.has(candidate.id));
 		loading = false;
 	});
 
-	async function respond(id: string, status: 'accepted' | 'received') {
+	async function invite() {
+		if (!selectedCandidateId || inviting) return;
+		inviting = true;
+		const created = await createFriendRequest(userId, selectedCandidateId);
+		friendships = [...friendships, created];
+		candidates = candidates.filter((candidate) => candidate.id !== selectedCandidateId);
+		selectedCandidateId = '';
+		inviting = false;
+	}
+
+	async function respond(id: string, status: 'accepted' | 'rejected') {
 		const updated = await respondToFriendRequest(id, status);
-		friendships = friendships.map((friendship) => (friendship.id === id ? updated : friendship));
+		friendships =
+			status === 'rejected'
+				? friendships.filter((friendship) => friendship.id !== id)
+				: friendships.map((friendship) => (friendship.id === id ? updated : friendship));
 	}
 
 	async function remove(id: string) {
@@ -46,6 +71,12 @@
 		description={$_('friends.description')}
 	/>
 	<div class="forge-panel p-4"><Input bind:value={query} placeholder={$_('friends.search')} /></div>
+	<FriendInvitePanel
+		{candidates}
+		bind:selectedId={selectedCandidateId}
+		disabled={inviting}
+		onInvite={() => void invite()}
+	/>
 	{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('friends.loading')}
 		</p>{:else if visibleFriendships.length}<div class="grid gap-3 lg:grid-cols-2">
@@ -76,7 +107,7 @@
 								><Button
 									size="sm"
 									variant="outline"
-									onclick={() => respond(friendship.id, 'received')}>{$_('friends.decline')}</Button
+									onclick={() => respond(friendship.id, 'rejected')}>{$_('friends.decline')}</Button
 								>{:else}<Button
 									size="sm"
 									variant="outline"

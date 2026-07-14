@@ -4,7 +4,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Sheet from '$lib/components/ui/sheet';
-	import { mockCollectionTagAssignments, mockCollectionTags } from '$lib/api/mocks/collection-tags';
 	import type { CardRecord } from '$lib/types';
 
 	let {
@@ -22,10 +21,15 @@
 	let query = $state('');
 	let rarities = $state<string[]>([]);
 	let tagIds = $state<string[]>([]);
+	const availableTags = $derived([
+		...new Map(
+			cards.flatMap((card) => card.collectionTags ?? []).map((tag) => [tag.id, tag])
+		).values()
+	]);
 	const filteredCards = $derived(
 		cards.filter((card) => {
 			const normalizedQuery = query.trim().toLocaleLowerCase('fr-FR');
-			const cardTags = mockCollectionTagAssignments[card.id] ?? [];
+			const cardTags = (card.collectionTags ?? []).map((tag) => tag.id);
 			return (
 				(!normalizedQuery ||
 					card.title.toLocaleLowerCase('fr-FR').includes(normalizedQuery) ||
@@ -75,7 +79,7 @@
 				{/each}
 			</div>
 			<div class="mb-4 flex flex-wrap gap-1.5" aria-label={$_('collection.tags')}>
-				{#each mockCollectionTags as tag (tag.id)}
+				{#each availableTags as tag (tag.id)}
 					<Button
 						variant={tagIds.includes(tag.id) ? 'default' : 'outline'}
 						size="xs"

@@ -1,5 +1,5 @@
-import { apiRequest, type RequestOptions } from './client';
-import type { CardRecord, PaginatedResponse } from '$lib/types';
+import { getWikiForgeCollection, toCollectionPage } from './wikiforge';
+import type { RequestOptions } from './client';
 
-export const getCollection = (options?: RequestOptions) =>
-	apiRequest<PaginatedResponse<CardRecord>>('/collection', options);
+export const getCollection = async (options?: RequestOptions) =>
+	toCollectionPage(await getWikiForgeCollection({ size: 100 }, options));

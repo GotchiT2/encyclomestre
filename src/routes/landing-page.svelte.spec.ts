@@ -1,7 +1,18 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import '$lib/i18n';
+
+vi.mock('$lib/api', async () => {
+	const { mockCards } = await import('$lib/api/mocks/cards');
+	return {
+		getCards: vi.fn().mockResolvedValue({
+			items: [mockCards.find((card) => card.isFullArt) ?? mockCards[0]]
+		}),
+		getDashboard: vi.fn()
+	};
+});
+
 import LandingPage from './+page.svelte';
 
 describe('landing page', () => {

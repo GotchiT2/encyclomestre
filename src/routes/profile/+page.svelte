@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { _ } from '$lib/i18n';
 	import { currentSession } from '$lib/auth/session';
-	import { getProfileSettings, getSales, updateProfileSettings } from '$lib/api';
+	import { getCard, getMyProfileSettings, getSales, updateProfileSettings } from '$lib/api';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardPicker from '$lib/components/profile/card-picker.svelte';
 	import ProfileGallery from '$lib/components/profile/profile-gallery.svelte';
@@ -48,9 +48,22 @@
 		ownedCards = collection.items;
 		allCards = catalogue.items;
 		const userId = $currentSession?.user.id ?? 'demo-user';
-		const [profile, userSales] = await Promise.all([getProfileSettings(userId), getSales(userId)]);
-		settings = profile;
+		const [profile, userSales] = await Promise.all([getMyProfileSettings(), getSales(userId)]);
+		settings = {
+			...profile,
+			username: profile.username || $currentSession?.user.username || ''
+		};
 		sales = userSales;
+		const knownIds = new Set(allCards.map((card) => card.id));
+		const referencedIds = [
+			...new Set([...settings.wantedCardIds, ...userSales.map((sale) => sale.cardId)])
+		];
+		const missingCards = await Promise.all(
+			referencedIds
+				.filter((cardId) => !knownIds.has(cardId))
+				.map((cardId) => getCard(cardId).catch(() => null))
+		);
+		allCards = [...allCards, ...missingCards.filter((card): card is CardRecord => card !== null)];
 		loading = false;
 	});
 
@@ -58,6 +71,10 @@
 		settings = next;
 		const userId = $currentSession?.user.id ?? 'demo-user';
 		settings = await updateProfileSettings(userId, next);
+	}
+
+	function cardReferenceId(card: CardRecord) {
+		return card.catalogueId ?? card.id;
 	}
 
 	function openPicker(title: string, cards: CardRecord[], action: (card: CardRecord) => void) {
@@ -69,7 +86,7 @@
 
 	function galleryCards(gallery: Gallery) {
 		return gallery.cardIds
-			.map((id) => ownedCards.find((card) => card.id === id))
+			.map((id) => ownedCards.find((card) => cardReferenceId(card) === id))
 			.filter(Boolean) as CardRecord[];
 	}
 
@@ -117,13 +134,14 @@
 					aria-label={$_('profile.avatar_title')}
 					onclick={() =>
 						openPicker($_('profile.avatar_title'), ownedCards, (card) =>
-							persist({ ...settings, avatarCardId: card.id })
+							persist({ ...settings, avatarCardId: cardReferenceId(card) })
 						)}
 				>
-					{#if settings.avatarCardId && ownedCards.find((card) => card.id === settings.avatarCardId)}
+					{#if settings.avatarCardId && ownedCards.find((card) => cardReferenceId(card) === settings.avatarCardId)}
 						<img
 							class="size-full object-cover"
-							src={ownedCards.find((card) => card.id === settings.avatarCardId)?.imageUrl}
+							src={ownedCards.find((card) => cardReferenceId(card) === settings.avatarCardId)
+								?.imageUrl}
 							alt={settings.username}
 						/>
 					{:else}{settings.username.slice(0, 1).toLocaleUpperCase('fr-FR')}{/if}
@@ -167,13 +185,16 @@
 						onAddCard={() =>
 							openPicker(
 								gallery.title,
-								ownedCards.filter((card) => !gallery.cardIds.includes(card.id)),
+								ownedCards.filter((card) => !gallery.cardIds.includes(cardReferenceId(card))),
 								(card) =>
 									persist({
 										...settings,
 										showcases: settings.showcases.map((entry) =>
 											entry.id === gallery.id
-												? { ...entry, cardIds: [...entry.cardIds, card.id].slice(0, 6) }
+												? {
+														...entry,
+														cardIds: [...entry.cardIds, cardReferenceId(card)].slice(0, 6)
+													}
 												: entry
 										)
 									})

@@ -4,13 +4,13 @@
 	import CardTile from '$lib/components/card-tile.svelte';
 	import ForgePanel from '$lib/components/layout/forge-panel.svelte';
 	import HudStat from '$lib/components/layout/hud-stat.svelte';
-	import { mockCards } from '$lib/api/mocks/cards';
 	import { _ } from '$lib/i18n';
 	import ArrowUpRightIcon from '@lucide/svelte/icons/arrow-up-right';
 	import BookOpenIcon from '@lucide/svelte/icons/book-open';
 	import PackageOpenIcon from '@lucide/svelte/icons/package-open';
+	import type { CardRecord } from '$lib/types';
 
-	const showcaseCard = mockCards.find((card) => card.isFullArt) ?? mockCards[0];
+	let { showcaseCard }: { showcaseCard: CardRecord | null } = $props();
 </script>
 
 <section
@@ -49,9 +49,9 @@
 		<div class="absolute right-0 bottom-0 z-20 w-32 rotate-8 sm:w-44">
 			<img src="/images/booster.png" alt="" class="forge-booster-idle w-full" />
 		</div>
-		<div class="relative z-10 max-w-sm -rotate-2" data-testid="full-art-frame">
-			<CardTile card={showcaseCard} showFriendOwners={false} />
-		</div>
+		{#if showcaseCard}<div class="relative z-10 max-w-sm -rotate-2" data-testid="full-art-frame">
+				<CardTile card={showcaseCard} showFriendOwners={false} />
+			</div>{/if}
 		<ForgePanel class="absolute right-3 bottom-4 z-30 hidden p-3 sm:block">
 			<a
 				href={resolve('/boosters')}

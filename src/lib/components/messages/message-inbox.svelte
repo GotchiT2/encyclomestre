@@ -4,7 +4,7 @@
 		getConversations,
 		markConversationRead,
 		sendMessage,
-		toggleMessageReaction
+		setMessageReaction
 	} from '$lib/api';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -57,9 +57,9 @@
 
 	async function loadThread(conversationId: string) {
 		thread = await getConversationMessages(conversationId);
-		const updated = await markConversationRead(conversationId);
+		await markConversationRead(conversationId);
 		conversations = conversations.map((conversation) =>
-			conversation.id === updated.id ? updated : conversation
+			conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation
 		);
 	}
 
@@ -85,8 +85,26 @@
 	}
 
 	async function react(message: MessageRecord, emoji: string) {
-		const updated = await toggleMessageReaction(message.id, { userId, emoji });
-		thread = thread.map((item) => (item.id === updated.id ? updated : item));
+		const current = message.reactions.find((reaction) => reaction.emoji === emoji);
+		const isActive = current?.userIds.includes(userId) ?? false;
+		await setMessageReaction(message.id, emoji, !isActive);
+		thread = thread.map((item) => {
+			if (item.id !== message.id) return item;
+			const reactions = item.reactions
+				.map((reaction) =>
+					reaction.emoji === emoji
+						? {
+								...reaction,
+								userIds: isActive
+									? reaction.userIds.filter((id) => id !== userId)
+									: [...reaction.userIds, userId]
+							}
+						: reaction
+				)
+				.filter((reaction) => reaction.userIds.length > 0);
+			if (!current && !isActive) reactions.push({ emoji, userIds: [userId] });
+			return { ...item, reactions };
+		});
 	}
 </script>
 

@@ -29,22 +29,18 @@ npm run dev
 npm run dev -- --open
 ```
 
-## API mock
+## API WikiForge
 
-Le client API peut intercepter tous les appels avant qu'ils ne partent vers le backend. Créez un fichier `.env` à la racine du projet avec :
+Le frontend utilise l’API WikiForge et ses contrats OpenAPI. Créez un fichier `.env` à la racine du projet avec :
 
 ```env
-PUBLIC_API_MOCK_ENABLED=true
-# Optionnel : simule la latence réseau en millisecondes.
-PUBLIC_API_MOCK_DELAY_MS=250
+PUBLIC_API_BASE_URL=http://localhost:8080
+PUBLIC_API_MOCK_ENABLED=false
 ```
 
-Le mock répond avec de vraies réponses HTTP JSON et les mêmes objets que les fonctions de `src/lib/api` attendent. Les routes actuellement couvertes sont `POST /auth/login`, `POST /auth/logout`, `POST /users`, `GET/PATCH /users/:id`, `PATCH /users/:id/preferences`, `GET /cards/:id` et `GET /cards/:id/price-history`.
-
-Utilisez les identifiants `demo-user` et `demo-card` pour afficher les données de démonstration. Une route absente renvoie un `404`, les données invalides un `422` et un utilisateur déjà existant un `409`, ce qui permet aussi de tester les états d'erreur.
+Le Swagger local est disponible sur `http://localhost:8080/swagger-ui/index.html`. Le mock historique reste réservé aux tests unitaires du client et ne couvre pas les parcours applicatifs complets.
 
 ## Building
-
 
 To create a production version of your app:
 
@@ -57,7 +53,9 @@ You can preview the production build with `npm run preview`.
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
 
 ## DA
+
 ### Colors
+
 - Dark blue : #080f19
 - Blue : #0a1422
 - Yellow : #feb823
@@ -71,6 +69,7 @@ You can preview the production build with `npm run preview`.
 - KTD : #1dcf47
 
 ### Typos
+
 - Logo : DBacks Regular
 - Titles : Palatino Linotype Bold
 - Texts : Lato Regular

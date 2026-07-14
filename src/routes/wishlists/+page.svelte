@@ -9,6 +9,7 @@
 		addWishlistRegistryCard,
 		createWishlistRegistry,
 		deleteWishlistRegistry,
+		getCard,
 		getCards,
 		getWishlistRegistry,
 		getWishlists,
@@ -67,13 +68,25 @@
 
 	onMount(async () => {
 		userId = $currentSession?.user.id ?? 'demo-user';
+		const sharedToken = currentPage.url.searchParams.get('share');
+		const imported = sharedToken ? await importWishlistRegistryFromLink(userId, sharedToken) : null;
 		const [catalogue, summaries] = await Promise.all([
 			getCards({ page: 1, pageSize: 100 }),
 			getWishlists(userId)
 		]);
-		cards = catalogue.items;
+		const knownIds = new Set(catalogue.items.map((card) => card.id));
+		const referencedIds = [...new Set(summaries.flatMap((registry) => registry.cardIds))];
+		const missingCards = await Promise.all(
+			referencedIds
+				.filter((cardId) => !knownIds.has(cardId))
+				.map((cardId) => getCard(cardId).catch(() => null))
+		);
+		cards = [
+			...catalogue.items,
+			...missingCards.filter((card): card is CardRecord => card !== null)
+		];
 		registries = summaries;
-		const requestedRegistryId = currentPage.url.searchParams.get('registry');
+		const requestedRegistryId = imported?.id ?? currentPage.url.searchParams.get('registry');
 		const initialRegistry =
 			summaries.find((registry) => registry.id === requestedRegistryId) ?? summaries[0];
 		if (initialRegistry) activeRegistry = await getWishlistRegistry(initialRegistry.id, userId);

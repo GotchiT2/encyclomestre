@@ -4,7 +4,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import XIcon from '@lucide/svelte/icons/x';
-	import { mockCollectionTagAssignments, mockCollectionTags } from '$lib/api/mocks/collection-tags';
 	import type { CardRecord, CollectionTag } from '$lib/types';
 
 	let {
@@ -30,10 +29,15 @@
 	const selectedCards = $derived(
 		selectedIds.map((id) => cards.find((card) => card.id === id)).filter(Boolean) as CardRecord[]
 	);
+	const availableTags = $derived([
+		...new Map(
+			cards.flatMap((card) => card.collectionTags ?? []).map((tag) => [tag.id, tag])
+		).values()
+	]);
 	const visibleCards = $derived(
 		cards
 			.filter((card) => {
-				const labels = mockCollectionTagAssignments[card.id] ?? [];
+				const labels = (card.collectionTags ?? []).map((tag) => tag.id);
 				const needle = query.trim().toLocaleLowerCase('fr-FR');
 				return (
 					!selectedIds.includes(card.id) &&
@@ -56,9 +60,7 @@
 	}
 
 	function tagsFor(card: CardRecord): CollectionTag[] {
-		return (mockCollectionTagAssignments[card.id] ?? [])
-			.map((id) => mockCollectionTags.find((tag) => tag.id === id))
-			.filter(Boolean) as CollectionTag[];
+		return card.collectionTags ?? [];
 	}
 
 	function contactOwns(card: CardRecord) {
@@ -84,19 +86,18 @@
 					class="h-auto max-w-full whitespace-normal break-words text-left"
 					style={`color:${card.rarityColor};border-color:${card.rarityColor}`}
 					onclick={() => (selectedIds = selectedIds.filter((id) => id !== card.id))}
-				>{card.title}
+					>{card.title}
 					<XIcon data-icon="inline-end" />
-				</Button
-				>
+				</Button>
 			{/each}
 			{#if credits > 0}<span
-				class="border border-primary/60 bg-primary/15 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-primary"
-			>{credits} {$_('trades.credit_chip')}</span
-			>{/if}
+					class="border border-primary/60 bg-primary/15 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-primary"
+					>{credits} {$_('trades.credit_chip')}</span
+				>{/if}
 			{#if !selectedCards.length && !credits}<span
-				class="font-serif text-sm italic text-muted-foreground"
-			>{$_('trades.no_counterparty')}</span
-			>{/if}
+					class="font-serif text-sm italic text-muted-foreground"
+					>{$_('trades.no_counterparty')}</span
+				>{/if}
 		</div>
 	</div>
 	<div
@@ -108,21 +109,18 @@
 			placeholder={$_('collection.search')}
 			class="h-8 w-full text-sm"
 		/><select
-		bind:value={sortBy}
-		onchange={resetPage}
-		aria-label={$_('collection.sort')}
-		class="h-8 w-full self-end border border-primary/50 bg-card px-2 py-0 font-mono text-[10px] leading-8 uppercase tracking-wider text-primary outline-none focus:border-primary lg:w-40"
-	>
-		<option value="rarity">{$_('collection.sortRarity')}</option>
-		<option value="name"
-		>{$_('collection.sortName')}</option
+			bind:value={sortBy}
+			onchange={resetPage}
+			aria-label={$_('collection.sort')}
+			class="h-8 w-full self-end border border-primary/50 bg-card px-2 py-0 font-mono text-[10px] leading-8 uppercase tracking-wider text-primary outline-none focus:border-primary lg:w-40"
 		>
-	</select
-	>
+			<option value="rarity">{$_('collection.sortRarity')}</option>
+			<option value="name">{$_('collection.sortName')}</option>
+		</select>
 		<div class="flex flex-wrap gap-1">
 			{#each [...new Set(cards.map((card) => card.rarity))] as rarity (rarity)}{@const card =
-				cards.find((entry) => entry.rarity === rarity)!}{@const isColored =
-				rarities.includes(rarity) || hoveredRarity === rarity}
+					cards.find((entry) => entry.rarity === rarity)!}{@const isColored =
+					rarities.includes(rarity) || hoveredRarity === rarity}
 				<Button
 					size="xs"
 					variant={rarities.includes(rarity) ? 'default' : 'outline'}
@@ -143,15 +141,15 @@
 		>
 			{$_('trades.credits')}
 			<Input
-			class="mt-1 pl-11 h-8 w-full text-sm lg:w-20"
-			type="number"
-			min="0"
-			bind:value={credits}
-		/></label
+				class="mt-1 pl-11 h-8 w-full text-sm lg:w-20"
+				type="number"
+				min="0"
+				bind:value={credits}
+			/></label
 		>
 	</div>
 	<div class="mt-2 flex flex-wrap gap-1">
-		{#each mockCollectionTags as tag (tag.id)}
+		{#each availableTags as tag (tag.id)}
 			<Button
 				size="xs"
 				variant={tagIds.includes(tag.id) ? 'default' : 'outline'}
@@ -168,15 +166,11 @@
 	<div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7">
 		{#each pageCards as card (card.id)}
 			<div class="relative min-w-0">
-				<CardTile
-					{card}
-					tags={tagsFor(card)}
-					showFriendOwners={false}
-				/>
+				<CardTile {card} tags={tagsFor(card)} showFriendOwners={false} />
 				{#if contactOwns(card)}<span
-					class="absolute top-2 right-2 z-10 border border-primary/60 bg-card px-1.5 py-1 font-mono text-[9px] uppercase tracking-wider text-primary"
-				>{$_('trades.contact_owns', { values: { user: ownerName } })}</span
-				>{/if}
+						class="absolute top-2 right-2 z-10 border border-primary/60 bg-card px-1.5 py-1 font-mono text-[9px] uppercase tracking-wider text-primary"
+						>{$_('trades.contact_owns', { values: { user: ownerName } })}</span
+					>{/if}
 				<Button
 					aria-label={card.title}
 					class="absolute inset-0 z-20 h-full w-full border-0 bg-transparent text-transparent hover:bg-primary/20"
@@ -191,13 +185,13 @@
 	</div>
 	<div class="mt-4 flex items-center justify-between gap-2">
 		<Button size="xs" variant="outline" disabled={page === 1} onclick={() => (page -= 1)}
-		>{$_('codex.previous')}</Button
+			>{$_('codex.previous')}</Button
 		>
 		<span class="font-mono text-[9px] uppercase tracking-widest text-primary"
-		>{$_('codex.page')} {page} / {totalPages}</span
+			>{$_('codex.page')} {page} / {totalPages}</span
 		>
 		<Button size="xs" variant="outline" disabled={page === totalPages} onclick={() => (page += 1)}
-		>{$_('codex.next')}</Button
+			>{$_('codex.next')}</Button
 		>
 	</div>
 </section>

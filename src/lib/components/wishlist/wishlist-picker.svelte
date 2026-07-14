@@ -4,7 +4,6 @@
 	import { Input } from '$lib/components/ui/input';
 	import * as Sheet from '$lib/components/ui/sheet';
 	import { _ } from '$lib/i18n';
-	import { mockCollectionTagAssignments, mockCollectionTags } from '$lib/api/mocks/collection-tags';
 	import type { CardRarity, CardRecord } from '$lib/types';
 
 	let {
@@ -25,6 +24,11 @@
 	let selectedTagIds = $state<string[]>([]);
 	let sortBy = $state<'rarity' | 'name'>('rarity');
 	let page = $state(1);
+	const availableTags = $derived([
+		...new Map(
+			cards.flatMap((card) => card.collectionTags ?? []).map((tag) => [tag.id, tag])
+		).values()
+	]);
 	const availableCards = $derived(
 		cards
 			.filter(
@@ -35,7 +39,7 @@
 					(!selectedRarities.length || selectedRarities.includes(card.rarity)) &&
 					(!selectedTagIds.length ||
 						selectedTagIds.every((tagId) =>
-							(mockCollectionTagAssignments[card.id] ?? []).includes(tagId)
+							(card.collectionTags ?? []).some((tag) => tag.id === tagId)
 						))
 			)
 			.toSorted((left, right) =>
@@ -106,7 +110,7 @@
 				{/each}
 			</div>
 			<div class="mt-3 flex flex-wrap gap-1.5" aria-label={$_('collection.tags')}>
-				{#each mockCollectionTags as tag (tag.id)}
+				{#each availableTags as tag (tag.id)}
 					<Button
 						size="xs"
 						variant={selectedTagIds.includes(tag.id) ? 'default' : 'outline'}

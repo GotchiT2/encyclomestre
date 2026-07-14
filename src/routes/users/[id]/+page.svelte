@@ -1,6 +1,5 @@
 <script lang="ts">
 	import PublicProfileView from '$lib/components/profile/public-profile-view.svelte';
-	import { mockCollectionTagAssignments, mockCollectionTags } from '$lib/api/mocks/collection-tags';
 	import { _ } from '$lib/i18n';
 	import type { PageData } from './$types';
 
@@ -19,8 +18,8 @@
 		{settings}
 		{summary}
 		{sales}
-		tags={mockCollectionTags}
-		assignments={mockCollectionTagAssignments}
+		tags={summary.publicTags}
+		assignments={{}}
 	/>
 {:catch}
 	<p class="border border-destructive/40 bg-destructive/10 p-4 font-serif italic text-destructive">

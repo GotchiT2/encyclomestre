@@ -219,3 +219,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 
 - [x] Démarrer le registre d’amis, ses invitations et raccourcis sociaux — `feat(friends): build social friend registry`
 - [x] Ajouter les profils publics et collections des amis — `feat(friends): show friend profiles and collections`
+
+## 8. Branchement API WikiForge
+
+- [x] Brancher les contrats OpenAPI pour l'authentification, les cartes, la collection, les profils, les amis, le marché, les échanges, les wishlists, la messagerie, le dashboard, les guildes, les boosters, les tags et les filtres — `feat(api): connect complete WikiForge platform`

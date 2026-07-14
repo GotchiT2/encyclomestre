@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { register } from '$lib/api';
+	import { register, updateUser } from '$lib/api';
 	import { persistSession } from '$lib/auth/session';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
@@ -20,18 +20,10 @@
 		error = undefined;
 		isSubmitting = true;
 		try {
-			const tokens = await register({ email, password });
-			persistSession(localStorage, {
-				...tokens,
-				user: {
-					id: email,
-					username,
-					displayName: username,
-					role: 'user',
-					createdAt: '',
-					updatedAt: ''
-				}
-			});
+			const session = await register({ email, password });
+			persistSession(localStorage, session);
+			const user = await updateUser(session.user.id, { username, displayName: username });
+			persistSession(localStorage, { ...session, user });
 			await goto(resolve('/'));
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : $_('auth.register.failure');

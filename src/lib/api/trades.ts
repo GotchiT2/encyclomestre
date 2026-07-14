@@ -1,26 +1,67 @@
 import { apiRequest, type RequestOptions } from './client';
 import type { CreateTradeOfferInput, TradeOffer } from '$lib/types';
 
-export const getTradeOffers = (userId: string, options?: RequestOptions) =>
-	apiRequest<TradeOffer[]>(`/trades?userId=${encodeURIComponent(userId)}`, options);
+interface ApiTradeOffer {
+	id: string;
+	initiatorId: string;
+	recipientId: string;
+	status: TradeOffer['status'];
+	offeredUserCardIds: string[];
+	requestedUserCardIds: string[];
+	offeredCredits: number;
+	requestedCredits: number;
+	createdAt: string;
+}
 
-export const createTradeOffer = (input: CreateTradeOfferInput, options?: RequestOptions) =>
-	apiRequest<TradeOffer>('/trades', { ...options, method: 'POST', body: input });
+const toTradeOffer = (offer: ApiTradeOffer): TradeOffer => ({
+	id: offer.id,
+	initiatorId: offer.initiatorId,
+	recipientId: offer.recipientId,
+	offeredCardIds: offer.offeredUserCardIds,
+	requestedCardIds: offer.requestedUserCardIds,
+	offeredCredits: offer.offeredCredits,
+	requestedCredits: offer.requestedCredits,
+	status: offer.status,
+	createdAt: offer.createdAt,
+	updatedAt: offer.createdAt
+});
 
-export const respondToTradeOffer = (
+export const getTradeOffers = async (_userId?: string, options?: RequestOptions) =>
+	(await apiRequest<ApiTradeOffer[]>('/api/trades', options)).map(toTradeOffer);
+
+export const createTradeOffer = async (input: CreateTradeOfferInput, options?: RequestOptions) =>
+	toTradeOffer(
+		await apiRequest<ApiTradeOffer>('/api/trades', {
+			...options,
+			method: 'POST',
+			body: {
+				recipientId: input.recipientId,
+				offeredUserCardIds: input.offeredCardIds,
+				requestedUserCardIds: input.requestedCardIds,
+				offeredCredits: input.offeredCredits ?? 0,
+				requestedCredits: input.requestedCredits ?? 0
+			}
+		})
+	);
+
+export const respondToTradeOffer = async (
 	id: string,
 	status: Extract<TradeOffer['status'], 'accepted' | 'rejected'>,
 	options?: RequestOptions
 ) =>
-	apiRequest<TradeOffer>(`/trades/${encodeURIComponent(id)}`, {
-		...options,
-		method: 'PATCH',
-		body: { status }
-	});
+	toTradeOffer(
+		await apiRequest<ApiTradeOffer>(`/api/trades/${encodeURIComponent(id)}`, {
+			...options,
+			method: 'PATCH',
+			body: { status }
+		})
+	);
 
-export const cancelTradeOffer = (id: string, options?: RequestOptions) =>
-	apiRequest<TradeOffer>(`/trades/${encodeURIComponent(id)}`, {
-		...options,
-		method: 'PATCH',
-		body: { status: 'cancelled' }
-	});
+export const cancelTradeOffer = async (id: string, options?: RequestOptions) =>
+	toTradeOffer(
+		await apiRequest<ApiTradeOffer>(`/api/trades/${encodeURIComponent(id)}`, {
+			...options,
+			method: 'PATCH',
+			body: { status: 'cancelled' }
+		})
+	);

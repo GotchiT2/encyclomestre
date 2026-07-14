@@ -73,10 +73,10 @@
 		"recentCards": "Cartes récemment obtenues",
 		"viewCollection": "Voir la collection",
 		"tradeSignal": "Échanges en attente",
-		"tradeTitle": "3 offres attendent votre réponse",
+		"tradeTitle": "{count} offres attendent votre réponse",
 		"openTrades": "Voir les échanges",
 		"marketSignal": "Nouvelles annonces",
-		"marketTitle": "12 nouvelles annonces détectées",
+		"marketTitle": "{count} annonces actives",
 		"openMarket": "Explorer le marché"
 	},
 	"codex": {
@@ -373,6 +373,9 @@
 		"objective_title": "Compléter la collection de génération 2",
 		"objective_description": "Chaque carte ajoutée par les membres rapproche la guilde de son objectif.",
 		"progress": "64 % complété",
+		"progress_value": "{progress} % complété",
+		"loading": "Chargement de la guilde…",
+		"empty": "Vous n’appartenez à aucune guilde.",
 		"open_channel": "Ouvrir le canal de guilde",
 		"members": "Membres"
 	},
@@ -381,6 +384,10 @@
 		"title": "Mes amis",
 		"description": "Gérez vos contacts et vos opportunités d’échange.",
 		"search": "Rechercher un ami",
+		"invite_title": "Ajouter un contact",
+		"invite_description": "Sélectionnez un utilisateur public pour lui envoyer une invitation.",
+		"invite_select": "Utilisateur",
+		"invite_action": "Envoyer l’invitation",
 		"loading": "Chargement des amis…",
 		"empty": "Aucun ami ne correspond à cette recherche.",
 		"status_received": "Invitation reçue",

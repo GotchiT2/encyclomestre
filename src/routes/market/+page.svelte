@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { getCards, getMarketListings } from '$lib/api';
+	import {
+		addSaleFavorite,
+		getCard,
+		getMarketListings,
+		getSaleFavorites,
+		removeSaleFavorite
+	} from '$lib/api';
+	import { currentSession } from '$lib/auth/session';
 	import MarketListings from '$lib/components/market/market-listings.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -21,8 +28,8 @@
 	let filterTimer: number | undefined;
 
 	onMount(async () => {
-		favoriteIds = JSON.parse(localStorage.getItem('market-favorites') ?? '[]');
-		cards = (await getCards({ page: 1, pageSize: 100 })).items;
+		const favorites = await getSaleFavorites();
+		favoriteIds = favorites.map((sale) => sale.id);
 		await refresh();
 	});
 
@@ -34,13 +41,20 @@
 			maxPrice: Number(maxPrice) || undefined,
 			sellerId:
 				activeTab === 'mine' || (activeTab === 'history' && historyTab === 'sold')
-					? 'demo-user'
+					? $currentSession?.user.id
 					: undefined,
 			bidderId:
 				activeTab === 'bids' || (activeTab === 'history' && historyTab === 'bought')
-					? 'demo-user'
+					? $currentSession?.user.id
 					: undefined
 		});
+		cards = (
+			await Promise.all(
+				[...new Set(listings.map((listing) => listing.cardId))].map((cardId) =>
+					getCard(cardId).catch(() => null)
+				)
+			)
+		).filter((card): card is CardRecord => card !== null);
 		loading = false;
 	}
 
@@ -49,11 +63,14 @@
 		filterTimer = window.setTimeout(() => void refresh(), delay);
 	}
 
-	function toggleFavorite(id: string) {
-		favoriteIds = favoriteIds.includes(id)
-			? favoriteIds.filter((item) => item !== id)
-			: [...favoriteIds, id];
-		localStorage.setItem('market-favorites', JSON.stringify(favoriteIds));
+	async function toggleFavorite(id: string) {
+		if (favoriteIds.includes(id)) {
+			await removeSaleFavorite(id);
+			favoriteIds = favoriteIds.filter((item) => item !== id);
+		} else {
+			await addSaleFavorite(id);
+			favoriteIds = [...favoriteIds, id];
+		}
 	}
 </script>
 
@@ -121,7 +138,7 @@
 			{cards}
 			showAction={activeTab === 'all' || activeTab === 'bids'}
 			{favoriteIds}
-			onToggleFavorite={toggleFavorite}
+			onToggleFavorite={(id) => void toggleFavorite(id)}
 			onAction={(listing) => (selectedListing = listing)}
 		/>{:else}<p
 			class="border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"

@@ -6,8 +6,8 @@
 	import { clearSession, currentSession } from '$lib/auth/session';
 	import {
 		deleteUser,
-		getProfileSettings,
-		getUser,
+		getCurrentUser,
+		getMyProfileSettings,
 		logout,
 		updateProfileSettings,
 		updateUserPreferences
@@ -31,7 +31,7 @@
 
 	onMount(async () => {
 		userId = $currentSession?.user.id ?? 'demo-user';
-		const [user, settings] = await Promise.all([getUser(userId), getProfileSettings(userId)]);
+		const [user, settings] = await Promise.all([getCurrentUser(), getMyProfileSettings()]);
 		preferences = user.preferences ?? preferences;
 		profile = settings;
 		loading = false;

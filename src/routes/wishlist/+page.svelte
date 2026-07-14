@@ -3,6 +3,7 @@
 	import { currentSession } from '$lib/auth/session';
 	import {
 		addWishlistEntry,
+		getCard,
 		getCards,
 		getWishlist,
 		getWishlistAlerts,
@@ -77,7 +78,16 @@
 			getWishlist(userId, { page: 1, pageSize: 100 }),
 			getWishlistAlerts(userId)
 		]);
-		cards = catalogue.items;
+		const knownIds = new Set(catalogue.items.map((card) => card.id));
+		const missingCards = await Promise.all(
+			wishlist.items
+				.filter((entry) => !knownIds.has(entry.cardId))
+				.map((entry) => getCard(entry.cardId).catch(() => null))
+		);
+		cards = [
+			...catalogue.items,
+			...missingCards.filter((card): card is CardRecord => card !== null)
+		];
 		entries = wishlist.items;
 		alerts = wishlistAlerts;
 		loading = false;

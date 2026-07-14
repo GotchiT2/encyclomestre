@@ -1,36 +1,39 @@
 import { apiRequest, type RequestOptions } from './client';
 import type { Conversation, MessageRecord } from '$lib/types';
 
-export const getConversations = (userId: string, options?: RequestOptions) =>
-	apiRequest<Conversation[]>(`/messages?userId=${encodeURIComponent(userId)}`, options);
+export const getConversations = (_userId?: string, options?: RequestOptions) =>
+	apiRequest<Conversation[]>('/api/conversations', options);
 
 export const getConversationMessages = (id: string, options?: RequestOptions) =>
-	apiRequest<MessageRecord[]>(`/messages/${encodeURIComponent(id)}`, options);
+	apiRequest<MessageRecord[]>(`/api/conversations/${encodeURIComponent(id)}/messages`, options);
 
 export const sendMessage = (
 	id: string,
-	input: Pick<MessageRecord, 'senderId' | 'content'> & { replyToMessageId?: string | null },
+	input: Pick<MessageRecord, 'content'> & {
+		senderId?: string;
+		replyToMessageId?: string | null;
+	},
 	options?: RequestOptions
 ) =>
-	apiRequest<MessageRecord>(`/messages/${encodeURIComponent(id)}`, {
+	apiRequest<MessageRecord>(`/api/conversations/${encodeURIComponent(id)}/messages`, {
 		...options,
 		method: 'POST',
-		body: input
+		body: { content: input.content, replyToMessageId: input.replyToMessageId ?? null }
 	});
 
 export const markConversationRead = (id: string, options?: RequestOptions) =>
-	apiRequest<Conversation>(`/messages/${encodeURIComponent(id)}/read`, {
+	apiRequest<void>(`/api/conversations/${encodeURIComponent(id)}/read`, {
 		...options,
 		method: 'PATCH'
 	});
 
-export const toggleMessageReaction = (
+export const setMessageReaction = (
 	id: string,
-	input: { userId: string; emoji: string },
+	emoji: string,
+	active: boolean,
 	options?: RequestOptions
 ) =>
-	apiRequest<MessageRecord>(`/messages/reactions/${encodeURIComponent(id)}`, {
-		...options,
-		method: 'PATCH',
-		body: input
-	});
+	apiRequest<void>(
+		`/api/messages/${encodeURIComponent(id)}/reactions/${encodeURIComponent(emoji)}`,
+		{ ...options, method: active ? 'PUT' : 'DELETE' }
+	);

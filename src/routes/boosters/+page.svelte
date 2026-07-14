@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { _ } from '$lib/i18n';
-	import { getWikiForgeBoosterStatus, openWikiForgeBooster, toCardRecord } from '$lib/api';
+	import {
+		getWikiForgeBoosterStatus,
+		openWikiForgeBooster,
+		toCollectionCardRecord
+	} from '$lib/api';
 	import BoosterOpeningStage from '$lib/components/boosters/booster-opening-stage.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import type { CardRecord } from '$lib/types';
@@ -34,7 +38,7 @@
 		opening = true;
 		result = null;
 		try {
-			result = (await openWikiForgeBooster()).cards.map(toCardRecord);
+			result = (await openWikiForgeBooster()).cards.map(toCollectionCardRecord);
 			inventory = await getWikiForgeBoosterStatus();
 		} finally {
 			opening = false;

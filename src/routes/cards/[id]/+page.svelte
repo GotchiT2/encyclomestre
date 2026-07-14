@@ -1,6 +1,5 @@
 <script lang="ts">
 	/* eslint-disable svelte/no-navigation-without-resolve -- card actions append dynamic query parameters */
-	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { currentSession } from '$lib/auth/session';
@@ -16,10 +15,6 @@
 	import CardTelemetry from '$lib/components/cards/card-telemetry.svelte';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import FriendOwnerLedger from '$lib/components/social/friend-owner-ledger.svelte';
-	import {
-		restoreCollectionTagState,
-		persistCollectionTagState
-	} from '$lib/collection/tag-persistence';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
 	import type { CollectionTag, CollectionTagAssignments } from '$lib/types';
@@ -31,20 +26,25 @@
 	let wishlistCardIds = $state<string[]>([]);
 	let tags = $state<CollectionTag[]>([]);
 	let assignments = $state<CollectionTagAssignments>({});
-	let hasHydratedTags = $state(false);
+	let ownedCardId = $state<string | null>(null);
 
 	onMount(async () => {
 		userId = $currentSession?.user.id ?? 'demo-user';
-		({ tags, assignments } = restoreCollectionTagState(localStorage));
-		hasHydratedTags = true;
-		const wishlists = await getWishlists(userId);
+		const [card, collection, apiTags, wishlists] = await Promise.all([
+			data.card,
+			data.collection,
+			data.tags,
+			getWishlists(userId)
+		]);
+		tags = apiTags;
+		const ownedCard = collection.items.find((item) => item.catalogueId === card.id);
+		ownedCardId = ownedCard?.id ?? null;
+		assignments = ownedCard
+			? { [ownedCard.id]: (ownedCard.collectionTags ?? []).map((tag) => tag.id) }
+			: {};
 		if (!wishlists[0]) return;
 		primaryWishlistId = wishlists[0].id;
 		wishlistCardIds = (await getWishlistRegistry(wishlists[0].id, userId)).cardIds;
-	});
-
-	$effect(() => {
-		if (browser && hasHydratedTags) persistCollectionTagState(localStorage, { tags, assignments });
 	});
 
 	async function toggleWishlist(cardId: string) {
@@ -79,7 +79,9 @@
 				<div class="mx-auto w-full max-w-xs">
 					<CardTile
 						{card}
-						tags={tags.filter((tag) => (assignments[card.id] ?? []).includes(tag.id))}
+						tags={tags.filter((tag) =>
+							ownedCardId ? (assignments[ownedCardId] ?? []).includes(tag.id) : false
+						)}
 						showFriendOwners={false}
 					/>
 				</div>
@@ -106,7 +108,7 @@
 						onMarket={() => goto(`/market?card=${encodeURIComponent(card.id)}`)}
 						onSell={() => goto(`/market/sell?card=${encodeURIComponent(card.id)}`)}
 					/>
-					<CardTagControls cardId={card.id} bind:tags bind:assignments />
+					{#if ownedCardId}<CardTagControls cardId={ownedCardId} bind:tags bind:assignments />{/if}
 					<CardTelemetry {card} />
 					{#await Promise.all([data.sales, data.priceHistory])}<p
 							class="font-mono text-[10px] uppercase tracking-widest text-primary"

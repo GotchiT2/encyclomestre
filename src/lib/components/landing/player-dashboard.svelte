@@ -3,14 +3,15 @@
 	import { Button } from '$lib/components/ui/button';
 	import ForgePanel from '$lib/components/layout/forge-panel.svelte';
 	import HudStat from '$lib/components/layout/hud-stat.svelte';
-	import { mockCards } from '$lib/api/mocks/cards';
 	import { _ } from '$lib/i18n';
 	import ArrowUpRightIcon from '@lucide/svelte/icons/arrow-up-right';
 	import HandshakeIcon from '@lucide/svelte/icons/handshake';
 	import PackageOpenIcon from '@lucide/svelte/icons/package-open';
 
-	let { username }: { username: string } = $props();
-	const recentCards = mockCards.slice(0, 3);
+	import type { DashboardData } from '$lib/types';
+
+	let { username, dashboard }: { username: string; dashboard: DashboardData | null } = $props();
+	const recentCards = $derived(dashboard?.recentAcquisitions ?? []);
 </script>
 
 <section class="flex flex-col gap-7">
@@ -23,9 +24,16 @@
 			<p class="mt-3 text-muted-foreground">{$_('dashboard.description')}</p>
 		</div>
 		<div class="grid grid-cols-3 gap-2">
-			<HudStat label={$_('dashboard.cards')} value="128" accent />
-			<HudStat label={$_('dashboard.trades')} value="03" />
-			<HudStat label={$_('dashboard.rank')} value="A-17" />
+			<HudStat
+				label={$_('dashboard.cards')}
+				value={String(dashboard?.collection.uniqueCards ?? 0)}
+				accent
+			/>
+			<HudStat
+				label={$_('dashboard.trades')}
+				value={String(dashboard?.pendingTrades ?? 0).padStart(2, '0')}
+			/>
+			<HudStat label={$_('dashboard.rank')} value={dashboard?.rank ?? '—'} />
 		</div>
 	</header>
 
@@ -70,7 +78,9 @@
 		<ForgePanel class="flex items-center justify-between gap-4 p-5"
 			><div>
 				<p class="forge-label">{$_('dashboard.tradeSignal')}</p>
-				<p class="mt-2 font-serif text-xl font-bold">{$_('dashboard.tradeTitle')}</p>
+				<p class="mt-2 font-serif text-xl font-bold">
+					{$_('dashboard.tradeTitle', { values: { count: dashboard?.pendingTrades ?? 0 } })}
+				</p>
 			</div>
 			<Button href="/trades" variant="outline"><HandshakeIcon />{$_('dashboard.openTrades')}</Button
 			></ForgePanel
@@ -78,7 +88,11 @@
 		<ForgePanel class="flex items-center justify-between gap-4 p-5"
 			><div>
 				<p class="forge-label">{$_('dashboard.marketSignal')}</p>
-				<p class="mt-2 font-serif text-xl font-bold">{$_('dashboard.marketTitle')}</p>
+				<p class="mt-2 font-serif text-xl font-bold">
+					{$_('dashboard.marketTitle', {
+						values: { count: dashboard?.activeMarketListings ?? 0 }
+					})}
+				</p>
 			</div>
 			<Button href="/market" variant="outline"
 				>{$_('dashboard.openMarket')}<ArrowUpRightIcon /></Button

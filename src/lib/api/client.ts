@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/public';
 import { createMockApiResponse } from './mock';
-import { clearSession, restoreSession, persistSession, sessionStorageKey } from '$lib/auth/session';
+import { clearSession, restoreSession, persistSession } from '$lib/auth/session';
 
 export type Fetcher = typeof fetch;
 
@@ -50,22 +50,26 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 			})()
 		: await fetcher(apiUrl(path), {
 				credentials: 'include',
-			headers: {
-				accept: 'application/json',
-				...(typeof localStorage !== 'undefined' && restoreSession(localStorage)?.accessToken
-					? { authorization: `Bearer ${restoreSession(localStorage)!.accessToken}` }
-					: {}),
+				headers: {
+					accept: 'application/json',
+					...(typeof localStorage !== 'undefined' && restoreSession(localStorage)?.accessToken
+						? { authorization: `Bearer ${restoreSession(localStorage)!.accessToken}` }
+						: {}),
 					...(body === undefined ? {} : { 'content-type': 'application/json' }),
 					...headers
 				},
 				body: body === undefined ? undefined : JSON.stringify(body),
 				...init
-		});
+			});
 
-	if (!didRefresh && (response.status === 401 || response.status === 403) && typeof localStorage !== 'undefined') {
+	if (!didRefresh && response.status === 401 && typeof localStorage !== 'undefined') {
 		const session = restoreSession(localStorage);
 		if (session?.refreshToken) {
-			const refreshed = await fetcher(apiUrl('/api/auth/refresh'), { method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/json' }, body: JSON.stringify({ refreshToken: session.refreshToken }) });
+			const refreshed = await fetcher(apiUrl('/api/auth/refresh'), {
+				method: 'POST',
+				headers: { accept: 'application/json', 'content-type': 'application/json' },
+				body: JSON.stringify({ refreshToken: session.refreshToken })
+			});
 			if (refreshed.ok) {
 				const tokens = await refreshed.json();
 				persistSession(localStorage, { ...session, ...tokens });
@@ -73,7 +77,8 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 			}
 		}
 		clearSession(localStorage);
-		if (typeof window !== 'undefined') window.location.assign(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+		if (typeof window !== 'undefined')
+			window.location.assign(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
 	}
 
 	if (response.status === 204) return undefined as T;
