@@ -14,6 +14,10 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 ## Refonte visuelle WikiForge
 
 - [x] Refonte de l’identité, des cartes, des grilles et de l’ouverture de booster — `feat(ui): redesign WikiForge cards and visual system`
+- [x] Installer les fondations Forge Astrale et la navigation de jeu responsive — `feat(ui): build forge astral design foundation`
+- [ ] Recomposer l’accueil, les galeries, le détail de carte et la chambre de booster
+- [ ] Harmoniser les espaces marché, échanges, social, profil et paramètres
+- [ ] Valider la refonte complète, les tests et les états responsive
 
 ## Plan de support — atomisation de l’interface
 
@@ -189,19 +193,23 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Commencer le branchement WikiForge du catalogue, de la collection, des boosters et du détail carte — `feat(api): start WikiForge catalogue collection and boosters integration`
 
 - [x] Brancher l’authentification WikiForge avec session locale et renouvellement de jeton — `feat(api): connect WikiForge authentication`
+
 2. `feat(messages): build conversations and guild shares`
 
 - [x] Créer la boîte de réception, les conversations mockées et les widgets de wishlist de guilde — `feat(messages): build conversations and guild shares`
 - [x] Ajouter la navigation, les réponses, réactions et offres d’échange dans les fils — `feat(messages): add reactions replies and trade offer widgets`
+
 3. `feat(market): build listings and bidding flows`
 
 - [x] Créer le catalogue d’annonces du marché, ses filtres et son détail — `feat(market): build listing catalogue and filters`
 - [x] Ajouter le détail des enchères, l’historique des mises et la modale de prix — `feat(market): add auction detail and price telemetry`
 - [x] Ajouter les registres de ventes et la persistance des enchères — `feat(market): add auction registers and bid persistence`
 - [x] Ajuster les actions et favoris des registres d’enchères — `fix(market): refine auction register actions and favorites`
+
 4. `feat(guild): build guild workspace`
 
 - [x] Démarrer l’espace de Guilde avec objectif, membres et accès au canal — `feat(guild): start guild workspace`
+
 5. `feat(achievements): build progression registry`
 6. `feat(leaderboard): build competitive rankings`
 

@@ -24,7 +24,10 @@
 		"mobileAria": "Navigation mobile",
 		"openMenu": "Ouvrir le menu",
 		"menuTitle": "Navigation",
-		"menuDescription": "Accédez aux folios du Grand Registre."
+		"menuDescription": "Accédez à tous les secteurs de la Forge.",
+		"forgeNetwork": "Réseau de collection",
+		"openBooster": "Ouvrir un booster",
+		"more": "Plus"
 	},
 	"landing": {
 		"eyebrow": "Archives connectées · Collection 01",
