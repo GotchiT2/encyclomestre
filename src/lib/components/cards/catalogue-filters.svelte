@@ -1,20 +1,24 @@
 <script lang="ts">
 	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
+	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
+	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
-	import type { CardRarity } from '$lib/types';
+	import type { CardRarity, CardVariant } from '$lib/types';
 
 	let {
 		query,
 		sortBy,
 		sortDirection,
 		selectedRarities,
+		variant = 'all',
 		rarities
 	}: {
 		query: string;
 		sortBy: string;
 		sortDirection: string;
 		selectedRarities: CardRarity[];
+		variant?: CardVariant;
 		rarities: CardRarity[];
 	} = $props();
 
@@ -22,22 +26,17 @@
 	let debounceTimer: number | undefined;
 	let localQuery = $state('');
 	let localRarities = $state<CardRarity[]>([]);
+	let localVariant = $state<CardVariant>('all');
 	let pending = $state(false);
 
-	const rarityColors: Record<CardRarity, string> = {
-		Commune: '#d3e4f8',
-		'Peu Commune': '#1d71cf',
-		Rare: '#5c1dcf',
-		'Super-Rare': '#b41dcf',
-		'Ultra-Rare': '#cf7d1d',
-		Légendaire: '#cf1d1d',
-		KTD: '#1dcf47'
-	};
-	const rarityOptions = $derived(rarities.map((value) => ({ value, color: rarityColors[value] })));
+	const rarityOptions = $derived(
+		rarities.map((value) => cardRarityOptions.find((option) => option.value === value)!)
+	);
 
 	$effect(() => {
 		localQuery = query;
 		localRarities = [...selectedRarities];
+		localVariant = variant;
 	});
 
 	function scheduleSubmit(delay = 400) {
@@ -82,6 +81,12 @@
 			onChange={() => scheduleSubmit(80)}
 		/>
 	</fieldset>
+	<CardVariantSelector
+		bind:value={localVariant}
+		name="variant"
+		onChange={() => scheduleSubmit(80)}
+		class="mt-5"
+	/>
 	<p
 		class="mt-3 min-h-4 text-[10px] font-bold tracking-wider text-[var(--energy-soft)] uppercase"
 		aria-live="polite"

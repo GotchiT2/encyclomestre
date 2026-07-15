@@ -1,17 +1,11 @@
 import type { CardRarity } from '$lib/types';
 import { getWikiForgeCollection, getWikiForgeTags, toCollectionPage } from '$lib/api';
+import { cardRarityCodeByName, cardRarityOptions } from '$lib/domain/cards/rarities';
+import { filterCardPageByVariant } from '$lib/domain/cards/variants';
+import type { CardVariant } from '$lib/types';
 import type { PageLoad } from './$types';
 
-const rarityCodes: Record<CardRarity, 'C' | 'PC' | 'R' | 'SR' | 'UR' | 'L' | 'KTD'> = {
-	Commune: 'C',
-	'Peu Commune': 'PC',
-	Rare: 'R',
-	'Super-Rare': 'SR',
-	'Ultra-Rare': 'UR',
-	Légendaire: 'L',
-	KTD: 'KTD'
-};
-const validRarities = new Set(Object.keys(rarityCodes) as CardRarity[]);
+const validRarities = new Set(cardRarityOptions.map((rarity) => rarity.value));
 
 export const load: PageLoad = ({ fetch, url }) => {
 	const query = url.searchParams.get('q')?.trim() ?? '';
@@ -22,6 +16,11 @@ export const load: PageLoad = ({ fetch, url }) => {
 	const untagged = url.searchParams.get('untagged') === 'true';
 	if (untagged) tagFilterIds.push('__untagged__');
 	const sortBy = url.searchParams.get('sortBy') === 'name' ? 'name' : 'rarity';
+	const variant = (
+		['normal', 'alternative'].includes(url.searchParams.get('variant') ?? '')
+			? url.searchParams.get('variant')
+			: 'all'
+	) as CardVariant;
 	return {
 		collection: getWikiForgeCollection(
 			{
@@ -29,13 +28,15 @@ export const load: PageLoad = ({ fetch, url }) => {
 				size: 100,
 				sortBy,
 				sortDirection: sortBy === 'name' ? 'ASC' : 'DESC',
-				rarities: selectedRarities.map((rarity) => rarityCodes[rarity]),
+				rarities: selectedRarities.map((rarity) => cardRarityCodeByName[rarity]),
 				tagIds: tagFilterIds.filter((id) => id !== '__untagged__'),
 				untagged
 			},
 			{ fetch }
-		).then(toCollectionPage),
+		)
+			.then(toCollectionPage)
+			.then((page) => filterCardPageByVariant(page, variant)),
 		tags: getWikiForgeTags({ fetch }),
-		filters: { query, selectedRarities, tagFilterIds, sortBy }
+		filters: { query, selectedRarities, tagFilterIds, sortBy, variant }
 	};
 };

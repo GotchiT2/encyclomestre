@@ -57,8 +57,7 @@ describe('CardTile', () => {
 		['Rare', 'R', '/images/card-R-empty.png'],
 		['Super-Rare', 'SR', '/images/card-SR-empty.png'],
 		['Ultra-Rare', 'UR', '/images/card-UR-empty.png'],
-		['Légendaire', 'L', '/images/card-L-empty.png'],
-		['KTD', 'KTD', '/images/card-KTD-empty.png']
+		['Légendaire', 'L', '/images/card-L-empty.png']
 	] as const)('selects the %s frame', async (rarity, rarityInitials, frame) => {
 		render(CardTile, { card: { ...card, rarity, rarityInitials, isFullArt: false } });
 		await expect.element(page.getByTestId('card-tile')).toHaveAttribute('data-frame', frame);

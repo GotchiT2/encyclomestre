@@ -15,20 +15,20 @@
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
 	import { addWishlistEntry, applyWikiForgeTag, getWishlist, removeWishlistEntry } from '$lib/api';
-	import type { CardRarity, CardRecord, CollectionTag, CollectionTagAssignments } from '$lib/types';
+	import type {
+		CardRarity,
+		CardRecord,
+		CardVariant,
+		CollectionTag,
+		CollectionTagAssignments
+	} from '$lib/types';
+	import { cardRarityOptions } from '$lib/domain/cards/rarities';
+	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 
 	const untaggedOption = untaggedFilterId;
-	const rarities: { value: CardRarity; initials: string; color: string }[] = [
-		{ value: 'KTD', initials: 'KTD', color: '#1dcf47' },
-		{ value: 'Légendaire', initials: 'L', color: '#cf1d1d' },
-		{ value: 'Ultra-Rare', initials: 'UR', color: '#cf7d1d' },
-		{ value: 'Super-Rare', initials: 'SR', color: '#b41dcf' },
-		{ value: 'Rare', initials: 'R', color: '#5c1dcf' },
-		{ value: 'Peu Commune', initials: 'PC', color: '#1d71cf' },
-		{ value: 'Commune', initials: 'C', color: '#d3e4f8' }
-	];
+	const rarities = cardRarityOptions;
 
 	let { data }: { data: PageData } = $props();
 	let query = $state('');
@@ -37,6 +37,7 @@
 	let tags = $state<CollectionTag[]>([]);
 	let assignments = $state<CollectionTagAssignments>({});
 	let tagFilterIds = $state<string[]>([]);
+	let variant = $state<CardVariant>('all');
 	let isSelectionMode = $state(false);
 	let selectedCardIds = $state<string[]>([]);
 	let bulkTagId = $state('');
@@ -51,6 +52,7 @@
 		sortBy = data.filters.sortBy as 'name' | 'rarity';
 		selectedRarities = data.filters.selectedRarities;
 		tagFilterIds = data.filters.tagFilterIds;
+		variant = data.filters.variant;
 		const [collection, apiTags, wishlist] = await Promise.all([
 			data.collection,
 			data.tags,
@@ -67,7 +69,7 @@
 	});
 
 	$effect(() => {
-		const snapshot = { query, sortBy, selectedRarities, tagFilterIds };
+		const snapshot = { query, sortBy, selectedRarities, tagFilterIds, variant };
 		if (!filtersReady) return;
 		window.clearTimeout(filterTimer);
 		filterTimer = window.setTimeout(() => {
@@ -121,6 +123,7 @@
 		selectedRarities = [];
 		tagFilterIds = [];
 		sortBy = 'rarity';
+		variant = 'all';
 	}
 
 	function visibleCards(cards: CardRecord[]) {
@@ -135,6 +138,7 @@
 				return (
 					card.title.toLocaleLowerCase('fr-FR').includes(normalizedQuery) &&
 					(!selectedRarities.length || selectedRarities.includes(card.rarity)) &&
+					matchesCardVariant(card, variant) &&
 					matchesTag
 				);
 			})
@@ -163,6 +167,7 @@
 			bind:sortBy
 			bind:selectedRarities
 			bind:tagFilterIds
+			bind:variant
 			{tags}
 			{rarities}
 			{untaggedOption}

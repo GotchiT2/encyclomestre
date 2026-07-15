@@ -16,6 +16,7 @@ describe('TagFilterSelector', () => {
 		await page.getByText('Toutes les étiquettes').click();
 		const option = page.getByRole('menuitemcheckbox', { name: 'Favoris' });
 		await expect.element(option).toBeVisible();
+		await expect.element(option).toHaveClass(/data-highlighted:text-primary/);
 		const selector = document.querySelector('[data-testid="tag-filter-selector"]');
 		const menu = document.querySelector('[role="menu"]');
 		expect(selector?.contains(menu)).toBe(false);

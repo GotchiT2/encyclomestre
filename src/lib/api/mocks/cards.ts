@@ -27,8 +27,7 @@ const articles: BaseArticle[] = [
 	['Sunmi', 'Ultra-Rare', 8600, 8800, 870000],
 	['Hyuna', 'Ultra-Rare', 8800, 8100, 1190000],
 	['SM Entertainment', 'Commune', 5500, 4500, 940000],
-	['Vague coréenne', 'Commune', 4800, 5200, 1100000],
-	['WikiForge', 'KTD', 10000, 10000, 2000000]
+	['Vague coréenne', 'Commune', 4800, 5200, 1100000]
 ];
 
 const editions = ['', ' · Édition Codex', ' · Variante holographique', ' · Archives impériales'];
@@ -52,8 +51,7 @@ const meta: Record<CardRarity, [CardRecord['rarityInitials'], string]> = {
 	Rare: ['R', '#5c1dcf'],
 	'Super-Rare': ['SR', '#b41dcf'],
 	'Ultra-Rare': ['UR', '#cf7d1d'],
-	Légendaire: ['L', '#cf1d1d'],
-	KTD: ['KTD', '#1dcf47']
+	Légendaire: ['L', '#cf1d1d']
 };
 
 export const mockCards: CardRecord[] = articles.flatMap(

@@ -16,18 +16,11 @@
 	} from '$lib/api';
 	import { _ } from '$lib/i18n';
 	import type { CardRarity, CardRecord } from '$lib/types';
+	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
-	const rarities: CardRarity[] = [
-		'Commune',
-		'Peu Commune',
-		'Rare',
-		'Super-Rare',
-		'Ultra-Rare',
-		'Légendaire',
-		'KTD'
-	];
+	const rarities: CardRarity[] = cardRarityOptions.map((rarity) => rarity.value);
 	let selectedCard = $state<CardRecord | null>(null);
 	let wishlistedCardIds = $state<string[]>([]);
 
@@ -64,6 +57,7 @@
 			sortDirection: data.filters.sortDirection
 		});
 		data.filters.selectedRarities.forEach((rarity) => parameters.append('rarity', rarity));
+		parameters.set('variant', data.filters.variant);
 		return `/cards?${parameters}`;
 	}
 </script>
@@ -79,6 +73,7 @@
 		sortBy={data.filters.sortBy}
 		sortDirection={data.filters.sortDirection}
 		selectedRarities={data.filters.selectedRarities}
+		variant={data.filters.variant}
 		{rarities}
 	/>
 	{#await data.cards}

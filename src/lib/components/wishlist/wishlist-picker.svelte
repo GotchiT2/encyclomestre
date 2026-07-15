@@ -1,10 +1,12 @@
 <script lang="ts">
 	import CardTile from '$lib/components/card-tile.svelte';
+	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
+	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Sheet from '$lib/components/ui/sheet';
 	import { _ } from '$lib/i18n';
-	import type { CardRarity, CardRecord } from '$lib/types';
+	import type { CardRarity, CardRecord, CardVariant } from '$lib/types';
 
 	let {
 		open = $bindable(false),
@@ -23,6 +25,7 @@
 	let selectedRarities = $state<CardRarity[]>([]);
 	let selectedTagIds = $state<string[]>([]);
 	let sortBy = $state<'rarity' | 'name'>('rarity');
+	let variant = $state<CardVariant>('all');
 	let page = $state(1);
 	const availableTags = $derived([
 		...new Map(
@@ -37,6 +40,7 @@
 					(!query ||
 						card.title.toLocaleLowerCase('fr-FR').includes(query.toLocaleLowerCase('fr-FR'))) &&
 					(!selectedRarities.length || selectedRarities.includes(card.rarity)) &&
+					matchesCardVariant(card, variant) &&
 					(!selectedTagIds.length ||
 						selectedTagIds.every((tagId) =>
 							(card.collectionTags ?? []).some((tag) => tag.id === tagId)
@@ -96,6 +100,7 @@
 					<option value="name">{$_('collection.sortName')}</option>
 				</select>
 			</div>
+			<CardVariantSelector bind:value={variant} onChange={() => (page = 1)} class="mt-3" />
 			<div class="mt-3 flex flex-wrap gap-1.5">
 				{#each [...new Set(cards.map((card) => card.rarity))] as rarity (rarity)}
 					{@const exemplar = cards.find((card) => card.rarity === rarity)!}

@@ -4,10 +4,13 @@
 	import CardTile from '$lib/components/card-tile.svelte';
 	import ProfileGallery from '$lib/components/profile/profile-gallery.svelte';
 	import RegistrySummary from '$lib/components/profile/registry-summary.svelte';
+	import { cardRarityOptions } from '$lib/domain/cards/rarities';
+	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import { _ } from '$lib/i18n';
 	import type {
 		CardRarity,
 		CardRecord,
+		CardVariant,
 		CollectionTag,
 		CollectionTagAssignments,
 		ProfileRegistrySummary,
@@ -19,15 +22,7 @@
 	type ProfileTab = 'showcase' | 'collection';
 
 	const untaggedOption = '__untagged__';
-	const rarities: { value: CardRarity; initials: string; color: string }[] = [
-		{ value: 'KTD', initials: 'KTD', color: '#1dcf47' },
-		{ value: 'Légendaire', initials: 'L', color: '#cf1d1d' },
-		{ value: 'Ultra-Rare', initials: 'UR', color: '#cf7d1d' },
-		{ value: 'Super-Rare', initials: 'SR', color: '#b41dcf' },
-		{ value: 'Rare', initials: 'R', color: '#5c1dcf' },
-		{ value: 'Peu Commune', initials: 'PC', color: '#1d71cf' },
-		{ value: 'Commune', initials: 'C', color: '#d3e4f8' }
-	];
+	const rarities = cardRarityOptions;
 
 	let {
 		user,
@@ -54,6 +49,7 @@
 	let sortBy = $state<'name' | 'rarity'>('rarity');
 	let selectedRarities = $state<CardRarity[]>([]);
 	let tagFilterIds = $state<string[]>([]);
+	let variant = $state<CardVariant>('all');
 
 	const cardsById = $derived(new Map(catalogue.map((card) => [card.id, card])));
 	const wantedCards = $derived(
@@ -68,6 +64,7 @@
 		sortBy = 'rarity';
 		selectedRarities = [];
 		tagFilterIds = [];
+		variant = 'all';
 	}
 
 	function visibleCards() {
@@ -82,6 +79,7 @@
 				return (
 					card.title.toLocaleLowerCase('fr-FR').includes(normalizedQuery) &&
 					(!selectedRarities.length || selectedRarities.includes(card.rarity)) &&
+					matchesCardVariant(card, variant) &&
 					matchesTag
 				);
 			})
@@ -247,6 +245,7 @@
 				bind:sortBy
 				bind:selectedRarities
 				bind:tagFilterIds
+				bind:variant
 				{tags}
 				{rarities}
 				{untaggedOption}

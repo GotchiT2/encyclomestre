@@ -40,7 +40,7 @@ describe('WikiForge API adapters', () => {
 					id: 7,
 					wikipediaTitle: 'Carte publique',
 					imageUrl: '/card-placeholder.svg',
-					rarity: 'KTD'
+					rarity: 'UNKNOWN'
 				}
 			],
 			page: 1,
@@ -49,6 +49,6 @@ describe('WikiForge API adapters', () => {
 		});
 
 		expect(page.meta).toEqual({ page: 2, pageSize: 20, total: 45, totalPages: 3 });
-		expect(page.items[0]).toMatchObject({ rarity: 'KTD', rarityInitials: 'KTD' });
+		expect(page.items[0]).toMatchObject({ rarity: 'Commune', rarityInitials: 'C' });
 	});
 });

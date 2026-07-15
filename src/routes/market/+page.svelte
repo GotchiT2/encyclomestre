@@ -9,23 +9,32 @@
 	} from '$lib/api';
 	import { currentSession } from '$lib/auth/session';
 	import MarketListings from '$lib/components/market/market-listings.svelte';
+	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
+	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
-	import type { CardRecord, SaleListing } from '$lib/types';
+	import type { CardRecord, CardVariant, SaleListing } from '$lib/types';
 
 	let cards = $state<CardRecord[]>([]);
 	let listings = $state<SaleListing[]>([]);
 	let query = $state('');
 	let type = $state<SaleListing['type'] | 'all'>('all');
 	let maxPrice = $state('');
+	let variant = $state<CardVariant>('all');
 	let loading = $state(true);
 	let selectedListing = $state<SaleListing | null>(null);
 	let activeTab = $state<'all' | 'mine' | 'bids' | 'history'>('all');
 	let historyTab = $state<'sold' | 'bought'>('sold');
 	let favoriteIds = $state<string[]>([]);
 	let filterTimer: number | undefined;
+	const visibleListings = $derived(
+		listings.filter((listing) => {
+			const card = cards.find((candidate) => candidate.id === listing.cardId);
+			return card ? matchesCardVariant(card, variant) : variant === 'all';
+		})
+	);
 
 	onMount(async () => {
 		const favorites = await getSaleFavorites();
@@ -131,10 +140,11 @@
 			oninput={() => scheduleRefresh(350)}
 		/>
 	</form>
+	<CardVariantSelector bind:value={variant} />
 	{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('market.loading')}
-		</p>{:else if listings.length}<MarketListings
-			{listings}
+		</p>{:else if visibleListings.length}<MarketListings
+			listings={visibleListings}
 			{cards}
 			showAction={activeTab === 'all' || activeTab === 'bids'}
 			{favoriteIds}

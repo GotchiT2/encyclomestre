@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { currentSession } from '$lib/auth/session';
+	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import {
 		addWishlistEntry,
 		getCard,
@@ -22,6 +23,7 @@
 	import type {
 		CardRarity,
 		CardRecord,
+		CardVariant,
 		WishlistAlert,
 		WishlistEntry,
 		WishlistPriority
@@ -36,6 +38,7 @@
 	let selectedRarities = $state<CardRarity[]>([]);
 	let priority = $state<WishlistPriority | ''>('');
 	let hasAlert = $state(false);
+	let variant = $state<CardVariant>('all');
 	let page = $state(1);
 	let pickerOpen = $state(false);
 	let editorOpen = $state(false);
@@ -50,6 +53,7 @@
 				Boolean(card) &&
 				(!normalizedQuery || card!.title.toLocaleLowerCase('fr-FR').includes(normalizedQuery)) &&
 				(!selectedRarities.length || selectedRarities.includes(card!.rarity)) &&
+				matchesCardVariant(card!, variant) &&
 				(!priority || entry.priority === priority) &&
 				(!hasAlert || alerts.some((alert) => alert.cardId === entry.cardId))
 			);
@@ -68,7 +72,8 @@
 	);
 
 	$effect(() => {
-		if (query || selectedRarities.length || priority || hasAlert || page !== 1) page = 1;
+		if (query || selectedRarities.length || priority || hasAlert || variant !== 'all' || page !== 1)
+			page = 1;
 	});
 
 	onMount(async () => {
@@ -142,7 +147,7 @@
 		</p>
 	</div>
 
-	<WishlistControls bind:query bind:selectedRarities bind:priority bind:hasAlert />
+	<WishlistControls bind:query bind:selectedRarities bind:priority bind:hasAlert bind:variant />
 	{#if loading}
 		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('wishlist.loading')}

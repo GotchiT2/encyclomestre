@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import CardTile from '$lib/components/card-tile.svelte';
+	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
+	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import XIcon from '@lucide/svelte/icons/x';
-	import type { CardRecord, CollectionTag } from '$lib/types';
+	import type { CardRecord, CardVariant, CollectionTag } from '$lib/types';
 
 	let {
 		title,
@@ -23,6 +25,7 @@
 	let rarities = $state<string[]>([]);
 	let tagIds = $state<string[]>([]);
 	let sortBy = $state<'rarity' | 'name'>('rarity');
+	let variant = $state<CardVariant>('all');
 	let hoveredRarity = $state<string | null>(null);
 	let page = $state(1);
 	const pageSize = 12;
@@ -43,6 +46,7 @@
 					!selectedIds.includes(card.id) &&
 					(!needle || card.title.toLocaleLowerCase('fr-FR').includes(needle)) &&
 					(!rarities.length || rarities.includes(card.rarity)) &&
+					matchesCardVariant(card, variant) &&
 					(!tagIds.length || tagIds.every((id) => labels.includes(id)))
 				);
 			})
@@ -148,6 +152,7 @@
 			/></label
 		>
 	</div>
+	<CardVariantSelector bind:value={variant} onChange={resetPage} class="mt-2" />
 	<div class="mt-2 flex flex-wrap gap-1">
 		{#each availableTags as tag (tag.id)}
 			<Button

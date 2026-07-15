@@ -1,29 +1,23 @@
 <script lang="ts">
 	import { Input } from '$lib/components/ui/input';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group';
+	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
+	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { _ } from '$lib/i18n';
-	import type { CardRarity, WishlistPriority } from '$lib/types';
-
-	const rarities: { value: CardRarity; initials: string; color: string }[] = [
-		{ value: 'KTD', initials: 'KTD', color: '#1dcf47' },
-		{ value: 'Légendaire', initials: 'L', color: '#cf1d1d' },
-		{ value: 'Ultra-Rare', initials: 'UR', color: '#cf7d1d' },
-		{ value: 'Super-Rare', initials: 'SR', color: '#b41dcf' },
-		{ value: 'Rare', initials: 'R', color: '#5c1dcf' },
-		{ value: 'Peu Commune', initials: 'PC', color: '#1d71cf' },
-		{ value: 'Commune', initials: 'C', color: '#d3e4f8' }
-	];
+	import type { CardRarity, CardVariant, WishlistPriority } from '$lib/types';
 
 	let {
 		query = $bindable(''),
 		selectedRarities = $bindable<CardRarity[]>([]),
 		priority = $bindable<WishlistPriority | ''>(''),
-		hasAlert = $bindable(false)
+		hasAlert = $bindable(false),
+		variant = $bindable<CardVariant>('all')
 	}: {
 		query?: string;
 		selectedRarities?: CardRarity[];
 		priority?: WishlistPriority | '';
 		hasAlert?: boolean;
+		variant?: CardVariant;
 	} = $props();
 </script>
 
@@ -58,7 +52,7 @@
 		spacing={1}
 		class="mt-3 w-full flex-wrap"
 	>
-		{#each rarities as rarity (rarity.value)}
+		{#each cardRarityOptions as rarity (rarity.value)}
 			<ToggleGroup.Item
 				value={rarity.value}
 				aria-label={rarity.value}
@@ -67,4 +61,5 @@
 			>
 		{/each}
 	</ToggleGroup.Root>
+	<CardVariantSelector bind:value={variant} class="mt-3" />
 </div>

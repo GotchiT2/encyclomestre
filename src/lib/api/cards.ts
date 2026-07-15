@@ -1,5 +1,6 @@
 import { apiRequest, type RequestOptions } from './client';
 import { getWikiForgeCard, getWikiForgeCards, toCardPage, toCardRecord } from './wikiforge';
+import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 import type { CardPriceHistory, CardRarity, CardRecord } from '$lib/types';
 
 export interface CardQuery {
@@ -8,16 +9,6 @@ export interface CardQuery {
 	query?: string;
 	rarity?: CardRarity;
 }
-
-const rarityCodes: Record<CardRarity, 'C' | 'PC' | 'R' | 'SR' | 'UR' | 'L' | 'KTD'> = {
-	Commune: 'C',
-	'Peu Commune': 'PC',
-	Rare: 'R',
-	'Super-Rare': 'SR',
-	'Ultra-Rare': 'UR',
-	Légendaire: 'L',
-	KTD: 'KTD'
-};
 
 export const getCards = async (
 	{ page = 1, pageSize = 12, query, rarity }: CardQuery = {},
@@ -29,7 +20,7 @@ export const getCards = async (
 				page: Math.max(0, page - 1),
 				size: pageSize,
 				q: query,
-				rarities: rarity ? [rarityCodes[rarity]] : undefined
+				rarities: rarity ? [cardRarityCodeByName[rarity]] : undefined
 			},
 			options
 		)

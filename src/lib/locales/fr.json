@@ -79,6 +79,14 @@
 		"marketTitle": "{count} annonces actives",
 		"openMarket": "Explorer le marché"
 	},
+	"cards": {
+		"variant": {
+			"label": "Variante",
+			"all": "Tous",
+			"normal": "Normal",
+			"alternative": "Alternatif"
+		}
+	},
 	"codex": {
 		"eyebrow": "Catalogue de cartes",
 		"title": "Toutes les cartes",

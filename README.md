@@ -66,7 +66,6 @@ You can preview the production build with `npm run preview`.
 - Super Rare : #b41dcf
 - Ultra Rare : #cf7d1d
 - Légendaire : #cf1d1d
-- KTD : #1dcf47
 
 ### Typos
 

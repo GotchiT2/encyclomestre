@@ -1,26 +1,10 @@
 import type { PageLoad } from './$types';
 import { getWikiForgeCards, toCardPage } from '$lib/api';
-import type { CardRarity } from '$lib/types';
+import { cardRarityCodeByName, cardRarityOptions } from '$lib/domain/cards/rarities';
+import { filterCardPageByVariant } from '$lib/domain/cards/variants';
+import type { CardRarity, CardVariant } from '$lib/types';
 
-const rarities = new Set<CardRarity>([
-	'Légendaire',
-	'Ultra-Rare',
-	'Super-Rare',
-	'Rare',
-	'Peu Commune',
-	'Commune',
-	'KTD'
-]);
-
-const rarityCodes: Record<CardRarity, 'C' | 'PC' | 'R' | 'SR' | 'UR' | 'L' | 'KTD'> = {
-	Commune: 'C',
-	'Peu Commune': 'PC',
-	Rare: 'R',
-	'Super-Rare': 'SR',
-	'Ultra-Rare': 'UR',
-	Légendaire: 'L',
-	KTD: 'KTD'
-};
+const rarities = new Set<CardRarity>(cardRarityOptions.map((rarity) => rarity.value));
 
 export const load: PageLoad = ({ fetch, url }) => {
 	const query = url.searchParams.get('q')?.trim() ?? '';
@@ -29,6 +13,11 @@ export const load: PageLoad = ({ fetch, url }) => {
 		.filter((rarity) => rarities.has(rarity as CardRarity)) as CardRarity[];
 	const sortBy = url.searchParams.get('sortBy') === 'name' ? 'name' : 'rarity';
 	const sortDirection = url.searchParams.get('sortDirection') === 'ASC' ? 'ASC' : 'DESC';
+	const variant = (
+		['normal', 'alternative'].includes(url.searchParams.get('variant') ?? '')
+			? url.searchParams.get('variant')
+			: 'all'
+	) as CardVariant;
 	return {
 		cards: getWikiForgeCards(
 			{
@@ -37,10 +26,12 @@ export const load: PageLoad = ({ fetch, url }) => {
 				q: query,
 				sortBy,
 				sortDirection,
-				rarities: selectedRarities.map((rarity) => rarityCodes[rarity])
+				rarities: selectedRarities.map((rarity) => cardRarityCodeByName[rarity])
 			},
 			{ fetch }
-		).then(toCardPage),
-		filters: { query, selectedRarities, sortBy, sortDirection }
+		)
+			.then(toCardPage)
+			.then((page) => filterCardPageByVariant(page, variant)),
+		filters: { query, selectedRarities, sortBy, sortDirection, variant }
 	};
 };

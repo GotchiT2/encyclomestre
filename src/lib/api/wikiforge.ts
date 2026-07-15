@@ -8,8 +8,9 @@ import type {
 	GuildSummary,
 	PaginatedResponse
 } from '$lib/types';
+import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/rarities';
 
-export type WikiForgeRarity = 'C' | 'PC' | 'R' | 'SR' | 'UR' | 'L' | 'KTD';
+export type WikiForgeRarity = CardRarityCode;
 
 export interface WikiForgeCard {
 	id: string | number;
@@ -175,21 +176,8 @@ export const getWikiForgeGuildWishlistShares = <T = unknown>(
 	options?: RequestOptions
 ) => apiRequest<T[]>(`/api/guilds/${encodeURIComponent(id)}/wishlist-shares`, options);
 
-const rarityMeta: Record<
-	string,
-	{ name: CardRecord['rarity']; initials: CardRecord['rarityInitials']; color: string }
-> = {
-	C: { name: 'Commune', initials: 'C', color: '#d3e4f8' },
-	PC: { name: 'Peu Commune', initials: 'PC', color: '#1d71cf' },
-	R: { name: 'Rare', initials: 'R', color: '#5c1dcf' },
-	SR: { name: 'Super-Rare', initials: 'SR', color: '#b41dcf' },
-	UR: { name: 'Ultra-Rare', initials: 'UR', color: '#cf7d1d' },
-	L: { name: 'Légendaire', initials: 'L', color: '#cf1d1d' },
-	KTD: { name: 'KTD', initials: 'KTD', color: '#1dcf47' }
-};
-
 export function toCardRecord(card: WikiForgeCard): CardRecord {
-	const rarity = rarityMeta[card.rarity] ?? rarityMeta.C;
+	const rarity = cardRarityByCode[card.rarity as CardRarityCode] ?? cardRarityByCode.C;
 	return {
 		id: String(card.id),
 		title: card.wikipediaTitle,

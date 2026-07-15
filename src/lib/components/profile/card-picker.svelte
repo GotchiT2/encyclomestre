@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import CardTile from '$lib/components/card-tile.svelte';
+	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
+	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Sheet from '$lib/components/ui/sheet';
-	import type { CardRecord } from '$lib/types';
+	import type { CardRecord, CardVariant } from '$lib/types';
 
 	let {
 		open = $bindable(false),
@@ -21,6 +23,7 @@
 	let query = $state('');
 	let rarities = $state<string[]>([]);
 	let tagIds = $state<string[]>([]);
+	let variant = $state<CardVariant>('all');
 	const availableTags = $derived([
 		...new Map(
 			cards.flatMap((card) => card.collectionTags ?? []).map((tag) => [tag.id, tag])
@@ -35,6 +38,7 @@
 					card.title.toLocaleLowerCase('fr-FR').includes(normalizedQuery) ||
 					card.shortDescription.toLocaleLowerCase('fr-FR').includes(normalizedQuery)) &&
 				(!rarities.length || rarities.includes(card.rarity)) &&
+				matchesCardVariant(card, variant) &&
 				(!tagIds.length || tagIds.every((tagId) => cardTags.includes(tagId)))
 			);
 		})
@@ -65,6 +69,7 @@
 		</div>
 		<div class="overflow-y-auto p-4">
 			<Input bind:value={query} placeholder={$_('collection.search')} class="mb-3" />
+			<CardVariantSelector bind:value={variant} class="mb-3" />
 			<div class="mb-3 flex flex-wrap gap-1.5" aria-label={$_('collection.rarities')}>
 				{#each [...new Set(cards.map((card) => card.rarity))] as rarity (rarity)}
 					{@const reference = cards.find((card) => card.rarity === rarity)!}

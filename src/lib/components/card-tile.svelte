@@ -21,8 +21,7 @@
 		Rare: '/images/card-R-empty.png',
 		'Super-Rare': '/images/card-SR-empty.png',
 		'Ultra-Rare': '/images/card-UR-empty.png',
-		Légendaire: '/images/card-L-empty.png',
-		KTD: '/images/card-KTD-empty.png'
+		Légendaire: '/images/card-L-empty.png'
 	} satisfies Record<CardRecord['rarity'], string>;
 
 	const frameSource = $derived(
