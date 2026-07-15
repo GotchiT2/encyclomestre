@@ -110,14 +110,17 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="h-[min(92dvh,58rem)] max-w-6xl grid-rows-[auto_minmax(0,1fr)]">
-		<div class="border-b border-primary/20 p-4 pr-14">
-			<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
+	<Dialog.Content class="h-[min(92dvh,58rem)] max-w-6xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0">
+		<div class="flex min-h-12 items-center gap-3 border-b border-primary/20 px-4 py-2 pr-14">
+			<p class="shrink-0 font-mono text-[9px] uppercase tracking-widest text-primary">
 				{$_('wishlist.catalogue')}
 			</p>
-			<Dialog.Title class="mt-1">{$_('wishlist.add_card')}</Dialog.Title>
+			<span class="h-4 w-px bg-primary/25" aria-hidden="true"></span>
+			<Dialog.Title class="truncate text-lg leading-tight sm:text-xl"
+				>{$_('wishlist.add_card')}</Dialog.Title
+			>
 		</div>
-		<div class="min-h-0 overflow-y-auto p-4">
+		<div class="min-h-0 overflow-y-auto p-3 sm:p-4">
 			<div class="grid grid-cols-[minmax(0,1fr)_10rem] gap-2">
 				<Input bind:value={query} oninput={() => (page = 1)} placeholder={$_('wishlist.search')} />
 				<select
@@ -170,19 +173,22 @@
 					{/each}
 				</div>
 			{/if}
-			<div
-				class="mt-5 flex items-center justify-between border-t border-dashed border-primary/30 pt-4"
-			>
-				<Button variant="outline" disabled={page === 1} onclick={() => (page -= 1)}
-					>{$_('codex.previous')}</Button
-				>
-				<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-					{page} / {totalPages}
-				</p>
-				<Button variant="outline" disabled={page === totalPages} onclick={() => (page += 1)}
-					>{$_('codex.next')}</Button
-				>
-			</div>
 		</div>
+		<nav
+			class="flex shrink-0 items-center justify-between border-t border-primary/25 bg-card px-3 py-2 sm:px-4"
+			aria-label={$_('codex.page')}
+			data-testid="card-picker-pagination"
+		>
+			<Button size="sm" variant="outline" disabled={page === 1} onclick={() => (page -= 1)}
+				>{$_('codex.previous')}</Button
+			>
+			<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
+				{$_('codex.page')}
+				{page} / {totalPages}
+			</p>
+			<Button size="sm" variant="outline" disabled={page === totalPages} onclick={() => (page += 1)}
+				>{$_('codex.next')}</Button
+			>
+		</nav>
 	</Dialog.Content>
 </Dialog.Root>

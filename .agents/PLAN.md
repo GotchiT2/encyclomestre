@@ -232,3 +232,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Charger toutes les cartes des wishlists, stabiliser les filtres et choisir la liste depuis le détail — `fix(wishlist): complete card selection flows`
 - [x] Charger le catalogue de cartes à la demande et le paginer dans les wishlists — `fix(wishlist): lazy-load card catalogue`
 - [x] Centrer les recherches de cartes, fiabiliser les suppressions et ouvrir le détail sans route dédiée — `fix(wishlist): center card flows and fix deletions`
+- [x] Compacter les sélecteurs de cartes et maintenir leur pagination visible — `fix(cards): pin picker pagination`

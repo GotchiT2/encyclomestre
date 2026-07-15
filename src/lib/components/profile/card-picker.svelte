@@ -57,12 +57,13 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="h-[min(90dvh,58rem)] max-w-6xl grid-rows-[auto_minmax(0,1fr)]">
-		<div class="border-b border-primary/20 p-4 pr-14">
-			<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
+	<Dialog.Content class="h-[min(90dvh,58rem)] max-w-6xl grid-rows-[auto_minmax(0,1fr)] gap-0">
+		<div class="flex min-h-12 items-center gap-3 border-b border-primary/20 px-4 py-2 pr-14">
+			<p class="shrink-0 font-mono text-[9px] uppercase tracking-widest text-primary">
 				{$_('profile.select_cards')}
 			</p>
-			<Dialog.Title class="mt-1">{title}</Dialog.Title>
+			<span class="h-4 w-px bg-primary/25" aria-hidden="true"></span>
+			<Dialog.Title class="truncate text-lg leading-tight sm:text-xl">{title}</Dialog.Title>
 		</div>
 		<div class="min-h-0 overflow-y-auto p-4">
 			<Input bind:value={query} placeholder={$_('collection.search')} class="mb-3" />

@@ -169,7 +169,9 @@
 			</div>
 		{/each}
 	</div>
-	<div class="mt-4 flex items-center justify-between gap-2">
+	<div
+		class="sticky bottom-0 z-30 mt-4 flex items-center justify-between gap-2 border-t border-primary/25 bg-card/95 px-2 py-2 backdrop-blur-sm"
+	>
 		<Button size="xs" variant="outline" disabled={page === 1} onclick={() => (page -= 1)}
 			>{$_('codex.previous')}</Button
 		>
