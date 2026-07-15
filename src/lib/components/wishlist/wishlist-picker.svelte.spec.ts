@@ -37,6 +37,17 @@ describe('WishlistPicker', () => {
 		await vi.waitFor(() => expect(loadCards).toHaveBeenCalledOnce());
 		expect(document.querySelector('[data-slot="dialog-content"]')).not.toBeNull();
 		expect(document.querySelector('[data-slot="sheet-content"]')).toBeNull();
+		const closeButton = document.querySelector<HTMLElement>('[data-slot="dialog-close"]');
+		const closeIcon = closeButton?.querySelector<SVGElement>('svg');
+		expect(closeButton).not.toBeNull();
+		expect(closeIcon).not.toBeNull();
+		const buttonBounds = closeButton!.getBoundingClientRect();
+		const iconBounds = closeIcon!.getBoundingClientRect();
+		expect(
+			Math.abs(
+				buttonBounds.left + buttonBounds.width / 2 - (iconBounds.left + iconBounds.width / 2)
+			)
+		).toBeLessThan(1);
 		const pagination = page.getByTestId('card-picker-pagination');
 		await expect.element(pagination).toBeVisible();
 		expect(pagination.element().parentElement).toHaveAttribute('data-slot', 'dialog-content');

@@ -234,3 +234,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Centrer les recherches de cartes, fiabiliser les suppressions et ouvrir le détail sans route dédiée — `fix(wishlist): center card flows and fix deletions`
 - [x] Compacter les sélecteurs de cartes et maintenir leur pagination visible — `fix(cards): pin picker pagination`
 - [x] Rendre rétractables tous les panneaux de recherche de cartes — `feat(cards): collapse search panels`
+- [x] Recentrer le bouton de fermeture des modales compactes — `fix(dialog): center close icon`
