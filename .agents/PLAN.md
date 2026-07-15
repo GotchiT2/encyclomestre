@@ -227,3 +227,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Désactiver le préchargement des routes de détail au survol des cartes — `fix(cards): prevent detail requests on hover`
 - [x] Adapter la hauteur de la modale de détail à son contenu sur desktop — `fix(cards): size detail modal to content`
 - [x] Stabiliser le premier rendu de la collection sans navigation de filtre implicite — `fix(collection): prevent initial grid reload`
+- [x] Rendre le menu des étiquettes hors du panneau découpé — `fix(collection): prevent tag selector clipping`

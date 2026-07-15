@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { _ } from '$lib/i18n';
-	import CheckIcon from '@lucide/svelte/icons/check';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import type { CollectionTag } from '$lib/types';
@@ -22,7 +21,6 @@
 		onCreate?: () => void;
 	} = $props();
 
-	let details: HTMLDetailsElement;
 	const options = $derived([
 		{ id: untaggedValue, name: $_('collection.untagged'), color: '#9cb0bc' },
 		...tags
@@ -33,53 +31,55 @@
 		onChange?.();
 	}
 
-	function create() {
-		details.open = false;
-		onCreate?.();
+	function selectionChanged() {
+		onChange?.();
 	}
 </script>
 
-<div>
-	<details bind:this={details} class="group relative">
-		<summary class="forge-control flex cursor-pointer list-none items-center justify-between gap-3">
+<div data-testid="tag-filter-selector">
+	<DropdownMenu.Root>
+		<DropdownMenu.Trigger
+			class="forge-control flex cursor-pointer items-center justify-between gap-3"
+		>
 			<span class="truncate">
 				{values.length
 					? $_('collection.selectedTagCount', { values: { count: values.length } })
 					: $_('collection.allTags')}
 			</span>
-			<ChevronDownIcon
-				class="size-4 shrink-0 text-primary transition-transform group-open:rotate-180"
-			/>
-		</summary>
-		<div
-			class="absolute top-full right-0 left-0 z-40 mt-2 border border-primary/35 bg-popover p-2 shadow-2xl"
+			<ChevronDownIcon class="shrink-0 text-primary" />
+		</DropdownMenu.Trigger>
+		<DropdownMenu.Content
+			align="start"
+			sideOffset={8}
+			class="max-h-72 border border-primary/35 bg-popover p-2 shadow-2xl"
 		>
-			<div class="max-h-60 overflow-y-auto">
+			<DropdownMenu.CheckboxGroup bind:value={values} onValueChange={selectionChanged}>
 				{#each options as option (option.id)}
-					<button
-						type="button"
-						class="flex min-h-11 w-full items-center gap-3 border border-transparent px-3 text-left text-sm hover:border-primary/25 hover:bg-secondary/70"
-						class:bg-secondary={values.includes(option.id)}
-						onclick={() => toggle(option.id)}
+					<DropdownMenu.CheckboxItem
+						value={option.id}
+						checked={values.includes(option.id)}
+						closeOnSelect={false}
+						class="min-h-11"
 					>
 						<span
-							class="grid size-5 shrink-0 place-items-center border"
-							style={`border-color:${option.color};background:${values.includes(option.id) ? option.color : 'transparent'};color:#080f19`}
-						>
-							{#if values.includes(option.id)}<CheckIcon class="size-3.5" />{/if}
-						</span>
+							class="size-3 shrink-0 border"
+							style={`border-color:${option.color};background:${values.includes(option.id) ? option.color : 'transparent'}`}
+						></span>
 						<span class="truncate">{option.name}</span>
-					</button>
+					</DropdownMenu.CheckboxItem>
 				{/each}
-			</div>
-			{#if allowCreation}<Button
-					type="button"
-					variant="ghost"
-					class="mt-2 w-full justify-start border-t border-primary/20"
-					onclick={create}><PlusIcon />{$_('collection.addTagOption')}</Button
-				>{/if}
-		</div>
-	</details>
+			</DropdownMenu.CheckboxGroup>
+			{#if allowCreation}
+				<DropdownMenu.Separator />
+				<DropdownMenu.Group>
+					<DropdownMenu.Item onSelect={() => onCreate?.()}>
+						<PlusIcon data-icon="inline-start" />
+						{$_('collection.addTagOption')}
+					</DropdownMenu.Item>
+				</DropdownMenu.Group>
+			{/if}
+		</DropdownMenu.Content>
+	</DropdownMenu.Root>
 	{#if values.length}
 		<div class="mt-2 flex flex-wrap gap-1.5">
 			{#each values as value (value)}
