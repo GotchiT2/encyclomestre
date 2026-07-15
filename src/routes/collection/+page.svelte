@@ -14,13 +14,19 @@
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
-	import { addWishlistEntry, applyWikiForgeTag, getWishlist, removeWishlistEntry } from '$lib/api';
+	import {
+		addWishlistRegistryCard,
+		applyWikiForgeTag,
+		getWishlists,
+		removeWishlistRegistryCard
+	} from '$lib/api';
 	import type {
 		CardRarity,
 		CardRecord,
 		CardVariant,
 		CollectionTag,
-		CollectionTagAssignments
+		CollectionTagAssignments,
+		WishlistRegistrySummary
 	} from '$lib/types';
 	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
@@ -43,7 +49,7 @@
 	let bulkTagId = $state('');
 	let isTagEditorOpen = $state(false);
 	let selectedCard = $state<CardRecord | null>(null);
-	let wishlistedCardIds = $state<string[]>([]);
+	let wishlists = $state<WishlistRegistrySummary[]>([]);
 	let filterTimer: number | undefined;
 	let filtersReady = $state(false);
 
@@ -53,13 +59,13 @@
 		selectedRarities = data.filters.selectedRarities;
 		tagFilterIds = data.filters.tagFilterIds;
 		variant = data.filters.variant;
-		const [collection, apiTags, wishlist] = await Promise.all([
+		const [collection, apiTags, wishlistRegistries] = await Promise.all([
 			data.collection,
 			data.tags,
-			getWishlist('', { page: 1, pageSize: 100 })
+			getWishlists()
 		]);
 		tags = apiTags;
-		wishlistedCardIds = wishlist.items.map((entry) => entry.cardId);
+		wishlists = wishlistRegistries;
 		assignments = {
 			...Object.fromEntries(
 				collection.items.map((card) => [card.id, (card.collectionTags ?? []).map((tag) => tag.id)])
@@ -107,15 +113,14 @@
 		selectedCardIds = [];
 	}
 
-	async function toggleWishlist(card: CardRecord) {
+	async function toggleWishlist(wishlistId: string, card: CardRecord, selected: boolean) {
 		const cardId = card.catalogueId ?? card.id;
-		if (wishlistedCardIds.includes(cardId)) {
-			await removeWishlistEntry('', cardId);
-			wishlistedCardIds = wishlistedCardIds.filter((id) => id !== cardId);
-		} else {
-			await addWishlistEntry('', cardId);
-			wishlistedCardIds = [...wishlistedCardIds, cardId];
-		}
+		const updated = selected
+			? await addWishlistRegistryCard(wishlistId, '', cardId)
+			: await removeWishlistRegistryCard(wishlistId, '', cardId);
+		wishlists = wishlists.map((wishlist) =>
+			wishlist.id === wishlistId ? { ...wishlist, cardIds: updated.cardIds } : wishlist
+		);
 	}
 
 	function clearFilters() {
@@ -169,7 +174,6 @@
 			bind:tagFilterIds
 			bind:variant
 			{tags}
-			{rarities}
 			{untaggedOption}
 			onOpenTagEditor={() => (isTagEditorOpen = true)}
 			onClear={clearFilters}
@@ -225,10 +229,11 @@
 	<CardDetailModal
 		card={selectedCard}
 		owned
-		isWishlisted={wishlistedCardIds.includes(selectedCard.catalogueId ?? selectedCard.id)}
+		{wishlists}
 		bind:tags
 		bind:assignments
-		onToggleWishlist={() => void toggleWishlist(selectedCard!)}
+		onToggleWishlist={(wishlistId, selected) =>
+			void toggleWishlist(wishlistId, selectedCard!, selected)}
 		onClose={() => (selectedCard = null)}
 	/>
 {/if}

@@ -15,13 +15,14 @@
 		CardRecord,
 		CollectionTag,
 		CollectionTagAssignments,
-		SaleListing
+		SaleListing,
+		WishlistRegistrySummary
 	} from '$lib/types';
 
 	let {
 		card,
 		owned = false,
-		isWishlisted = false,
+		wishlists = [],
 		tags = $bindable<CollectionTag[]>([]),
 		assignments = $bindable<CollectionTagAssignments>({}),
 		sales = [],
@@ -31,12 +32,12 @@
 	}: {
 		card: CardRecord;
 		owned?: boolean;
-		isWishlisted?: boolean;
+		wishlists?: WishlistRegistrySummary[];
 		tags?: CollectionTag[];
 		assignments?: CollectionTagAssignments;
 		sales?: SaleListing[];
 		history?: CardPriceHistory;
-		onToggleWishlist: () => void;
+		onToggleWishlist: (wishlistId: string, selected: boolean) => void | Promise<void>;
 		onClose: () => void;
 	} = $props();
 
@@ -89,7 +90,7 @@
 				</header>
 				<CardActions
 					card={{ ...card, ownedCount: owned ? Math.max(1, card.ownedCount) : 0 }}
-					{isWishlisted}
+					{wishlists}
 					{onToggleWishlist}
 					onTrade={() => undefined}
 					onMarket={() => goto(resolve('/market'))}

@@ -26,3 +26,17 @@ export const cardRarityByCode = Object.fromEntries(
 		{ name: rarity.value, initials: rarity.initials, color: rarity.color }
 	])
 ) as Record<CardRarityCode, { name: CardRarity; initials: CardRarityInitials; color: string }>;
+
+export const cardRarityRank = Object.fromEntries(
+	cardRarityOptions.map((rarity, index) => [rarity.value, index])
+) as Record<CardRarity, number>;
+
+export function compareCardsByRarityDesc(
+	left: { rarity: CardRarity; title: string },
+	right: { rarity: CardRarity; title: string }
+) {
+	return (
+		cardRarityRank[right.rarity] - cardRarityRank[left.rarity] ||
+		left.title.localeCompare(right.title, 'fr')
+	);
+}

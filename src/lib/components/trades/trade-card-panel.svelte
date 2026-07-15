@@ -2,11 +2,13 @@
 	import { _ } from '$lib/i18n';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
+	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
+	import { cardRarityOptions, compareCardsByRarityDesc } from '$lib/domain/cards/rarities';
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import XIcon from '@lucide/svelte/icons/x';
-	import type { CardRecord, CardVariant, CollectionTag } from '$lib/types';
+	import type { CardRarity, CardRecord, CardVariant, CollectionTag } from '$lib/types';
 
 	let {
 		title,
@@ -22,11 +24,10 @@
 		credits?: number;
 	} = $props();
 	let query = $state('');
-	let rarities = $state<string[]>([]);
+	let rarities = $state<CardRarity[]>([]);
 	let tagIds = $state<string[]>([]);
 	let sortBy = $state<'rarity' | 'name'>('rarity');
 	let variant = $state<CardVariant>('all');
-	let hoveredRarity = $state<string | null>(null);
 	let page = $state(1);
 	const pageSize = 12;
 	const selectedCards = $derived(
@@ -51,9 +52,7 @@
 				);
 			})
 			.toSorted((a, b) =>
-				sortBy === 'name'
-					? a.title.localeCompare(b.title, 'fr')
-					: a.rarity.localeCompare(b.rarity, 'fr') || a.title.localeCompare(b.title, 'fr')
+				sortBy === 'name' ? a.title.localeCompare(b.title, 'fr') : compareCardsByRarityDesc(a, b)
 			)
 	);
 	const totalPages = $derived(Math.max(1, Math.ceil(visibleCards.length / pageSize)));
@@ -121,25 +120,7 @@
 			<option value="rarity">{$_('collection.sortRarity')}</option>
 			<option value="name">{$_('collection.sortName')}</option>
 		</select>
-		<div class="flex flex-wrap gap-1">
-			{#each [...new Set(cards.map((card) => card.rarity))] as rarity (rarity)}{@const card =
-					cards.find((entry) => entry.rarity === rarity)!}{@const isColored =
-					rarities.includes(rarity) || hoveredRarity === rarity}
-				<Button
-					size="xs"
-					variant={rarities.includes(rarity) ? 'default' : 'outline'}
-					style={isColored
-						? `background-color:${card.rarityColor};border-color:${card.rarityColor};color:white`
-						: `color:${card.rarityColor};border-color:${card.rarityColor}`}
-					onmouseenter={() => (hoveredRarity = rarity)}
-					onmouseleave={() => (hoveredRarity = null)}
-					onclick={() => {
-						rarities = toggle(rarities, rarity);
-						resetPage();
-					}}>{card.rarityInitials}</Button
-				>
-			{/each}
-		</div>
+		<RaritySelector options={cardRarityOptions} bind:selected={rarities} onChange={resetPage} />
 		<label
 			class="font-mono text-[9px] uppercase tracking-widest text-primary lg:mx-4 lg:border-l lg:border-primary/25 lg:pl-4"
 		>

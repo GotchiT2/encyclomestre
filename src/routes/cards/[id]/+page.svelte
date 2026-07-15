@@ -3,12 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { currentSession } from '$lib/auth/session';
-	import {
-		addWishlistRegistryCard,
-		getWishlistRegistry,
-		getWishlists,
-		removeWishlistRegistryCard
-	} from '$lib/api';
+	import { addWishlistRegistryCard, getWishlists, removeWishlistRegistryCard } from '$lib/api';
 	import CardActions from '$lib/components/cards/card-actions.svelte';
 	import CardMarketSummary from '$lib/components/cards/card-market-summary.svelte';
 	import CardTagControls from '$lib/components/cards/card-tag-controls.svelte';
@@ -17,20 +12,23 @@
 	import FriendOwnerLedger from '$lib/components/social/friend-owner-ledger.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
-	import type { CollectionTag, CollectionTagAssignments } from '$lib/types';
+	import type {
+		CollectionTag,
+		CollectionTagAssignments,
+		WishlistRegistrySummary
+	} from '$lib/types';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 	let userId = $state('demo-user');
-	let primaryWishlistId = $state<string | null>(null);
-	let wishlistCardIds = $state<string[]>([]);
+	let wishlists = $state<WishlistRegistrySummary[]>([]);
 	let tags = $state<CollectionTag[]>([]);
 	let assignments = $state<CollectionTagAssignments>({});
 	let ownedCardId = $state<string | null>(null);
 
 	onMount(async () => {
 		userId = $currentSession?.user.id ?? 'demo-user';
-		const [card, collection, apiTags, wishlists] = await Promise.all([
+		const [card, collection, apiTags, wishlistRegistries] = await Promise.all([
 			data.card,
 			data.collection,
 			data.tags,
@@ -42,17 +40,16 @@
 		assignments = ownedCard
 			? { [ownedCard.id]: (ownedCard.collectionTags ?? []).map((tag) => tag.id) }
 			: {};
-		if (!wishlists[0]) return;
-		primaryWishlistId = wishlists[0].id;
-		wishlistCardIds = (await getWishlistRegistry(wishlists[0].id, userId)).cardIds;
+		wishlists = wishlistRegistries;
 	});
 
-	async function toggleWishlist(cardId: string) {
-		if (!primaryWishlistId) return;
-		const next = wishlistCardIds.includes(cardId)
-			? await removeWishlistRegistryCard(primaryWishlistId, userId, cardId)
-			: await addWishlistRegistryCard(primaryWishlistId, userId, cardId);
-		wishlistCardIds = next.cardIds;
+	async function toggleWishlist(wishlistId: string, cardId: string, selected: boolean) {
+		const updated = selected
+			? await addWishlistRegistryCard(wishlistId, userId, cardId)
+			: await removeWishlistRegistryCard(wishlistId, userId, cardId);
+		wishlists = wishlists.map((wishlist) =>
+			wishlist.id === wishlistId ? { ...wishlist, cardIds: updated.cardIds } : wishlist
+		);
 	}
 
 	function closeDetail() {
@@ -99,8 +96,9 @@
 					</header>
 					<CardActions
 						{card}
-						isWishlisted={wishlistCardIds.includes(card.id)}
-						onToggleWishlist={() => toggleWishlist(card.id)}
+						{wishlists}
+						onToggleWishlist={(wishlistId, selected) =>
+							toggleWishlist(wishlistId, card.id, selected)}
 						onTrade={() =>
 							goto(
 								`/trades?partner=${encodeURIComponent(card.friendsWhoOwn[0]?.friendId ?? '')}&cards=${encodeURIComponent(card.id)}`

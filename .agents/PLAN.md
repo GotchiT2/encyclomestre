@@ -229,3 +229,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Stabiliser le premier rendu de la collection sans navigation de filtre implicite — `fix(collection): prevent initial grid reload`
 - [x] Rendre le menu des étiquettes hors du panneau découpé — `fix(collection): prevent tag selector clipping`
 - [x] Normaliser les raretés et filtrer toutes les recherches de cartes par variante — `feat(cards): add card variant filters`
+- [x] Charger toutes les cartes des wishlists, stabiliser les filtres et choisir la liste depuis le détail — `fix(wishlist): complete card selection flows`

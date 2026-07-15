@@ -8,26 +8,22 @@
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import {
-		addWishlistEntry,
+		addWishlistRegistryCard,
 		getWikiForgeCard,
-		getWishlist,
-		removeWishlistEntry,
+		getWishlists,
+		removeWishlistRegistryCard,
 		toCardRecord
 	} from '$lib/api';
 	import { _ } from '$lib/i18n';
-	import type { CardRarity, CardRecord } from '$lib/types';
-	import { cardRarityOptions } from '$lib/domain/cards/rarities';
+	import type { CardRecord, WishlistRegistrySummary } from '$lib/types';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
-	const rarities: CardRarity[] = cardRarityOptions.map((rarity) => rarity.value);
 	let selectedCard = $state<CardRecord | null>(null);
-	let wishlistedCardIds = $state<string[]>([]);
+	let wishlists = $state<WishlistRegistrySummary[]>([]);
 
 	onMount(async () => {
-		wishlistedCardIds = (await getWishlist('', { page: 1, pageSize: 100 })).items.map(
-			(entry) => entry.cardId
-		);
+		wishlists = await getWishlists();
 	});
 
 	async function openCard(card: CardRecord) {
@@ -39,14 +35,13 @@
 		}
 	}
 
-	async function toggleWishlist(cardId: string) {
-		if (wishlistedCardIds.includes(cardId)) {
-			await removeWishlistEntry('', cardId);
-			wishlistedCardIds = wishlistedCardIds.filter((id) => id !== cardId);
-		} else {
-			await addWishlistEntry('', cardId);
-			wishlistedCardIds = [...wishlistedCardIds, cardId];
-		}
+	async function toggleWishlist(wishlistId: string, cardId: string, selected: boolean) {
+		const updated = selected
+			? await addWishlistRegistryCard(wishlistId, '', cardId)
+			: await removeWishlistRegistryCard(wishlistId, '', cardId);
+		wishlists = wishlists.map((wishlist) =>
+			wishlist.id === wishlistId ? { ...wishlist, cardIds: updated.cardIds } : wishlist
+		);
 	}
 
 	function pageHref(page: number) {
@@ -74,7 +69,6 @@
 		sortDirection={data.filters.sortDirection}
 		selectedRarities={data.filters.selectedRarities}
 		variant={data.filters.variant}
-		{rarities}
 	/>
 	{#await data.cards}
 		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
@@ -110,8 +104,9 @@
 {#if selectedCard}
 	<CardDetailModal
 		card={selectedCard}
-		isWishlisted={wishlistedCardIds.includes(selectedCard.id)}
-		onToggleWishlist={() => void toggleWishlist(selectedCard!.id)}
+		{wishlists}
+		onToggleWishlist={(wishlistId, selected) =>
+			void toggleWishlist(wishlistId, selectedCard!.id, selected)}
 		onClose={() => (selectedCard = null)}
 	/>
 {/if}

@@ -13,7 +13,9 @@ describe('TagFilterSelector', () => {
 			allowCreation: false
 		});
 
+		document.body.style.overflow = '';
 		await page.getByText('Toutes les étiquettes').click();
+		expect(document.body.style.overflow).not.toBe('hidden');
 		const option = page.getByRole('menuitemcheckbox', { name: 'Favoris' });
 		await expect.element(option).toBeVisible();
 		await expect.element(option).toHaveClass(/data-highlighted:text-primary/);

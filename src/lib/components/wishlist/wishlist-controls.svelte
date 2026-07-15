@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Input } from '$lib/components/ui/input';
-	import * as ToggleGroup from '$lib/components/ui/toggle-group';
 	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
+	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
 	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { _ } from '$lib/i18n';
 	import type { CardRarity, CardVariant, WishlistPriority } from '$lib/types';
@@ -45,21 +45,8 @@
 			{$_('wishlist.with_alerts')}
 		</label>
 	</div>
-	<ToggleGroup.Root
-		bind:value={selectedRarities}
-		type="multiple"
-		variant="outline"
-		spacing={1}
-		class="mt-3 w-full flex-wrap"
-	>
-		{#each cardRarityOptions as rarity (rarity.value)}
-			<ToggleGroup.Item
-				value={rarity.value}
-				aria-label={rarity.value}
-				class="h-7 min-w-8 px-1.5 font-mono text-[10px] font-bold"
-				style={`background-color:${rarity.color};color:#080f19`}>{rarity.initials}</ToggleGroup.Item
-			>
-		{/each}
-	</ToggleGroup.Root>
+	<div class="mt-3">
+		<RaritySelector options={cardRarityOptions} bind:selected={selectedRarities} />
+	</div>
 	<CardVariantSelector bind:value={variant} class="mt-3" />
 </div>

@@ -13,8 +13,7 @@ describe('CatalogueFilters', () => {
 			query: '',
 			sortBy: 'rarity',
 			sortDirection: 'DESC',
-			selectedRarities: [],
-			rarities: ['Commune', 'Rare']
+			selectedRarities: []
 		});
 
 		await page.getByPlaceholder('Rechercher une carte').fill('Mars');
@@ -22,6 +21,17 @@ describe('CatalogueFilters', () => {
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		expect(requestSubmit).toHaveBeenCalledOnce();
 		await expect.element(page.getByRole('button', { name: 'Filtrer' })).not.toBeInTheDocument();
+		const rarityButtons = Array.from(document.querySelectorAll('button[aria-pressed]')).map(
+			(button) => button.textContent?.replace(/\s+/g, '')
+		);
+		expect(rarityButtons.slice(0, 6)).toEqual([
+			'CCommune',
+			'PCPeuCommune',
+			'RRare',
+			'SRSuper-Rare',
+			'URUltra-Rare',
+			'LLégendaire'
+		]);
 		requestSubmit.mockRestore();
 	});
 });

@@ -2,11 +2,13 @@
 	import { _ } from '$lib/i18n';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
+	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
+	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Sheet from '$lib/components/ui/sheet';
-	import type { CardRecord, CardVariant } from '$lib/types';
+	import type { CardRarity, CardRecord, CardVariant } from '$lib/types';
 
 	let {
 		open = $bindable(false),
@@ -21,7 +23,7 @@
 	} = $props();
 
 	let query = $state('');
-	let rarities = $state<string[]>([]);
+	let rarities = $state<CardRarity[]>([]);
 	let tagIds = $state<string[]>([]);
 	let variant = $state<CardVariant>('all');
 	const availableTags = $derived([
@@ -70,18 +72,8 @@
 		<div class="overflow-y-auto p-4">
 			<Input bind:value={query} placeholder={$_('collection.search')} class="mb-3" />
 			<CardVariantSelector bind:value={variant} class="mb-3" />
-			<div class="mb-3 flex flex-wrap gap-1.5" aria-label={$_('collection.rarities')}>
-				{#each [...new Set(cards.map((card) => card.rarity))] as rarity (rarity)}
-					{@const reference = cards.find((card) => card.rarity === rarity)!}
-					<Button
-						variant={rarities.includes(rarity) ? 'default' : 'outline'}
-						size="xs"
-						style={rarities.includes(rarity)
-							? `background-color:${reference.rarityColor};border-color:${reference.rarityColor}`
-							: `color:${reference.rarityColor};border-color:${reference.rarityColor}`}
-						onclick={() => (rarities = toggle(rarities, rarity))}>{reference.rarityInitials}</Button
-					>
-				{/each}
+			<div class="mb-3" aria-label={$_('collection.rarities')}>
+				<RaritySelector options={cardRarityOptions} bind:selected={rarities} />
 			</div>
 			<div class="mb-4 flex flex-wrap gap-1.5" aria-label={$_('collection.tags')}>
 				{#each availableTags as tag (tag.id)}

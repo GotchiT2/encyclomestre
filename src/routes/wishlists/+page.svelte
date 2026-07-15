@@ -10,7 +10,7 @@
 		createWishlistRegistry,
 		deleteWishlistRegistry,
 		getCard,
-		getCards,
+		getAllCards,
 		getWishlistRegistry,
 		getWishlists,
 		importWishlistRegistryFromLink,
@@ -28,6 +28,7 @@
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
+	import { compareCardsByRarityDesc } from '$lib/domain/cards/rarities';
 	import type {
 		CardRecord,
 		FriendOwnerInfo,
@@ -62,7 +63,7 @@
 						(activeRegistry?.cardIds.indexOf(right.id) ?? 0) -
 						(activeRegistry?.cardIds.indexOf(left.id) ?? 0)
 					);
-				return right.rarityColor.localeCompare(left.rarityColor);
+				return compareCardsByRarityDesc(left, right);
 			})
 	);
 
@@ -71,20 +72,17 @@
 		const sharedToken = currentPage.url.searchParams.get('share');
 		const imported = sharedToken ? await importWishlistRegistryFromLink(userId, sharedToken) : null;
 		const [catalogue, summaries] = await Promise.all([
-			getCards({ page: 1, pageSize: 100 }),
+			getAllCards({ sortBy: 'rarity', sortDirection: 'DESC' }),
 			getWishlists(userId)
 		]);
-		const knownIds = new Set(catalogue.items.map((card) => card.id));
+		const knownIds = new Set(catalogue.map((card) => card.id));
 		const referencedIds = [...new Set(summaries.flatMap((registry) => registry.cardIds))];
 		const missingCards = await Promise.all(
 			referencedIds
 				.filter((cardId) => !knownIds.has(cardId))
 				.map((cardId) => getCard(cardId).catch(() => null))
 		);
-		cards = [
-			...catalogue.items,
-			...missingCards.filter((card): card is CardRecord => card !== null)
-		];
+		cards = [...catalogue, ...missingCards.filter((card): card is CardRecord => card !== null)];
 		registries = summaries;
 		const requestedRegistryId = imported?.id ?? currentPage.url.searchParams.get('registry');
 		const initialRegistry =

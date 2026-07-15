@@ -247,7 +247,6 @@
 				bind:tagFilterIds
 				bind:variant
 				{tags}
-				{rarities}
 				{untaggedOption}
 				allowTagCreation={false}
 				onOpenTagEditor={() => undefined}

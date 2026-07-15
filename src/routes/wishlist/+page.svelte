@@ -4,8 +4,8 @@
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import {
 		addWishlistEntry,
+		getAllCards,
 		getCard,
-		getCards,
 		getWishlist,
 		getWishlistAlerts,
 		removeWishlistEntry,
@@ -79,20 +79,17 @@
 	onMount(async () => {
 		userId = $currentSession?.user.id ?? 'demo-user';
 		const [catalogue, wishlist, wishlistAlerts] = await Promise.all([
-			getCards({ page: 1, pageSize: 100 }),
+			getAllCards({ sortBy: 'rarity', sortDirection: 'DESC' }),
 			getWishlist(userId, { page: 1, pageSize: 100 }),
 			getWishlistAlerts(userId)
 		]);
-		const knownIds = new Set(catalogue.items.map((card) => card.id));
+		const knownIds = new Set(catalogue.map((card) => card.id));
 		const missingCards = await Promise.all(
 			wishlist.items
 				.filter((entry) => !knownIds.has(entry.cardId))
 				.map((entry) => getCard(entry.cardId).catch(() => null))
 		);
-		cards = [
-			...catalogue.items,
-			...missingCards.filter((card): card is CardRecord => card !== null)
-		];
+		cards = [...catalogue, ...missingCards.filter((card): card is CardRecord => card !== null)];
 		entries = wishlist.items;
 		alerts = wishlistAlerts;
 		loading = false;

@@ -2,6 +2,7 @@
 	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
 	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
 	import TagFilterSelector from '$lib/components/collection/tag-filter-selector.svelte';
+	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { Button } from '$lib/components/ui/button';
 	import * as Field from '$lib/components/ui/field';
 	import { Input } from '$lib/components/ui/input';
@@ -9,8 +10,6 @@
 	import type { CardRarity, CardVariant, CollectionTag } from '$lib/types';
 
 	type SortBy = 'name' | 'rarity';
-	type RarityOption = { value: CardRarity; initials: string; color: string };
-
 	let {
 		query = $bindable(''),
 		sortBy = $bindable<SortBy>('rarity'),
@@ -18,7 +17,6 @@
 		tagFilterIds = $bindable<string[]>([]),
 		variant = $bindable<CardVariant>('all'),
 		tags,
-		rarities,
 		untaggedOption,
 		allowTagCreation = true,
 		onOpenTagEditor,
@@ -30,7 +28,6 @@
 		tagFilterIds: string[];
 		variant?: CardVariant;
 		tags: CollectionTag[];
-		rarities: RarityOption[];
 		untaggedOption: string;
 		allowTagCreation?: boolean;
 		onOpenTagEditor: () => void;
@@ -64,7 +61,7 @@
 
 	<Field.FieldSet class="gap-2">
 		<Field.FieldLegend class="forge-label">{$_('collection.rarities')}</Field.FieldLegend>
-		<RaritySelector options={rarities} bind:selected={selectedRarities} />
+		<RaritySelector options={cardRarityOptions} bind:selected={selectedRarities} />
 	</Field.FieldSet>
 
 	<CardVariantSelector bind:value={variant} />

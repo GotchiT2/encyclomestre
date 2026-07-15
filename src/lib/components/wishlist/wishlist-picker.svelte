@@ -1,6 +1,8 @@
 <script lang="ts">
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
+	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
+	import { cardRarityOptions, compareCardsByRarityDesc } from '$lib/domain/cards/rarities';
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -49,19 +51,11 @@
 			.toSorted((left, right) =>
 				sortBy === 'name'
 					? left.title.localeCompare(right.title, 'fr')
-					: left.rarityColor.localeCompare(right.rarityColor) ||
-						left.title.localeCompare(right.title, 'fr')
+					: compareCardsByRarityDesc(left, right)
 			)
 	);
 	const totalPages = $derived(Math.max(1, Math.ceil(availableCards.length / pageSize)));
 	const visibleCards = $derived(availableCards.slice((page - 1) * pageSize, page * pageSize));
-
-	function toggleRarity(rarity: CardRarity) {
-		selectedRarities = selectedRarities.includes(rarity)
-			? selectedRarities.filter((value) => value !== rarity)
-			: [...selectedRarities, rarity];
-		page = 1;
-	}
 
 	function toggleTag(tagId: string) {
 		selectedTagIds = selectedTagIds.includes(tagId)
@@ -101,18 +95,12 @@
 				</select>
 			</div>
 			<CardVariantSelector bind:value={variant} onChange={() => (page = 1)} class="mt-3" />
-			<div class="mt-3 flex flex-wrap gap-1.5">
-				{#each [...new Set(cards.map((card) => card.rarity))] as rarity (rarity)}
-					{@const exemplar = cards.find((card) => card.rarity === rarity)!}
-					<Button
-						size="xs"
-						variant={selectedRarities.includes(rarity) ? 'default' : 'outline'}
-						style={selectedRarities.includes(rarity)
-							? `background-color:${exemplar.rarityColor};border-color:${exemplar.rarityColor};color:#080A09`
-							: `color:${exemplar.rarityColor};border-color:${exemplar.rarityColor}`}
-						onclick={() => toggleRarity(rarity)}>{exemplar.rarityInitials}</Button
-					>
-				{/each}
+			<div class="mt-3">
+				<RaritySelector
+					options={cardRarityOptions}
+					bind:selected={selectedRarities}
+					onChange={() => (page = 1)}
+				/>
 			</div>
 			<div class="mt-3 flex flex-wrap gap-1.5" aria-label={$_('collection.tags')}>
 				{#each availableTags as tag (tag.id)}

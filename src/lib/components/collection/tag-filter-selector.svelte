@@ -49,6 +49,7 @@
 			<ChevronDownIcon class="shrink-0 text-primary" />
 		</DropdownMenu.Trigger>
 		<DropdownMenu.Content
+			preventScroll={false}
 			align="start"
 			sideOffset={8}
 			class="max-h-72 border border-primary/35 bg-popover p-2 shadow-2xl"

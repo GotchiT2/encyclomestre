@@ -11,15 +11,13 @@
 		sortBy,
 		sortDirection,
 		selectedRarities,
-		variant = 'all',
-		rarities
+		variant = 'all'
 	}: {
 		query: string;
 		sortBy: string;
 		sortDirection: string;
 		selectedRarities: CardRarity[];
 		variant?: CardVariant;
-		rarities: CardRarity[];
 	} = $props();
 
 	let form: HTMLFormElement;
@@ -28,10 +26,6 @@
 	let localRarities = $state<CardRarity[]>([]);
 	let localVariant = $state<CardVariant>('all');
 	let pending = $state(false);
-
-	const rarityOptions = $derived(
-		rarities.map((value) => cardRarityOptions.find((option) => option.value === value)!)
-	);
 
 	$effect(() => {
 		localQuery = query;
@@ -75,7 +69,7 @@
 	<fieldset class="mt-5">
 		<legend class="forge-label mb-2">{$_('codex.rarities')}</legend>
 		<RaritySelector
-			options={rarityOptions}
+			options={cardRarityOptions}
 			bind:selected={localRarities}
 			name="rarity"
 			onChange={() => scheduleSubmit(80)}

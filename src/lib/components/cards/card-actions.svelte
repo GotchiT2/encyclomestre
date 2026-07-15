@@ -1,18 +1,19 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
+	import WishlistActionMenu from '$lib/components/wishlist/wishlist-action-menu.svelte';
 	import { _ } from '$lib/i18n';
-	import type { CardRecord } from '$lib/types';
+	import type { CardRecord, WishlistRegistrySummary } from '$lib/types';
 	let {
 		card,
-		isWishlisted,
+		wishlists = [],
 		onToggleWishlist,
 		onTrade,
 		onMarket,
 		onSell
 	}: {
 		card: CardRecord;
-		isWishlisted: boolean;
-		onToggleWishlist: () => void;
+		wishlists?: WishlistRegistrySummary[];
+		onToggleWishlist: (wishlistId: string, selected: boolean) => void | Promise<void>;
 		onTrade: () => void;
 		onMarket: () => void;
 		onSell: () => void;
@@ -20,9 +21,11 @@
 </script>
 
 <div class="grid gap-2 sm:grid-cols-4">
-	<Button variant={isWishlisted ? 'outline' : 'default'} onclick={onToggleWishlist}
-		>{isWishlisted ? $_('cardDetail.remove_wishlist') : $_('cardDetail.add_wishlist')}</Button
-	>
+	<WishlistActionMenu
+		cardId={card.catalogueId ?? card.id}
+		{wishlists}
+		onToggle={onToggleWishlist}
+	/>
 	<Button variant="outline" disabled={!card.friendsWhoOwn.length} onclick={onTrade}
 		>{$_('cardDetail.trade')}</Button
 	>

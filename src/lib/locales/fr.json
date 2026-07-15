@@ -244,6 +244,8 @@
 	"cardDetail": {
 		"owned_count": "{count} exemplaire(s) dans votre collection",
 		"add_wishlist": "Ajouter à une wishlist",
+		"manage_wishlists": "Gérer les wishlists",
+		"no_wishlist": "Aucune wishlist disponible",
 		"remove_wishlist": "Retirer de la wishlist",
 		"trade": "Proposer un échange",
 		"market": "Voir le marché",
