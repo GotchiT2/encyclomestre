@@ -4,7 +4,7 @@
 	import CardTile from '$lib/components/card-tile.svelte';
 	import ProfileGallery from '$lib/components/profile/profile-gallery.svelte';
 	import RegistrySummary from '$lib/components/profile/registry-summary.svelte';
-	import { cardRarityOptions } from '$lib/domain/cards/rarities';
+	import { compareCardsByRarityDesc } from '$lib/domain/cards/rarities';
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import { _ } from '$lib/i18n';
 	import type {
@@ -22,8 +22,6 @@
 	type ProfileTab = 'showcase' | 'collection';
 
 	const untaggedOption = '__untagged__';
-	const rarities = cardRarityOptions;
-
 	let {
 		user,
 		collection,
@@ -84,12 +82,7 @@
 				);
 			})
 			.toSorted((first, second) => {
-				if (sortBy === 'rarity') {
-					const rarityOrder =
-						rarities.findIndex((rarity) => rarity.value === first.rarity) -
-						rarities.findIndex((rarity) => rarity.value === second.rarity);
-					return rarityOrder || first.title.localeCompare(second.title, 'fr');
-				}
+				if (sortBy === 'rarity') return compareCardsByRarityDesc(first, second);
 				return first.title.localeCompare(second.title, 'fr');
 			});
 	}

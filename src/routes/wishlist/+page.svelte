@@ -51,6 +51,8 @@
 	let selectedCard = $state<CardRecord | null>(null);
 	let wishlists = $state<WishlistRegistrySummary[]>([]);
 	let loading = $state(true);
+	let failed = $state(false);
+	let wishlistsLoaded = false;
 
 	const visibleEntries = $derived(
 		entries.filter((entry) => {
@@ -67,6 +69,10 @@
 		})
 	);
 	const totalPages = $derived(Math.max(1, Math.ceil(visibleEntries.length / pageSize)));
+	const filterKey = $derived(
+		JSON.stringify([query, selectedRarities, priority, hasAlert, variant])
+	);
+	let previousFilterKey = $state('');
 	const pagedEntries = $derived(
 		visibleEntries
 			.slice((page - 1) * pageSize, page * pageSize)
@@ -79,40 +85,37 @@
 	);
 
 	$effect(() => {
-		if (query || selectedRarities.length || priority || hasAlert || variant !== 'all' || page !== 1)
+		if (filterKey !== previousFilterKey) {
+			previousFilterKey = filterKey;
 			page = 1;
+		}
 	});
 
 	onMount(async () => {
 		userId = $currentSession?.user.id ?? 'demo-user';
-		const [wishlist, wishlistAlerts, wishlistRegistries] = await Promise.all([
-			getWishlist(userId, { page: 1, pageSize: 100 }),
-			getWishlistAlerts(userId),
-			getWishlists(userId)
-		]);
-		const wishlistCards = await Promise.all(
-			wishlist.items.map((entry) => getCard(entry.cardId).catch(() => null))
-		);
-		cards = wishlistCards.filter((card): card is CardRecord => card !== null);
-		entries = wishlist.items;
-		alerts = wishlistAlerts;
-		wishlists = wishlistRegistries;
-		loading = false;
+		try {
+			const [wishlist, wishlistAlerts] = await Promise.all([
+				getWishlist(userId, { page: 1, pageSize: 100 }),
+				getWishlistAlerts(userId)
+			]);
+			const wishlistCards = await Promise.all(
+				wishlist.items.map((entry) => getCard(entry.cardId).catch(() => null))
+			);
+			cards = wishlistCards.filter((card): card is CardRecord => card !== null);
+			entries = wishlist.items;
+			alerts = wishlistAlerts;
+		} catch {
+			failed = true;
+		} finally {
+			loading = false;
+		}
 	});
 
-	async function refresh() {
-		const [wishlist, wishlistAlerts] = await Promise.all([
-			getWishlist(userId, { page: 1, pageSize: 100 }),
-			getWishlistAlerts(userId)
-		]);
-		entries = wishlist.items;
-		alerts = wishlistAlerts;
-	}
-
 	async function addCard(card: CardRecord) {
-		await addWishlistEntry(userId, card.id);
+		const created = await addWishlistEntry(userId, card.id);
 		if (!cards.some((entry) => entry.id === card.id)) cards = [...cards, card];
-		await refresh();
+		entries = [...entries.filter((entry) => entry.cardId !== card.id), created];
+		pickerOpen = false;
 	}
 
 	function edit(entry: WishlistEntry) {
@@ -122,8 +125,19 @@
 
 	async function save(input: { priority: WishlistPriority; note: string | null }) {
 		if (!editingEntry) return;
-		await updateWishlistEntry(userId, editingEntry.cardId, input);
-		await refresh();
+		const updated = await updateWishlistEntry(userId, editingEntry.cardId, input);
+		entries = entries.map((entry) => (entry.cardId === updated.cardId ? updated : entry));
+	}
+
+	async function openCard(card: CardRecord) {
+		selectedCard = card;
+		if (wishlistsLoaded) return;
+		wishlistsLoaded = true;
+		try {
+			wishlists = await getWishlists(userId);
+		} catch {
+			wishlistsLoaded = false;
+		}
 	}
 
 	async function remove(cardId: string) {
@@ -173,6 +187,8 @@
 		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('wishlist.loading')}
 		</p>
+	{:else if failed}
+		<p class="text-destructive">{$_('codex.error')}</p>
 	{:else}
 		<WishlistRegistry
 			entries={pagedEntries}
@@ -180,7 +196,7 @@
 			{totalPages}
 			onEdit={edit}
 			onRemove={remove}
-			onOpen={(card) => (selectedCard = card)}
+			onOpen={(card) => void openCard(card)}
 			onPageChange={(nextPage) => (page = nextPage)}
 		/>
 	{/if}

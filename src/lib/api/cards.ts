@@ -41,8 +41,21 @@ export const getCards = async (
 		)
 	);
 
-export const getCard = async (id: string, options?: RequestOptions): Promise<CardRecord> =>
-	toCardRecord(await getWikiForgeCard(id, options));
+const cardRequestCache = new Map<string, Promise<CardRecord>>();
+
+export const getCard = async (id: string, options?: RequestOptions): Promise<CardRecord> => {
+	if (options) return toCardRecord(await getWikiForgeCard(id, options));
+	const cached = cardRequestCache.get(id);
+	if (cached) return cached;
+	const request = getWikiForgeCard(id)
+		.then(toCardRecord)
+		.catch((error) => {
+			cardRequestCache.delete(id);
+			throw error;
+		});
+	cardRequestCache.set(id, request);
+	return request;
+};
 
 interface WikiForgePricePoint {
 	price: number;

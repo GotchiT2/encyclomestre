@@ -9,6 +9,8 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
+	import { reactionMenuAlignment, updateMessageReaction } from '$lib/messages/reactions';
+	import { cn } from '$lib/utils';
 	import type { Conversation, MessageRecord } from '$lib/types';
 	import { onMount } from 'svelte';
 
@@ -86,25 +88,14 @@
 
 	async function react(message: MessageRecord, emoji: string) {
 		const current = message.reactions.find((reaction) => reaction.emoji === emoji);
-		const isActive = current?.userIds.includes(userId) ?? false;
-		await setMessageReaction(message.id, emoji, !isActive);
-		thread = thread.map((item) => {
-			if (item.id !== message.id) return item;
-			const reactions = item.reactions
-				.map((reaction) =>
-					reaction.emoji === emoji
-						? {
-								...reaction,
-								userIds: isActive
-									? reaction.userIds.filter((id) => id !== userId)
-									: [...reaction.userIds, userId]
-							}
-						: reaction
-				)
-				.filter((reaction) => reaction.userIds.length > 0);
-			if (!current && !isActive) reactions.push({ emoji, userIds: [userId] });
-			return { ...item, reactions };
-		});
+		const active = !(current?.userIds.includes(userId) ?? false);
+		const previousThread = thread;
+		thread = updateMessageReaction(thread, message.id, emoji, userId, active);
+		try {
+			await setMessageReaction(message.id, emoji, active);
+		} catch {
+			thread = previousThread;
+		}
 	}
 </script>
 
@@ -235,7 +226,7 @@
 								onclick={() => (replyToMessageId = message.id)}>{$_('messages.reply')}</Button
 							>{#each message.reactions as reaction (reaction.emoji)}<Button
 									size="sm"
-									variant="outline"
+									variant={reaction.userIds.includes(userId) ? 'default' : 'outline'}
 									class="h-7 gap-1 px-2 text-xs"
 									aria-pressed={reaction.userIds.includes(userId)}
 									onclick={() => void react(message, reaction.emoji)}
@@ -247,7 +238,10 @@
 									aria-label={$_('messages.react')}>+</summary
 								>
 								<div
-									class="absolute right-0 bottom-full z-10 mb-1 flex border border-primary/40 bg-card p-1 shadow-xl"
+									class={cn(
+										'absolute bottom-full z-10 mb-1 flex border border-primary/40 bg-card p-1 shadow-xl',
+										reactionMenuAlignment(message.senderId, userId)
+									)}
 								>
 									{#each reactionEmojis as emoji (emoji)}<Button
 											size="icon-xs"

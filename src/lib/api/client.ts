@@ -21,7 +21,7 @@ export class ApiError extends Error {
 }
 
 function apiUrl(path: string): string {
-	const baseUrl = (env.PUBLIC_API_BASE_URL ?? 'http://localhost:8080').replace(/\/$/, '');
+	const baseUrl = (env.PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
 	return baseUrl ? `${baseUrl}${path}` : path;
 }
 

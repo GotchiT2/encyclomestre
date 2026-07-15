@@ -235,3 +235,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Compacter les sélecteurs de cartes et maintenir leur pagination visible — `fix(cards): pin picker pagination`
 - [x] Rendre rétractables tous les panneaux de recherche de cartes — `feat(cards): collapse search panels`
 - [x] Recentrer le bouton de fermeture des modales compactes — `fix(dialog): center close icon`
+- [x] Stabiliser les suppressions, les chargements sociaux, les wishlists et les réactions — `fix(api): stabilize social and wishlist flows`

@@ -1,18 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getWikiForgeCards } = vi.hoisted(() => ({ getWikiForgeCards: vi.fn() }));
+const { getWikiForgeCard, getWikiForgeCards, toCardRecord } = vi.hoisted(() => ({
+	getWikiForgeCard: vi.fn(),
+	getWikiForgeCards: vi.fn(),
+	toCardRecord: vi.fn((card: unknown) => card)
+}));
 
 vi.mock('./wikiforge', () => ({
 	getWikiForgeCards,
-	getWikiForgeCard: vi.fn(),
-	toCardRecord: vi.fn(),
+	getWikiForgeCard,
+	toCardRecord,
 	toCardPage: (page: unknown) => page
 }));
 
-import { getCards } from './cards';
+import { getCard, getCards } from './cards';
 
 describe('getCards', () => {
-	beforeEach(() => getWikiForgeCards.mockReset());
+	beforeEach(() => {
+		getWikiForgeCard.mockReset();
+		getWikiForgeCards.mockReset();
+		toCardRecord.mockClear();
+	});
 
 	it('forwards pagination, repeated rarities and descending rarity order', async () => {
 		getWikiForgeCards.mockResolvedValueOnce({
@@ -39,5 +47,15 @@ describe('getCards', () => {
 			}),
 			undefined
 		);
+	});
+
+	it('reuses card details already requested by client-side wishlist views', async () => {
+		getWikiForgeCard.mockResolvedValueOnce({ id: 'cache-card-42' });
+
+		const [first, second] = await Promise.all([getCard('cache-card-42'), getCard('cache-card-42')]);
+
+		expect(first).toEqual({ id: 'cache-card-42' });
+		expect(second).toEqual(first);
+		expect(getWikiForgeCard).toHaveBeenCalledOnce();
 	});
 });

@@ -7,11 +7,11 @@
 	import {
 		createFriendRequest,
 		getFriends,
-		getTradePartners,
+		searchUsers,
 		respondToFriendRequest,
 		removeFriend
 	} from '$lib/api';
-	import FriendInvitePanel from '$lib/components/friends/friend-invite-panel.svelte';
+	import FriendInviteDialog from '$lib/components/friends/friend-invite-dialog.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import EmptyState from '$lib/components/layout/empty-state.svelte';
@@ -23,9 +23,7 @@
 	let friendships = $state<Friendship[]>([]);
 	let query = $state('');
 	let loading = $state(true);
-	let candidates = $state<User[]>([]);
-	let selectedCandidateId = $state('');
-	let inviting = $state(false);
+	let inviteOpen = $state(false);
 	const visibleFriendships = $derived(
 		friendships.filter((friendship) =>
 			friendship.user.username.toLocaleLowerCase('fr-FR').includes(query.toLocaleLowerCase('fr-FR'))
@@ -34,20 +32,13 @@
 
 	onMount(async () => {
 		userId = $currentSession?.user.id ?? 'demo-user';
-		[friendships, candidates] = await Promise.all([getFriends(userId), getTradePartners(userId)]);
-		const existingIds = new Set(friendships.map((friendship) => friendship.user.id));
-		candidates = candidates.filter((candidate) => !existingIds.has(candidate.id));
+		friendships = await getFriends(userId);
 		loading = false;
 	});
 
-	async function invite() {
-		if (!selectedCandidateId || inviting) return;
-		inviting = true;
-		const created = await createFriendRequest(userId, selectedCandidateId);
+	async function invite(candidate: User) {
+		const created = await createFriendRequest(userId, candidate.id);
 		friendships = [...friendships, created];
-		candidates = candidates.filter((candidate) => candidate.id !== selectedCandidateId);
-		selectedCandidateId = '';
-		inviting = false;
 	}
 
 	async function respond(id: string, status: 'accepted' | 'rejected') {
@@ -69,14 +60,12 @@
 		eyebrow={$_('friends.eyebrow')}
 		title={$_('friends.title')}
 		description={$_('friends.description')}
-	/>
+	>
+		{#snippet actions()}
+			<Button onclick={() => (inviteOpen = true)}>{$_('friends.add_action')}</Button>
+		{/snippet}
+	</PageHeader>
 	<div class="forge-panel p-4"><Input bind:value={query} placeholder={$_('friends.search')} /></div>
-	<FriendInvitePanel
-		{candidates}
-		bind:selectedId={selectedCandidateId}
-		disabled={inviting}
-		onInvite={() => void invite()}
-	/>
 	{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('friends.loading')}
 		</p>{:else if visibleFriendships.length}<div class="grid gap-3 lg:grid-cols-2">
@@ -126,3 +115,10 @@
 				</article>{/each}
 		</div>{:else}<EmptyState title={$_('friends.empty')} />{/if}
 </section>
+
+<FriendInviteDialog
+	bind:open={inviteOpen}
+	existingUserIds={friendships.map((friendship) => friendship.user.id)}
+	loadUsers={(searchQuery) => searchUsers(searchQuery)}
+	onInvite={invite}
+/>

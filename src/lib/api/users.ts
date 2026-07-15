@@ -42,16 +42,28 @@ export const getUserCollection = async (
 	);
 };
 
-export const getTradePartners = async (
-	_userId?: string,
+export const searchUsers = async (
+	query: string,
+	{ page = 0, size = 20 }: { page?: number; size?: number } = {},
 	options?: RequestOptions
 ): Promise<User[]> => {
+	const parameters = new URLSearchParams({
+		excludeCurrent: 'true',
+		page: String(Math.max(0, page)),
+		size: String(Math.min(100, Math.max(1, size)))
+	});
+	if (query.trim()) parameters.set('q', query.trim());
 	const response = await apiRequest<PaginatedResponse<User> | WikiForgePage<User>>(
-		'/api/users?excludeCurrent=true&page=0&size=100',
+		`/api/users?${parameters}`,
 		options
 	);
 	return 'results' in response ? response.results : response.items;
 };
+
+export const getTradePartners = async (
+	_userId?: string,
+	options?: RequestOptions
+): Promise<User[]> => searchUsers('', { size: 100 }, options);
 
 export const getFriends = (_userId?: string, options?: RequestOptions) =>
 	apiRequest<Friendship[]>('/api/friends', options);
