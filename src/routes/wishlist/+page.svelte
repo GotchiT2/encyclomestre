@@ -4,8 +4,8 @@
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import {
 		addWishlistEntry,
-		getAllCards,
 		getCard,
+		getCards,
 		getWishlist,
 		getWishlistAlerts,
 		removeWishlistEntry,
@@ -78,18 +78,14 @@
 
 	onMount(async () => {
 		userId = $currentSession?.user.id ?? 'demo-user';
-		const [catalogue, wishlist, wishlistAlerts] = await Promise.all([
-			getAllCards({ sortBy: 'rarity', sortDirection: 'DESC' }),
+		const [wishlist, wishlistAlerts] = await Promise.all([
 			getWishlist(userId, { page: 1, pageSize: 100 }),
 			getWishlistAlerts(userId)
 		]);
-		const knownIds = new Set(catalogue.map((card) => card.id));
-		const missingCards = await Promise.all(
-			wishlist.items
-				.filter((entry) => !knownIds.has(entry.cardId))
-				.map((entry) => getCard(entry.cardId).catch(() => null))
+		const wishlistCards = await Promise.all(
+			wishlist.items.map((entry) => getCard(entry.cardId).catch(() => null))
 		);
-		cards = [...catalogue, ...missingCards.filter((card): card is CardRecord => card !== null)];
+		cards = wishlistCards.filter((card): card is CardRecord => card !== null);
 		entries = wishlist.items;
 		alerts = wishlistAlerts;
 		loading = false;
@@ -104,8 +100,9 @@
 		alerts = wishlistAlerts;
 	}
 
-	async function addCard(cardId: string) {
-		await addWishlistEntry(userId, cardId);
+	async function addCard(card: CardRecord) {
+		await addWishlistEntry(userId, card.id);
+		if (!cards.some((entry) => entry.id === card.id)) cards = [...cards, card];
 		await refresh();
 	}
 
@@ -163,8 +160,8 @@
 
 <WishlistPicker
 	bind:open={pickerOpen}
-	{cards}
 	existingCardIds={entries.map((entry) => entry.cardId)}
+	loadCards={getCards}
 	onSelect={addCard}
 />
 <WishlistEditor bind:open={editorOpen} entry={editingEntry} onSave={save} />

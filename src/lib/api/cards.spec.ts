@@ -9,33 +9,34 @@ vi.mock('./wikiforge', () => ({
 	toCardPage: (page: unknown) => page
 }));
 
-import { getAllCards } from './cards';
+import { getCards } from './cards';
 
-describe('getAllCards', () => {
+describe('getCards', () => {
 	beforeEach(() => getWikiForgeCards.mockReset());
 
-	it('loads every catalogue page in descending rarity order', async () => {
-		getWikiForgeCards
-			.mockResolvedValueOnce({
-				items: [{ id: 'legendary' }],
-				meta: { page: 1, pageSize: 100, total: 101, totalPages: 2 }
-			})
-			.mockResolvedValueOnce({
-				items: [{ id: 'common' }],
-				meta: { page: 2, pageSize: 100, total: 101, totalPages: 2 }
-			});
+	it('forwards pagination, repeated rarities and descending rarity order', async () => {
+		getWikiForgeCards.mockResolvedValueOnce({
+			items: [{ id: 'legendary' }],
+			meta: { page: 2, pageSize: 12, total: 30, totalPages: 3 }
+		});
 
-		const cards = await getAllCards({ sortBy: 'rarity', sortDirection: 'DESC' });
+		const cards = await getCards({
+			page: 2,
+			pageSize: 12,
+			rarities: ['Légendaire', 'Rare'],
+			sortBy: 'rarity',
+			sortDirection: 'DESC'
+		});
 
-		expect(cards).toEqual([{ id: 'legendary' }, { id: 'common' }]);
-		expect(getWikiForgeCards).toHaveBeenNthCalledWith(
-			1,
-			expect.objectContaining({ page: 0, size: 100, sortBy: 'rarity', sortDirection: 'DESC' }),
-			undefined
-		);
-		expect(getWikiForgeCards).toHaveBeenNthCalledWith(
-			2,
-			expect.objectContaining({ page: 1, size: 100, sortBy: 'rarity', sortDirection: 'DESC' }),
+		expect(cards.items).toEqual([{ id: 'legendary' }]);
+		expect(getWikiForgeCards).toHaveBeenCalledWith(
+			expect.objectContaining({
+				page: 1,
+				size: 12,
+				rarities: ['L', 'R'],
+				sortBy: 'rarity',
+				sortDirection: 'DESC'
+			}),
 			undefined
 		);
 	});

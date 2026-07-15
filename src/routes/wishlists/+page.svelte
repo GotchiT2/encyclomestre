@@ -10,7 +10,7 @@
 		createWishlistRegistry,
 		deleteWishlistRegistry,
 		getCard,
-		getAllCards,
+		getCards,
 		getWishlistRegistry,
 		getWishlists,
 		importWishlistRegistryFromLink,
@@ -67,37 +67,42 @@
 			})
 	);
 
+	async function ensureCards(cardIds: string[]) {
+		const knownIds = new Set(cards.map((card) => card.id));
+		const missingCards = await Promise.all(
+			cardIds
+				.filter((cardId) => !knownIds.has(cardId))
+				.map((cardId) => getCard(cardId).catch(() => null))
+		);
+		cards = [...cards, ...missingCards.filter((card): card is CardRecord => card !== null)];
+	}
+
+	async function loadRegistry(id: string) {
+		const registry = await getWishlistRegistry(id, userId);
+		await ensureCards(registry.cardIds);
+		return registry;
+	}
+
 	onMount(async () => {
 		userId = $currentSession?.user.id ?? 'demo-user';
 		const sharedToken = currentPage.url.searchParams.get('share');
 		const imported = sharedToken ? await importWishlistRegistryFromLink(userId, sharedToken) : null;
-		const [catalogue, summaries] = await Promise.all([
-			getAllCards({ sortBy: 'rarity', sortDirection: 'DESC' }),
-			getWishlists(userId)
-		]);
-		const knownIds = new Set(catalogue.map((card) => card.id));
-		const referencedIds = [...new Set(summaries.flatMap((registry) => registry.cardIds))];
-		const missingCards = await Promise.all(
-			referencedIds
-				.filter((cardId) => !knownIds.has(cardId))
-				.map((cardId) => getCard(cardId).catch(() => null))
-		);
-		cards = [...catalogue, ...missingCards.filter((card): card is CardRecord => card !== null)];
+		const summaries = await getWishlists(userId);
 		registries = summaries;
 		const requestedRegistryId = imported?.id ?? currentPage.url.searchParams.get('registry');
 		const initialRegistry =
 			summaries.find((registry) => registry.id === requestedRegistryId) ?? summaries[0];
-		if (initialRegistry) activeRegistry = await getWishlistRegistry(initialRegistry.id, userId);
+		if (initialRegistry) activeRegistry = await loadRegistry(initialRegistry.id);
 		loading = false;
 	});
 
 	async function selectRegistry(id: string) {
-		activeRegistry = await getWishlistRegistry(id, userId);
+		activeRegistry = await loadRegistry(id);
 	}
 
 	async function refreshHub(selectedId = activeRegistry?.id) {
 		registries = await getWishlists(userId);
-		if (selectedId) activeRegistry = await getWishlistRegistry(selectedId, userId);
+		if (selectedId) activeRegistry = await loadRegistry(selectedId);
 	}
 
 	async function create(title: string, description: string) {
@@ -110,12 +115,13 @@
 		await deleteWishlistRegistry(activeRegistry.id, userId);
 		deleteOpen = false;
 		registries = await getWishlists(userId);
-		activeRegistry = registries[0] ? await getWishlistRegistry(registries[0].id, userId) : null;
+		activeRegistry = registries[0] ? await loadRegistry(registries[0].id) : null;
 	}
 
-	async function addCard(cardId: string) {
+	async function addCard(card: CardRecord) {
 		if (!activeRegistry) return;
-		activeRegistry = await addWishlistRegistryCard(activeRegistry.id, userId, cardId);
+		activeRegistry = await addWishlistRegistryCard(activeRegistry.id, userId, card.id);
+		if (!cards.some((entry) => entry.id === card.id)) cards = [...cards, card];
 		registries = await getWishlists(userId);
 	}
 
@@ -241,8 +247,8 @@
 
 <WishlistPicker
 	bind:open={pickerOpen}
-	{cards}
 	existingCardIds={activeRegistry?.cardIds ?? []}
+	loadCards={getCards}
 	onSelect={addCard}
 />
 <WishlistRegistryDrawers
