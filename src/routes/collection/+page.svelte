@@ -6,6 +6,10 @@
 	import FilterControls from '$lib/components/collection/filter-controls.svelte';
 	import SelectionPanel from '$lib/components/collection/selection-panel.svelte';
 	import TagEditor from '$lib/components/collection/tag-editor.svelte';
+	import {
+		buildCollectionFilterTarget,
+		untaggedFilterId
+	} from '$lib/components/collection/collection-filter-url';
 	import EmptyState from '$lib/components/layout/empty-state.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -13,10 +17,9 @@
 	import { addWishlistEntry, applyWikiForgeTag, getWishlist, removeWishlistEntry } from '$lib/api';
 	import type { CardRarity, CardRecord, CollectionTag, CollectionTagAssignments } from '$lib/types';
 	import { onMount } from 'svelte';
-	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import type { PageData } from './$types';
 
-	const untaggedOption = '__untagged__';
+	const untaggedOption = untaggedFilterId;
 	const rarities: { value: CardRarity; initials: string; color: string }[] = [
 		{ value: 'KTD', initials: 'KTD', color: '#1dcf47' },
 		{ value: 'Légendaire', initials: 'L', color: '#cf1d1d' },
@@ -68,18 +71,11 @@
 		if (!filtersReady) return;
 		window.clearTimeout(filterTimer);
 		filterTimer = window.setTimeout(() => {
-			const parameters = new SvelteURLSearchParams();
-			if (snapshot.query.trim()) parameters.set('q', snapshot.query.trim());
-			parameters.set('sortBy', snapshot.sortBy);
-			snapshot.selectedRarities.forEach((rarity) => parameters.append('rarity', rarity));
-			snapshot.tagFilterIds.forEach((tagId) => {
-				if (tagId === untaggedOption) parameters.set('untagged', 'true');
-				else parameters.append('tag', tagId);
-			});
-			const target = `/collection?${parameters}`;
+			const target = buildCollectionFilterTarget(snapshot);
 			if (`${location.pathname}${location.search}` !== target)
 				void goto(target, { replaceState: true });
 		}, 400);
+		return () => window.clearTimeout(filterTimer);
 	});
 
 	function toggleCardSelection(cardId: string) {
