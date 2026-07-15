@@ -26,13 +26,17 @@ const girlsGeneration: CardRecord = {
 describe('WishlistSocialGrid', () => {
 	it('signals a trade opportunity and starts the selected friend trade flow', async () => {
 		const onInitiateTrade = vi.fn();
+		const onOpen = vi.fn();
 		render(WishlistSocialGrid, {
 			cards: [girlsGeneration],
+			onOpen,
 			onRemove: vi.fn(),
 			onInitiateTrade
 		});
 
 		await expect.element(page.getByText('Opportunité d’échange')).toBeInTheDocument();
+		await page.getByRole('button', { name: girlsGeneration.title }).click();
+		expect(onOpen).toHaveBeenCalledWith(girlsGeneration);
 		await page.getByRole('button', { name: '@SoneS9 (×2)' }).click();
 		expect(onInitiateTrade).toHaveBeenCalledWith(girlsGeneration, girlsGeneration.friendsWhoOwn[0]);
 	});

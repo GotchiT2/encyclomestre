@@ -4,13 +4,17 @@
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import {
 		addWishlistEntry,
+		addWishlistRegistryCard,
 		getCard,
 		getCards,
 		getWishlist,
 		getWishlistAlerts,
+		getWishlists,
 		removeWishlistEntry,
+		removeWishlistRegistryCard,
 		updateWishlistEntry
 	} from '$lib/api';
+	import CardDetailModal from '$lib/components/cards/card-detail-modal.svelte';
 	import WishlistControls from '$lib/components/wishlist/wishlist-controls.svelte';
 	import WishlistEditor from '$lib/components/wishlist/wishlist-editor.svelte';
 	import WishlistPicker from '$lib/components/wishlist/wishlist-picker.svelte';
@@ -26,7 +30,8 @@
 		CardVariant,
 		WishlistAlert,
 		WishlistEntry,
-		WishlistPriority
+		WishlistPriority,
+		WishlistRegistrySummary
 	} from '$lib/types';
 
 	const pageSize = 12;
@@ -43,6 +48,8 @@
 	let pickerOpen = $state(false);
 	let editorOpen = $state(false);
 	let editingEntry = $state<WishlistEntry | null>(null);
+	let selectedCard = $state<CardRecord | null>(null);
+	let wishlists = $state<WishlistRegistrySummary[]>([]);
 	let loading = $state(true);
 
 	const visibleEntries = $derived(
@@ -78,9 +85,10 @@
 
 	onMount(async () => {
 		userId = $currentSession?.user.id ?? 'demo-user';
-		const [wishlist, wishlistAlerts] = await Promise.all([
+		const [wishlist, wishlistAlerts, wishlistRegistries] = await Promise.all([
 			getWishlist(userId, { page: 1, pageSize: 100 }),
-			getWishlistAlerts(userId)
+			getWishlistAlerts(userId),
+			getWishlists(userId)
 		]);
 		const wishlistCards = await Promise.all(
 			wishlist.items.map((entry) => getCard(entry.cardId).catch(() => null))
@@ -88,6 +96,7 @@
 		cards = wishlistCards.filter((card): card is CardRecord => card !== null);
 		entries = wishlist.items;
 		alerts = wishlistAlerts;
+		wishlists = wishlistRegistries;
 		loading = false;
 	});
 
@@ -119,7 +128,25 @@
 
 	async function remove(cardId: string) {
 		await removeWishlistEntry(userId, cardId);
-		await refresh();
+		entries = entries.filter((entry) => entry.cardId !== cardId);
+		cards = cards.filter((card) => card.id !== cardId);
+		alerts = alerts.filter((alert) => alert.cardId !== cardId);
+		if (selectedCard?.id === cardId) selectedCard = null;
+	}
+
+	async function toggleNamedWishlist(wishlistId: string, cardId: string, selected: boolean) {
+		if (selected) await addWishlistRegistryCard(wishlistId, userId, cardId);
+		else await removeWishlistRegistryCard(wishlistId, userId, cardId);
+		wishlists = wishlists.map((wishlist) =>
+			wishlist.id === wishlistId
+				? {
+						...wishlist,
+						cardIds: selected
+							? [...new Set([...wishlist.cardIds, cardId])]
+							: wishlist.cardIds.filter((id) => id !== cardId)
+					}
+				: wishlist
+		);
 	}
 </script>
 
@@ -153,6 +180,7 @@
 			{totalPages}
 			onEdit={edit}
 			onRemove={remove}
+			onOpen={(card) => (selectedCard = card)}
 			onPageChange={(nextPage) => (page = nextPage)}
 		/>
 	{/if}
@@ -165,3 +193,12 @@
 	onSelect={addCard}
 />
 <WishlistEditor bind:open={editorOpen} entry={editingEntry} onSave={save} />
+{#if selectedCard}
+	<CardDetailModal
+		card={selectedCard}
+		{wishlists}
+		onToggleWishlist={(wishlistId, selected) =>
+			void toggleNamedWishlist(wishlistId, selectedCard!.id, selected)}
+		onClose={() => (selectedCard = null)}
+	/>
+{/if}

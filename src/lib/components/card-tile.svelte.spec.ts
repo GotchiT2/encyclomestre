@@ -1,5 +1,5 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import '$lib/i18n';
 import CardTile from './card-tile.svelte';
@@ -24,15 +24,13 @@ const card: CardRecord = {
 };
 
 describe('CardTile', () => {
-	it('links directly to the card detail route', async () => {
-		render(CardTile, { card });
+	it('opens card details through its callback without navigation', async () => {
+		const onOpen = vi.fn();
+		render(CardTile, { card, onOpen });
 		await expect.element(page.getByTestId('card-tile')).toHaveClass('bg-transparent');
-		await expect
-			.element(page.getByRole('link'))
-			.toHaveAttribute('href', '/cards/girls-generation-1');
-		await expect
-			.element(page.getByRole('link'))
-			.toHaveAttribute('data-sveltekit-preload-data', 'off');
+		await page.getByRole('button', { name: card.title }).click();
+		expect(onOpen).toHaveBeenCalledWith(card);
+		await expect.element(page.getByRole('link')).not.toBeInTheDocument();
 	});
 
 	it('renders the data inside the legendary full-art frame', async () => {

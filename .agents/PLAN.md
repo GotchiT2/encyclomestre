@@ -231,3 +231,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Normaliser les raretés et filtrer toutes les recherches de cartes par variante — `feat(cards): add card variant filters`
 - [x] Charger toutes les cartes des wishlists, stabiliser les filtres et choisir la liste depuis le détail — `fix(wishlist): complete card selection flows`
 - [x] Charger le catalogue de cartes à la demande et le paginer dans les wishlists — `fix(wishlist): lazy-load card catalogue`
+- [x] Centrer les recherches de cartes, fiabiliser les suppressions et ouvrir le détail sans route dédiée — `fix(wishlist): center card flows and fix deletions`

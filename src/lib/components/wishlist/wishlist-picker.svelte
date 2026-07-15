@@ -6,7 +6,7 @@
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
-	import * as Sheet from '$lib/components/ui/sheet';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import { _ } from '$lib/i18n';
 	import type { CardQuery } from '$lib/api';
 	import type { CardRarity, CardRecord, CardVariant, PaginatedResponse } from '$lib/types';
@@ -109,20 +109,15 @@
 	}
 </script>
 
-<Sheet.Root bind:open>
-	<Sheet.Content
-		side="bottom"
-		class="max-h-[92dvh] border-4 border-double border-primary/40 bg-card p-0 sm:inset-x-[6%] sm:bottom-6 sm:max-w-none"
-	>
+<Dialog.Root bind:open>
+	<Dialog.Content class="h-[min(92dvh,58rem)] max-w-6xl grid-rows-[auto_minmax(0,1fr)]">
 		<div class="border-b border-primary/20 p-4 pr-14">
 			<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 				{$_('wishlist.catalogue')}
 			</p>
-			<Sheet.Title class="mt-1 font-serif text-2xl font-black uppercase tracking-tight"
-				>{$_('wishlist.add_card')}</Sheet.Title
-			>
+			<Dialog.Title class="mt-1">{$_('wishlist.add_card')}</Dialog.Title>
 		</div>
-		<div class="overflow-y-auto p-4">
+		<div class="min-h-0 overflow-y-auto p-4">
 			<div class="grid grid-cols-[minmax(0,1fr)_10rem] gap-2">
 				<Input bind:value={query} oninput={() => (page = 1)} placeholder={$_('wishlist.search')} />
 				<select
@@ -189,5 +184,5 @@
 				>
 			</div>
 		</div>
-	</Sheet.Content>
-</Sheet.Root>
+	</Dialog.Content>
+</Dialog.Root>

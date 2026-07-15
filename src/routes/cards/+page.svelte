@@ -36,11 +36,17 @@
 	}
 
 	async function toggleWishlist(wishlistId: string, cardId: string, selected: boolean) {
-		const updated = selected
-			? await addWishlistRegistryCard(wishlistId, '', cardId)
-			: await removeWishlistRegistryCard(wishlistId, '', cardId);
+		if (selected) await addWishlistRegistryCard(wishlistId, '', cardId);
+		else await removeWishlistRegistryCard(wishlistId, '', cardId);
 		wishlists = wishlists.map((wishlist) =>
-			wishlist.id === wishlistId ? { ...wishlist, cardIds: updated.cardIds } : wishlist
+			wishlist.id === wishlistId
+				? {
+						...wishlist,
+						cardIds: selected
+							? [...new Set([...wishlist.cardIds, cardId])]
+							: wishlist.cardIds.filter((id) => id !== cardId)
+					}
+				: wishlist
 		);
 	}
 

@@ -70,7 +70,6 @@
 					{card}
 					tags={tags.filter((tag) => (assignments[card.id] ?? []).includes(tag.id))}
 					showFriendOwners={false}
-					onOpen={() => undefined}
 				/>
 			</div>
 			<div class="flex min-h-0 min-w-0 flex-col gap-5">

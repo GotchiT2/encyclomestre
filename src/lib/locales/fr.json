@@ -162,7 +162,8 @@
 		"add": "Ajouter",
 		"filter": "Filtrer",
 		"save": "Enregistrer",
-		"cancel": "Annuler"
+		"cancel": "Annuler",
+		"close": "Fermer"
 	},
 	"profile": {
 		"title": "Mon profil",

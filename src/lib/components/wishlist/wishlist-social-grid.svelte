@@ -7,10 +7,12 @@
 	let {
 		cards,
 		onRemove,
+		onOpen,
 		onInitiateTrade
 	}: {
 		cards: CardRecord[];
-		onRemove: (cardId: string) => void;
+		onRemove: (cardId: string) => void | Promise<void>;
+		onOpen: (card: CardRecord) => void;
 		onInitiateTrade: (card: CardRecord, friend: FriendOwnerInfo) => void;
 	} = $props();
 </script>
@@ -20,13 +22,16 @@
 		{#each cards as card (card.id)}
 			<article class="border border-primary/25 bg-card p-2">
 				<div class="relative">
-					<CardTile {card} showFriendOwners={false} />
+					<CardTile {card} showFriendOwners={false} {onOpen} />
 					<Button
 						size="icon-xs"
 						variant="destructive"
 						class="absolute top-2 right-2 z-20 border-destructive bg-destructive text-white shadow-lg hover:bg-destructive/90"
 						aria-label={$_('wishlist.remove')}
-						onclick={() => onRemove(card.id)}>×</Button
+						onclick={(event) => {
+							event.stopPropagation();
+							void onRemove(card.id);
+						}}>×</Button
 					>
 				</div>
 				<div class="mt-2 border-t border-dashed border-primary/20 pt-2">

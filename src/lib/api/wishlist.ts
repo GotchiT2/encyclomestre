@@ -156,7 +156,6 @@ export const addWishlistRegistryCard = async (
 		`/api/wishlists/${encodeURIComponent(id)}/cards?cardId=${encodeURIComponent(cardId)}`,
 		{ ...options, method: 'POST' }
 	);
-	return getWishlistRegistry(id, undefined, options);
 };
 
 export const removeWishlistRegistryCard = async (
@@ -169,7 +168,6 @@ export const removeWishlistRegistryCard = async (
 		`/api/wishlists/${encodeURIComponent(id)}/cards/${encodeURIComponent(cardId)}`,
 		{ ...options, method: 'DELETE' }
 	);
-	return getWishlistRegistry(id, undefined, options);
 };
 
 export const shareWishlistRegistry = async (

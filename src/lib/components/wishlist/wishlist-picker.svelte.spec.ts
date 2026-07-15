@@ -35,6 +35,8 @@ describe('WishlistPicker', () => {
 		expect(loadCards).not.toHaveBeenCalled();
 		await result.rerender({ ...props, open: true });
 		await vi.waitFor(() => expect(loadCards).toHaveBeenCalledOnce());
+		expect(document.querySelector('[data-slot="dialog-content"]')).not.toBeNull();
+		expect(document.querySelector('[data-slot="sheet-content"]')).toBeNull();
 		expect(loadCards).toHaveBeenLastCalledWith(
 			expect.objectContaining({
 				page: 1,

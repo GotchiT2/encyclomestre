@@ -14,13 +14,15 @@
 		totalPages,
 		onEdit,
 		onRemove,
+		onOpen,
 		onPageChange
 	}: {
 		entries: WishlistCard[];
 		page: number;
 		totalPages: number;
 		onEdit: (entry: WishlistEntry) => void;
-		onRemove: (cardId: string) => void;
+		onRemove: (cardId: string) => void | Promise<void>;
+		onOpen: (card: CardRecord) => void;
 		onPageChange: (page: number) => void;
 	} = $props();
 </script>
@@ -29,19 +31,25 @@
 	<div class="wikiforge-card-grid">
 		{#each entries as entry (entry.cardId)}
 			<div class="wikiforge-card-size relative">
-				<CardTile card={entry.card} showFriendOwners={false} />
+				<CardTile card={entry.card} showFriendOwners={false} {onOpen} />
 				<div class="absolute top-2 right-2 z-20 flex gap-1">
 					<Button
 						size="icon-xs"
 						variant="outline"
 						aria-label={$_('wishlist.edit')}
-						onclick={() => onEdit(entry)}><PencilIcon /></Button
+						onclick={(event) => {
+							event.stopPropagation();
+							onEdit(entry);
+						}}><PencilIcon /></Button
 					>
 					<Button
 						size="icon-xs"
 						variant="destructive"
 						aria-label={$_('wishlist.remove')}
-						onclick={() => onRemove(entry.cardId)}><XIcon /></Button
+						onclick={(event) => {
+							event.stopPropagation();
+							void onRemove(entry.cardId);
+						}}><XIcon /></Button
 					>
 				</div>
 				<div class="absolute right-2 bottom-2 left-2 z-20 flex flex-wrap items-center gap-1">

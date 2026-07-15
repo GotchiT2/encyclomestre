@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import { _ } from '$lib/i18n';
 	import type { CardRecord, CollectionTag } from '$lib/types';
 
@@ -34,10 +33,8 @@
 		`--card-title-mobile:${Math.min(0.78, Math.max(0.3, 13.5 / titleLength)).toFixed(3)}rem;--card-title-desktop:${Math.min(1.18, Math.max(0.45, 23 / titleLength)).toFixed(3)}rem`
 	);
 
-	function handleOpen(event: MouseEvent) {
-		if (!onOpen) return;
-		event.preventDefault();
-		onOpen(card);
+	function handleOpen() {
+		onOpen?.(card);
 	}
 </script>
 
@@ -80,13 +77,14 @@
 			{card.defense.toLocaleString('fr-FR')}
 		</p>
 	</div>
-	<a
-		href={resolve('/cards/[id]', { id: card.id })}
-		data-sveltekit-preload-data="off"
-		class="absolute inset-0 rounded-none outline-offset-[-4px] focus-visible:outline-2 focus-visible:outline-primary"
-		aria-label={card.title}
-		onclick={handleOpen}
-	></a>
+	{#if onOpen}
+		<button
+			type="button"
+			class="absolute inset-0 rounded-none outline-offset-[-4px] focus-visible:outline-2 focus-visible:outline-primary"
+			aria-label={card.title}
+			onclick={handleOpen}
+		></button>
+	{/if}
 	{#if tags.length}
 		<div class="absolute right-[8%] bottom-[11%] left-[8%] z-10 flex items-center gap-1">
 			{#each tags.slice(0, 2) as tag (tag.id)}

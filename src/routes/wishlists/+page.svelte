@@ -18,6 +18,7 @@
 		shareWishlistRegistry
 	} from '$lib/api';
 	import WishlistHub from '$lib/components/wishlist/wishlist-hub.svelte';
+	import CardDetailModal from '$lib/components/cards/card-detail-modal.svelte';
 	import WishlistImport from '$lib/components/wishlist/wishlist-import.svelte';
 	import WishlistOwnerSummary from '$lib/components/wishlist/wishlist-owner-summary.svelte';
 	import WishlistPicker from '$lib/components/wishlist/wishlist-picker.svelte';
@@ -45,6 +46,8 @@
 	let createOpen = $state(false);
 	let shareOpen = $state(false);
 	let deleteOpen = $state(false);
+	let deletingRegistry = $state<WishlistRegistrySummary | null>(null);
+	let selectedCard = $state<CardRecord | null>(null);
 	let tradeOpen = $state(false);
 	let tradeCard = $state<CardRecord | null>(null);
 	let tradeFriend = $state<FriendOwnerInfo | null>(null);
@@ -111,24 +114,68 @@
 	}
 
 	async function removeRegistry() {
-		if (!activeRegistry) return;
-		await deleteWishlistRegistry(activeRegistry.id, userId);
+		if (!deletingRegistry) return;
+		const deletedId = deletingRegistry.id;
+		await deleteWishlistRegistry(deletedId, userId);
+		registries = registries.filter((registry) => registry.id !== deletedId);
 		deleteOpen = false;
-		registries = await getWishlists(userId);
-		activeRegistry = registries[0] ? await loadRegistry(registries[0].id) : null;
+		deletingRegistry = null;
+		if (activeRegistry?.id === deletedId) {
+			activeRegistry = registries[0] ? await loadRegistry(registries[0].id) : null;
+		}
 	}
 
 	async function addCard(card: CardRecord) {
 		if (!activeRegistry) return;
-		activeRegistry = await addWishlistRegistryCard(activeRegistry.id, userId, card.id);
+		await addWishlistRegistryCard(activeRegistry.id, userId, card.id);
+		activeRegistry = {
+			...activeRegistry,
+			cardIds: [...new Set([...activeRegistry.cardIds, card.id])]
+		};
 		if (!cards.some((entry) => entry.id === card.id)) cards = [...cards, card];
-		registries = await getWishlists(userId);
+		registries = registries.map((registry) =>
+			registry.id === activeRegistry?.id
+				? { ...registry, cardIds: activeRegistry.cardIds }
+				: registry
+		);
 	}
 
 	async function removeCard(cardId: string) {
 		if (!activeRegistry) return;
-		activeRegistry = await removeWishlistRegistryCard(activeRegistry.id, userId, cardId);
-		registries = await getWishlists(userId);
+		await removeWishlistRegistryCard(activeRegistry.id, userId, cardId);
+		activeRegistry = {
+			...activeRegistry,
+			cardIds: activeRegistry.cardIds.filter((id) => id !== cardId)
+		};
+		registries = registries.map((registry) =>
+			registry.id === activeRegistry?.id
+				? { ...registry, cardIds: activeRegistry.cardIds }
+				: registry
+		);
+		if (selectedCard?.id === cardId) selectedCard = null;
+	}
+
+	async function toggleWishlist(wishlistId: string, card: CardRecord, selected: boolean) {
+		if (selected) await addWishlistRegistryCard(wishlistId, userId, card.id);
+		else await removeWishlistRegistryCard(wishlistId, userId, card.id);
+		registries = registries.map((registry) =>
+			registry.id === wishlistId
+				? {
+						...registry,
+						cardIds: selected
+							? [...new Set([...registry.cardIds, card.id])]
+							: registry.cardIds.filter((id) => id !== card.id)
+					}
+				: registry
+		);
+		if (activeRegistry?.id === wishlistId) {
+			activeRegistry = {
+				...activeRegistry,
+				cardIds: selected
+					? [...new Set([...activeRegistry.cardIds, card.id])]
+					: activeRegistry.cardIds.filter((id) => id !== card.id)
+			};
+		}
 	}
 
 	function proposeTrade(card: CardRecord, friend: FriendOwnerInfo) {
@@ -187,7 +234,10 @@
 			activeId={activeRegistry?.id ?? null}
 			onSelect={selectRegistry}
 			onCreate={() => (createOpen = true)}
-			onDelete={() => (deleteOpen = true)}
+			onDelete={(registry) => {
+				deletingRegistry = registry;
+				deleteOpen = true;
+			}}
 		/>
 		<div class="flex justify-end">
 			<WishlistImport onImportLink={importRegistryLink} />
@@ -236,6 +286,7 @@
 				<WishlistSocialGrid
 					cards={activeCards}
 					onRemove={removeCard}
+					onOpen={(card) => (selectedCard = card)}
 					onInitiateTrade={proposeTrade}
 				/>{:else}<WishlistOwnerSummary
 					cards={activeCards}
@@ -254,10 +305,19 @@
 <WishlistRegistryDrawers
 	bind:createOpen
 	bind:deleteOpen
-	registry={registries.find((registry) => registry.id === activeRegistry?.id) ?? null}
+	registry={deletingRegistry}
 	onCreate={create}
 	onDelete={removeRegistry}
 />
+{#if selectedCard}
+	<CardDetailModal
+		card={selectedCard}
+		wishlists={registries}
+		onToggleWishlist={(wishlistId, selected) =>
+			void toggleWishlist(wishlistId, selectedCard!, selected)}
+		onClose={() => (selectedCard = null)}
+	/>
+{/if}
 <WishlistShareModal bind:open={shareOpen} onShareLink={shareLink} onShareGuild={shareGuild} />
 <WishlistTradeDrawer
 	bind:open={tradeOpen}
