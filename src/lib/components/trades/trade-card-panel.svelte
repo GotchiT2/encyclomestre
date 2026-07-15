@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import CardTile from '$lib/components/card-tile.svelte';
+	import CardSearchPanel from '$lib/components/cards/card-search-panel.svelte';
 	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
 	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
 	import { cardRarityOptions, compareCardsByRarityDesc } from '$lib/domain/cards/rarities';
@@ -103,52 +104,54 @@
 				>{/if}
 		</div>
 	</div>
-	<div
-		class="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-[minmax(14rem,1fr)_auto_auto_auto] lg:items-end"
-	>
-		<Input
-			bind:value={query}
-			oninput={resetPage}
-			placeholder={$_('collection.search')}
-			class="h-8 w-full text-sm"
-		/><select
-			bind:value={sortBy}
-			onchange={resetPage}
-			aria-label={$_('collection.sort')}
-			class="h-8 w-full self-end border border-primary/50 bg-card px-2 py-0 font-mono text-[10px] leading-8 uppercase tracking-wider text-primary outline-none focus:border-primary lg:w-40"
+	<CardSearchPanel class="mt-3">
+		<div
+			class="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(14rem,1fr)_auto_auto_auto] lg:items-end"
 		>
-			<option value="rarity">{$_('collection.sortRarity')}</option>
-			<option value="name">{$_('collection.sortName')}</option>
-		</select>
-		<RaritySelector options={cardRarityOptions} bind:selected={rarities} onChange={resetPage} />
-		<label
-			class="font-mono text-[9px] uppercase tracking-widest text-primary lg:mx-4 lg:border-l lg:border-primary/25 lg:pl-4"
-		>
-			{$_('trades.credits')}
 			<Input
-				class="mt-1 pl-11 h-8 w-full text-sm lg:w-20"
-				type="number"
-				min="0"
-				bind:value={credits}
-			/></label
-		>
-	</div>
-	<CardVariantSelector bind:value={variant} onChange={resetPage} class="mt-2" />
-	<div class="mt-2 flex flex-wrap gap-1">
-		{#each availableTags as tag (tag.id)}
-			<Button
-				size="xs"
-				variant={tagIds.includes(tag.id) ? 'default' : 'outline'}
-				style={tagIds.includes(tag.id)
-					? `background-color:${tag.color};border-color:${tag.color}`
-					: `color:${tag.color};border-color:${tag.color}`}
-				onclick={() => {
-					tagIds = toggle(tagIds, tag.id);
-					resetPage();
-				}}>{tag.name}</Button
+				bind:value={query}
+				oninput={resetPage}
+				placeholder={$_('collection.search')}
+				class="h-8 w-full text-sm"
+			/><select
+				bind:value={sortBy}
+				onchange={resetPage}
+				aria-label={$_('collection.sort')}
+				class="h-8 w-full self-end border border-primary/50 bg-card px-2 py-0 font-mono text-[10px] leading-8 uppercase tracking-wider text-primary outline-none focus:border-primary lg:w-40"
 			>
-		{/each}
-	</div>
+				<option value="rarity">{$_('collection.sortRarity')}</option>
+				<option value="name">{$_('collection.sortName')}</option>
+			</select>
+			<RaritySelector options={cardRarityOptions} bind:selected={rarities} onChange={resetPage} />
+			<label
+				class="font-mono text-[9px] uppercase tracking-widest text-primary lg:mx-4 lg:border-l lg:border-primary/25 lg:pl-4"
+			>
+				{$_('trades.credits')}
+				<Input
+					class="mt-1 pl-11 h-8 w-full text-sm lg:w-20"
+					type="number"
+					min="0"
+					bind:value={credits}
+				/></label
+			>
+		</div>
+		<CardVariantSelector bind:value={variant} onChange={resetPage} class="mt-2" />
+		<div class="mt-2 flex flex-wrap gap-1">
+			{#each availableTags as tag (tag.id)}
+				<Button
+					size="xs"
+					variant={tagIds.includes(tag.id) ? 'default' : 'outline'}
+					style={tagIds.includes(tag.id)
+						? `background-color:${tag.color};border-color:${tag.color}`
+						: `color:${tag.color};border-color:${tag.color}`}
+					onclick={() => {
+						tagIds = toggle(tagIds, tag.id);
+						resetPage();
+					}}>{tag.name}</Button
+				>
+			{/each}
+		</div>
+	</CardSearchPanel>
 	<div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7">
 		{#each pageCards as card (card.id)}
 			<div class="relative min-w-0">

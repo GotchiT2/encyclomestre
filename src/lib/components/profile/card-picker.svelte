@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import CardTile from '$lib/components/card-tile.svelte';
+	import CardSearchPanel from '$lib/components/cards/card-search-panel.svelte';
 	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
 	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
 	import { cardRarityOptions } from '$lib/domain/cards/rarities';
@@ -66,23 +67,25 @@
 			<Dialog.Title class="truncate text-lg leading-tight sm:text-xl">{title}</Dialog.Title>
 		</div>
 		<div class="min-h-0 overflow-y-auto p-4">
-			<Input bind:value={query} placeholder={$_('collection.search')} class="mb-3" />
-			<CardVariantSelector bind:value={variant} class="mb-3" />
-			<div class="mb-3" aria-label={$_('collection.rarities')}>
-				<RaritySelector options={cardRarityOptions} bind:selected={rarities} />
-			</div>
-			<div class="mb-4 flex flex-wrap gap-1.5" aria-label={$_('collection.tags')}>
-				{#each availableTags as tag (tag.id)}
-					<Button
-						variant={tagIds.includes(tag.id) ? 'default' : 'outline'}
-						size="xs"
-						style={tagIds.includes(tag.id)
-							? `background-color:${tag.color};border-color:${tag.color}`
-							: `color:${tag.color};border-color:${tag.color}`}
-						onclick={() => (tagIds = toggle(tagIds, tag.id))}>{tag.name}</Button
-					>
-				{/each}
-			</div>
+			<CardSearchPanel class="mb-4">
+				<Input bind:value={query} placeholder={$_('collection.search')} class="mb-3" />
+				<CardVariantSelector bind:value={variant} class="mb-3" />
+				<div class="mb-3" aria-label={$_('collection.rarities')}>
+					<RaritySelector options={cardRarityOptions} bind:selected={rarities} />
+				</div>
+				<div class="flex flex-wrap gap-1.5" aria-label={$_('collection.tags')}>
+					{#each availableTags as tag (tag.id)}
+						<Button
+							variant={tagIds.includes(tag.id) ? 'default' : 'outline'}
+							size="xs"
+							style={tagIds.includes(tag.id)
+								? `background-color:${tag.color};border-color:${tag.color}`
+								: `color:${tag.color};border-color:${tag.color}`}
+							onclick={() => (tagIds = toggle(tagIds, tag.id))}>{tag.name}</Button
+						>
+					{/each}
+				</div>
+			</CardSearchPanel>
 			<div class="wikiforge-card-grid">
 				{#each filteredCards as card (card.id)}
 					<div class="wikiforge-card-size relative">

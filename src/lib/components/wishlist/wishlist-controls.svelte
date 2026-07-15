@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Input } from '$lib/components/ui/input';
 	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
+	import CardSearchPanel from '$lib/components/cards/card-search-panel.svelte';
 	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
 	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { _ } from '$lib/i18n';
@@ -21,7 +22,7 @@
 	} = $props();
 </script>
 
-<div class="border-4 border-double border-primary/30 bg-card p-3">
+<CardSearchPanel class="border-4 border-double border-primary/30 bg-card">
 	<div class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_11rem_auto]">
 		<Input
 			bind:value={query}
@@ -49,4 +50,4 @@
 		<RaritySelector options={cardRarityOptions} bind:selected={selectedRarities} />
 	</div>
 	<CardVariantSelector bind:value={variant} class="mt-3" />
-</div>
+</CardSearchPanel>

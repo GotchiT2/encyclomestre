@@ -80,6 +80,7 @@
 		"openMarket": "Explorer le marché"
 	},
 	"cards": {
+		"searchPanel": "Recherche et filtres",
 		"variant": {
 			"label": "Variante",
 			"all": "Tous",
@@ -163,7 +164,9 @@
 		"filter": "Filtrer",
 		"save": "Enregistrer",
 		"cancel": "Annuler",
-		"close": "Fermer"
+		"close": "Fermer",
+		"expandFilters": "Afficher les filtres",
+		"collapseFilters": "Masquer les filtres"
 	},
 	"profile": {
 		"title": "Mon profil",

@@ -172,19 +172,17 @@
 		description={$_('collection.description')}
 	/>
 
-	<div class="forge-panel p-4 sm:p-5">
-		<FilterControls
-			bind:query
-			bind:sortBy
-			bind:selectedRarities
-			bind:tagFilterIds
-			bind:variant
-			{tags}
-			{untaggedOption}
-			onOpenTagEditor={() => (isTagEditorOpen = true)}
-			onClear={clearFilters}
-		/>
-	</div>
+	<FilterControls
+		bind:query
+		bind:sortBy
+		bind:selectedRarities
+		bind:tagFilterIds
+		bind:variant
+		{tags}
+		{untaggedOption}
+		onOpenTagEditor={() => (isTagEditorOpen = true)}
+		onClear={clearFilters}
+	/>
 
 	<div class="flex flex-wrap items-center gap-2">
 		<TagEditor bind:open={isTagEditorOpen} bind:tags bind:assignments />

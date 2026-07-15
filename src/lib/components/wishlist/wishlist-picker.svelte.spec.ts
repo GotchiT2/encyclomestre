@@ -40,6 +40,11 @@ describe('WishlistPicker', () => {
 		const pagination = page.getByTestId('card-picker-pagination');
 		await expect.element(pagination).toBeVisible();
 		expect(pagination.element().parentElement).toHaveAttribute('data-slot', 'dialog-content');
+		await page.getByRole('button', { name: 'Masquer les filtres' }).click();
+		await expect.element(page.getByPlaceholder('Rechercher une carte')).not.toBeVisible();
+		await expect.element(pagination).toBeVisible();
+		await page.getByRole('button', { name: 'Afficher les filtres' }).click();
+		await expect.element(page.getByPlaceholder('Rechercher une carte')).toBeVisible();
 		expect(loadCards).toHaveBeenLastCalledWith(
 			expect.objectContaining({
 				page: 1,
