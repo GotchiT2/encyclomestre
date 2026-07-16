@@ -51,7 +51,8 @@ describe('TradeDetail', () => {
 		render(TradeDetail, {
 			open: true,
 			offer,
-			cards,
+			offeredCards: [cards[0]],
+			requestedCards: [cards[1]],
 			currentUserId: 'current-user',
 			onCounterOffer: vi.fn(),
 			onRespond: vi.fn(),
@@ -61,6 +62,35 @@ describe('TradeDetail', () => {
 		await expect.element(page.getByText('Claire Trade → Test')).toBeVisible();
 		expect(document.querySelectorAll('[data-testid="card-tile"]')).toHaveLength(2);
 		await expect.element(page.getByRole('button', { name: 'Accepter' })).toBeVisible();
+		await expect.element(page.getByRole('button', { name: 'Fermer' })).toBeVisible();
+		await expect.element(page.getByText('trade-1')).not.toBeInTheDocument();
+		expect(getComputedStyle(document.body).overflow).toBe('hidden');
+		const scrollRect = await page
+			.getByTestId('trade-detail-scroll')
+			.element()
+			.getBoundingClientRect();
+		const actionRect = await page
+			.getByTestId('trade-detail-actions')
+			.element()
+			.getBoundingClientRect();
+		expect(scrollRect.bottom).toBeLessThanOrEqual(actionRect.top + 1);
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+	});
+
+	it('never substitutes a card from the other participant when an instance is unavailable', async () => {
+		render(TradeDetail, {
+			open: true,
+			offer,
+			offeredCards: [cards[0]],
+			requestedCards: [],
+			currentUserId: 'current-user',
+			onCounterOffer: vi.fn(),
+			onRespond: vi.fn(),
+			onCancel: vi.fn()
+		});
+
+		expect(document.querySelectorAll('[data-testid="card-tile"]')).toHaveLength(1);
+		await expect.element(page.getByText(/1 carte.*ne sont plus disponibles/)).toBeVisible();
+		await expect.element(page.getByText('Carte demandée')).not.toBeInTheDocument();
 	});
 });

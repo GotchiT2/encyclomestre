@@ -38,6 +38,8 @@
 	let selectedPartner = $state<User | null>(null);
 	let detailOpen = $state(false);
 	let selectedOffer = $state<TradeOffer | null>(null);
+	let selectedOfferedCards = $state<CardRecord[]>([]);
+	let selectedRequestedCards = $state<CardRecord[]>([]);
 	let editorDraft = $state<Partial<CreateTradeOfferInput>>({});
 	const collectionsByUser = new SvelteMap<string, Promise<CardRecord[]>>();
 
@@ -155,10 +157,18 @@
 	}
 
 	async function openTradeDetail(offer: TradeOffer) {
-		await Promise.all([
+		const [initiatorCollection, recipientCollection] = await Promise.all([
 			loadParticipantCollection(offer.initiatorId),
 			loadParticipantCollection(offer.recipientId)
 		]);
+		const initiatorCardsById = new Map(initiatorCollection.map((card) => [card.id, card]));
+		const recipientCardsById = new Map(recipientCollection.map((card) => [card.id, card]));
+		selectedOfferedCards = offer.offeredCardIds
+			.map((id) => initiatorCardsById.get(id))
+			.filter((card): card is CardRecord => Boolean(card));
+		selectedRequestedCards = offer.requestedCardIds
+			.map((id) => recipientCardsById.get(id))
+			.filter((card): card is CardRecord => Boolean(card));
 		selectedOffer = offer;
 		detailOpen = true;
 	}
@@ -210,7 +220,8 @@
 <TradeDetail
 	bind:open={detailOpen}
 	offer={selectedOffer}
-	cards={tradeCards}
+	offeredCards={selectedOfferedCards}
+	requestedCards={selectedRequestedCards}
 	{currentUserId}
 	onCounterOffer={openCounterOffer}
 	onRespond={respond}

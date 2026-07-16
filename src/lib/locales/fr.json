@@ -480,6 +480,7 @@
 		"counterparties": "Contreparties sélectionnées",
 		"no_counterparty": "Aucune contrepartie sélectionnée.",
 		"credit_chip": "crédits",
+		"cards_unavailable": "{count} carte(s) de cette offre ne sont plus disponibles dans la collection.",
 		"contact_owns": "{user} la possède",
 		"your_panel": "Votre proposition",
 		"partner_panel": "Proposition de l’ami",
