@@ -2,19 +2,19 @@
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
 	import TradeOfferCard from './trade-offer-card.svelte';
-	import type { CardRecord, TradeOffer } from '$lib/types';
+	import type { TradeOffer } from '$lib/types';
 
 	let {
 		offers,
-		cards,
 		currentUserId,
+		onTabChange,
 		onRespond,
 		onView,
 		onCounterOffer
 	}: {
 		offers: TradeOffer[];
-		cards: CardRecord[];
 		currentUserId: string;
+		onTabChange: (tab: LedgerTab) => void;
 		onRespond: (id: string, status: 'accepted' | 'rejected') => void;
 		onView: (offer: TradeOffer) => void;
 		onCounterOffer: (offer: TradeOffer) => void;
@@ -44,7 +44,10 @@
 				size="sm"
 				role="tab"
 				aria-selected={activeTab === tab}
-				onclick={() => (activeTab = tab as LedgerTab)}>{$_(`trades.tabs.${tab}`)}</Button
+				onclick={() => {
+					activeTab = tab as LedgerTab;
+					onTabChange(activeTab);
+				}}>{$_(`trades.tabs.${tab}`)}</Button
 			>
 		{/each}
 	</div>
@@ -54,7 +57,6 @@
 	<div class="grid gap-3 lg:grid-cols-2">
 		{#each visibleOffers as offer (offer.id)}<TradeOfferCard
 				{offer}
-				{cards}
 				{currentUserId}
 				{onRespond}
 				{onView}

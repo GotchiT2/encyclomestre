@@ -1,18 +1,16 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
-	import type { CardRecord, TradeOffer } from '$lib/types';
+	import type { TradeOffer } from '$lib/types';
 
 	let {
 		offer,
-		cards,
 		currentUserId,
 		onRespond,
 		onView,
 		onCounterOffer
 	}: {
 		offer: TradeOffer;
-		cards: CardRecord[];
 		currentUserId: string;
 		onRespond: (id: string, status: 'accepted' | 'rejected') => void;
 		onView: (offer: TradeOffer) => void;
@@ -30,16 +28,6 @@
 			: offer.status === 'rejected'
 				? 'border-destructive/50 text-destructive'
 				: 'border-primary/50 text-primary'
-	);
-	const offeredCards = $derived(
-		offer.offeredCardIds
-			.map((id) => cards.find((card) => card.id === id))
-			.filter(Boolean) as CardRecord[]
-	);
-	const requestedCards = $derived(
-		offer.requestedCardIds
-			.map((id) => cards.find((card) => card.id === id))
-			.filter(Boolean) as CardRecord[]
 	);
 </script>
 
@@ -73,11 +61,10 @@
 					{$_('trades.offered')}
 				</p>
 				<div class="mt-2 flex flex-wrap gap-1.5">
-					{#each offeredCards as card (card.id)}<span
-							class="border px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider"
-							style={`border-color:${card.rarityColor};color:${card.rarityColor}`}
-							>{card.title}</span
-						>{/each}{#if offer.offeredCredits > 0}<span
+					{#if offer.offeredCardIds.length}<span
+							class="border border-primary/40 bg-primary/10 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-primary"
+							>{$_('trades.cardCount', { values: { count: offer.offeredCardIds.length } })}</span
+						>{/if}{#if offer.offeredCredits > 0}<span
 							class="border border-primary/60 bg-primary/15 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-primary"
 							>{offer.offeredCredits} {$_('trades.credit_chip')}</span
 						>{/if}
@@ -88,11 +75,10 @@
 					{$_('trades.requested')}
 				</p>
 				<div class="mt-2 flex flex-wrap gap-1.5">
-					{#each requestedCards as card (card.id)}<span
-							class="border px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider"
-							style={`border-color:${card.rarityColor};color:${card.rarityColor}`}
-							>{card.title}</span
-						>{/each}{#if offer.requestedCredits > 0}<span
+					{#if offer.requestedCardIds.length}<span
+							class="border border-primary/40 bg-primary/10 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-primary"
+							>{$_('trades.cardCount', { values: { count: offer.requestedCardIds.length } })}</span
+						>{/if}{#if offer.requestedCredits > 0}<span
 							class="border border-primary/60 bg-primary/15 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-primary"
 							>{offer.requestedCredits} {$_('trades.credit_chip')}</span
 						>{/if}

@@ -7,7 +7,9 @@
 	import {
 		cancelTradeOffer,
 		createTradeOffer,
-		getTradeOffers,
+		getReceivedTradeOffers,
+		getSentTradeOffers,
+		getTradeHistory,
 		getTradePartners,
 		getUserCollection,
 		respondToTradeOffer
@@ -27,7 +29,6 @@
 	} from '$lib/types';
 
 	let offers = $state<TradeOffer[]>([]);
-	let tradeCards = $state<CardRecord[]>([]);
 	let ownedCards = $state<CardRecord[]>([]);
 	let partnerCards = $state<CardRecord[]>([]);
 	let partners = $state<User[]>([]);
@@ -42,29 +43,15 @@
 	let selectedRequestedCards = $state<CardRecord[]>([]);
 	let editorDraft = $state<Partial<CreateTradeOfferInput>>({});
 	const collectionsByUser = new SvelteMap<string, Promise<CardRecord[]>>();
+	let ownedCardsRequest: Promise<CardRecord[]> | null = null;
+	let partnersRequest: Promise<User[]> | null = null;
+	type TradeTab = 'received' | 'sent' | 'history';
+	const tradeRequests = new SvelteMap<TradeTab, Promise<TradeOffer[]>>();
 
 	onMount(async () => {
 		currentUserId = $currentSession?.user.id ?? 'demo-user';
 		try {
-			const [ledger, ownCollection, tradePartners] = await Promise.all([
-				getTradeOffers(currentUserId),
-				getUserCollection(currentUserId),
-				getTradePartners(currentUserId)
-			]);
-			offers = ledger;
-			ownedCards = ownCollection;
-			collectionsByUser.set(currentUserId, Promise.resolve(ownCollection));
-			tradeCards = ownCollection;
-			partners = tradePartners;
-			loading = false;
-			const counterpartIds = [
-				...new Set(
-					ledger
-						.flatMap((offer) => [offer.initiatorId, offer.recipientId])
-						.filter((id) => id !== currentUserId)
-				)
-			];
-			void Promise.all(counterpartIds.map((id) => loadParticipantCollection(id)));
+			await loadTradeTab('received');
 
 			const partnerId = page.url.searchParams.get('partner');
 			const cardIds = (
@@ -74,35 +61,67 @@
 			)
 				.split(',')
 				.filter(Boolean);
-			const requestedPartner = tradePartners.find((partner) => partner.id === partnerId);
-			if (requestedPartner && cardIds.length) await selectPartner(requestedPartner, cardIds);
+			if (partnerId && cardIds.length) {
+				const tradePartners = await loadPartners();
+				const requestedPartner = tradePartners.find((partner) => partner.id === partnerId);
+				if (requestedPartner) await selectPartner(requestedPartner, cardIds);
+			}
 		} finally {
 			loading = false;
 		}
 	});
 
-	function mergeTradeCards(collection: CardRecord[]) {
-		tradeCards = [
-			...new Map([...tradeCards, ...collection].map((card) => [card.id, card])).values()
-		];
+	async function loadTradeTab(tab: TradeTab) {
+		const cached = tradeRequests.get(tab);
+		if (cached) return cached;
+		const request = (
+			tab === 'received'
+				? getReceivedTradeOffers()
+				: tab === 'sent'
+					? getSentTradeOffers()
+					: getTradeHistory()
+		).then((result) => {
+			offers = [...new Map([...offers, ...result].map((offer) => [offer.id, offer])).values()];
+			return result;
+		});
+		tradeRequests.set(tab, request);
+		return request;
+	}
+
+	async function loadOwnedCards() {
+		if (ownedCardsRequest) return ownedCardsRequest;
+		ownedCardsRequest = getUserCollection(currentUserId).then((collection) => {
+			ownedCards = collection;
+			collectionsByUser.set(currentUserId, Promise.resolve(collection));
+			return collection;
+		});
+		return ownedCardsRequest;
+	}
+
+	async function loadPartners() {
+		if (partnersRequest) return partnersRequest;
+		partnersRequest = getTradePartners(currentUserId).then((result) => {
+			partners = result;
+			return result;
+		});
+		return partnersRequest;
 	}
 
 	async function loadParticipantCollection(userId: string) {
 		const cached = collectionsByUser.get(userId);
 		if (cached) return cached;
-		const request = getUserCollection(userId)
-			.catch(() => [])
-			.then((collection) => {
-				mergeTradeCards(collection);
-				return collection;
-			});
+		const request = getUserCollection(userId).catch(() => []);
 		collectionsByUser.set(userId, request);
 		return request;
 	}
 
 	async function selectPartner(partner: User, requestedCatalogueIds: string[] = []) {
 		selectedPartner = partner;
-		partnerCards = await loadParticipantCollection(partner.id);
+		const [, collection] = await Promise.all([
+			loadOwnedCards(),
+			loadParticipantCollection(partner.id)
+		]);
+		partnerCards = collection;
 		if (requestedCatalogueIds.length) {
 			editorDraft = {
 				recipientId: partner.id,
@@ -112,6 +131,11 @@
 			};
 		}
 		editorOpen = true;
+	}
+
+	async function openPartnerPicker() {
+		await Promise.all([loadOwnedCards(), loadPartners()]);
+		partnerPickerOpen = true;
 	}
 
 	function participantAsUser(participant: TradeParticipant): User {
@@ -142,6 +166,7 @@
 
 	async function openCounterOffer(offer: TradeOffer) {
 		const counterpart = offer.initiatorId === currentUserId ? offer.recipient : offer.initiator;
+		await Promise.all([loadOwnedCards(), loadPartners()]);
 		selectedPartner =
 			partners.find((partner) => partner.id === counterpart.id) ?? participantAsUser(counterpart);
 		partnerCards = await loadParticipantCollection(selectedPartner.id);
@@ -186,7 +211,7 @@
 					editorDraft = {};
 					selectedPartner = null;
 					partnerCards = [];
-					partnerPickerOpen = true;
+					void openPartnerPicker();
 				}}>{$_('trades.create_offer')}</Button
 			>
 		{/snippet}
@@ -195,8 +220,8 @@
 			{$_('trades.loading')}
 		</p>{:else}<TradeLedger
 			{offers}
-			cards={tradeCards}
 			{currentUserId}
+			onTabChange={(tab) => void loadTradeTab(tab)}
 			onRespond={respond}
 			onCounterOffer={openCounterOffer}
 			onView={(offer) => void openTradeDetail(offer)}
