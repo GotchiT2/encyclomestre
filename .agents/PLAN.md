@@ -250,3 +250,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Afficher les participants et résoudre les cartes d’échange depuis les UUID d’exemplaires — `fix(trades): hydrate participants and traded cards`
 - [x] Verrouiller la modale d’offre, séparer les cartes par propriétaire et masquer les identifiants techniques — `fix(trades): stabilize offer detail modal`
 - [x] Limiter le chargement initial aux offres reçues et différer les autres registres, collections et partenaires jusqu’aux actions utilisateur — `perf(trades): defer collection hydration`
+- [x] Charger les cartes détaillées d’une wishlist nommée avec son endpoint hydraté dédié — `perf(wishlist): load registry cards in one request`

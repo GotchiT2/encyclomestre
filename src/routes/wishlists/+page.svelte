@@ -4,13 +4,14 @@
 	import { resolve } from '$app/paths';
 	import { page as currentPage } from '$app/state';
 	import { onMount } from 'svelte';
+	import { SvelteMap } from 'svelte/reactivity';
 	import { currentSession } from '$lib/auth/session';
 	import {
 		addWishlistRegistryCard,
 		createWishlistRegistry,
 		deleteWishlistRegistry,
 		getCards,
-		getWishlistRegistry,
+		getWishlistRegistryCards,
 		getWishlists,
 		importWishlistRegistryFromLink,
 		removeWishlistRegistryCard,
@@ -37,7 +38,6 @@
 	} from '$lib/types';
 
 	let userId = $state('demo-user');
-	let cards = $state<CardRecord[]>([]);
 	let registries = $state<WishlistRegistrySummary[]>([]);
 	let activeRegistry = $state<WishlistRegistry | null>(null);
 	let loading = $state(true);
@@ -53,30 +53,37 @@
 	let tradeCardIds = $state<string[]>([]);
 	let sortBy = $state<'rarity' | 'date' | 'opportunity'>('rarity');
 	let activeTab = $state<'cards' | 'owners'>('cards');
+	const registryCardsById = new SvelteMap<string, Promise<CardRecord[]>>();
 
 	const activeCards = $derived(
-		(activeRegistry?.cardIds ?? [])
-			.map((id) => cards.find((card) => card.id === id))
-			.filter((card): card is CardRecord => Boolean(card))
-			.toSorted((left, right) => {
-				if (sortBy === 'opportunity') return right.friendsWhoOwn.length - left.friendsWhoOwn.length;
-				if (sortBy === 'date')
-					return (
-						(activeRegistry?.cardIds.indexOf(right.id) ?? 0) -
-						(activeRegistry?.cardIds.indexOf(left.id) ?? 0)
-					);
-				return compareCardsByRarityDesc(left, right);
-			})
+		(activeRegistry?.cards ?? []).toSorted((left, right) => {
+			if (sortBy === 'opportunity') return right.friendsWhoOwn.length - left.friendsWhoOwn.length;
+			if (sortBy === 'date')
+				return (
+					(activeRegistry?.cardIds.indexOf(right.id) ?? 0) -
+					(activeRegistry?.cardIds.indexOf(left.id) ?? 0)
+				);
+			return compareCardsByRarityDesc(left, right);
+		})
 	);
 
-	function mergeCards(nextCards: CardRecord[]) {
-		cards = [...new Map([...cards, ...nextCards].map((card) => [card.id, card])).values()];
-	}
-
 	async function loadRegistry(id: string) {
-		const registry = await getWishlistRegistry(id, userId);
-		mergeCards(registry.cards);
-		return registry;
+		const summary = registries.find((registry) => registry.id === id);
+		if (!summary) return null;
+		let cardsRequest = registryCardsById.get(id);
+		if (!cardsRequest) {
+			cardsRequest = getWishlistRegistryCards(id).catch((error) => {
+				registryCardsById.delete(id);
+				throw error;
+			});
+			registryCardsById.set(id, cardsRequest);
+		}
+		const registryCards = await cardsRequest;
+		return {
+			...summary,
+			cardIds: registryCards.map((card) => card.id),
+			cards: registryCards
+		} satisfies WishlistRegistry;
 	}
 
 	onMount(async () => {
@@ -85,7 +92,6 @@
 		const imported = sharedToken ? await importWishlistRegistryFromLink(userId, sharedToken) : null;
 		const summaries = await getWishlists(userId);
 		registries = summaries;
-		mergeCards(summaries.flatMap((registry) => registry.cards));
 		const requestedRegistryId = imported?.id ?? currentPage.url.searchParams.get('registry');
 		const initialRegistry =
 			summaries.find((registry) => registry.id === requestedRegistryId) ?? summaries[0];
@@ -111,6 +117,7 @@
 		if (!deletingRegistry) return;
 		const deletedId = deletingRegistry.id;
 		await deleteWishlistRegistry(deletedId, userId);
+		registryCardsById.delete(deletedId);
 		registries = registries.filter((registry) => registry.id !== deletedId);
 		deleteOpen = false;
 		deletingRegistry = null;
@@ -129,7 +136,7 @@
 				...new Map([...activeRegistry.cards, card].map((entry) => [entry.id, entry])).values()
 			]
 		};
-		mergeCards([card]);
+		registryCardsById.set(activeRegistry.id, Promise.resolve(activeRegistry.cards));
 		registries = registries.map((registry) =>
 			registry.id === activeRegistry?.id
 				? { ...registry, cardIds: activeRegistry.cardIds, cards: activeRegistry.cards }
@@ -145,6 +152,7 @@
 			cardIds: activeRegistry.cardIds.filter((id) => id !== cardId),
 			cards: activeRegistry.cards.filter((card) => card.id !== cardId)
 		};
+		registryCardsById.set(activeRegistry.id, Promise.resolve(activeRegistry.cards));
 		registries = registries.map((registry) =>
 			registry.id === activeRegistry?.id
 				? { ...registry, cardIds: activeRegistry.cardIds, cards: activeRegistry.cards }
@@ -179,6 +187,7 @@
 					? [...new Map([...activeRegistry.cards, card].map((entry) => [entry.id, entry])).values()]
 					: activeRegistry.cards.filter((entry) => entry.id !== card.id)
 			};
+			registryCardsById.set(wishlistId, Promise.resolve(activeRegistry.cards));
 		}
 	}
 

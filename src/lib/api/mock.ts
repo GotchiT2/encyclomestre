@@ -703,6 +703,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const registry = registries.find((entry) => entry.id === decodeURIComponent(encodedId));
 		if (!registry) return error(404, 'Wishlist introuvable.', 'WISHLIST_NOT_FOUND');
 		if (normalizedMethod === 'GET' && !action) return json(apiRegistry(registry));
+		if (normalizedMethod === 'GET' && action === 'cards') return json(registry.cards.map(apiCard));
 		if (normalizedMethod === 'DELETE' && !action) {
 			wishlists.set(
 				userId,

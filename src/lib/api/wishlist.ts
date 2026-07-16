@@ -1,5 +1,6 @@
 import { apiRequest, type RequestOptions } from './client';
 import type {
+	CardRecord,
 	GuildWishlistShare,
 	PaginatedResponse,
 	WishlistAlert,
@@ -27,7 +28,7 @@ interface ApiWishlistAlert {
 
 interface ApiWishlistRegistry extends Omit<WishlistRegistry, 'cardIds' | 'cards'> {
 	cardIds: string[];
-	cards: WikiForgeCard[];
+	cards?: WikiForgeCard[];
 	opportunityCount: number;
 	shareToken?: string | null;
 }
@@ -41,7 +42,7 @@ const toEntry = (entry: ApiWishlistEntry): WishlistEntry => ({
 const toRegistry = (registry: ApiWishlistRegistry): WishlistRegistrySummary => ({
 	...registry,
 	cardIds: registry.cardIds,
-	cards: registry.cards.map(toCardRecord)
+	cards: (registry.cards ?? []).map(toCardRecord)
 });
 
 export const getWishlist = async (
@@ -144,6 +145,14 @@ export const getWishlistRegistry = async (
 	toRegistry(
 		await apiRequest<ApiWishlistRegistry>(`/api/wishlists/${encodeURIComponent(id)}`, options)
 	);
+
+export const getWishlistRegistryCards = async (
+	id: string,
+	options?: RequestOptions
+): Promise<CardRecord[]> =>
+	(
+		await apiRequest<WikiForgeCard[]>(`/api/wishlists/${encodeURIComponent(id)}/cards`, options)
+	).map(toCardRecord);
 
 export const createWishlistRegistry = async (
 	_userId: string,

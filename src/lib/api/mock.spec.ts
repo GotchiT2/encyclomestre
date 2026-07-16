@@ -148,6 +148,18 @@ describe('createMockApiResponse', () => {
 		expect(created.status).toBe(201);
 		expect(registry.title).toBe('Cartes à échanger');
 
+		createMockApiResponse({
+			path: `/wishlists/${registry.id}/cards?cardId=red-velvet-1&userId=demo-user`,
+			method: 'POST'
+		});
+		const cards = createMockApiResponse({
+			path: `/wishlists/${registry.id}/cards?userId=demo-user`
+		});
+		expect(cards.status).toBe(200);
+		expect(await cards.json()).toEqual([
+			expect.objectContaining({ id: 'red-velvet-1', wikipediaTitle: 'Red Velvet' })
+		]);
+
 		const shared = createMockApiResponse({
 			path: `/wishlists/${registry.id}/share?userId=demo-user`,
 			method: 'POST',

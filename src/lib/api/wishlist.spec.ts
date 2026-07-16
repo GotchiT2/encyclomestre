@@ -7,6 +7,7 @@ vi.mock('./client', () => ({ apiRequest }));
 import {
 	deleteWishlistRegistry,
 	getWishlist,
+	getWishlistRegistryCards,
 	getWishlists,
 	removeWishlistEntry,
 	removeWishlistRegistryCard
@@ -110,6 +111,36 @@ describe('wishlist deletions', () => {
 		expect(lists[0]).toMatchObject({
 			cardIds: ['variant-uuid'],
 			cards: [{ id: 'variant-uuid', variant: 'NORMAL' }]
+		});
+	});
+
+	it('loads every detailed card of a named wishlist in one request', async () => {
+		apiRequest.mockResolvedValueOnce([
+			{
+				id: 'variant-full-art',
+				baseCardId: 42,
+				variant: 'FULL_ART',
+				isFullArt: true,
+				wikipediaTitle: 'Carte légendaire',
+				imageUrl: '/card-placeholder.svg',
+				rarity: 'L',
+				category: 'Histoire',
+				atk: 90,
+				def: 80
+			}
+		]);
+
+		const cards = await getWishlistRegistryCards('list/1');
+
+		expect(apiRequest).toHaveBeenCalledOnce();
+		expect(apiRequest).toHaveBeenCalledWith('/api/wishlists/list%2F1/cards', undefined);
+		expect(cards[0]).toMatchObject({
+			id: 'variant-full-art',
+			variant: 'FULL_ART',
+			isFullArt: true,
+			title: 'Carte légendaire',
+			attack: 90,
+			defense: 80
 		});
 	});
 });
