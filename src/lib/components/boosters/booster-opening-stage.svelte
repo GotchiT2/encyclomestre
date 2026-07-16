@@ -46,6 +46,7 @@
 	let preferenceReady = $state(false);
 	let openRequested = $state(false);
 	let suspensionActive = $state(false);
+	let mobileViewport = $state(false);
 	let timers: number[] = [];
 	function schedule(callback: () => void, delay: number) {
 		const timer = window.setTimeout(callback, delay);
@@ -62,8 +63,11 @@
 		slots[index] = { ...slots[index], revealed: true };
 		const remaining = slots.some((slot) => !slot.revealed);
 		if (!remaining) {
-			phase = 'complete';
 			mobileIndex = slots.length - 1;
+			if (mobileViewport && !quickOpening) {
+				phase = 'revealing';
+				schedule(() => (phase = 'complete'), 900);
+			} else phase = 'complete';
 			return;
 		}
 		phase = 'revealing';
@@ -129,6 +133,11 @@
 	onMount(() => {
 		quickOpening = localStorage.getItem(quickPreferenceKey) === 'true';
 		preferenceReady = true;
+		const media = window.matchMedia('(max-width: 1023px)');
+		const updateViewport = () => (mobileViewport = media.matches);
+		updateViewport();
+		media.addEventListener('change', updateViewport);
+		return () => media.removeEventListener('change', updateViewport);
 	});
 
 	onDestroy(clearTimers);
@@ -140,6 +149,10 @@
 	function resumeAfterSuspension() {
 		const nextIndex = slots.findIndex((slot) => !slot.revealed);
 		mobileIndex = nextIndex >= 0 ? nextIndex : Math.max(0, slots.length - 1);
+		if (nextIndex < 0 && phase === 'revealing') {
+			phase = 'complete';
+			return;
+		}
 		if (!quickOpening && phase === 'dealing') {
 			phase = 'revealing';
 			return;

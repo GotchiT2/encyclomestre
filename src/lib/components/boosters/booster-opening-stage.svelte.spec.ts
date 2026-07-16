@@ -188,6 +188,35 @@ describe('BoosterOpeningStage', () => {
 		await expect.element(page.getByRole('switch', { name: 'Ouverture rapide' })).toBeChecked();
 	});
 
+	it('keeps the final mobile card visible before showing the recap', async () => {
+		await page.viewport(390, 844);
+		render(BoosterOpeningStage, {
+			available: 0,
+			maximum: 1,
+			opening: false,
+			cards,
+			onOpen: vi.fn(),
+			onReset: vi.fn()
+		});
+
+		await new Promise((resolve) => window.setTimeout(resolve, 760));
+		document.querySelector<HTMLButtonElement>('.mobile-current button')?.click();
+		await new Promise((resolve) => window.setTimeout(resolve, 720));
+		const lastCard = document.querySelector<HTMLButtonElement>('.mobile-current button');
+		expect(lastCard?.getAttribute('aria-label')).toContain('Légendaire');
+		lastCard?.click();
+
+		expect(document.querySelector('.booster-deck')?.getAttribute('data-phase')).toBe('revealing');
+		await vi.waitFor(() =>
+			expect(document.querySelector('.mobile-current [data-rarity="L"]')).toHaveAttribute(
+				'data-revealed',
+				'true'
+			)
+		);
+		await new Promise((resolve) => window.setTimeout(resolve, 950));
+		expect(document.querySelector('.booster-deck')?.getAttribute('data-phase')).toBe('complete');
+	});
+
 	it('shows a retry action after an API failure', async () => {
 		const onOpen = vi.fn();
 		render(BoosterOpeningStage, {

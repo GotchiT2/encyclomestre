@@ -240,3 +240,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Brancher les cartes recherchées sur le catalogue complet, centrer les éditeurs et stabiliser la largeur des pages sous modale — `fix(collection): connect searched cards and center dialogs`
 - [x] Recomposer l’ouverture des boosters avec cartes retournées, halos de rareté, interactions desktop/mobile et mode rapide — `feat(boosters): build immersive opening sequence`
 - [x] Ouvrir le détail des cartes révélées et ajouter des propagations lumineuses au survol, au focus et au toucher — `feat(boosters): open card details from reveals`
+- [x] Relancer la recharge des boosters, conserver la dernière révélation mobile et fiabiliser le détail responsive — `fix(boosters): refine recharge and mobile experience`

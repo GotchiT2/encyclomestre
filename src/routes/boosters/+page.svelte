@@ -11,6 +11,7 @@
 		toCollectionCardRecord
 	} from '$lib/api';
 	import BoosterOpeningStage from '$lib/components/boosters/booster-opening-stage.svelte';
+	import { formatBoosterDelay } from '$lib/components/boosters/booster-countdown';
 	import CardDetailModal from '$lib/components/cards/card-detail-modal.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import type {
@@ -36,18 +37,38 @@
 	let detailDependenciesLoaded = $state(false);
 	let detailDependenciesLoading = $state(false);
 	let now = $state(Date.now());
+	let statusRefreshing = $state(false);
+	let nextStatusRetryAt = 0;
 	const nextDelay = $derived(
 		inventory?.nextBoosterAvailableAt
 			? Math.max(0, new Date(inventory.nextBoosterAvailableAt).getTime() - now)
 			: 0
 	);
-	const nextDelayLabel = $derived(
-		`${String(Math.floor(nextDelay / 3_600_000)).padStart(2, '0')}:${String(Math.floor((nextDelay % 3_600_000) / 60_000)).padStart(2, '0')}:${String(Math.floor((nextDelay % 60_000) / 1000)).padStart(2, '0')}`
-	);
+	const nextDelayLabel = $derived(formatBoosterDelay(nextDelay));
+
+	async function refreshInventory() {
+		if (statusRefreshing) return;
+		statusRefreshing = true;
+		try {
+			inventory = await getWikiForgeBoosterStatus();
+			now = Date.now();
+		} finally {
+			statusRefreshing = false;
+		}
+	}
 
 	onMount(() => {
-		const timer = window.setInterval(() => (now = Date.now()), 1_000);
-		void getWikiForgeBoosterStatus().then((status) => (inventory = status));
+		const timer = window.setInterval(() => {
+			now = Date.now();
+			const rechargeAt = inventory?.nextBoosterAvailableAt
+				? new Date(inventory.nextBoosterAvailableAt).getTime()
+				: 0;
+			if (rechargeAt && now >= rechargeAt && now >= nextStatusRetryAt) {
+				nextStatusRetryAt = now + 2_000;
+				void refreshInventory().catch(() => undefined);
+			}
+		}, 1_000);
+		void refreshInventory().catch(() => undefined);
 		return () => window.clearInterval(timer);
 	});
 
@@ -60,7 +81,7 @@
 			result = (await openWikiForgeBooster()).cards.map(toCollectionCardRecord);
 			openingId += 1;
 			try {
-				inventory = await getWikiForgeBoosterStatus();
+				await refreshInventory();
 			} catch {
 				inventory = inventory
 					? { ...inventory, availableBoosters: Math.max(0, inventory.availableBoosters - 1) }

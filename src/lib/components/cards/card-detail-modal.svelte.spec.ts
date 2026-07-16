@@ -1,7 +1,8 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import '$lib/i18n';
+import '../../../app.css';
 
 vi.mock('$lib/api', () => ({
 	applyWikiForgeTag: vi.fn(),
@@ -33,6 +34,8 @@ const card: CardRecord = {
 };
 
 describe('CardDetailModal', () => {
+	afterEach(async () => page.viewport(1280, 720));
+
 	it('uses its content height without an internal desktop scrollbar', async () => {
 		render(CardDetailModal, {
 			card,
@@ -46,5 +49,30 @@ describe('CardDetailModal', () => {
 		await expect
 			.element(page.getByTestId('card-detail-tab-panel'))
 			.not.toHaveClass(/overflow-y-auto/);
+	});
+
+	it('keeps the modal and its actions accessible on mobile', async () => {
+		await page.viewport(390, 844);
+		render(CardDetailModal, {
+			card,
+			onToggleWishlist: vi.fn(),
+			onClose: vi.fn()
+		});
+
+		const modal = document.querySelector<HTMLElement>('[data-testid="card-detail-modal"]')!;
+		const actions = document.querySelector<HTMLElement>(
+			'[data-testid="card-detail-mobile-actions"]'
+		)!;
+		const modalRect = modal.getBoundingClientRect();
+		const actionsRect = actions.getBoundingClientRect();
+		expect(modalRect.left).toBeGreaterThanOrEqual(0);
+		expect(modalRect.right).toBeLessThanOrEqual(window.innerWidth);
+		expect(modalRect.bottom).toBeLessThanOrEqual(window.innerHeight);
+		expect(actionsRect.bottom).toBeLessThanOrEqual(modalRect.bottom);
+		expect(actions.querySelectorAll('button')).toHaveLength(3);
+		for (const button of actions.querySelectorAll('button')) {
+			expect(button.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+		}
+		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
 	});
 });
