@@ -70,9 +70,11 @@ describe('CardDetailModal', () => {
 		const actions = document.querySelector<HTMLElement>(
 			'[data-testid="card-detail-mobile-actions"]'
 		)!;
+		const tabs = document.querySelector<HTMLElement>('[data-testid="card-detail-mobile-tabs"]')!;
 		const overlay = document.querySelector<HTMLElement>('[data-testid="card-detail-overlay"]')!;
 		const modalRect = modal.getBoundingClientRect();
 		const actionsRect = actions.getBoundingClientRect();
+		const tabsRect = tabs.getBoundingClientRect();
 		const cardRect = document
 			.querySelector<HTMLElement>('.card-detail-preview .wikiforge-card-size')!
 			.getBoundingClientRect();
@@ -82,6 +84,16 @@ describe('CardDetailModal', () => {
 		expect(cardRect.width).toBeGreaterThanOrEqual(190);
 		expect(Number(getComputedStyle(overlay).zIndex)).toBeGreaterThan(40);
 		expect(actionsRect.bottom).toBeLessThanOrEqual(modalRect.bottom);
+		expect(tabsRect.bottom).toBeLessThanOrEqual(actionsRect.top);
+		await expect.element(page.getByRole('tab', { name: 'Données' })).toBeVisible();
+		await page.getByRole('tab', { name: 'Marché' }).click();
+		await page.getByRole('tab', { name: 'Données' }).click();
+		await expect
+			.element(page.getByRole('tab', { name: 'Données' }))
+			.toHaveAttribute('aria-selected', 'true');
+		expect(tabs.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+			actions.getBoundingClientRect().top
+		);
 		expect(actions.querySelectorAll('button')).toHaveLength(3);
 		for (const button of actions.querySelectorAll('button')) {
 			expect(button.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);

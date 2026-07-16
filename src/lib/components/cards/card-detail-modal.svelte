@@ -107,7 +107,7 @@
 						</div>
 
 						<div
-							class="flex gap-1 overflow-x-auto border-b border-primary/20"
+							class="hidden gap-1 overflow-x-auto border-b border-primary/20 sm:flex"
 							role="tablist"
 							aria-label={$_('cardDetail.tabs')}
 						>
@@ -137,6 +137,22 @@
 						</div>
 					</div>
 				</section>
+				<div
+					class="flex min-h-11 shrink-0 border-t border-b border-primary/25 bg-[rgb(8_15_25_/_98%)] sm:hidden"
+					role="tablist"
+					aria-label={$_('cardDetail.tabs')}
+					data-testid="card-detail-mobile-tabs"
+				>
+					{#each [{ id: 'data', label: 'cardDetail.data' }, { id: 'market', label: 'cardDetail.market_tab' }, { id: 'social', label: 'cardDetail.social' }] as tab (tab.id)}
+						<Button
+							variant="ghost"
+							class={`min-w-0 flex-1 px-2 ${activeTab === tab.id ? 'forge-nav-active' : ''}`}
+							onclick={() => (activeTab = tab.id as typeof activeTab)}
+							role="tab"
+							aria-selected={activeTab === tab.id}>{$_(tab.label)}</Button
+						>
+					{/each}
+				</div>
 				<div
 					class="min-h-[4.25rem] shrink-0 border-t border-primary/25 bg-[rgb(8_15_25_/_96%)] p-3 sm:hidden"
 					data-testid="card-detail-mobile-actions"

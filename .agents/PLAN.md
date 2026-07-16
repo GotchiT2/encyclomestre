@@ -243,3 +243,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Relancer la recharge des boosters, conserver la dernière révélation mobile et fiabiliser le détail responsive — `fix(boosters): refine recharge and mobile experience`
 - [x] Placer le détail au-dessus des menus, confirmer le récapitulatif mobile et rééquilibrer les halos — `fix(boosters): polish mobile reveal interactions`
 - [x] Compacter les informations du détail et renforcer la présence visuelle de la carte — `refactor(cards): emphasize card in detail modal`
+- [x] Maintenir les onglets du détail visibles au-dessus des actions sur mobile — `fix(cards): keep detail tabs visible on mobile`
