@@ -312,6 +312,14 @@ const tradeOffers: TradeOffer[] = [
 		updatedAt: '2026-07-15T14:00:00.000Z'
 	}
 ];
+const apiTradeCards = (offer: TradeOffer) =>
+	[
+		...offer.offeredCardIds.map((userCardId) => ({ userCardId, side: 'offered' as const })),
+		...offer.requestedCardIds.map((userCardId) => ({ userCardId, side: 'requested' as const }))
+	].flatMap((entry) => {
+		const card = mockCards.find((candidate) => entry.userCardId.endsWith(`-${candidate.id}`));
+		return card ? [{ ...entry, card: apiCard(card) }] : [];
+	});
 const apiTradeOffer = (offer: TradeOffer) => ({
 	id: offer.id,
 	initiatorId: offer.initiatorId,
@@ -321,6 +329,7 @@ const apiTradeOffer = (offer: TradeOffer) => ({
 	status: offer.status,
 	offeredUserCardIds: offer.offeredCardIds,
 	requestedUserCardIds: offer.requestedCardIds,
+	cards: apiTradeCards(offer),
 	offeredCredits: offer.offeredCredits,
 	requestedCredits: offer.requestedCredits,
 	createdAt: offer.createdAt
@@ -624,6 +633,34 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				.filter((conversation) => conversation.participantIds.includes(userId))
 				.toSorted((first, second) => second.updatedAt.localeCompare(first.updatedAt))
 		);
+	}
+	if (
+		normalizedMethod === 'POST' &&
+		(pathname === '/api/conversations/direct' || pathname === '/conversations/direct')
+	) {
+		const participantId = asObject(body)?.participantId;
+		if (typeof participantId !== 'string' || !users.has(participantId))
+			return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
+		const existing = conversations.find(
+			(conversation) =>
+				conversation.kind === 'direct' &&
+				conversation.participantIds.includes('demo-user') &&
+				conversation.participantIds.includes(participantId)
+		);
+		if (existing) return json(existing);
+		const participant = users.get(participantId)!;
+		const conversation: Conversation = {
+			id: `conversation-${participantId}`,
+			kind: 'direct',
+			title: participant.displayName || participant.username,
+			participantIds: ['demo-user', participantId],
+			preview: '',
+			unreadCount: 0,
+			updatedAt: new Date().toISOString()
+		};
+		conversations.unshift(conversation);
+		messages.set(conversation.id, []);
+		return json(conversation);
 	}
 	const reactionMatch = /^\/messages\/reactions\/([^/]+)$/.exec(pathname);
 	if (reactionMatch && normalizedMethod === 'PATCH') {
@@ -1056,15 +1093,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	if (tradeCardsMatch && normalizedMethod === 'GET') {
 		const offer = tradeOffers.find((entry) => entry.id === decodeURIComponent(tradeCardsMatch[1]));
 		if (!offer) return error(404, 'Offre introuvable.', 'TRADE_NOT_FOUND');
-		return json(
-			[
-				...offer.offeredCardIds.map((userCardId) => ({ userCardId, side: 'offered' })),
-				...offer.requestedCardIds.map((userCardId) => ({ userCardId, side: 'requested' }))
-			].flatMap((entry) => {
-				const card = mockCards.find((candidate) => entry.userCardId.endsWith(`-${candidate.id}`));
-				return card ? [{ ...entry, card: apiCard(card) }] : [];
-			})
-		);
+		return json(apiTradeCards(offer));
 	}
 	const tradeMatch = /^\/trades\/([^/]+)$/.exec(tradePathname);
 	if (tradeMatch && normalizedMethod === 'PATCH') {

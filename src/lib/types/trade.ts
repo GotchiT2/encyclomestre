@@ -15,6 +15,7 @@ export interface TradeOffer {
 	recipient: TradeParticipant;
 	offeredCardIds: string[];
 	requestedCardIds: string[];
+	cards?: TradeCardDetail[];
 	offeredCredits: number;
 	requestedCredits: number;
 	status: TradeOfferStatus;

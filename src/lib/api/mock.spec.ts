@@ -47,7 +47,13 @@ describe('createMockApiResponse', () => {
 			expect.arrayContaining([
 				expect.objectContaining({
 					recipientId: 'demo-user',
-					initiator: expect.objectContaining({ displayName: expect.any(String) })
+					initiator: expect.objectContaining({ displayName: expect.any(String) }),
+					cards: expect.arrayContaining([
+						expect.objectContaining({
+							side: 'offered',
+							card: expect.objectContaining({ wikipediaTitle: expect.any(String) })
+						})
+					])
 				})
 			])
 		);
@@ -115,6 +121,25 @@ describe('createMockApiResponse', () => {
 		expect((await response.json()) as { id: string }[]).not.toContainEqual(
 			expect.objectContaining({ id: 'demo-user' })
 		);
+	});
+
+	it('retourne la même conversation directe lors de deux appels identiques', async () => {
+		const first = createMockApiResponse({
+			path: '/api/conversations/direct',
+			method: 'POST',
+			body: { participantId: 'friend-2' }
+		});
+		const second = createMockApiResponse({
+			path: '/api/conversations/direct',
+			method: 'POST',
+			body: { participantId: 'friend-2' }
+		});
+
+		expect(first.status).toBe(200);
+		expect(second.status).toBe(200);
+		const firstConversation = (await first.json()) as { id: string };
+		const secondConversation = (await second.json()) as { id: string };
+		expect(firstConversation.id).toBe(secondConversation.id);
 	});
 
 	it('persiste, filtre et pagine les entrées de wishlist', async () => {

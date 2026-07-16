@@ -1,4 +1,7 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-navigation-without-resolve -- the conversation id is appended to a resolved route */
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { page } from '$app/state';
@@ -9,7 +12,7 @@
 		createTradeOffer,
 		getReceivedTradeOffers,
 		getSentTradeOffers,
-		getTradeCards,
+		getOrCreateDirectConversation,
 		getTradeHistory,
 		getTradePartners,
 		getUserCollection,
@@ -49,7 +52,6 @@
 	let partnersRequest: Promise<User[]> | null = null;
 	type TradeTab = 'received' | 'sent' | 'history';
 	const tradeRequests = new SvelteMap<TradeTab, Promise<TradeOffer[]>>();
-	const tradeCardRequests = new SvelteMap<string, Promise<TradeCardDetail[]>>();
 	const tradeCardsByOffer = new SvelteMap<string, TradeCardDetail[]>();
 
 	onMount(async () => {
@@ -84,30 +86,13 @@
 				: tab === 'sent'
 					? getSentTradeOffers()
 					: getTradeHistory()
-		).then(async (result) => {
+		).then((result) => {
 			offers = [...new Map([...offers, ...result].map((offer) => [offer.id, offer])).values()];
-			await Promise.all(result.map((offer) => loadTradeCards(offer.id).catch(() => [])));
+			result.forEach((offer) => tradeCardsByOffer.set(offer.id, offer.cards ?? []));
 			return result;
 		});
 		tradeRequests.set(tab, request);
 		return request;
-	}
-
-	async function loadTradeCards(offerId: string) {
-		let cardsRequest = tradeCardRequests.get(offerId);
-		if (!cardsRequest) {
-			cardsRequest = getTradeCards(offerId)
-				.then((cards) => {
-					tradeCardsByOffer.set(offerId, cards);
-					return cards;
-				})
-				.catch((error) => {
-					tradeCardRequests.delete(offerId);
-					throw error;
-				});
-			tradeCardRequests.set(offerId, cardsRequest);
-		}
-		return cardsRequest;
 	}
 
 	async function loadOwnedCards() {
@@ -171,17 +156,20 @@
 
 	async function respond(id: string, status: 'accepted' | 'rejected') {
 		const updated = await respondToTradeOffer(id, status);
+		tradeCardsByOffer.set(id, updated.cards ?? tradeCardsByOffer.get(id) ?? []);
 		offers = offers.map((offer) => (offer.id === id ? updated : offer));
 		if (selectedOffer?.id === id) selectedOffer = updated;
 	}
 
 	async function submitOffer(input: CreateTradeOfferInput) {
 		const created = await createTradeOffer(input);
+		tradeCardsByOffer.set(created.id, created.cards ?? []);
 		offers = [created, ...offers];
 	}
 
 	async function cancel(id: string) {
 		const updated = await cancelTradeOffer(id);
+		tradeCardsByOffer.set(id, updated.cards ?? tradeCardsByOffer.get(id) ?? []);
 		offers = offers.map((offer) => (offer.id === id ? updated : offer));
 		if (selectedOffer?.id === id) selectedOffer = updated;
 	}
@@ -204,7 +192,7 @@
 	}
 
 	async function openTradeDetail(offer: TradeOffer) {
-		const tradeCards = await loadTradeCards(offer.id);
+		const tradeCards = tradeCardsByOffer.get(offer.id) ?? offer.cards ?? [];
 		selectedOfferedCards = tradeCards
 			.filter((entry) => entry.side === 'offered')
 			.map((entry) => entry.card);
@@ -213,6 +201,11 @@
 			.map((entry) => entry.card);
 		selectedOffer = offer;
 		detailOpen = true;
+	}
+
+	async function openMessage(participantId: string) {
+		const conversation = await getOrCreateDirectConversation(participantId);
+		await goto(`${resolve('/messages')}?conversation=${encodeURIComponent(conversation.id)}`);
 	}
 </script>
 
@@ -243,6 +236,7 @@
 			onRespond={respond}
 			onCounterOffer={openCounterOffer}
 			onView={(offer) => void openTradeDetail(offer)}
+			onMessage={(participantId) => void openMessage(participantId)}
 		/>{/if}
 </section>
 

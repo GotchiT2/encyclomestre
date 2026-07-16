@@ -67,12 +67,14 @@ describe('TradeOfferCard', () => {
 
 	it('shows both sides and the direct-message action on mobile', async () => {
 		await page.viewport(390, 844);
+		const onMessage = vi.fn();
 		render(TradeOfferCard, {
 			offer,
 			cards,
 			currentUserId: 'current-user',
 			onRespond: vi.fn(),
 			onView: vi.fn(),
+			onMessage,
 			onCounterOffer: vi.fn()
 		});
 
@@ -80,9 +82,8 @@ describe('TradeOfferCard', () => {
 		await expect.element(page.getByText('@claire.trade')).toBeVisible();
 		await expect.element(page.getByText('R · Carte proposée')).toBeVisible();
 		await expect.element(page.getByText('L · Carte demandée')).toBeVisible();
-		await expect
-			.element(page.getByRole('link', { name: 'Envoyer un message à Claire Trade' }))
-			.toHaveAttribute('href', '/messages?user=user-claire');
+		await page.getByRole('button', { name: 'Envoyer un message à Claire Trade' }).click();
+		expect(onMessage).toHaveBeenCalledWith('user-claire');
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
 	});
 
@@ -95,6 +96,7 @@ describe('TradeOfferCard', () => {
 			currentUserId: 'current-user',
 			onRespond: vi.fn(),
 			onView,
+			onMessage: vi.fn(),
 			onCounterOffer: vi.fn()
 		});
 

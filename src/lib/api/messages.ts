@@ -9,6 +9,13 @@ const normalizeMessage = (message: MessageRecord): MessageRecord => ({
 export const getConversations = (_userId?: string, options?: RequestOptions) =>
 	apiRequest<Conversation[]>('/api/conversations', options);
 
+export const getOrCreateDirectConversation = (participantId: string, options?: RequestOptions) =>
+	apiRequest<Conversation>('/api/conversations/direct', {
+		...options,
+		method: 'POST',
+		body: { participantId }
+	});
+
 export const getConversationMessages = async (id: string, options?: RequestOptions) =>
 	(
 		await apiRequest<MessageRecord[]>(

@@ -1,6 +1,4 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- query parameters are appended to a resolved route */
-	import { resolve } from '$app/paths';
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
 	import ArrowLeftRightIcon from '@lucide/svelte/icons/arrow-left-right';
@@ -16,6 +14,7 @@
 		currentUserId,
 		onRespond,
 		onView,
+		onMessage,
 		onCounterOffer
 	}: {
 		offer: TradeOffer;
@@ -23,6 +22,7 @@
 		currentUserId: string;
 		onRespond: (id: string, status: 'accepted' | 'rejected') => void;
 		onView: (offer: TradeOffer) => void;
+		onMessage: (participantId: string) => void;
 		onCounterOffer: (offer: TradeOffer) => void;
 	} = $props();
 
@@ -43,7 +43,6 @@
 				? 'text-destructive'
 				: 'text-primary'
 	);
-	const messageUrl = $derived(`${resolve('/messages')}?user=${encodeURIComponent(counterpart.id)}`);
 
 	function formattedDate(value: string) {
 		return new Date(value).toLocaleDateString('fr-FR', {
@@ -74,14 +73,15 @@
 			<time class="hidden font-mono text-[9px] uppercase text-muted-foreground sm:block">
 				{formattedDate(offer.createdAt)}
 			</time>
-			<a
-				href={messageUrl}
+			<button
+				type="button"
 				class="grid size-11 place-items-center text-muted-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
 				aria-label={$_('trades.message_user', { values: { user: counterpartName } })}
 				title={$_('trades.message_user', { values: { user: counterpartName } })}
+				onclick={() => onMessage(counterpart.id)}
 			>
 				<MessageCircleIcon class="size-4" />
-			</a>
+			</button>
 		</div>
 	</header>
 

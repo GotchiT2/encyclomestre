@@ -11,6 +11,7 @@
 		onTabChange,
 		onRespond,
 		onView,
+		onMessage,
 		onCounterOffer
 	}: {
 		offers: TradeOffer[];
@@ -19,6 +20,7 @@
 		onTabChange: (tab: LedgerTab) => void;
 		onRespond: (id: string, status: 'accepted' | 'rejected') => void;
 		onView: (offer: TradeOffer) => void;
+		onMessage: (participantId: string) => void;
 		onCounterOffer: (offer: TradeOffer) => void;
 	} = $props();
 	type LedgerTab = 'received' | 'sent' | 'history';
@@ -63,6 +65,7 @@
 				{currentUserId}
 				{onRespond}
 				{onView}
+				{onMessage}
 				{onCounterOffer}
 			/>{/each}
 	</div>

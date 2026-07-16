@@ -24,6 +24,7 @@ interface ApiTradeOffer {
 	status: TradeOffer['status'];
 	offeredUserCardIds: string[];
 	requestedUserCardIds: string[];
+	cards?: ApiTradeCardDetail[];
 	offeredCredits: number;
 	requestedCredits: number;
 	createdAt: string;
@@ -41,6 +42,15 @@ const fallbackParticipant = (id: string): TradeParticipant => ({
 	displayName: id
 });
 
+const toTradeCardDetail = (entry: ApiTradeCardDetail): TradeCardDetail => {
+	const card = toCardRecord(entry.card);
+	return {
+		userCardId: entry.userCardId,
+		side: entry.side,
+		card: { ...card, id: entry.userCardId, catalogueId: card.id }
+	};
+};
+
 const toTradeOffer = (offer: ApiTradeOffer): TradeOffer => ({
 	id: offer.id,
 	initiatorId: offer.initiatorId,
@@ -49,6 +59,7 @@ const toTradeOffer = (offer: ApiTradeOffer): TradeOffer => ({
 	recipient: offer.recipient ?? fallbackParticipant(offer.recipientId),
 	offeredCardIds: offer.offeredUserCardIds,
 	requestedCardIds: offer.requestedUserCardIds,
+	cards: (offer.cards ?? []).map(toTradeCardDetail),
 	offeredCredits: offer.offeredCredits,
 	requestedCredits: offer.requestedCredits,
 	status: offer.status,
@@ -74,14 +85,7 @@ export const getTradeCards = async (
 ): Promise<TradeCardDetail[]> =>
 	(
 		await apiRequest<ApiTradeCardDetail[]>(`/api/trades/${encodeURIComponent(id)}/cards`, options)
-	).map((entry) => {
-		const card = toCardRecord(entry.card);
-		return {
-			userCardId: entry.userCardId,
-			side: entry.side,
-			card: { ...card, id: entry.userCardId, catalogueId: card.id }
-		};
-	});
+	).map(toTradeCardDetail);
 
 export const getTradeOffers = async (_userId?: string, options?: RequestOptions) => {
 	const [received, sent, history] = await Promise.all([

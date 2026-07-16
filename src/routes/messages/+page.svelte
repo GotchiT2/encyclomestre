@@ -7,7 +7,8 @@
 
 	const userId = $derived($currentSession?.user.id ?? 'demo-user');
 	const initialConversationId = $derived(
-		page.url.searchParams.get('user') ? `conversation-${page.url.searchParams.get('user')}` : ''
+		page.url.searchParams.get('conversation') ??
+			(page.url.searchParams.get('user') ? `conversation-${page.url.searchParams.get('user')}` : '')
 	);
 </script>
 

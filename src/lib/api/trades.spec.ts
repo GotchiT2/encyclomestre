@@ -23,6 +23,20 @@ const apiOffer = (id: string, status: string) => ({
 	status,
 	offeredUserCardIds: [`offered-${id}`],
 	requestedUserCardIds: [`requested-${id}`],
+	cards: [
+		{
+			userCardId: `offered-${id}`,
+			side: 'offered',
+			card: {
+				id: `variant-${id}`,
+				variant: 'NORMAL',
+				isFullArt: false,
+				wikipediaTitle: `Carte ${id}`,
+				imageUrl: '/card-placeholder.svg',
+				rarity: 'R'
+			}
+		}
+	],
 	offeredCredits: 10,
 	requestedCredits: 5,
 	createdAt: '2026-07-16T12:00:00Z'
@@ -52,6 +66,15 @@ describe('trade ledger', () => {
 			expect.objectContaining({
 				id: 'received',
 				offeredCardIds: ['offered-received'],
+				cards: [
+					expect.objectContaining({
+						userCardId: 'offered-received',
+						card: expect.objectContaining({
+							id: 'offered-received',
+							catalogueId: 'variant-received'
+						})
+					})
+				],
 				initiator: expect.objectContaining({ displayName: 'Claire Trade' })
 			}),
 			expect.objectContaining({ id: 'sent', requestedCardIds: ['requested-sent'] }),
