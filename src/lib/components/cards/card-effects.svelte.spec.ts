@@ -7,8 +7,8 @@ describe('CardEffects', () => {
 	it.each([
 		['PC', 'pc', '1', 'false'],
 		['R', 'r', '2', 'false'],
-		['SR', 'sr', '3', 'true'],
-		['UR', 'ur', '4', 'true'],
+		['SR', 'sr', '3', 'false'],
+		['UR', 'ur', '4', 'false'],
 		['L', 'l', '5', 'true']
 	] as const)('renders the progressive %s profile', async (rarity, profile, level, ambient) => {
 		render(CardEffects, { rarity, active: true });
@@ -34,11 +34,22 @@ describe('CardEffects', () => {
 		await expect.element(page.getByTestId('card-effects')).toHaveAttribute('data-ambient', 'true');
 	});
 
-	it('keeps ambient foil motion for SR and higher profiles', () => {
-		render(CardEffects, { rarity: 'SR' });
+	it.each(['SR', 'UR'] as const)('keeps %s still at rest', (rarity) => {
+		render(CardEffects, { rarity });
 
-		const foil = document.querySelector<HTMLElement>('.card-effects__foil');
-		expect(getComputedStyle(foil!).animationName).toContain('wikiforge-foil-drift');
+		const varnish = document.querySelector<HTMLElement>('.card-effects__varnish');
+		const sparkles = document.querySelector<HTMLElement>('.card-effects__sparkles');
+		expect(getComputedStyle(varnish!).animationName).toBe('none');
+		expect(getComputedStyle(sparkles!).animationName).toBe('none');
+		expect(getComputedStyle(varnish!).backgroundImage).not.toContain('linear-gradient');
+		expect(getComputedStyle(varnish!).backgroundImage).not.toContain('repeating');
+	});
+
+	it('only breathes the fixed legendary sparkles at rest', () => {
+		render(CardEffects, { rarity: 'L' });
+
+		const sparkles = document.querySelector<HTMLElement>('.card-effects__sparkles');
+		expect(getComputedStyle(sparkles!).animationName).toContain('wikiforge-sparkle-breathe');
 	});
 
 	it('keeps common cards free from foil effects', async () => {

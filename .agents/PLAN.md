@@ -256,3 +256,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Consommer les cartes embarquées des registres et créer ou retrouver les conversations directes depuis les échanges — `perf(trades): consume embedded cards and direct messages`
 - [x] Limiter les effets de rareté à un reflet neutre sur les illustrations PC/R et adoucir l'inclinaison 3D — `feat(cards): add subtle rarity illustration effects`
 - [x] Étendre les effets foil progressifs de PC à Full Art sans masquer les illustrations — `feat(cards): add progressive foil profiles`
+- [x] Remplacer les bandes foil artificielles par un vernis spéculaire piloté par l'angle — `fix(cards): replace artificial foil bands`

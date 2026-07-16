@@ -21,7 +21,7 @@
 	};
 	const hasEffect = $derived(rarity !== 'C');
 	const profile = $derived(fullArt && rarity === 'L' ? 'full-art' : rarity.toLowerCase());
-	const hasAmbientAnimation = $derived(['SR', 'UR', 'L'].includes(rarity));
+	const hasAmbientAnimation = $derived(rarity === 'L');
 	const effectLevel = $derived(fullArt && rarity === 'L' ? 6 : effectLevelByRarity[rarity]);
 </script>
 
@@ -37,8 +37,8 @@
 		aria-hidden="true"
 	>
 		<span class="card-effects__glare"></span>
-		<span class="card-effects__foil"></span>
-		<span class="card-effects__accent"></span>
+		<span class="card-effects__varnish"></span>
+		<span class="card-effects__sparkles"></span>
 	</span>
 {/if}
 
@@ -56,89 +56,94 @@
 		isolation: isolate;
 		--glare-rest: 0;
 		--glare-active: 0;
-		--foil-rest: 0;
-		--foil-active: 0;
-		--accent-rest: 0;
-		--accent-active: 0;
+		--varnish-rest: 0;
+		--varnish-active: 0;
+		--sparkles-rest: 0;
+		--sparkles-active: 0;
 	}
 
 	.card-effects > span {
-		transition: opacity 180ms ease;
+		transition:
+			opacity 180ms ease,
+			filter 240ms ease;
 	}
 
 	.card-effects__glare {
 		background:
 			radial-gradient(
-				circle at calc(var(--card-pointer-x, 50) * 1%) calc(var(--card-pointer-y, 50) * 1%),
-				rgb(255 255 255 / 96%) 0,
-				rgb(255 255 255 / 48%) 9%,
-				transparent 37%
+				ellipse 48% 34% at calc(var(--card-pointer-x, 50) * 1%) calc(var(--card-pointer-y, 50) * 1%),
+				rgb(255 255 255 / 92%) 0,
+				rgb(255 255 255 / 46%) 18%,
+				rgb(255 255 255 / 12%) 42%,
+				transparent 68%
 			),
-			linear-gradient(
-				112deg,
-				transparent 29%,
-				rgb(255 255 255 / 72%) 47%,
-				rgb(255 255 255 / 26%) 55%,
+			radial-gradient(
+				ellipse 82% 62% at calc(var(--card-pointer-x, 50) * 1%) calc(var(--card-pointer-y, 50) * 1%),
+				rgb(255 255 255 / 26%),
 				transparent 72%
 			);
-		background-position:
-			center,
-			calc(var(--card-pointer-x, 50) * 1%) center;
 		mix-blend-mode: screen;
 		opacity: var(--glare-rest);
 	}
 
-	.card-effects__foil {
+	.card-effects__varnish {
 		background:
-			repeating-linear-gradient(
-				118deg,
-				transparent 0 9px,
-				rgb(190 235 232 / 72%) 10px,
-				transparent 12px 20px
+			radial-gradient(
+				ellipse 58% 74% at calc(var(--card-pointer-x, 50) * 1% - 18%)
+					calc(var(--card-pointer-y, 50) * 1% + 10%),
+				rgb(142 214 210 / 78%),
+				rgb(194 232 229 / 34%) 38%,
+				transparent 72%
 			),
-			linear-gradient(
-				108deg,
-				transparent 18%,
-				rgb(255 255 255 / 74%) 37%,
-				rgb(126 205 201 / 64%) 49%,
-				rgb(245 218 144 / 68%) 61%,
-				transparent 82%
+			radial-gradient(
+				ellipse 52% 68% at calc(var(--card-pointer-x, 50) * 1% + 20%)
+					calc(var(--card-pointer-y, 50) * 1% - 12%),
+				rgb(245 218 144 / 76%),
+				rgb(255 246 211 / 26%) 42%,
+				transparent 74%
+			),
+			radial-gradient(
+				ellipse 72% 54% at calc(var(--card-pointer-x, 50) * 1%) calc(var(--card-pointer-y, 50) * 1%),
+				rgb(255 255 255 / 54%),
+				transparent 70%
 			);
-		background-position:
-			calc(var(--card-pointer-x, 50) * 0.3%) calc(var(--card-pointer-y, 50) * 0.2%),
-			calc(var(--card-pointer-x, 50) * 1%) calc(var(--card-pointer-y, 50) * 1%);
-		background-size:
-			150% 150%,
-			210% 210%;
-		filter: contrast(1.06);
+		filter: saturate(0.82) contrast(1.02);
 		mix-blend-mode: soft-light;
-		opacity: var(--foil-rest);
+		opacity: var(--varnish-rest);
 	}
 
-	.card-effects__accent {
-		background: linear-gradient(
-			96deg,
-			transparent 27%,
-			rgb(245 218 144 / 76%) 47%,
-			rgb(178 229 225 / 58%) 55%,
-			transparent 73%
-		);
-		background-position: calc(var(--card-pointer-x, 50) * 1%) center;
-		background-size: 190% 100%;
+	.card-effects__sparkles {
+		background-image:
+			radial-gradient(circle at 12% 19%, rgb(255 255 255 / 92%) 0 0.8px, transparent 1.9px),
+			radial-gradient(circle at 69% 14%, rgb(245 218 144 / 88%) 0 1px, transparent 2.1px),
+			radial-gradient(circle at 37% 61%, rgb(173 229 225 / 90%) 0 1.1px, transparent 2.2px),
+			radial-gradient(circle at 84% 73%, rgb(255 255 255 / 82%) 0 0.8px, transparent 1.9px),
+			radial-gradient(circle at 21% 84%, rgb(245 218 144 / 76%) 0 0.9px, transparent 2px),
+			radial-gradient(circle at 57% 39%, rgb(255 255 255 / 78%) 0 0.7px, transparent 1.8px),
+			radial-gradient(circle at 92% 42%, rgb(166 222 218 / 80%) 0 0.9px, transparent 2px);
+		background-size:
+			47% 41%,
+			63% 52%,
+			71% 66%,
+			53% 61%,
+			58% 49%,
+			67% 57%,
+			49% 68%;
+		filter: brightness(0.88);
 		mix-blend-mode: screen;
-		opacity: var(--accent-rest);
+		opacity: var(--sparkles-rest);
 	}
 
 	.card-effects[data-active='true'] .card-effects__glare {
 		opacity: var(--glare-active);
 	}
 
-	.card-effects[data-active='true'] .card-effects__foil {
-		opacity: var(--foil-active);
+	.card-effects[data-active='true'] .card-effects__varnish {
+		opacity: var(--varnish-active);
 	}
 
-	.card-effects[data-active='true'] .card-effects__accent {
-		opacity: var(--accent-active);
+	.card-effects[data-active='true'] .card-effects__sparkles {
+		opacity: var(--sparkles-active);
 	}
 
 	.card-effects[data-profile='pc'] {
@@ -147,109 +152,51 @@
 
 	.card-effects[data-profile='r'] {
 		--glare-active: 0.28;
-		--foil-active: 0.11;
+		--varnish-active: 0.08;
 	}
 
 	.card-effects[data-profile='sr'] {
-		--glare-rest: 0.02;
-		--glare-active: 0.25;
-		--foil-rest: 0.04;
-		--foil-active: 0.17;
-		--accent-rest: 0.02;
-		--accent-active: 0.1;
+		--glare-active: 0.26;
+		--varnish-active: 0.17;
 	}
 
 	.card-effects[data-profile='ur'] {
-		--glare-rest: 0.03;
-		--glare-active: 0.26;
-		--foil-rest: 0.055;
-		--foil-active: 0.21;
-		--accent-rest: 0.035;
-		--accent-active: 0.15;
+		--glare-active: 0.28;
+		--varnish-active: 0.22;
+		--sparkles-active: 0.08;
 	}
 
 	.card-effects[data-profile='l'] {
-		--glare-rest: 0.04;
-		--glare-active: 0.28;
-		--foil-rest: 0.065;
-		--foil-active: 0.24;
-		--accent-rest: 0.055;
-		--accent-active: 0.2;
+		--glare-active: 0.3;
+		--varnish-active: 0.24;
+		--sparkles-rest: 0.025;
+		--sparkles-active: 0.15;
 	}
 
 	.card-effects[data-profile='full-art'] {
-		--glare-rest: 0.035;
-		--glare-active: 0.2;
-		--foil-rest: 0.06;
-		--foil-active: 0.18;
-		--accent-rest: 0.05;
-		--accent-active: 0.16;
+		--glare-active: 0.21;
+		--varnish-active: 0.18;
+		--sparkles-rest: 0.02;
+		--sparkles-active: 0.11;
 	}
 
-	.card-effects[data-profile='ur'] .card-effects__accent,
-	.card-effects[data-profile='l'] .card-effects__accent,
-	.card-effects[data-profile='full-art'] .card-effects__accent {
-		background-image:
-			linear-gradient(
-				98deg,
-				transparent 24%,
-				rgb(245 218 144 / 82%) 45%,
-				rgb(255 255 255 / 66%) 51%,
-				rgb(151 218 213 / 62%) 58%,
-				transparent 76%
+	.card-effects[data-profile='full-art'] .card-effects__glare {
+		background:
+			radial-gradient(
+				ellipse 58% 42% at calc(var(--card-pointer-x, 50) * 1%) calc(var(--card-pointer-y, 50) * 1%),
+				rgb(255 255 255 / 84%),
+				rgb(255 255 255 / 32%) 24%,
+				transparent 72%
 			),
 			radial-gradient(
-				circle at calc(var(--card-pointer-x, 50) * 1%) calc(var(--card-pointer-y, 50) * 1%),
-				rgb(245 218 144 / 72%),
-				transparent 31%
-			);
-		background-size:
-			190% 100%,
-			100% 100%;
-	}
-
-	.card-effects[data-profile='l'] .card-effects__accent,
-	.card-effects[data-profile='full-art'] .card-effects__accent {
-		background-image:
-			radial-gradient(circle at 15% 22%, rgb(255 255 255 / 90%) 0 1px, transparent 2px),
-			radial-gradient(circle at 76% 18%, rgb(245 218 144 / 82%) 0 1px, transparent 2px),
-			radial-gradient(circle at 42% 68%, rgb(175 229 225 / 86%) 0 1.2px, transparent 2.2px),
-			radial-gradient(circle at 88% 72%, rgb(255 255 255 / 76%) 0 1px, transparent 2px),
-			linear-gradient(
-				98deg,
-				transparent 24%,
-				rgb(245 218 144 / 76%) 46%,
-				rgb(255 255 255 / 62%) 51%,
-				rgb(151 218 213 / 56%) 58%,
+				ellipse 92% 74% at calc(var(--card-pointer-x, 50) * 1%) calc(var(--card-pointer-y, 50) * 1%),
+				rgb(255 255 255 / 20%),
 				transparent 76%
 			);
-		background-position:
-			calc(var(--card-pointer-x, 50) * 0.15%) calc(var(--card-pointer-y, 50) * 0.12%),
-			calc(var(--card-pointer-x, 50) * -0.12%) calc(var(--card-pointer-y, 50) * 0.18%),
-			center,
-			center,
-			calc(var(--card-pointer-x, 50) * 1%) center;
-		background-size:
-			42% 38%,
-			56% 48%,
-			60% 58%,
-			38% 46%,
-			190% 100%;
 	}
 
-	.card-effects[data-profile='full-art'] .card-effects__foil {
-		background-size:
-			220% 165%,
-			250% 190%;
-	}
-
-	.card-effects[data-ambient='true'] .card-effects__foil {
-		animation: wikiforge-foil-drift 8s ease-in-out infinite;
-	}
-
-	.card-effects[data-profile='l'] .card-effects__accent,
-	.card-effects[data-profile='full-art'] .card-effects__accent {
-		animation: wikiforge-sparkle-drift 5.6s ease-in-out infinite;
+	.card-effects[data-ambient='true'] .card-effects__sparkles {
+		animation: wikiforge-sparkle-breathe 6.8s ease-in-out infinite;
 	}
 
 	@media (prefers-reduced-motion: reduce) {
@@ -257,32 +204,12 @@
 			animation: none !important;
 			transition: none;
 		}
-
-		.card-effects__glare,
-		.card-effects__foil,
-		.card-effects__accent {
-			background-position: center;
-		}
 	}
 
-	@keyframes wikiforge-foil-drift {
+	@keyframes wikiforge-sparkle-breathe {
 		0%,
 		100% {
-			background-position:
-				18% 24%,
-				28% 38%;
-		}
-		50% {
-			background-position:
-				78% 72%,
-				72% 62%;
-		}
-	}
-
-	@keyframes wikiforge-sparkle-drift {
-		0%,
-		100% {
-			filter: brightness(0.88);
+			filter: brightness(0.72);
 		}
 		50% {
 			filter: brightness(1.08);
