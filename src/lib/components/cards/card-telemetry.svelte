@@ -5,36 +5,36 @@
 </script>
 
 <dl
-	class="grid grid-cols-2 divide-x divide-y divide-primary/10 border border-primary/20 sm:grid-cols-3"
+	class="grid grid-cols-3 divide-x divide-y divide-primary/10 border border-primary/20 sm:grid-cols-5"
 >
-	<div class="p-3">
+	<div class="p-2">
 		<dt class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
 			{$_('codex.attack')}
 		</dt>
-		<dd class="font-mono text-lg text-primary">{card.attack}</dd>
+		<dd class="font-mono text-base text-primary">{card.attack}</dd>
 	</div>
-	<div class="p-3">
+	<div class="p-2">
 		<dt class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
 			{$_('codex.defense')}
 		</dt>
-		<dd class="font-mono text-lg text-primary">{card.defense}</dd>
+		<dd class="font-mono text-base text-primary">{card.defense}</dd>
 	</div>
-	<div class="p-3">
+	<div class="p-2">
 		<dt class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
 			{$_('codex.owned')}
 		</dt>
-		<dd class="font-mono text-lg text-primary">{card.ownedCount}</dd>
+		<dd class="font-mono text-base text-primary">{card.ownedCount}</dd>
 	</div>
-	<div class="p-3">
+	<div class="p-2">
 		<dt class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
 			{$_('codex.supply')}
 		</dt>
-		<dd class="font-mono text-lg text-primary">{card.globalSupply}</dd>
+		<dd class="font-mono text-base text-primary">{card.globalSupply}</dd>
 	</div>
-	<div class="p-3">
+	<div class="p-2">
 		<dt class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
 			{$_('codex.views')}
 		</dt>
-		<dd class="font-mono text-lg text-primary">{card.viewCount}</dd>
+		<dd class="font-mono text-base text-primary">{card.viewCount}</dd>
 	</div>
 </dl>

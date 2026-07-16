@@ -9,14 +9,14 @@
 	}: { sales: SaleListing[]; history: CardPriceHistory; onMarket: () => void } = $props();
 </script>
 
-<section class="border-4 border-double border-primary/30 bg-card p-4">
+<section class="border-4 border-double border-primary/30 bg-card p-3">
 	<div class="flex items-center justify-between gap-3">
 		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('cardDetail.market_summary')}
 		</p>
 		<Button size="xs" variant="outline" onclick={onMarket}>{$_('cardDetail.market')}</Button>
 	</div>
-	{#if sales.length}<ul class="mt-3 divide-y divide-primary/10 border-y border-primary/10">
+	{#if sales.length}<ul class="mt-2 divide-y divide-primary/10 border-y border-primary/10">
 			{#each sales as sale (sale.id)}<li
 					class="flex justify-between gap-3 py-2 font-mono text-[10px] uppercase tracking-widest"
 				>
@@ -29,7 +29,7 @@
 		</ul>{:else}<p class="mt-3 font-serif text-sm italic text-muted-foreground">
 			{$_('cardDetail.no_sales')}
 		</p>{/if}
-	<p class="mt-4 font-mono text-[10px] uppercase tracking-widest text-primary">
+	<p class="mt-3 font-mono text-[10px] uppercase tracking-widest text-primary">
 		{$_('codex.priceHistory')}
 	</p>
 	<ul class="mt-2 divide-y divide-primary/10 border-y border-primary/10">

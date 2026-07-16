@@ -37,14 +37,14 @@
 	}
 </script>
 
-<section class="border border-primary/25 bg-card p-4">
+<section class="border border-primary/25 bg-card p-3">
 	<div class="flex flex-wrap items-center justify-between gap-2">
 		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('collection.tags')}
 		</p>
 		<TagEditor bind:open={editorOpen} bind:tags bind:assignments />
 	</div>
-	<div class="mt-3 flex flex-wrap gap-1.5">
+	<div class="mt-2 flex flex-wrap gap-1.5">
 		{#each assignedTags as tag (tag.id)}
 			<Button
 				size="xs"
@@ -54,10 +54,10 @@
 			>
 		{/each}
 	</div>
-	<div class="mt-3 flex flex-wrap gap-2">
+	<div class="mt-2 flex flex-wrap gap-2">
 		<select
 			bind:value={tagToAdd}
-			class="h-9 min-w-44 flex-1 border-2 border-primary/40 bg-background px-3 font-mono text-[10px] uppercase tracking-wider text-primary outline-none focus:border-primary"
+			class="h-11 min-w-44 flex-1 border-2 border-primary/40 bg-background px-3 font-mono text-[10px] uppercase tracking-wider text-primary outline-none focus:border-primary"
 		>
 			<option value="">{$_('cardDetail.choose_tag')}</option>
 			{#each tags.filter((tag) => !assignedTags.some((assigned) => assigned.id === tag.id)) as tag (tag.id)}

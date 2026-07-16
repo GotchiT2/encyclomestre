@@ -37,6 +37,7 @@ describe('CardDetailModal', () => {
 	afterEach(async () => page.viewport(1280, 720));
 
 	it('uses its content height without an internal desktop scrollbar', async () => {
+		await page.viewport(1280, 720);
 		render(CardDetailModal, {
 			card,
 			onToggleWishlist: vi.fn(),
@@ -49,6 +50,12 @@ describe('CardDetailModal', () => {
 		await expect
 			.element(page.getByTestId('card-detail-tab-panel'))
 			.not.toHaveClass(/overflow-y-auto/);
+		expect(
+			document
+				.querySelector<HTMLElement>('.card-detail-preview .wikiforge-card-size')!
+				.getBoundingClientRect().width
+		).toBeGreaterThanOrEqual(330);
+		await expect.element(page.getByText('Description complète.')).toBeVisible();
 	});
 
 	it('keeps the modal and its actions accessible on mobile', async () => {
@@ -66,9 +73,13 @@ describe('CardDetailModal', () => {
 		const overlay = document.querySelector<HTMLElement>('[data-testid="card-detail-overlay"]')!;
 		const modalRect = modal.getBoundingClientRect();
 		const actionsRect = actions.getBoundingClientRect();
+		const cardRect = document
+			.querySelector<HTMLElement>('.card-detail-preview .wikiforge-card-size')!
+			.getBoundingClientRect();
 		expect(modalRect.left).toBeGreaterThanOrEqual(0);
 		expect(modalRect.right).toBeLessThanOrEqual(window.innerWidth);
 		expect(modalRect.bottom).toBeLessThanOrEqual(window.innerHeight);
+		expect(cardRect.width).toBeGreaterThanOrEqual(190);
 		expect(Number(getComputedStyle(overlay).zIndex)).toBeGreaterThan(40);
 		expect(actionsRect.bottom).toBeLessThanOrEqual(modalRect.bottom);
 		expect(actions.querySelectorAll('button')).toHaveLength(3);
