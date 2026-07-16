@@ -1,16 +1,25 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-navigation-without-resolve -- query parameters are appended to a resolved route */
+	import { resolve } from '$app/paths';
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
-	import type { TradeOffer } from '$lib/types';
+	import ArrowLeftRightIcon from '@lucide/svelte/icons/arrow-left-right';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
+	import Undo2Icon from '@lucide/svelte/icons/undo-2';
+	import XIcon from '@lucide/svelte/icons/x';
+	import type { TradeCardDetail, TradeOffer } from '$lib/types';
 
 	let {
 		offer,
+		cards,
 		currentUserId,
 		onRespond,
 		onView,
 		onCounterOffer
 	}: {
 		offer: TradeOffer;
+		cards: TradeCardDetail[];
 		currentUserId: string;
 		onRespond: (id: string, status: 'accepted' | 'rejected') => void;
 		onView: (offer: TradeOffer) => void;
@@ -22,96 +31,163 @@
 	const counterpartName = $derived(
 		counterpart.displayName.trim() || counterpart.username || counterpart.id
 	);
+	const initiatorName = $derived(
+		offer.initiator.displayName.trim() || offer.initiator.username || offer.initiatorId
+	);
+	const offeredCards = $derived(cards.filter((entry) => entry.side === 'offered'));
+	const requestedCards = $derived(cards.filter((entry) => entry.side === 'requested'));
 	const statusClass = $derived(
 		offer.status === 'accepted'
-			? 'border-emerald-500/50 text-emerald-400'
-			: offer.status === 'rejected'
-				? 'border-destructive/50 text-destructive'
-				: 'border-primary/50 text-primary'
+			? 'text-emerald-400'
+			: offer.status === 'rejected' || offer.status === 'cancelled'
+				? 'text-destructive'
+				: 'text-primary'
 	);
+	const messageUrl = $derived(`${resolve('/messages')}?user=${encodeURIComponent(counterpart.id)}`);
+
+	function formattedDate(value: string) {
+		return new Date(value).toLocaleDateString('fr-FR', {
+			day: '2-digit',
+			month: 'short'
+		});
+	}
 </script>
 
 <article
-	class="min-w-0 border border-primary/25 bg-card p-3 transition-colors hover:border-primary/60 sm:p-4"
+	class="min-w-0 border border-primary/20 bg-card/85 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition-colors hover:border-primary/45 sm:p-4"
 >
-	<button type="button" class="block w-full cursor-pointer text-left" onclick={() => onView(offer)}>
-		<header
-			class="flex flex-wrap items-start justify-between gap-3 border-b border-dashed border-primary/20 pb-3"
-		>
-			<div class="min-w-0">
-				<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-					{isIncoming ? $_('trades.incoming') : $_('trades.outgoing')}
-				</p>
-				<h2
-					class="mt-1 break-words font-serif text-lg font-black uppercase tracking-tight sm:text-xl"
-				>
+	<header class="flex min-w-0 items-start justify-between gap-3">
+		<div class="min-w-0">
+			<div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+				<h2 class="break-words font-serif text-base font-bold text-foreground sm:text-lg">
 					{isIncoming
 						? $_('trades.from', { values: { user: counterpartName } })
 						: $_('trades.to', { values: { user: counterpartName } })}
 				</h2>
-				<p class="mt-1 truncate text-xs text-muted-foreground">@{counterpart.username}</p>
+				<span class={`font-mono text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>
+					· {$_(`trades.status.${offer.status}`)}
+				</span>
 			</div>
-			<span class={`border px-2 py-1 font-mono text-[9px] uppercase tracking-widest ${statusClass}`}
-				>{$_(`trades.status.${offer.status}`)}</span
-			>
-		</header>
-		<div class="grid gap-3 py-4 sm:grid-cols-2">
-			<div class="border border-primary/15 bg-background/40 p-3">
-				<p class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-					{$_('trades.offered')}
-				</p>
-				<div class="mt-2 flex flex-wrap gap-1.5">
-					{#if offer.offeredCardIds.length}<span
-							class="border border-primary/40 bg-primary/10 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-primary"
-							>{$_('trades.cardCount', { values: { count: offer.offeredCardIds.length } })}</span
-						>{/if}{#if offer.offeredCredits > 0}<span
-							class="border border-primary/60 bg-primary/15 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-primary"
-							>{offer.offeredCredits} {$_('trades.credit_chip')}</span
-						>{/if}
-				</div>
-			</div>
-			<div class="border border-primary/15 bg-background/40 p-3">
-				<p class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-					{$_('trades.requested')}
-				</p>
-				<div class="mt-2 flex flex-wrap gap-1.5">
-					{#if offer.requestedCardIds.length}<span
-							class="border border-primary/40 bg-primary/10 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-primary"
-							>{$_('trades.cardCount', { values: { count: offer.requestedCardIds.length } })}</span
-						>{/if}{#if offer.requestedCredits > 0}<span
-							class="border border-primary/60 bg-primary/15 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-primary"
-							>{offer.requestedCredits} {$_('trades.credit_chip')}</span
-						>{/if}
-				</div>
-			</div>
+			<p class="mt-1 truncate text-xs text-muted-foreground">@{counterpart.username}</p>
 		</div>
+		<div class="flex shrink-0 items-center gap-1 sm:gap-2">
+			<time class="hidden font-mono text-[9px] uppercase text-muted-foreground sm:block">
+				{formattedDate(offer.createdAt)}
+			</time>
+			<a
+				href={messageUrl}
+				class="grid size-11 place-items-center text-muted-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+				aria-label={$_('trades.message_user', { values: { user: counterpartName } })}
+				title={$_('trades.message_user', { values: { user: counterpartName } })}
+			>
+				<MessageCircleIcon class="size-4" />
+			</a>
+		</div>
+	</header>
+
+	<button
+		type="button"
+		class="mt-3 grid w-full min-w-0 cursor-pointer items-stretch gap-3 text-left focus-visible:outline-2 focus-visible:outline-primary lg:grid-cols-[minmax(0,1fr)_2rem_minmax(0,1fr)] lg:gap-4"
+		onclick={() => onView(offer)}
+		aria-label={$_('trades.open_details')}
+	>
+		<section class="min-w-0">
+			<p class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+				{$_('trades.user_offers', { values: { user: initiatorName } })}
+			</p>
+			<div class="mt-2 flex min-h-7 flex-wrap content-start gap-x-4 gap-y-2">
+				{#each offeredCards as entry (entry.userCardId)}
+					<span
+						class="max-w-full truncate font-mono text-[10px] font-bold sm:text-xs"
+						style={`color:${entry.card.rarityColor}`}
+					>
+						{entry.card.rarityInitials} · {entry.card.title}
+					</span>
+				{/each}
+				{#if offer.offeredCredits > 0}
+					<span
+						class="border border-primary/35 bg-primary/12 px-2 py-0.5 font-mono text-[10px] text-primary"
+					>
+						{offer.offeredCredits}
+						{$_('trades.credit_chip')}
+					</span>
+				{/if}
+				{#if !offeredCards.length && offer.offeredCardIds.length}
+					<span class="font-mono text-[10px] uppercase text-muted-foreground">
+						{$_('trades.cardCount', { values: { count: offer.offeredCardIds.length } })}
+					</span>
+				{:else if !offeredCards.length && offer.offeredCredits <= 0}
+					<span class="font-mono text-[10px] uppercase text-muted-foreground"
+						>{$_('trades.nothing')}</span
+					>
+				{/if}
+			</div>
+		</section>
+
+		<div class="grid place-items-center text-muted-foreground/65" aria-hidden="true">
+			<ArrowLeftRightIcon class="size-4 rotate-90 lg:rotate-0" />
+		</div>
+
+		<section class="min-w-0">
+			<p class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+				{$_('trades.in_exchange')}
+			</p>
+			<div class="mt-2 flex min-h-7 flex-wrap content-start gap-x-4 gap-y-2">
+				{#each requestedCards as entry (entry.userCardId)}
+					<span
+						class="max-w-full truncate font-mono text-[10px] font-bold sm:text-xs"
+						style={`color:${entry.card.rarityColor}`}
+					>
+						{entry.card.rarityInitials} · {entry.card.title}
+					</span>
+				{/each}
+				{#if offer.requestedCredits > 0}
+					<span
+						class="border border-primary/35 bg-primary/12 px-2 py-0.5 font-mono text-[10px] text-primary"
+					>
+						{offer.requestedCredits}
+						{$_('trades.credit_chip')}
+					</span>
+				{/if}
+				{#if !requestedCards.length && offer.requestedCardIds.length}
+					<span class="font-mono text-[10px] uppercase text-muted-foreground">
+						{$_('trades.cardCount', { values: { count: offer.requestedCardIds.length } })}
+					</span>
+				{:else if !requestedCards.length && offer.requestedCredits <= 0}
+					<span class="font-mono text-[10px] uppercase text-muted-foreground"
+						>{$_('trades.nothing')}</span
+					>
+				{/if}
+			</div>
+		</section>
 	</button>
-	{#if isIncoming && offer.status === 'pending'}<footer
-			class="mt-4 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap"
+
+	{#if isIncoming && offer.status === 'pending'}
+		<footer
+			class="mt-4 grid grid-cols-1 gap-2 border-t border-primary/10 pt-3 sm:flex sm:flex-wrap"
 		>
+			<Button size="sm" class="w-full sm:w-auto" onclick={() => onRespond(offer.id, 'accepted')}>
+				<CheckIcon class="size-4" />
+				{$_('trades.accept')}
+			</Button>
 			<Button
-				size="sm"
-				class="w-full sm:w-auto"
-				onclick={(event) => {
-					event.stopPropagation();
-					onRespond(offer.id, 'accepted');
-				}}>{$_('trades.accept')}</Button
-			><Button
 				size="sm"
 				variant="outline"
 				class="w-full sm:w-auto"
-				onclick={(event) => {
-					event.stopPropagation();
-					onCounterOffer(offer);
-				}}>{$_('trades.counter_offer')}</Button
-			><Button
+				onclick={() => onCounterOffer(offer)}
+			>
+				<Undo2Icon class="size-4" />
+				{$_('trades.counter_offer')}
+			</Button>
+			<Button
 				size="sm"
 				variant="destructive"
 				class="w-full sm:w-auto"
-				onclick={(event) => {
-					event.stopPropagation();
-					onRespond(offer.id, 'rejected');
-				}}>{$_('trades.reject')}</Button
+				onclick={() => onRespond(offer.id, 'rejected')}
 			>
-		</footer>{/if}
+				<XIcon class="size-4" />
+				{$_('trades.reject')}
+			</Button>
+		</footer>
+	{/if}
 </article>

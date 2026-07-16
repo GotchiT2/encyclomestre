@@ -2,10 +2,11 @@
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
 	import TradeOfferCard from './trade-offer-card.svelte';
-	import type { TradeOffer } from '$lib/types';
+	import type { TradeCardDetail, TradeOffer } from '$lib/types';
 
 	let {
 		offers,
+		cardsByOffer,
 		currentUserId,
 		onTabChange,
 		onRespond,
@@ -13,6 +14,7 @@
 		onCounterOffer
 	}: {
 		offers: TradeOffer[];
+		cardsByOffer: ReadonlyMap<string, TradeCardDetail[]>;
 		currentUserId: string;
 		onTabChange: (tab: LedgerTab) => void;
 		onRespond: (id: string, status: 'accepted' | 'rejected') => void;
@@ -54,9 +56,10 @@
 </div>
 
 {#if visibleOffers.length}
-	<div class="grid gap-3 lg:grid-cols-2">
+	<div class="grid gap-3">
 		{#each visibleOffers as offer (offer.id)}<TradeOfferCard
 				{offer}
+				cards={cardsByOffer.get(offer.id) ?? []}
 				{currentUserId}
 				{onRespond}
 				{onView}

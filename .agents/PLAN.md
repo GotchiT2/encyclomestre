@@ -252,3 +252,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Limiter le chargement initial aux offres reçues et différer les autres registres, collections et partenaires jusqu’aux actions utilisateur — `perf(trades): defer collection hydration`
 - [x] Charger les cartes détaillées d’une wishlist nommée avec son endpoint hydraté dédié — `perf(wishlist): load registry cards in one request`
 - [x] Charger les deux côtés d’un échange avec l’endpoint hydraté dédié sans parcourir les collections — `perf(trades): load detailed cards in one request`
+- [x] Présenter chaque échange comme une vue bilatérale détaillée avec cartes, crédits, actions et accès direct aux messages — `feat(trades): build bilateral offer summaries`

@@ -50,6 +50,7 @@
 	type TradeTab = 'received' | 'sent' | 'history';
 	const tradeRequests = new SvelteMap<TradeTab, Promise<TradeOffer[]>>();
 	const tradeCardRequests = new SvelteMap<string, Promise<TradeCardDetail[]>>();
+	const tradeCardsByOffer = new SvelteMap<string, TradeCardDetail[]>();
 
 	onMount(async () => {
 		currentUserId = $currentSession?.user.id ?? 'demo-user';
@@ -83,12 +84,30 @@
 				: tab === 'sent'
 					? getSentTradeOffers()
 					: getTradeHistory()
-		).then((result) => {
+		).then(async (result) => {
 			offers = [...new Map([...offers, ...result].map((offer) => [offer.id, offer])).values()];
+			await Promise.all(result.map((offer) => loadTradeCards(offer.id).catch(() => [])));
 			return result;
 		});
 		tradeRequests.set(tab, request);
 		return request;
+	}
+
+	async function loadTradeCards(offerId: string) {
+		let cardsRequest = tradeCardRequests.get(offerId);
+		if (!cardsRequest) {
+			cardsRequest = getTradeCards(offerId)
+				.then((cards) => {
+					tradeCardsByOffer.set(offerId, cards);
+					return cards;
+				})
+				.catch((error) => {
+					tradeCardRequests.delete(offerId);
+					throw error;
+				});
+			tradeCardRequests.set(offerId, cardsRequest);
+		}
+		return cardsRequest;
 	}
 
 	async function loadOwnedCards() {
@@ -185,15 +204,7 @@
 	}
 
 	async function openTradeDetail(offer: TradeOffer) {
-		let cardsRequest = tradeCardRequests.get(offer.id);
-		if (!cardsRequest) {
-			cardsRequest = getTradeCards(offer.id).catch((error) => {
-				tradeCardRequests.delete(offer.id);
-				throw error;
-			});
-			tradeCardRequests.set(offer.id, cardsRequest);
-		}
-		const tradeCards = await cardsRequest;
+		const tradeCards = await loadTradeCards(offer.id);
 		selectedOfferedCards = tradeCards
 			.filter((entry) => entry.side === 'offered')
 			.map((entry) => entry.card);
@@ -226,6 +237,7 @@
 			{$_('trades.loading')}
 		</p>{:else}<TradeLedger
 			{offers}
+			cardsByOffer={tradeCardsByOffer}
 			{currentUserId}
 			onTabChange={(tab) => void loadTradeTab(tab)}
 			onRespond={respond}
