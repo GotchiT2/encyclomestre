@@ -1,19 +1,24 @@
 <script lang="ts">
-	import CardTile from '$lib/components/card-tile.svelte';
+	import { onDestroy, onMount } from 'svelte';
+	import BoosterRevealCard from './booster-reveal-card.svelte';
 	import ForgePanel from '$lib/components/layout/forge-panel.svelte';
 	import HudStat from '$lib/components/layout/hud-stat.svelte';
 	import { Button } from '$lib/components/ui/button';
+	import { Switch } from '$lib/components/ui/switch';
 	import { _ } from '$lib/i18n';
-	import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
-	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import type { CardRecord } from '$lib/types';
+
+	type BoosterPhase = 'idle' | 'opening' | 'dealing' | 'revealing' | 'complete' | 'error';
+	type BoosterSlot = { card: CardRecord; revealed: boolean };
 
 	let {
 		available,
 		maximum,
 		nextDelay,
 		opening,
+		openingId = 0,
 		cards,
+		error = false,
 		onOpen,
 		onReset
 	}: {
@@ -21,87 +26,382 @@
 		maximum: number;
 		nextDelay?: string;
 		opening: boolean;
+		openingId?: number;
 		cards: CardRecord[] | null;
+		error?: boolean;
 		onOpen: () => void;
 		onReset: () => void;
 	} = $props();
 
-	let currentIndex = $derived(cards?.length ? 0 : 0);
-	const currentCard = $derived(cards?.[currentIndex]);
-	const complete = $derived(Boolean(cards?.length && currentIndex === cards.length - 1));
+	const quickPreferenceKey = 'wikiforge.booster.quick-opening';
+	let phase = $state<BoosterPhase>('idle');
+	let slots = $state<BoosterSlot[]>([]);
+	let handledOpeningId = $state(-1);
+	let mobileIndex = $state(0);
+	let quickOpening = $state(false);
+	let preferenceReady = $state(false);
+	let openRequested = $state(false);
+	let timers: number[] = [];
+	function schedule(callback: () => void, delay: number) {
+		const timer = window.setTimeout(callback, delay);
+		timers.push(timer);
+	}
+
+	function clearTimers() {
+		for (const timer of timers) window.clearTimeout(timer);
+		timers = [];
+	}
+
+	function setSlotRevealed(index: number) {
+		if (!slots[index] || slots[index].revealed || phase === 'opening') return;
+		slots[index] = { ...slots[index], revealed: true };
+		const remaining = slots.some((slot) => !slot.revealed);
+		if (!remaining) {
+			phase = 'complete';
+			mobileIndex = slots.length - 1;
+			return;
+		}
+		phase = 'revealing';
+		if (index === mobileIndex)
+			schedule(() => (mobileIndex = Math.min(index + 1, slots.length - 1)), 680);
+	}
+
+	function startDeal(nextCards: CardRecord[], nextOpeningId: number) {
+		clearTimers();
+		openRequested = false;
+		handledOpeningId = nextOpeningId;
+		slots = nextCards.map((card) => ({ card, revealed: false }));
+		mobileIndex = 0;
+		phase = 'dealing';
+		if (quickOpening) {
+			nextCards.forEach((_, index) => schedule(() => setSlotRevealed(index), 150 + index * 95));
+			schedule(() => (phase = 'complete'), 150 + nextCards.length * 95 + 180);
+		} else {
+			schedule(() => (phase = 'revealing'), 720);
+		}
+	}
+
+	function revealNext() {
+		if (phase !== 'revealing') return;
+		const nextIndex = slots.findIndex((slot) => !slot.revealed);
+		if (nextIndex >= 0) setSlotRevealed(nextIndex);
+	}
+
+	function requestOpen() {
+		if (!available || opening || openRequested) return;
+		openRequested = true;
+		onOpen();
+	}
+
+	function advance() {
+		if (phase === 'revealing') {
+			revealNext();
+			return;
+		}
+		if (phase === 'complete') requestOpen();
+	}
+
+	function isInteractiveTarget(target: EventTarget | null) {
+		return target instanceof Element && Boolean(target.closest('[data-booster-interactive]'));
+	}
+
+	function handleStageClick(event: MouseEvent) {
+		if (event.currentTarget !== event.target && isInteractiveTarget(event.target)) return;
+		advance();
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.code !== 'Space' || event.repeat || isInteractiveTarget(event.target)) return;
+		if (phase !== 'revealing' && phase !== 'complete') return;
+		event.preventDefault();
+		advance();
+	}
+
+	onMount(() => {
+		quickOpening = localStorage.getItem(quickPreferenceKey) === 'true';
+		preferenceReady = true;
+	});
+
+	onDestroy(clearTimers);
+
+	$effect(() => {
+		if (preferenceReady) localStorage.setItem(quickPreferenceKey, String(quickOpening));
+	});
+
+	$effect(() => {
+		if (cards?.length && openingId !== handledOpeningId) {
+			startDeal(cards, openingId);
+			return;
+		}
+		if (opening) phase = 'opening';
+		else if (error) {
+			openRequested = false;
+			phase = 'error';
+		} else if (!cards && phase !== 'dealing') phase = 'idle';
+	});
+
+	function resetStage() {
+		clearTimers();
+		slots = [];
+		phase = 'idle';
+		openRequested = false;
+		onReset();
+	}
 </script>
 
-<ForgePanel class="relative min-h-[34rem] overflow-hidden p-5 sm:p-8">
+<svelte:window onkeydown={handleKeydown} />
+
+<ForgePanel
+	class="relative isolate min-h-[38rem] overflow-hidden p-4 sm:p-6 lg:min-h-[45rem] lg:p-8"
+>
+	<div class="booster-stage-energy" aria-hidden="true"></div>
 	<div
-		class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_52%,rgb(25_167_170_/_20%),transparent_24rem),conic-gradient(from_45deg_at_50%_50%,transparent_0_12%,rgb(254_184_35_/_7%)_12.5%_13%,transparent_13.5%_37%)]"
-	></div>
-	<div class="relative flex flex-wrap items-start justify-between gap-3">
-		<HudStat label={$_('boosters.reserve')} value={`${available} / ${maximum}`} accent />
-		{#if nextDelay}<HudStat label={$_('boosters.nextCharge')} value={nextDelay} />{/if}
+		class="relative z-20 flex flex-wrap items-start justify-between gap-3"
+		data-booster-interactive
+	>
+		<div class="flex flex-wrap gap-2">
+			<HudStat label={$_('boosters.reserve')} value={`${available} / ${maximum}`} accent />
+			{#if nextDelay}<HudStat label={$_('boosters.nextCharge')} value={nextDelay} />{/if}
+		</div>
+		<label class="booster-quick-toggle" data-booster-interactive>
+			<span>
+				<strong>{$_('boosters.quick_mode')}</strong>
+				<small>{$_('boosters.quick_mode_hint')}</small>
+			</span>
+			<Switch bind:checked={quickOpening} aria-label={$_('boosters.quick_mode')} />
+		</label>
 	</div>
 
-	{#if !cards}
-		<div
-			class="relative z-10 mx-auto flex max-w-xl flex-col items-center py-6 text-center sm:py-10"
-		>
-			<p class="forge-label">{opening ? $_('boosters.opening') : $_('boosters.chamberReady')}</p>
-			<h2 class="mt-3 font-serif text-3xl font-bold sm:text-4xl">{$_('boosters.stageTitle')}</h2>
-			<button
-				class="forge-energy-orbit mt-4 flex w-56 cursor-pointer flex-col items-center border-0 bg-transparent p-4 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45 sm:w-72"
-				disabled={!available || opening}
-				onclick={onOpen}
-				aria-label={opening ? $_('boosters.opening') : $_('boosters.open')}
-			>
-				<img
-					src="/images/booster.png"
-					alt=""
-					class="w-full drop-shadow-[0_0_2rem_rgb(253_121_12_/_38%)]"
-					class:forge-booster-idle={!opening}
-					class:animate-pulse={opening}
-				/>
-				<span
-					class="mt-3 border border-accent bg-gradient-to-b from-primary to-accent px-6 py-3 text-[11px] font-bold tracking-[0.12em] text-primary-foreground uppercase"
-					>{opening ? $_('boosters.opening') : $_('boosters.open')}</span
+	<div
+		class="booster-stage-content relative z-10"
+		data-phase={phase}
+		onclick={handleStageClick}
+		role="presentation"
+	>
+		{#if phase === 'idle' || phase === 'opening' || phase === 'error'}
+			<div class="mx-auto flex max-w-xl flex-col items-center py-6 text-center sm:py-10">
+				<p class="forge-label">
+					{phase === 'opening'
+						? $_('boosters.opening')
+						: phase === 'error'
+							? $_('boosters.opening_error')
+							: $_('boosters.chamberReady')}
+				</p>
+				<h2 class="mt-3 font-serif text-3xl font-bold sm:text-4xl">{$_('boosters.stageTitle')}</h2>
+				<button
+					class="forge-energy-orbit mt-4 flex w-56 cursor-pointer flex-col items-center border-0 bg-transparent p-4 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45 sm:w-72"
+					disabled={!available || opening}
+					onclick={(event) => {
+						event.stopPropagation();
+						requestOpen();
+					}}
+					aria-label={phase === 'error'
+						? $_('boosters.retry')
+						: opening
+							? $_('boosters.opening')
+							: $_('boosters.open')}
+					data-booster-interactive
 				>
-			</button>
-			{#if !available}<p class="mt-4 text-sm text-muted-foreground">
-					{$_('boosters.emptyReserve')}
-				</p>{/if}
-		</div>
-	{:else if currentCard}
-		<div class="relative z-10 mx-auto flex max-w-3xl flex-col items-center py-4 text-center">
-			<p class="forge-label">
-				{$_('boosters.reveal_progress', {
-					values: { current: currentIndex + 1, total: cards.length }
-				})}
-			</p>
-			<div class="mt-4" class:booster-legendary={currentCard.rarity === 'Légendaire'}>
-				<CardTile card={currentCard} showFriendOwners={false} onOpen={() => undefined} />
+					<img
+						src="/images/booster.png"
+						alt=""
+						class="w-full drop-shadow-[0_0_2rem_rgb(253_121_12_/_38%)]"
+						class:forge-booster-idle={phase === 'idle'}
+						class:booster-pack-opening={phase === 'opening'}
+					/>
+					<span class="booster-open-label">
+						{phase === 'error'
+							? $_('boosters.retry')
+							: opening
+								? $_('boosters.opening')
+								: $_('boosters.open')}
+					</span>
+				</button>
+				{#if !available}<p class="mt-4 text-sm text-muted-foreground">
+						{$_('boosters.emptyReserve')}
+					</p>{/if}
 			</div>
-			<div class="mt-5 flex items-center justify-center gap-2">
-				<Button
-					variant="outline"
-					size="icon"
-					disabled={currentIndex === 0}
-					onclick={() => (currentIndex -= 1)}
-					aria-label={$_('boosters.previous')}><ChevronLeftIcon /></Button
+		{:else}
+			<div class="flex min-h-0 flex-1 flex-col items-center justify-center py-4">
+				<p class="forge-label text-center">
+					{phase === 'complete' ? $_('boosters.complete') : $_('boosters.reveal_instruction')}
+				</p>
+				<div
+					class="booster-deck mt-5"
+					data-phase={phase}
+					aria-label={$_('boosters.revealed_title')}
 				>
-				<div class="flex gap-1" aria-hidden="true">
-					{#each cards as revealedCard, index (revealedCard.id)}<span
-							class="h-1.5 w-7"
-							class:bg-primary={index <= currentIndex}
-							class:bg-secondary={index > currentIndex}
-						></span>{/each}
+					{#each slots as slot, index (slot.card.id)}
+						<div
+							class="booster-slot"
+							class:mobile-current={index === mobileIndex}
+							style={`--slot-index:${index};--slot-offset:${index - (slots.length - 1) / 2};--slot-arc:${Math.abs(index - (slots.length - 1) / 2) * 0.75}rem`}
+						>
+							<BoosterRevealCard
+								card={slot.card}
+								revealed={slot.revealed}
+								interactive={phase === 'revealing'}
+								onReveal={() => setSlotRevealed(index)}
+							/>
+						</div>
+					{/each}
 				</div>
-				{#if !complete}
-					<Button size="lg" onclick={() => (currentIndex += 1)}
-						>{$_('boosters.next')}<ChevronRightIcon /></Button
-					>
-				{:else}
-					<Button variant="outline" onclick={onReset}>{$_('boosters.close')}</Button>
-					{#if available}<Button onclick={onOpen}>{$_('boosters.open_next')}</Button>{/if}
-				{/if}
+				<div
+					class="mt-5 flex min-h-11 flex-wrap items-center justify-center gap-2"
+					data-booster-interactive
+				>
+					{#if phase === 'complete'}
+						<Button variant="outline" onclick={resetStage}>{$_('boosters.close')}</Button>
+						{#if available}<Button onclick={requestOpen}>{$_('boosters.open_next')}</Button>{/if}
+					{:else}
+						<p class="text-center text-xs text-muted-foreground sm:text-sm">
+							{$_('boosters.advance_instruction')}
+						</p>
+					{/if}
+				</div>
 			</div>
-		</div>
-	{/if}
+		{/if}
+	</div>
 </ForgePanel>
+
+<style>
+	.booster-stage-energy {
+		position: absolute;
+		inset: 1px;
+		background:
+			radial-gradient(circle at 50% 58%, rgb(25 167 170 / 24%), transparent 24rem),
+			conic-gradient(
+				from 45deg at 50% 55%,
+				transparent 0 12%,
+				rgb(254 184 35 / 8%) 12.5% 13%,
+				transparent 13.5% 37%
+			);
+		animation: booster-stage-rotation 24s linear infinite;
+	}
+
+	.booster-stage-content {
+		display: flex;
+		min-height: 31rem;
+		flex-direction: column;
+	}
+
+	.booster-quick-toggle {
+		display: flex;
+		min-height: 44px;
+		align-items: center;
+		gap: 0.75rem;
+		border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent);
+		background: rgb(8 15 25 / 82%);
+		padding: 0.45rem 0.65rem;
+		cursor: pointer;
+	}
+
+	.booster-quick-toggle span {
+		display: grid;
+		gap: 0.1rem;
+	}
+	.booster-quick-toggle strong {
+		font-size: 0.65rem;
+		letter-spacing: 0.12em;
+		color: var(--primary);
+		text-transform: uppercase;
+	}
+	.booster-quick-toggle small {
+		font-size: 0.68rem;
+		color: var(--muted-foreground);
+	}
+
+	.booster-open-label {
+		margin-top: 0.75rem;
+		border: 1px solid var(--accent);
+		background: linear-gradient(to bottom, var(--primary), var(--accent));
+		padding: 0.75rem 1.5rem;
+		font-size: 0.7rem;
+		font-weight: 700;
+		letter-spacing: 0.12em;
+		color: var(--primary-foreground);
+		text-transform: uppercase;
+	}
+
+	.booster-pack-opening {
+		animation: booster-pack-opening 780ms ease-in-out infinite alternate;
+	}
+
+	.booster-deck {
+		display: flex;
+		width: 100%;
+		min-height: 20rem;
+		align-items: center;
+		justify-content: center;
+		padding: 1.25rem 0;
+	}
+
+	.booster-slot {
+		position: relative;
+		flex: 0 0 auto;
+		margin-inline: -1rem;
+		transform: translateY(var(--slot-arc)) rotate(calc(var(--slot-offset) * 3deg));
+		animation: booster-card-deal 620ms cubic-bezier(0.16, 0.82, 0.25, 1.12) both;
+		animation-delay: calc(var(--slot-index) * 90ms);
+	}
+
+	@keyframes booster-card-deal {
+		from {
+			transform: translateY(9rem) scale(0.5) rotate(0);
+			opacity: 0;
+		}
+	}
+
+	@keyframes booster-pack-opening {
+		from {
+			transform: scale(0.96) rotate(-1deg);
+			filter: brightness(1);
+		}
+		to {
+			transform: scale(1.04) rotate(1deg);
+			filter: brightness(1.45);
+		}
+	}
+
+	@keyframes booster-stage-rotation {
+		to {
+			transform: rotate(360deg) scale(1.2);
+		}
+	}
+
+	@media (max-width: 1023px) {
+		.booster-stage-content {
+			min-height: 32rem;
+		}
+		.booster-deck {
+			min-height: 22rem;
+			overflow-x: auto;
+			justify-content: flex-start;
+			scroll-snap-type: x mandatory;
+		}
+		.booster-deck:not([data-phase='complete']) {
+			justify-content: center;
+			overflow: visible;
+		}
+		.booster-deck:not([data-phase='complete']) .booster-slot:not(.mobile-current) {
+			display: none;
+		}
+		.booster-deck[data-phase='complete'] {
+			gap: 0.8rem;
+			padding-inline: calc(50% - 6.5rem);
+		}
+		.booster-slot {
+			margin-inline: 0;
+			transform: none;
+			scroll-snap-align: center;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.booster-stage-energy,
+		.booster-pack-opening,
+		.booster-slot {
+			animation: none;
+		}
+	}
+</style>

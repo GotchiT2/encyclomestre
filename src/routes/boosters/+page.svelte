@@ -17,6 +17,8 @@
 	} | null>(null);
 	let result = $state<CardRecord[] | null>(null);
 	let opening = $state(false);
+	let openingError = $state(false);
+	let openingId = $state(0);
 	let now = $state(Date.now());
 	const nextDelay = $derived(
 		inventory?.nextBoosterAvailableAt
@@ -37,9 +39,19 @@
 		if (!inventory?.availableBoosters || opening) return;
 		opening = true;
 		result = null;
+		openingError = false;
 		try {
 			result = (await openWikiForgeBooster()).cards.map(toCollectionCardRecord);
-			inventory = await getWikiForgeBoosterStatus();
+			openingId += 1;
+			try {
+				inventory = await getWikiForgeBoosterStatus();
+			} catch {
+				inventory = inventory
+					? { ...inventory, availableBoosters: Math.max(0, inventory.availableBoosters - 1) }
+					: inventory;
+			}
+		} catch {
+			openingError = true;
 		} finally {
 			opening = false;
 		}
@@ -58,9 +70,14 @@
 			maximum={inventory.maxBoosters ?? 1}
 			nextDelay={inventory.nextBoosterAvailableAt ? nextDelayLabel : undefined}
 			{opening}
+			{openingId}
 			cards={result}
+			error={openingError}
 			onOpen={open}
-			onReset={() => (result = null)}
+			onReset={() => {
+				result = null;
+				openingError = false;
+			}}
 		/>
 	{:else}
 		<div class="forge-panel min-h-[34rem] animate-pulse"></div>

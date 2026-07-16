@@ -243,7 +243,14 @@
 		"open_next": "Ouvrir le booster suivant",
 		"close": "Quitter",
 		"complete": "Toutes les cartes ont été affichées",
-		"reveal_progress": "Carte {current} / {total}"
+		"reveal_progress": "Carte {current} / {total}",
+		"quick_mode": "Ouverture rapide",
+		"quick_mode_hint": "Animations courtes",
+		"reveal_card": "Retourner la carte {rarity}",
+		"reveal_instruction": "Choisissez une carte à retourner",
+		"advance_instruction": "Cliquez dans la scène ou appuyez sur Espace pour continuer.",
+		"opening_error": "L’ouverture du booster a échoué",
+		"retry": "Réessayer"
 	},
 	"cardDetail": {
 		"owned_count": "{count} exemplaire(s) dans votre collection",
