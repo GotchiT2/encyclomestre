@@ -41,32 +41,40 @@ describe('createMockApiResponse', () => {
 		);
 	});
 
-	it('expose le registre des offres et crée une offre en attente', async () => {
-		const ledger = createMockApiResponse({ path: '/trades?userId=demo-user' });
-		expect((await ledger.json()) as { recipientId: string }[]).toEqual(
+	it('expose les trois registres et crée une offre en attente', async () => {
+		const received = createMockApiResponse({ path: '/api/trades/received' });
+		expect((await received.json()) as { recipientId: string }[]).toEqual(
 			expect.arrayContaining([expect.objectContaining({ recipientId: 'demo-user' })])
+		);
+		const sent = createMockApiResponse({ path: '/api/trades/sended' });
+		expect((await sent.json()) as { initiatorId: string }[]).toEqual(
+			expect.arrayContaining([expect.objectContaining({ initiatorId: 'demo-user' })])
+		);
+		const history = createMockApiResponse({ path: '/api/trades/history' });
+		expect((await history.json()) as { status: string }[]).toEqual(
+			expect.arrayContaining([expect.objectContaining({ status: 'accepted' })])
 		);
 
 		const created = createMockApiResponse({
-			path: '/trades',
+			path: '/api/trades',
 			method: 'POST',
 			body: {
-				initiatorId: 'demo-user',
 				recipientId: 'friend-2',
-				offeredCardIds: ['girls-generation-1'],
-				requestedCardIds: ['twice-groupe-1']
+				offeredUserCardIds: ['girls-generation-1'],
+				requestedUserCardIds: ['twice-groupe-1']
 			}
 		});
-		expect(created.status).toBe(201);
+		expect(created.status).toBe(200);
 		expect(await created.json()).toMatchObject({
 			initiatorId: 'demo-user',
+			offeredUserCardIds: ['girls-generation-1'],
 			status: 'pending'
 		});
 	});
 
 	it('accepte ou refuse uniquement une offre en attente', async () => {
 		const response = createMockApiResponse({
-			path: '/trades/trade-001',
+			path: '/api/trades/trade-001',
 			method: 'PATCH',
 			body: { status: 'accepted' }
 		});

@@ -9,7 +9,6 @@ import type {
 	SaleListing,
 	ProfileSettings,
 	TradeOffer,
-	CreateTradeOfferInput,
 	BoosterInventory,
 	WishlistEntry,
 	WishlistRegistry,
@@ -284,8 +283,31 @@ const tradeOffers: TradeOffer[] = [
 		status: 'accepted',
 		createdAt: '2026-07-01T08:00:00.000Z',
 		updatedAt: '2026-07-02T09:30:00.000Z'
+	},
+	{
+		id: 'trade-003',
+		initiatorId: 'demo-user',
+		recipientId: 'friend-2',
+		offeredCardIds: ['blackpink-1'],
+		requestedCardIds: ['twice-groupe-1'],
+		offeredCredits: 5,
+		requestedCredits: 0,
+		status: 'pending',
+		createdAt: '2026-07-15T14:00:00.000Z',
+		updatedAt: '2026-07-15T14:00:00.000Z'
 	}
 ];
+const apiTradeOffer = (offer: TradeOffer) => ({
+	id: offer.id,
+	initiatorId: offer.initiatorId,
+	recipientId: offer.recipientId,
+	status: offer.status,
+	offeredUserCardIds: offer.offeredCardIds,
+	requestedUserCardIds: offer.requestedCardIds,
+	offeredCredits: offer.offeredCredits,
+	requestedCredits: offer.requestedCredits,
+	createdAt: offer.createdAt
+});
 const profileSettings = new Map<string, ProfileSettings>([
 	[
 		'demo-user',
@@ -950,26 +972,41 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			status: 'active'
 		});
 	}
-	if (normalizedMethod === 'GET' && pathname === '/trades') {
-		const userId = url.searchParams.get('userId');
+	const tradePathname = pathname.replace(/^\/api(?=\/trades(?:\/|$))/, '');
+	if (normalizedMethod === 'GET' && tradePathname === '/trades/received') {
 		return json(
-			userId
-				? tradeOffers.filter(
-						(offer) => offer.initiatorId === userId || offer.recipientId === userId
-					)
-				: tradeOffers
+			tradeOffers
+				.filter((offer) => offer.recipientId === 'demo-user' && offer.status === 'pending')
+				.map(apiTradeOffer)
 		);
 	}
-	if (normalizedMethod === 'POST' && pathname === '/trades') {
-		const input = asObject(body) as CreateTradeOfferInput | undefined;
+	if (normalizedMethod === 'GET' && tradePathname === '/trades/sended') {
+		return json(
+			tradeOffers
+				.filter((offer) => offer.initiatorId === 'demo-user' && offer.status === 'pending')
+				.map(apiTradeOffer)
+		);
+	}
+	if (normalizedMethod === 'GET' && tradePathname === '/trades/history') {
+		return json(
+			tradeOffers
+				.filter(
+					(offer) =>
+						offer.status !== 'pending' &&
+						(offer.initiatorId === 'demo-user' || offer.recipientId === 'demo-user')
+				)
+				.map(apiTradeOffer)
+		);
+	}
+	if (normalizedMethod === 'POST' && tradePathname === '/trades') {
+		const input = asObject(body);
 		if (
 			!input ||
-			typeof input.initiatorId !== 'string' ||
 			typeof input.recipientId !== 'string' ||
-			!Array.isArray(input.offeredCardIds) ||
-			!Array.isArray(input.requestedCardIds) ||
-			(!input.offeredCardIds.length &&
-				!input.requestedCardIds.length &&
+			!Array.isArray(input.offeredUserCardIds) ||
+			!Array.isArray(input.requestedUserCardIds) ||
+			(!input.offeredUserCardIds.length &&
+				!input.requestedUserCardIds.length &&
 				!(input.offeredCredits || input.requestedCredits))
 		)
 			return error(
@@ -980,10 +1017,10 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const createdAt = new Date().toISOString();
 		const offer: TradeOffer = {
 			id: `trade-${crypto.randomUUID()}`,
-			initiatorId: input.initiatorId,
+			initiatorId: 'demo-user',
 			recipientId: input.recipientId,
-			offeredCardIds: input.offeredCardIds,
-			requestedCardIds: input.requestedCardIds,
+			offeredCardIds: input.offeredUserCardIds as string[],
+			requestedCardIds: input.requestedUserCardIds as string[],
 			offeredCredits: Math.max(0, Number(input.offeredCredits) || 0),
 			requestedCredits: Math.max(0, Number(input.requestedCredits) || 0),
 			status: 'pending',
@@ -991,9 +1028,9 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			updatedAt: createdAt
 		};
 		tradeOffers.unshift(offer);
-		return json(offer, 201);
+		return json(apiTradeOffer(offer));
 	}
-	const tradeMatch = /^\/trades\/([^/]+)$/.exec(pathname);
+	const tradeMatch = /^\/trades\/([^/]+)$/.exec(tradePathname);
 	if (tradeMatch && normalizedMethod === 'PATCH') {
 		const offer = tradeOffers.find((entry) => entry.id === decodeURIComponent(tradeMatch[1]));
 		if (!offer) return error(404, 'Offre introuvable.', 'TRADE_NOT_FOUND');
@@ -1009,7 +1046,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			);
 		offer.status = status;
 		offer.updatedAt = new Date().toISOString();
-		return json(offer);
+		return json(apiTradeOffer(offer));
 	}
 	const profileMatch = /^\/users\/([^/]+)\/profile$/.exec(pathname);
 	if (profileMatch) {

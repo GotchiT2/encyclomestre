@@ -26,8 +26,26 @@ const toTradeOffer = (offer: ApiTradeOffer): TradeOffer => ({
 	updatedAt: offer.createdAt
 });
 
-export const getTradeOffers = async (_userId?: string, options?: RequestOptions) =>
-	(await apiRequest<ApiTradeOffer[]>('/api/trades', options)).map(toTradeOffer);
+const getTradeOfferGroup = async (path: string, options?: RequestOptions) =>
+	(await apiRequest<ApiTradeOffer[]>(path, options)).map(toTradeOffer);
+
+export const getReceivedTradeOffers = async (options?: RequestOptions) =>
+	getTradeOfferGroup('/api/trades/received', options);
+
+export const getSentTradeOffers = async (options?: RequestOptions) =>
+	getTradeOfferGroup('/api/trades/sended', options);
+
+export const getTradeHistory = async (options?: RequestOptions) =>
+	getTradeOfferGroup('/api/trades/history', options);
+
+export const getTradeOffers = async (_userId?: string, options?: RequestOptions) => {
+	const [received, sent, history] = await Promise.all([
+		getReceivedTradeOffers(options),
+		getSentTradeOffers(options),
+		getTradeHistory(options)
+	]);
+	return [...received, ...sent, ...history];
+};
 
 export const createTradeOffer = async (input: CreateTradeOfferInput, options?: RequestOptions) =>
 	toTradeOffer(

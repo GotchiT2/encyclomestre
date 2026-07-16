@@ -246,3 +246,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Maintenir les onglets du détail visibles au-dessus des actions sur mobile — `fix(cards): keep detail tabs visible on mobile`
 - [x] Centraliser la vue marché et le graphe de prix dans une modale partagée — `feat(market): centralize card market modal`
 - [x] Adapter les amis et wishlists au mobile, puis reconstruire la messagerie en liste et discussion responsive — `fix(social): rebuild responsive friends and messages`
+- [x] Remplacer le registre global des échanges par les flux reçus, envoyés et historiques — `fix(trades): connect split trade ledgers`
