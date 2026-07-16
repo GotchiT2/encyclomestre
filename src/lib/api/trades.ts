@@ -1,10 +1,19 @@
 import { apiRequest, type RequestOptions } from './client';
-import type { CreateTradeOfferInput, TradeOffer } from '$lib/types';
+import type { CreateTradeOfferInput, TradeOffer, TradeParticipant } from '$lib/types';
+
+interface ApiTradeParticipant {
+	id: string;
+	username: string;
+	displayName: string;
+	avatarUrl?: string | null;
+}
 
 interface ApiTradeOffer {
 	id: string;
 	initiatorId: string;
 	recipientId: string;
+	initiator?: ApiTradeParticipant;
+	recipient?: ApiTradeParticipant;
 	status: TradeOffer['status'];
 	offeredUserCardIds: string[];
 	requestedUserCardIds: string[];
@@ -13,10 +22,18 @@ interface ApiTradeOffer {
 	createdAt: string;
 }
 
+const fallbackParticipant = (id: string): TradeParticipant => ({
+	id,
+	username: id,
+	displayName: id
+});
+
 const toTradeOffer = (offer: ApiTradeOffer): TradeOffer => ({
 	id: offer.id,
 	initiatorId: offer.initiatorId,
 	recipientId: offer.recipientId,
+	initiator: offer.initiator ?? fallbackParticipant(offer.initiatorId),
+	recipient: offer.recipient ?? fallbackParticipant(offer.recipientId),
 	offeredCardIds: offer.offeredUserCardIds,
 	requestedCardIds: offer.requestedUserCardIds,
 	offeredCredits: offer.offeredCredits,

@@ -1,5 +1,9 @@
 import { apiRequest, type RequestOptions } from './client';
-import { toCardRecord, type WikiForgeCollectionCard, type WikiForgePage } from './wikiforge';
+import {
+	toCollectionCardRecord,
+	type WikiForgeCollectionCard,
+	type WikiForgePage
+} from './wikiforge';
 import type {
 	CardRecord,
 	Friendship,
@@ -19,15 +23,22 @@ export const getUserCollection = async (
 	id: string,
 	options?: RequestOptions
 ): Promise<CardRecord[]> => {
-	const page = await apiRequest<WikiForgePage<WikiForgeCollectionCard>>(
-		`/api/users/${encodeURIComponent(id)}/collection?page=0&size=100`,
+	const endpoint = `/api/users/${encodeURIComponent(id)}/collection`;
+	const firstPage = await apiRequest<WikiForgePage<WikiForgeCollectionCard>>(
+		`${endpoint}?page=0&size=100`,
 		options
 	);
-	return page.results.map((item) => ({
-		...toCardRecord({ ...item.card, id: item.cardId, acquiredAt: item.acquiredAt }),
-		catalogueId: item.cardId,
-		collectionTags: item.tags ?? []
-	}));
+	const pageSize = Math.max(1, firstPage.size || 100);
+	const totalPages = Math.max(1, Math.ceil(firstPage.nbResults / pageSize));
+	const remainingPages = await Promise.all(
+		Array.from({ length: totalPages - 1 }, (_, index) =>
+			apiRequest<WikiForgePage<WikiForgeCollectionCard>>(
+				`${endpoint}?page=${index + 1}&size=${pageSize}`,
+				options
+			)
+		)
+	);
+	return [firstPage, ...remainingPages].flatMap((page) => page.results.map(toCollectionCardRecord));
 };
 
 export const searchUsers = async (

@@ -152,7 +152,9 @@
 			{/each}
 		</div>
 	</CardSearchPanel>
-	<div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7">
+	<div
+		class="mt-3 grid grid-cols-1 justify-items-center gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+	>
 		{#each pageCards as card (card.id)}
 			<div class="relative min-w-0">
 				<CardTile {card} tags={tagsFor(card)} showFriendOwners={false} />

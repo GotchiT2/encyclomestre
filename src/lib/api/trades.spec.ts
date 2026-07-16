@@ -10,6 +10,16 @@ const apiOffer = (id: string, status: string) => ({
 	id,
 	initiatorId: 'user-1',
 	recipientId: 'user-2',
+	initiator: {
+		id: 'user-1',
+		username: 'claire.trade',
+		displayName: 'Claire Trade'
+	},
+	recipient: {
+		id: 'user-2',
+		username: 'test',
+		displayName: 'Test'
+	},
 	status,
 	offeredUserCardIds: [`offered-${id}`],
 	requestedUserCardIds: [`requested-${id}`],
@@ -39,7 +49,11 @@ describe('trade ledger', () => {
 		expect(apiRequest).toHaveBeenCalledWith('/api/trades/history', undefined);
 		expect(apiRequest).not.toHaveBeenCalledWith('/api/trades', expect.anything());
 		expect(offers).toEqual([
-			expect.objectContaining({ id: 'received', offeredCardIds: ['offered-received'] }),
+			expect.objectContaining({
+				id: 'received',
+				offeredCardIds: ['offered-received'],
+				initiator: expect.objectContaining({ displayName: 'Claire Trade' })
+			}),
 			expect.objectContaining({ id: 'sent', requestedCardIds: ['requested-sent'] }),
 			expect.objectContaining({ id: 'history', status: 'accepted' })
 		]);

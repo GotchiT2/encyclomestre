@@ -44,7 +44,22 @@ describe('createMockApiResponse', () => {
 	it('expose les trois registres et crée une offre en attente', async () => {
 		const received = createMockApiResponse({ path: '/api/trades/received' });
 		expect((await received.json()) as { recipientId: string }[]).toEqual(
-			expect.arrayContaining([expect.objectContaining({ recipientId: 'demo-user' })])
+			expect.arrayContaining([
+				expect.objectContaining({
+					recipientId: 'demo-user',
+					initiator: expect.objectContaining({ displayName: expect.any(String) })
+				})
+			])
+		);
+		const initiatorCollection = createMockApiResponse({
+			path: '/api/users/friend-0/collection?page=0&size=100'
+		});
+		expect(
+			((await initiatorCollection.json()) as { results: { userCardId: string }[] }).results
+		).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ userCardId: 'owned-friend-0-girls-generation-1' })
+			])
 		);
 		const sent = createMockApiResponse({ path: '/api/trades/sended' });
 		expect((await sent.json()) as { initiatorId: string }[]).toEqual(

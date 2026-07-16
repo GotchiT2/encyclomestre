@@ -259,13 +259,24 @@ const boosterReserve = new Map<string, { available: number; lastRechargeAt: numb
 ]);
 const boosterCapacity = 10;
 const rechargeMs = 10 * 60 * 1000;
+const mockTradeParticipant = (id: string) => {
+	const user = users.get(id);
+	return {
+		id,
+		username: user?.username ?? id,
+		displayName: user?.displayName ?? user?.username ?? id,
+		avatarUrl: user?.avatarUrl ?? null
+	};
+};
 const tradeOffers: TradeOffer[] = [
 	{
 		id: 'trade-001',
 		initiatorId: 'friend-0',
 		recipientId: 'demo-user',
-		offeredCardIds: ['twice-groupe-1'],
-		requestedCardIds: ['girls-generation-1'],
+		initiator: mockTradeParticipant('friend-0'),
+		recipient: mockTradeParticipant('demo-user'),
+		offeredCardIds: ['owned-friend-0-girls-generation-1'],
+		requestedCardIds: ['owned-demo-user-2ne1-1'],
 		offeredCredits: 15,
 		requestedCredits: 0,
 		status: 'pending',
@@ -276,8 +287,10 @@ const tradeOffers: TradeOffer[] = [
 		id: 'trade-002',
 		initiatorId: 'demo-user',
 		recipientId: 'friend-1',
-		offeredCardIds: ['red-velvet-1'],
-		requestedCardIds: ['blackpink-1'],
+		initiator: mockTradeParticipant('demo-user'),
+		recipient: mockTradeParticipant('friend-1'),
+		offeredCardIds: ['owned-demo-user-girls-generation-1'],
+		requestedCardIds: ['owned-friend-1-2ne1-1'],
 		offeredCredits: 0,
 		requestedCredits: 25,
 		status: 'accepted',
@@ -288,8 +301,10 @@ const tradeOffers: TradeOffer[] = [
 		id: 'trade-003',
 		initiatorId: 'demo-user',
 		recipientId: 'friend-2',
-		offeredCardIds: ['blackpink-1'],
-		requestedCardIds: ['twice-groupe-1'],
+		initiator: mockTradeParticipant('demo-user'),
+		recipient: mockTradeParticipant('friend-2'),
+		offeredCardIds: ['owned-demo-user-girls-generation-1'],
+		requestedCardIds: ['owned-friend-2-twice-groupe-1'],
 		offeredCredits: 5,
 		requestedCredits: 0,
 		status: 'pending',
@@ -301,6 +316,8 @@ const apiTradeOffer = (offer: TradeOffer) => ({
 	id: offer.id,
 	initiatorId: offer.initiatorId,
 	recipientId: offer.recipientId,
+	initiator: offer.initiator,
+	recipient: offer.recipient,
 	status: offer.status,
 	offeredUserCardIds: offer.offeredCardIds,
 	requestedUserCardIds: offer.requestedCardIds,
@@ -470,7 +487,9 @@ function boosterInventory(userId: string): BoosterInventory {
 }
 
 export function createMockApiResponse({ path, method = 'GET', body }: MockApiRequest): Response {
-	const url = new URL(path, 'http://mock-api.local');
+	const requestUrl = new URL(path, 'http://mock-api.local');
+	const routedPath = requestUrl.pathname.replace(/^\/api(?=\/)/, '');
+	const url = new URL(`${routedPath}${requestUrl.search}`, requestUrl.origin);
 	const { pathname } = url;
 	const normalizedMethod = method.toUpperCase();
 
@@ -1019,6 +1038,8 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			id: `trade-${crypto.randomUUID()}`,
 			initiatorId: 'demo-user',
 			recipientId: input.recipientId,
+			initiator: mockTradeParticipant('demo-user'),
+			recipient: mockTradeParticipant(input.recipientId),
 			offeredCardIds: input.offeredUserCardIds as string[],
 			requestedCardIds: input.requestedUserCardIds as string[],
 			offeredCredits: Math.max(0, Number(input.offeredCredits) || 0),

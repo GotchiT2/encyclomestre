@@ -60,16 +60,17 @@
 
 <TradeModal bind:open title={$_('trades.editor_title')}>
 	<div class="flex min-h-0 flex-1 flex-col">
-		<div class="min-h-0 flex-1 overflow-y-auto p-4">
+		<div class="min-h-0 flex-1 overflow-y-auto p-2 sm:p-4">
 			<nav class="flex border-b border-primary/25" aria-label={$_('trades.editor_tabs')}>
 				<Button
 					variant={activePanel === 'you' ? 'default' : 'ghost'}
-					class="flex-1"
+					class="min-w-0 flex-1 px-2 text-xs sm:text-sm"
 					onclick={() => (activePanel = 'you')}>{$_('trades.my_cards')}</Button
 				><Button
 					variant={activePanel === 'partner' ? 'default' : 'ghost'}
-					class="flex-1"
-					onclick={() => (activePanel = 'partner')}>{partner?.username}</Button
+					class="min-w-0 flex-1 truncate px-2 text-xs sm:text-sm"
+					onclick={() => (activePanel = 'partner')}
+					>{partner?.displayName || partner?.username}</Button
 				>
 			</nav>
 			<div class="mt-4">
@@ -92,8 +93,8 @@
 					{error}
 				</p>{/if}
 		</div>
-		<div class="flex shrink-0 justify-end border-t border-primary/25 bg-card px-4 py-3">
-			<Button onclick={submit}>{$_('trades.send_offer')}</Button>
+		<div class="flex shrink-0 justify-end border-t border-primary/25 bg-card px-3 py-3 sm:px-4">
+			<Button class="w-full sm:w-auto" onclick={submit}>{$_('trades.send_offer')}</Button>
 		</div>
 	</div>
 </TradeModal>
