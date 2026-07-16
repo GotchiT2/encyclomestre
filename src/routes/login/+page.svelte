@@ -1,50 +1,73 @@
 <script lang="ts">
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Label } from "$lib/components/ui/label/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import * as Card from "$lib/components/ui/card/index.js";
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
+	import { getSafeRedirectTarget } from '$lib/auth/redirect';
+	import { persistSession } from '$lib/auth/session';
+	import { login } from '$lib/api';
+	import { Button } from '$lib/components/ui/button';
+	import * as Card from '$lib/components/ui/card';
+	import * as Field from '$lib/components/ui/field';
+	import { Input } from '$lib/components/ui/input';
+	import { _ } from '$lib/i18n';
 
-	let email = $state("");
-	let password = $state("");
+	let email = $state('');
+	let password = $state('');
+	let error = $state<string>();
+	let isSubmitting = $state(false);
 
-	function handleSubmit(event: Event) {
+	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
-		console.log("Email:", email);
-		console.log("Mot de passe:", password);
+		error = undefined;
+		isSubmitting = true;
+		try {
+			const session = await login({ email, password });
+			persistSession(localStorage, session);
+			await goto(resolve(getSafeRedirectTarget(page.url.searchParams.get('redirectTo')) as '/'));
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : $_('auth.login.failure');
+		} finally {
+			isSubmitting = false;
+		}
 	}
 </script>
 
-<Card.Root class="-my-4 w-full max-w-sm">
-	<Card.Header>
-		<Card.Title>Connexion à votre compte</Card.Title>
-		<Card.Description>Entrez votre email ci-dessous pour vous connecter</Card.Description>
-		<Card.Action>
-			<a href="/register">
-				<Button variant="link">Créer un compte</Button>
-			</a>
-		</Card.Action>
-	</Card.Header>
-	<Card.Content>
-		<form onsubmit={handleSubmit}>
-			<div class="flex flex-col gap-6">
-				<div class="grid gap-2">
-					<Label for="email">Email</Label>
-					<Input id="email" type="email" placeholder="m@example.com" required bind:value={email} />
-				</div>
-				<div class="grid gap-2">
-					<div class="flex items-center">
-						<Label for="password">Mot de passe</Label>
-						<a
-							href=""
-							class="ms-auto inline-block text-sm underline-offset-4 hover:underline"
+<section class="grid min-h-[calc(100dvh-10rem)] place-items-center py-6">
+	<div class="w-full max-w-md">
+		<p class="forge-wordmark mb-5 text-center text-4xl">{$_('navigation.brand')}</p>
+		<Card.Root class="forge-panel w-full border-0 bg-card shadow-none">
+			<Card.Header>
+				<Card.Title>{$_('auth.login.title')}</Card.Title>
+				<Card.Description>{$_('auth.login.description')}</Card.Description>
+				<Card.Action
+					><Button href="/register" variant="link">{$_('auth.login.registerLink')}</Button
+					></Card.Action
+				>
+			</Card.Header>
+			<Card.Content>
+				<form onsubmit={handleSubmit}>
+					<Field.Group>
+						<Field.Field>
+							<Field.Label for="email">{$_('auth.fields.email')}</Field.Label>
+							<Input id="email" type="email" autocomplete="email" required bind:value={email} />
+						</Field.Field>
+						<Field.Field>
+							<Field.Label for="password">{$_('auth.fields.password')}</Field.Label>
+							<Input
+								id="password"
+								type="password"
+								autocomplete="current-password"
+								required
+								bind:value={password}
+							/>
+						</Field.Field>
+						{#if error}<Field.Error>{error}</Field.Error>{/if}
+						<Button type="submit" class="w-full" disabled={isSubmitting}
+							>{isSubmitting ? $_('auth.login.submitting') : $_('auth.login.submit')}</Button
 						>
-							Mot de passe oublié ?
-						</a>
-					</div>
-					<Input id="password" type="password" required bind:value={password} />
-				</div>
-			</div>
-			<Button type="submit" class="mt-6 w-full">Se connecter</Button>
-		</form>
-	</Card.Content>
-</Card.Root>
+					</Field.Group>
+				</form>
+			</Card.Content>
+		</Card.Root>
+	</div>
+</section>

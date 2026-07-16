@@ -1,0 +1,113 @@
+import { apiRequest, type RequestOptions } from './client';
+import {
+	toCollectionCardRecord,
+	type WikiForgeCollectionCard,
+	type WikiForgePage
+} from './wikiforge';
+import type {
+	CardRecord,
+	Friendship,
+	PaginatedResponse,
+	UpdateUserInput,
+	UpdateUserPreferencesInput,
+	User
+} from '$lib/types';
+
+export const getCurrentUser = (options?: RequestOptions) =>
+	apiRequest<User>('/api/users/me', options);
+
+export const getUser = (id: string, options?: RequestOptions) =>
+	apiRequest<User>(`/api/users/${encodeURIComponent(id)}`, options);
+
+export const getUserCollection = async (
+	id: string,
+	options?: RequestOptions
+): Promise<CardRecord[]> => {
+	const endpoint = `/api/users/${encodeURIComponent(id)}/collection`;
+	const firstPage = await apiRequest<WikiForgePage<WikiForgeCollectionCard>>(
+		`${endpoint}?page=0&size=100`,
+		options
+	);
+	const pageSize = Math.max(1, firstPage.size || 100);
+	const totalPages = Math.max(1, Math.ceil(firstPage.nbResults / pageSize));
+	const remainingPages = await Promise.all(
+		Array.from({ length: totalPages - 1 }, (_, index) =>
+			apiRequest<WikiForgePage<WikiForgeCollectionCard>>(
+				`${endpoint}?page=${index + 1}&size=${pageSize}`,
+				options
+			)
+		)
+	);
+	return [firstPage, ...remainingPages].flatMap((page) => page.results.map(toCollectionCardRecord));
+};
+
+export const searchUsers = async (
+	query: string,
+	{ page = 0, size = 20 }: { page?: number; size?: number } = {},
+	options?: RequestOptions
+): Promise<User[]> => {
+	const parameters = new URLSearchParams({
+		excludeCurrent: 'true',
+		page: String(Math.max(0, page)),
+		size: String(Math.min(100, Math.max(1, size)))
+	});
+	if (query.trim()) parameters.set('q', query.trim());
+	const response = await apiRequest<PaginatedResponse<User> | WikiForgePage<User>>(
+		`/api/users?${parameters}`,
+		options
+	);
+	return 'results' in response ? response.results : response.items;
+};
+
+export const getTradePartners = async (
+	_userId?: string,
+	options?: RequestOptions
+): Promise<User[]> => searchUsers('', { size: 100 }, options);
+
+export const getFriends = (_userId?: string, options?: RequestOptions) =>
+	apiRequest<Friendship[]>('/api/friends', options);
+
+export const createFriendRequest = (
+	_userId: string,
+	recipientId: string,
+	options?: RequestOptions
+) =>
+	apiRequest<Friendship>('/api/friends', {
+		...options,
+		method: 'POST',
+		body: { recipientId }
+	});
+
+export const respondToFriendRequest = (
+	id: string,
+	status: 'accepted' | 'rejected',
+	options?: RequestOptions
+) =>
+	apiRequest<Friendship>(`/api/friends/${encodeURIComponent(id)}`, {
+		...options,
+		method: 'PATCH',
+		body: { status }
+	});
+
+export const removeFriend = (id: string, options?: RequestOptions) =>
+	apiRequest<void>(`/api/friends/${encodeURIComponent(id)}`, {
+		...options,
+		method: 'DELETE'
+	});
+
+export const updateUser = (_id: string, input: UpdateUserInput, options?: RequestOptions) =>
+	apiRequest<User>('/api/users/me', { ...options, method: 'PATCH', body: input });
+
+export const deleteUser = (_id?: string, options?: RequestOptions) =>
+	apiRequest<void>('/api/users/me', { ...options, method: 'DELETE' });
+
+export const updateUserPreferences = (
+	_id: string,
+	input: UpdateUserPreferencesInput,
+	options?: RequestOptions
+) =>
+	apiRequest<User>('/api/users/me/preferences', {
+		...options,
+		method: 'PATCH',
+		body: input
+	});

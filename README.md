@@ -29,7 +29,18 @@ npm run dev
 npm run dev -- --open
 ```
 
+## API WikiForge
 
+Le frontend utilise l’API WikiForge et ses contrats OpenAPI. Créez un fichier `.env` à la racine du projet avec :
+
+```env
+PUBLIC_API_BASE_URL=http://localhost:8080
+PUBLIC_API_MOCK_ENABLED=false
+```
+
+Le Swagger local est disponible sur `http://localhost:8080/swagger-ui/index.html`. Le mock historique reste réservé aux tests unitaires du client et ne couvre pas les parcours applicatifs complets.
+
+## Building
 
 To create a production version of your app:
 
@@ -41,8 +52,23 @@ You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
 
+## Déploiement Portainer
+
+Le frontend est prêt pour un déploiement Node/Docker. Dans Portainer, créez une stack depuis ce dépôt avec `docker-compose.portainer.yml`, puis renseignez les variables du fichier `.env.production.example`.
+
+- Avec vos sous-domaines, définissez `ORIGIN=https://wikiforge.roselaqueen.fr`, `PUBLIC_API_BASE_URL=https://wikiforge-api.roselaqueen.fr` et `FRONTEND_PORT=32000`. Configurez l'API avec `CORS_ALLOWED_ORIGINS=https://wikiforge.roselaqueen.fr` et publiez-la sur le port `32001` du NAS.
+- Avec un seul domaine et une règle de proxy `/api` vers l'API, laissez `PUBLIC_API_BASE_URL` vide : le navigateur appellera le même domaine, sans CORS.
+
+Le proxy du NAS doit envoyer le domaine du frontend vers le port `3000` du conteneur. Ne publiez pas ce port directement sur Internet.
+
+### TrueNAS sans build Portainer
+
+Utilisez `docker-compose.truenas.yml` si Portainer échoue avant la lecture du Dockerfile. Cette stack n'utilise pas `build:` : elle récupère ce dépôt au démarrage, exécute `npm ci`, construit SvelteKit puis démarre le serveur Node. Les valeurs par défaut correspondent à `wikiforge.roselaqueen.fr`, `wikiforge-api.roselaqueen.fr` et au port NAS `32000`.
+
 ## DA
+
 ### Colors
+
 - Dark blue : #080f19
 - Blue : #0a1422
 - Yellow : #feb823
@@ -53,9 +79,9 @@ You can preview the production build with `npm run preview`.
 - Super Rare : #b41dcf
 - Ultra Rare : #cf7d1d
 - Légendaire : #cf1d1d
-- KTD : #1dcf47
 
 ### Typos
+
 - Logo : DBacks Regular
 - Titles : Palatino Linotype Bold
 - Texts : Lato Regular

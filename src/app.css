@@ -1,0 +1,352 @@
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn-svelte/tailwind.css';
+
+@font-face {
+	font-family: 'DBacks';
+	src: url('/fonts/MLB%20Diamondbacks%20Regular.ttf') format('truetype');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Palatino Linotype';
+	src: url('/fonts/palatino-linotype-bold.ttf') format('truetype');
+	font-weight: 700;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Lato';
+	src: url('/fonts/Lato-Regular.ttf') format('truetype');
+	font-weight: 400;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Lato';
+	src: url('/fonts/Lato-Bold.ttf') format('truetype');
+	font-weight: 700;
+	font-display: swap;
+}
+
+:root {
+	--background: #050a12;
+	--foreground: #f7f2df;
+	--card: #0a1928;
+	--card-foreground: #f7f2df;
+	--popover: #0d2232;
+	--popover-foreground: #f7f2df;
+	--primary: #feb823;
+	--primary-foreground: #080f19;
+	--secondary: #10283a;
+	--secondary-foreground: #e9f4f4;
+	--muted: #102333;
+	--muted-foreground: #9cb0bc;
+	--accent: #fd790c;
+	--accent-foreground: #080f19;
+	--energy: #19a7aa;
+	--energy-soft: #7ce4de;
+	--surface-elevated: #102b3d;
+	--destructive: #e33c39;
+	--border: color-mix(in srgb, #feb823 28%, transparent);
+	--input: color-mix(in srgb, #7ce4de 32%, transparent);
+	--ring: #7ce4de;
+	--radius: 0rem;
+	--forge-cut: 14px;
+}
+
+@theme inline {
+	--font-sans: 'Lato', Arial, sans-serif;
+	--font-serif: 'Palatino Linotype', Palatino, Georgia, serif;
+	--font-mono: 'Lato', Arial, sans-serif;
+	--font-heading: 'DBacks', Impact, sans-serif;
+	--color-ring: var(--ring);
+	--color-input: var(--input);
+	--color-border: var(--border);
+	--color-destructive: var(--destructive);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-accent: var(--accent);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-muted: var(--muted);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-secondary: var(--secondary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-primary: var(--primary);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-popover: var(--popover);
+	--color-card-foreground: var(--card-foreground);
+	--color-card: var(--card);
+	--color-foreground: var(--foreground);
+	--color-background: var(--background);
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+
+	html {
+		@apply font-sans;
+		overflow-x: hidden;
+		scrollbar-gutter: stable;
+		color-scheme: dark;
+	}
+
+	body {
+		@apply bg-background text-foreground antialiased;
+		min-width: 320px;
+		overflow-x: hidden;
+		background-image:
+			radial-gradient(circle at 50% -12rem, rgb(25 167 170 / 24%), transparent 38rem),
+			radial-gradient(circle at 85% 32%, rgb(253 121 12 / 11%), transparent 30rem),
+			linear-gradient(
+				120deg,
+				transparent 0 46%,
+				rgb(254 184 35 / 3%) 46% 46.2%,
+				transparent 46.2% 100%
+			),
+			linear-gradient(#050a12e8, #050a12f5),
+			repeating-linear-gradient(60deg, rgb(124 228 222 / 4%) 0 1px, transparent 1px 56px);
+		background-attachment: fixed;
+	}
+
+	button,
+	a,
+	input,
+	select,
+	textarea {
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	input,
+	select,
+	textarea {
+		font-family: 'Lato', Arial, sans-serif;
+	}
+
+	::selection {
+		background: var(--primary);
+		color: var(--primary-foreground);
+	}
+}
+
+@utility wikiforge-title {
+	@apply font-serif font-bold tracking-tight;
+}
+
+@utility wikiforge-card-grid {
+	@apply grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] justify-items-center gap-x-5 gap-y-8 xl:grid-cols-[repeat(auto-fit,minmax(17rem,1fr))];
+}
+
+@utility wikiforge-card-size {
+	@apply w-52 xl:w-[17rem];
+}
+
+@utility forge-panel {
+	position: relative;
+	border: 1px solid color-mix(in srgb, var(--primary) 36%, transparent);
+	background:
+		linear-gradient(135deg, rgb(124 228 222 / 8%), transparent 24%),
+		linear-gradient(180deg, rgb(16 43 61 / 96%), rgb(8 20 34 / 98%));
+	box-shadow:
+		inset 0 1px rgb(255 255 255 / 4%),
+		inset 0 0 30px rgb(25 167 170 / 5%),
+		0 18px 55px rgb(0 0 0 / 26%);
+	clip-path: polygon(
+		var(--forge-cut) 0,
+		calc(100% - var(--forge-cut)) 0,
+		100% var(--forge-cut),
+		100% calc(100% - var(--forge-cut)),
+		calc(100% - var(--forge-cut)) 100%,
+		var(--forge-cut) 100%,
+		0 calc(100% - var(--forge-cut)),
+		0 var(--forge-cut)
+	);
+}
+
+@utility forge-panel-flat {
+	@apply border border-primary/25 bg-card/90 shadow-[inset_0_1px_rgb(255_255_255_/_4%),0_14px_40px_rgb(0_0_0_/_22%)];
+}
+
+@utility forge-label {
+	@apply font-sans text-[10px] font-bold tracking-[0.18em] text-primary uppercase;
+}
+
+@utility forge-divider {
+	@apply border-b border-primary/20 pb-4;
+	position: relative;
+}
+
+@utility alchemy-frame {
+	@apply forge-panel;
+}
+
+@utility alchemy-label {
+	@apply border border-primary/35 bg-background/70 px-2 py-1 forge-label;
+}
+
+.forge-scene {
+	position: relative;
+	isolation: isolate;
+}
+
+.forge-scene::before,
+.forge-scene::after {
+	position: absolute;
+	z-index: -1;
+	content: '';
+	pointer-events: none;
+}
+
+.forge-scene::before {
+	inset: -10rem -12vw auto;
+	height: 34rem;
+	background:
+		radial-gradient(circle, rgb(25 167 170 / 23%), transparent 48%),
+		conic-gradient(
+			from 0deg at 50% 50%,
+			transparent 0 8%,
+			rgb(254 184 35 / 9%) 8.4% 9%,
+			transparent 9.4% 24%
+		);
+	filter: blur(1px);
+}
+
+.forge-scene::after {
+	top: 3rem;
+	right: -18vw;
+	width: 32rem;
+	height: 32rem;
+	border: 1px solid rgb(124 228 222 / 10%);
+	transform: rotate(45deg);
+	box-shadow: 0 0 80px rgb(25 167 170 / 8%);
+}
+
+.forge-wordmark {
+	font-family: 'DBacks', Impact, sans-serif;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--primary);
+	text-shadow:
+		0 2px 0 #6f2607,
+		0 0 20px rgb(253 121 12 / 30%);
+}
+
+.forge-nav-active {
+	color: var(--primary);
+	background: linear-gradient(180deg, rgb(254 184 35 / 14%), rgb(25 167 170 / 6%));
+	box-shadow: inset 0 -2px var(--accent);
+}
+
+/* Transitional treatment for dense domain components that still use the legacy frame utilities. */
+.border-double {
+	border-width: 1px !important;
+	border-style: solid !important;
+	border-color: color-mix(in srgb, var(--primary) 30%, transparent) !important;
+	background-color: color-mix(in srgb, var(--card) 94%, transparent);
+	box-shadow:
+		inset 0 1px rgb(255 255 255 / 4%),
+		0 14px 38px rgb(0 0 0 / 20%);
+}
+
+.border-dashed {
+	border-style: solid !important;
+}
+
+[data-slot='card'] {
+	background-image: linear-gradient(145deg, rgb(124 228 222 / 7%), transparent 30%);
+}
+
+[data-slot='input'] {
+	min-height: 2.75rem;
+	height: 2.75rem;
+	border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+	background: rgb(5 10 18 / 64%);
+}
+
+select:not([multiple]),
+.forge-control {
+	height: 2.75rem !important;
+	min-height: 2.75rem;
+	border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent) !important;
+	background-color: rgb(5 10 18 / 72%) !important;
+	padding-inline: 0.75rem;
+	font-family: 'Lato', Arial, sans-serif;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	color: var(--foreground);
+	outline: none;
+}
+
+select:not([multiple]):focus,
+.forge-control:focus-visible {
+	border-color: var(--energy-soft) !important;
+	box-shadow: 0 0 0 2px rgb(124 228 222 / 14%);
+}
+
+.forge-energy-orbit {
+	position: relative;
+}
+
+.forge-energy-orbit::before {
+	position: absolute;
+	inset: 6% 8%;
+	z-index: -1;
+	content: '';
+	border: 1px solid rgb(124 228 222 / 28%);
+	border-radius: 50%;
+	box-shadow:
+		0 0 55px rgb(25 167 170 / 28%),
+		inset 0 0 45px rgb(253 121 12 / 18%);
+	animation: forge-orbit 7s linear infinite;
+}
+
+@keyframes forge-orbit {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@keyframes forge-pulse {
+	0%,
+	100% {
+		filter: drop-shadow(0 0 1.1rem rgb(253 121 12 / 28%));
+		transform: translateY(0);
+	}
+	50% {
+		filter: drop-shadow(0 0 2.5rem rgb(25 167 170 / 48%));
+		transform: translateY(-8px);
+	}
+}
+
+@keyframes booster-legendary-seal {
+	0%,
+	100% {
+		filter: drop-shadow(0 0 0 rgb(229 169 60 / 0%));
+	}
+	50% {
+		filter: drop-shadow(0 0 2.5rem rgb(229 169 60 / 72%));
+	}
+}
+
+.booster-legendary {
+	animation: booster-legendary-seal 1.4s ease-in-out infinite;
+}
+
+.forge-booster-idle {
+	animation: forge-pulse 3.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		scroll-behavior: auto !important;
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}
