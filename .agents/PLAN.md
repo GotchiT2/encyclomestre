@@ -258,3 +258,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Étendre les effets foil progressifs de PC à Full Art sans masquer les illustrations — `feat(cards): add progressive foil profiles`
 - [x] Remplacer les bandes foil artificielles par un vernis spéculaire piloté par l'angle — `fix(cards): replace artificial foil bands`
 - [x] Répartir la brillance foil et renforcer sa progression sur les raretés supérieures — `fix(cards): balance foil brightness`
+- [x] Dockeriser le frontend SvelteKit et fournir la stack Portainer de production — `feat(deploy): add Portainer frontend stack`

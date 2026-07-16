@@ -52,6 +52,15 @@ You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
 
+## Déploiement Portainer
+
+Le frontend est prêt pour un déploiement Node/Docker. Dans Portainer, créez une stack depuis ce dépôt avec `docker-compose.portainer.yml`, puis renseignez les variables du fichier `.env.production.example`.
+
+- Avec vos sous-domaines, définissez `ORIGIN=https://wikiforge.roselaqueen.fr`, `PUBLIC_API_BASE_URL=https://wikiforge-api.roselaqueen.fr` et `FRONTEND_PORT=32000`. Configurez l'API avec `CORS_ALLOWED_ORIGINS=https://wikiforge.roselaqueen.fr` et publiez-la sur le port `32001` du NAS.
+- Avec un seul domaine et une règle de proxy `/api` vers l'API, laissez `PUBLIC_API_BASE_URL` vide : le navigateur appellera le même domaine, sans CORS.
+
+Le proxy du NAS doit envoyer le domaine du frontend vers le port `3000` du conteneur. Ne publiez pas ce port directement sur Internet.
+
 ## DA
 
 ### Colors
