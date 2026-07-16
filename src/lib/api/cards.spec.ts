@@ -32,6 +32,7 @@ describe('getCards', () => {
 			page: 2,
 			pageSize: 12,
 			rarities: ['Légendaire', 'Rare'],
+			variant: 'alternative',
 			sortBy: 'rarity',
 			sortDirection: 'DESC'
 		});
@@ -42,6 +43,7 @@ describe('getCards', () => {
 				page: 1,
 				size: 12,
 				rarities: ['L', 'R'],
+				variant: 'alternative',
 				sortBy: 'rarity',
 				sortDirection: 'DESC'
 			}),

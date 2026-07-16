@@ -1,6 +1,8 @@
 import { apiRequest, type RequestOptions } from './client';
 import type {
 	CardRecord,
+	CardVariant,
+	CardVariantCode,
 	CollectionTag,
 	DashboardData,
 	GuildMember,
@@ -13,13 +15,15 @@ import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/raritie
 export type WikiForgeRarity = CardRarityCode;
 
 export interface WikiForgeCard {
-	id: string | number;
+	id: string;
+	baseCardId?: number;
+	variant: CardVariantCode;
 	wikipediaTitle: string;
 	shortDescription?: string;
 	longDescription?: string;
 	imageUrl: string;
 	rarity: string;
-	isFullArt?: boolean;
+	isFullArt: boolean;
 	category?: string;
 	atk?: number;
 	def?: number;
@@ -33,7 +37,7 @@ export interface WikiForgeCard {
 
 export interface WikiForgeCollectionCard {
 	userCardId: string;
-	cardId: string | number;
+	cardId: string;
 	acquiredAt: string;
 	tags: CollectionTag[];
 	card: WikiForgeCard;
@@ -59,7 +63,14 @@ export interface WikiForgeQuery {
 	rarities?: WikiForgeRarity[];
 	tagIds?: string[];
 	untagged?: boolean;
+	variant?: CardVariant;
 }
+
+const apiVariantByFilter: Record<CardVariant, 'ALL' | CardVariantCode> = {
+	all: 'ALL',
+	normal: 'NORMAL',
+	alternative: 'FULL_ART'
+};
 
 function queryPath(endpoint: '/api/cards' | '/api/collection', query: WikiForgeQuery) {
 	const parameters = new URLSearchParams({
@@ -69,6 +80,7 @@ function queryPath(endpoint: '/api/cards' | '/api/collection', query: WikiForgeQ
 		sortDirection: query.sortDirection ?? 'ASC'
 	});
 	if (query.q) parameters.set('q', query.q);
+	parameters.set('variant', apiVariantByFilter[query.variant ?? 'all']);
 	query.rarities?.forEach((rarity) => parameters.append('rarity', rarity));
 	query.tagIds?.forEach((tagId) => parameters.append('tag', tagId));
 	if (query.untagged) parameters.set('untagged', 'true');
@@ -81,7 +93,7 @@ export const getWikiForgeCards = (query: WikiForgeQuery = {}, options?: RequestO
 export const getWikiForgeCollection = (query: WikiForgeQuery = {}, options?: RequestOptions) =>
 	apiRequest<WikiForgePage<WikiForgeCollectionCard>>(queryPath('/api/collection', query), options);
 
-export const getWikiForgeCard = (id: string | number, options?: RequestOptions) =>
+export const getWikiForgeCard = (id: string, options?: RequestOptions) =>
 	apiRequest<WikiForgeCard>(`/api/cards/${encodeURIComponent(id)}`, options);
 
 export interface BoosterStatus {
@@ -141,7 +153,9 @@ export const removeWikiForgeTag = (
 interface DashboardResponse extends Omit<DashboardData, 'recentAcquisitions'> {
 	recentAcquisitions: Array<{
 		userCardId: string;
-		cardId: number;
+		cardId: string;
+		variant: CardVariantCode;
+		isFullArt: boolean;
 		rarity: string;
 		acquiredAt: string;
 		wikipediaTitle: string;
@@ -155,7 +169,9 @@ export const getDashboard = async (options?: RequestOptions): Promise<DashboardD
 		...response,
 		recentAcquisitions: response.recentAcquisitions.map((item) =>
 			toCardRecord({
-				id: item.userCardId,
+				id: item.cardId,
+				variant: item.variant,
+				isFullArt: item.isFullArt,
 				wikipediaTitle: item.wikipediaTitle,
 				imageUrl: item.imageUrl,
 				rarity: item.rarity,
@@ -180,6 +196,8 @@ export function toCardRecord(card: WikiForgeCard): CardRecord {
 	const rarity = cardRarityByCode[card.rarity as CardRarityCode] ?? cardRarityByCode.C;
 	return {
 		id: String(card.id),
+		baseCardId: card.baseCardId,
+		variant: card.variant,
 		title: card.wikipediaTitle,
 		shortDescription: card.shortDescription ?? card.category ?? '',
 		longDescription: card.longDescription ?? card.shortDescription ?? card.category ?? '',
@@ -194,7 +212,7 @@ export function toCardRecord(card: WikiForgeCard): CardRecord {
 		ownedCount: card.acquiredAt ? 1 : 0,
 		globalSupply: card.globalSupply ?? 0,
 		friendsWhoOwn: [],
-		isFullArt: card.isFullArt ?? false,
+		isFullArt: card.isFullArt,
 		category: card.category,
 		qScore: card.qScore,
 		acquiredAt: card.acquiredAt

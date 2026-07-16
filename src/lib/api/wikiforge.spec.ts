@@ -5,11 +5,13 @@ describe('WikiForge API adapters', () => {
 	it('préserve les identifiants catalogue et exemplaire d’une carte de collection', () => {
 		const card = toCollectionCardRecord({
 			userCardId: 'user-card-uuid',
-			cardId: 42,
+			cardId: 'variant-uuid',
 			acquiredAt: '2026-07-14T12:00:00Z',
 			tags: [{ id: 'tag-1', name: 'Favori', color: '#feb823' }],
 			card: {
-				id: 42,
+				id: 'variant-uuid',
+				baseCardId: 42,
+				variant: 'FULL_ART',
 				wikipediaTitle: 'Carte de validation',
 				shortDescription: 'Description courte',
 				longDescription: 'Description complète',
@@ -23,7 +25,7 @@ describe('WikiForge API adapters', () => {
 
 		expect(card).toMatchObject({
 			id: 'user-card-uuid',
-			catalogueId: '42',
+			catalogueId: 'variant-uuid',
 			title: 'Carte de validation',
 			longDescription: 'Description complète',
 			isFullArt: true,
@@ -37,7 +39,10 @@ describe('WikiForge API adapters', () => {
 		const page = toCardPage({
 			results: [
 				{
-					id: 7,
+					id: 'normal-uuid',
+					baseCardId: 7,
+					variant: 'NORMAL',
+					isFullArt: false,
 					wikipediaTitle: 'Carte publique',
 					imageUrl: '/card-placeholder.svg',
 					rarity: 'UNKNOWN'

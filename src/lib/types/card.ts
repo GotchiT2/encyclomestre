@@ -9,9 +9,12 @@ export type CardRarity =
 	'Légendaire' | 'Ultra-Rare' | 'Super-Rare' | 'Rare' | 'Peu Commune' | 'Commune';
 export type CardRarityInitials = 'L' | 'UR' | 'SR' | 'R' | 'PC' | 'C';
 export type CardVariant = 'all' | 'normal' | 'alternative';
+export type CardVariantCode = 'NORMAL' | 'FULL_ART';
 
 export interface Card {
 	catalogueId?: string;
+	baseCardId?: number;
+	variant?: CardVariantCode;
 	title: string;
 	shortDescription: string;
 	longDescription: string;

@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import {
 		addSaleFavorite,
-		getCard,
 		getMarketListings,
 		getSaleFavorites,
 		removeSaleFavorite
@@ -57,13 +56,7 @@
 					? $currentSession?.user.id
 					: undefined
 		});
-		cards = (
-			await Promise.all(
-				[...new Set(listings.map((listing) => listing.cardId))].map((cardId) =>
-					getCard(cardId).catch(() => null)
-				)
-			)
-		).filter((card): card is CardRecord => card !== null);
+		cards = listings.flatMap((listing) => (listing.card ? [listing.card] : []));
 		loading = false;
 	}
 

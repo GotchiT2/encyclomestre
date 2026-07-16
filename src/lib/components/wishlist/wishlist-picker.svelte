@@ -66,6 +66,7 @@
 			pageSize,
 			query: query.trim() || undefined,
 			rarities: selectedRarities,
+			variant,
 			sortBy,
 			sortDirection: sortBy === 'rarity' ? 'DESC' : 'ASC'
 		};

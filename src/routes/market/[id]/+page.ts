@@ -6,7 +6,7 @@ export const load: PageLoad = ({ params, fetch }) => {
 	return {
 		sale,
 		bids: getSaleBids(params.id, { fetch }),
-		card: sale.then((listing) => getCard(listing.cardId, { fetch })),
+		card: sale.then((listing) => listing.card ?? getCard(listing.cardId, { fetch })),
 		priceHistory: sale.then((listing) => getCardPriceHistory(listing.cardId, { fetch }))
 	};
 };

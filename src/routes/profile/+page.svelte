@@ -54,10 +54,15 @@
 			username: profile.username || $currentSession?.user.username || ''
 		};
 		sales = userSales;
-		const knownIds = new Set(allCards.map((card) => card.id));
-		const referencedIds = [
-			...new Set([...settings.wantedCardIds, ...userSales.map((sale) => sale.cardId)])
+		allCards = [
+			...new Map(
+				[...allCards, ...userSales.flatMap((sale) => (sale.card ? [sale.card] : []))].map(
+					(card) => [card.id, card]
+				)
+			).values()
 		];
+		const knownIds = new Set(allCards.map((card) => card.id));
+		const referencedIds = [...new Set(settings.wantedCardIds)];
 		const missingCards = await Promise.all(
 			referencedIds
 				.filter((cardId) => !knownIds.has(cardId))

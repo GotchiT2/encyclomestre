@@ -2,10 +2,11 @@ import { apiRequest, type RequestOptions } from './client';
 import { getCard } from './cards';
 import { getUser } from './users';
 import type { SaleBid, SaleListing } from '$lib/types';
-import type { WikiForgePage } from './wikiforge';
+import { toCardRecord, type WikiForgeCard, type WikiForgePage } from './wikiforge';
 
-interface ApiSale extends Omit<SaleListing, 'cardId'> {
-	cardId: number;
+interface ApiSale extends Omit<SaleListing, 'cardId' | 'card'> {
+	cardId: string;
+	card: WikiForgeCard;
 }
 
 interface ApiBid {
@@ -15,7 +16,11 @@ interface ApiBid {
 	createdAt: string;
 }
 
-const toSale = (sale: ApiSale): SaleListing => ({ ...sale, cardId: String(sale.cardId) });
+const toSale = (sale: ApiSale): SaleListing => ({
+	...sale,
+	cardId: sale.cardId,
+	card: toCardRecord(sale.card)
+});
 const toBid = (saleId: string, bid: ApiBid): SaleBid => ({
 	...bid,
 	saleId,

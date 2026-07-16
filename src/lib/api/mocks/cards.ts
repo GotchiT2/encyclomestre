@@ -56,16 +56,18 @@ const meta: Record<CardRarity, [CardRecord['rarityInitials'], string]> = {
 
 export const mockCards: CardRecord[] = articles.flatMap(
 	([title, rarity, attack, defense, viewCount], articleIndex) =>
-		editions.map((edition, editionIndex) => {
+		editions.flatMap((edition, editionIndex) => {
 			const index = articleIndex + editionIndex * articles.length;
 			const [rarityInitials, rarityColor] = meta[rarity];
-			return {
+			const baseCard: CardRecord = {
 				id: `${title
 					.toLowerCase()
 					.normalize('NFD')
 					.replace(/[\u0300-\u036f]/g, '')
 					.replace(/[^a-z0-9]+/g, '-')
 					.replace(/^-|-$/g, '')}-${editionIndex + 1}`,
+				baseCardId: index + 1,
+				variant: 'NORMAL',
 				title: `${title}${edition}`,
 				shortDescription: `Notice encyclopédique de ${title}.`,
 				longDescription: `${title} est une notice du compendium K-pop féminin, indexée pour la collection et les échanges entre amis.`,
@@ -78,7 +80,7 @@ export const mockCards: CardRecord[] = articles.flatMap(
 				attack: Math.min(10000, Math.round(attack * (1 + editionIndex * 0.03))),
 				defense: Math.min(10000, Math.round(defense * (1 + editionIndex * 0.03))),
 				ownedCount: index % 7 === 0 ? (index % 3) + 1 : 0,
-				isFullArt: rarity === 'Légendaire' && index % 4 === 2,
+				isFullArt: false,
 				globalSupply: Math.max(20, Math.round(1200 / (editionIndex + 1))),
 				friendsWhoOwn:
 					index === 0
@@ -108,5 +110,17 @@ export const mockCards: CardRecord[] = articles.flatMap(
 									}
 								]
 			};
+			return rarity === 'Légendaire'
+				? [
+						baseCard,
+						{
+							...baseCard,
+							id: `${baseCard.id}-full-art`,
+							variant: 'FULL_ART',
+							isFullArt: true,
+							ownedCount: 0
+						}
+					]
+				: [baseCard];
 		})
 );

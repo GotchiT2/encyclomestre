@@ -16,6 +16,7 @@ describe('WishlistActionMenu', () => {
 					title: 'Cartes recherchées',
 					description: '',
 					cardIds: [],
+					cards: [],
 					createdAt: '',
 					updatedAt: '',
 					opportunityCount: 0

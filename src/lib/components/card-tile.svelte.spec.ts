@@ -38,9 +38,11 @@ describe('CardTile', () => {
 		await expect
 			.element(page.getByTestId('card-tile'))
 			.toHaveAttribute('data-frame', '/images/card-L---Overframe-empty.png');
+		await expect.element(page.getByTestId('card-tile')).toHaveAttribute('data-layout', 'full-art');
 		await expect.element(page.getByLabelText('ATK 9500')).toBeVisible();
 		await expect.element(page.getByLabelText('DEF 9800')).toBeVisible();
-		await expect.element(page.getByText('Notice encyclopédique.')).toBeVisible();
+		await expect.element(page.getByText('Notice encyclopédique.')).not.toBeInTheDocument();
+		await expect.element(page.getByTestId('card-art')).toHaveClass('top-[6.3%]');
 	});
 
 	it('keeps a long title in its dedicated card zone', async () => {

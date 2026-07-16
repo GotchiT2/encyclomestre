@@ -8,8 +8,9 @@ describe('createMockApiResponse', () => {
 		expect(response.status).toBe(200);
 		expect(await response.json()).toMatchObject({
 			id: 'girls-generation-1',
-			title: "Girls' Generation",
-			rarityInitials: 'L'
+			wikipediaTitle: "Girls' Generation",
+			rarity: 'L',
+			variant: 'NORMAL'
 		});
 	});
 
@@ -35,7 +36,7 @@ describe('createMockApiResponse', () => {
 		});
 
 		const sales = createMockApiResponse({ path: '/sales?sellerId=demo-user' });
-		expect((await sales.json()) as { sellerId: string }[]).toEqual(
+		expect(((await sales.json()) as { results: { sellerId: string }[] }).results).toEqual(
 			expect.arrayContaining([expect.objectContaining({ sellerId: 'demo-user' })])
 		);
 	});
@@ -93,13 +94,20 @@ describe('createMockApiResponse', () => {
 		});
 
 		const response = createMockApiResponse({
-			path: '/wishlist?userId=demo-user&priority=high&page=1&pageSize=1'
+			path: '/wishlist?priority=high&page=0&size=1'
 		});
 
 		expect(response.status).toBe(200);
 		expect(await response.json()).toMatchObject({
-			items: [expect.objectContaining({ cardId: 'girls-generation-1', priority: 'high' })],
-			meta: expect.objectContaining({ page: 1, total: 1 })
+			results: [
+				expect.objectContaining({
+					cardId: 'girls-generation-1',
+					priority: 'high',
+					card: expect.objectContaining({ variant: 'NORMAL' })
+				})
+			],
+			page: 0,
+			nbResults: 1
 		});
 	});
 
@@ -123,13 +131,13 @@ describe('createMockApiResponse', () => {
 			body: { target: 'guild' }
 		});
 		expect(shared.status).toBe(200);
-		expect(await shared.json()).toMatchObject({ sealUrl: expect.stringContaining('/seals/') });
+		expect(await shared.json()).toMatchObject({ token: registry.id });
 	});
 
 	it('filtre les ventes actives pour une carte', async () => {
 		const response = createMockApiResponse({ path: '/sales?cardId=red-velvet-1' });
 		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual([
+		expect(((await response.json()) as { results: unknown[] }).results).toEqual([
 			expect.objectContaining({ cardId: 'red-velvet-1', type: 'auction' })
 		]);
 	});

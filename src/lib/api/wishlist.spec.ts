@@ -6,6 +6,8 @@ vi.mock('./client', () => ({ apiRequest }));
 
 import {
 	deleteWishlistRegistry,
+	getWishlist,
+	getWishlists,
 	removeWishlistEntry,
 	removeWishlistRegistryCard
 } from './wishlist';
@@ -37,5 +39,77 @@ describe('wishlist deletions', () => {
 
 		expect(apiRequest).toHaveBeenCalledOnce();
 		expect(apiRequest).toHaveBeenCalledWith('/api/wishlists/list%2F2', { method: 'DELETE' });
+	});
+
+	it('uses the hydrated variant cards returned by the paginated wishlist', async () => {
+		apiRequest.mockResolvedValueOnce({
+			results: [
+				{
+					cardId: 'variant-uuid',
+					priority: 'high',
+					note: null,
+					createdAt: '2026-07-16T08:00:00Z',
+					updatedAt: '2026-07-16T08:00:00Z',
+					card: {
+						id: 'variant-uuid',
+						baseCardId: 42,
+						variant: 'FULL_ART',
+						isFullArt: true,
+						wikipediaTitle: 'Carte légendaire',
+						imageUrl: '/card-placeholder.svg',
+						rarity: 'L'
+					}
+				}
+			],
+			page: 0,
+			nbResults: 1,
+			size: 20
+		});
+
+		const wishlist = await getWishlist('user-1', {
+			page: 1,
+			pageSize: 20,
+			variant: 'alternative'
+		});
+
+		expect(apiRequest).toHaveBeenCalledWith(expect.stringContaining('variant=FULL_ART'), undefined);
+		expect(wishlist.items[0]).toMatchObject({
+			cardId: 'variant-uuid',
+			card: { id: 'variant-uuid', isFullArt: true, variant: 'FULL_ART' }
+		});
+	});
+
+	it('hydrates named wishlists without requesting each card separately', async () => {
+		apiRequest.mockResolvedValueOnce([
+			{
+				id: 'wishlist-uuid',
+				userId: 'user-1',
+				title: 'Priorités',
+				description: '',
+				cardIds: ['variant-uuid'],
+				cards: [
+					{
+						id: 'variant-uuid',
+						baseCardId: 42,
+						variant: 'NORMAL',
+						isFullArt: false,
+						wikipediaTitle: 'Carte normale',
+						imageUrl: '/card-placeholder.svg',
+						rarity: 'L'
+					}
+				],
+				opportunityCount: 0,
+				createdAt: '',
+				updatedAt: ''
+			}
+		]);
+
+		const lists = await getWishlists('user-1');
+
+		expect(apiRequest).toHaveBeenCalledOnce();
+		expect(lists[0]).toMatchObject({
+			cardIds: ['variant-uuid'],
+			cards: [{ id: 'variant-uuid', variant: 'NORMAL' }]
+		});
 	});
 });

@@ -1,5 +1,6 @@
 import type {
 	AuthSession,
+	CardRecord,
 	CardPriceHistory,
 	CreateUserInput,
 	UpdateUserInput,
@@ -10,7 +11,6 @@ import type {
 	TradeOffer,
 	CreateTradeOfferInput,
 	BoosterInventory,
-	BoosterOpenResult,
 	WishlistEntry,
 	WishlistRegistry,
 	GuildWishlistShare,
@@ -29,6 +29,30 @@ export interface MockApiRequest {
 }
 
 const now = '2026-07-11T09:00:00.000Z';
+const apiCard = (card: CardRecord) => ({
+	id: card.id,
+	baseCardId: card.baseCardId ?? (Number.parseInt(card.id.replace(/\D/g, ''), 10) || 0),
+	variant: card.isFullArt ? 'FULL_ART' : 'NORMAL',
+	isFullArt: Boolean(card.isFullArt),
+	wikipediaTitle: card.title,
+	shortDescription: card.shortDescription,
+	longDescription: card.longDescription,
+	imageUrl: card.imageUrl,
+	wikipediaUrl: card.wikipediaUrl,
+	rarity: card.rarityInitials,
+	category: card.category,
+	atk: card.attack,
+	def: card.defense,
+	qScore: card.qScore,
+	pageviews: card.viewCount,
+	globalSupply: card.globalSupply,
+	createdAt: now
+});
+
+const apiRegistry = (registry: WishlistRegistry) => ({
+	...registry,
+	cards: registry.cards.map(apiCard)
+});
 const defaultPreferences = {
 	language: 'fr',
 	timezone: 'Europe/Paris',
@@ -117,6 +141,7 @@ const wishlist = new Map<string, WishlistEntry[]>([
 		[
 			{
 				cardId: 'red-velvet-1',
+				card: mockCards.find((card) => card.id === 'red-velvet-1')!,
 				priority: 'medium',
 				note: 'Suivre la prochaine enchère.',
 				createdAt: now,
@@ -124,6 +149,7 @@ const wishlist = new Map<string, WishlistEntry[]>([
 			},
 			{
 				cardId: 'blackpink-1',
+				card: mockCards.find((card) => card.id === 'blackpink-1')!,
 				priority: 'medium',
 				note: null,
 				createdAt: now,
@@ -142,6 +168,9 @@ const wishlists = new Map<string, WishlistRegistry[]>([
 				title: 'Cartes prioritaires',
 				description: 'Les cartes à obtenir en priorité.',
 				cardIds: ['girls-generation-1', 'blackpink-1', 'red-velvet-1'],
+				cards: mockCards.filter((card) =>
+					['girls-generation-1', 'blackpink-1', 'red-velvet-1'].includes(card.id)
+				),
 				createdAt: now,
 				updatedAt: now
 			},
@@ -151,6 +180,9 @@ const wishlists = new Map<string, WishlistRegistry[]>([
 				title: 'Génération 2',
 				description: 'Cartes de la seconde génération.',
 				cardIds: ['girls-generation-2', '2ne1-1', 'kara-groupe-1'],
+				cards: mockCards.filter((card) =>
+					['girls-generation-2', '2ne1-1', 'kara-groupe-1'].includes(card.id)
+				),
 				createdAt: now,
 				updatedAt: now
 			}
@@ -463,37 +495,59 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	}
 
 	if (normalizedMethod === 'GET' && pathname === '/cards') {
-		const page = Math.max(1, Number(url.searchParams.get('page') ?? 1));
-		const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get('pageSize') ?? 12)));
+		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
+		const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get('size') ?? 20)));
 		const query = url.searchParams.get('q')?.trim().toLocaleLowerCase('fr-FR');
-		const rarity = url.searchParams.get('rarity');
+		const rarities = url.searchParams.getAll('rarity');
+		const variant = url.searchParams.get('variant') ?? 'ALL';
 		const items = mockCards.filter(
 			(card) =>
 				(!query || card.title.toLocaleLowerCase('fr-FR').includes(query)) &&
-				(!rarity || card.rarity === rarity)
+				(!rarities.length || rarities.includes(card.rarityInitials)) &&
+				(variant === 'ALL' ||
+					(variant === 'FULL_ART' && card.isFullArt) ||
+					(variant === 'NORMAL' && !card.isFullArt))
 		);
 		return json({
-			items: items.slice((page - 1) * pageSize, page * pageSize),
-			meta: {
-				page,
-				pageSize,
-				total: items.length,
-				totalPages: Math.max(1, Math.ceil(items.length / pageSize))
-			}
+			results: items.slice(page * pageSize, (page + 1) * pageSize).map(apiCard),
+			page,
+			nbResults: items.length,
+			size: pageSize,
+			sortBy: url.searchParams.get('sortBy') ?? 'name',
+			sortDirection: url.searchParams.get('sortDirection') ?? 'ASC',
+			filters: { rarity: rarities, variant },
+			q: query ?? null
 		});
 	}
 	if (normalizedMethod === 'GET' && pathname === '/collection') {
-		const items = mockCards.filter((card) => card.ownedCount > 0);
+		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
+		const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get('size') ?? 20)));
+		const variant = url.searchParams.get('variant') ?? 'ALL';
+		const items = mockCards.filter(
+			(card) =>
+				card.ownedCount > 0 &&
+				(variant === 'ALL' ||
+					(variant === 'FULL_ART' && card.isFullArt) ||
+					(variant === 'NORMAL' && !card.isFullArt))
+		);
 		return json({
-			items,
-			meta: { page: 1, pageSize: items.length, total: items.length, totalPages: 1 }
+			results: items.slice(page * pageSize, (page + 1) * pageSize).map((card) => ({
+				userCardId: `owned-${card.id}`,
+				cardId: card.id,
+				acquiredAt: card.acquiredAt ?? now,
+				tags: card.collectionTags ?? [],
+				card: apiCard(card)
+			})),
+			page,
+			nbResults: items.length,
+			size: pageSize
 		});
 	}
 	if (normalizedMethod === 'GET' && pathname === '/wishlists') {
 		const userId = url.searchParams.get('userId') ?? 'demo-user';
 		return json(
 			(wishlists.get(userId) ?? []).map((registry) => ({
-				...registry,
+				...apiRegistry(registry),
 				opportunityCount: registry.cardIds.filter((cardId) =>
 					Boolean(mockCards.find((card) => card.id === cardId)?.friendsWhoOwn.length)
 				).length
@@ -512,11 +566,12 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			title,
 			description,
 			cardIds: [],
+			cards: [],
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString()
 		};
 		wishlists.set(userId, [registry, ...(wishlists.get(userId) ?? [])]);
-		return json(registry, 201);
+		return json(apiRegistry(registry), 201);
 	}
 	if (normalizedMethod === 'GET' && pathname === '/messages/guild-wishlists') {
 		return json(guildWishlistShares);
@@ -583,13 +638,9 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		}
 	}
 	if (normalizedMethod === 'POST' && pathname === '/wishlists/import') {
-		const input = asObject(body);
-		const userId = typeof input?.userId === 'string' ? input.userId : 'demo-user';
-		const sealUrl = typeof input?.sealUrl === 'string' ? input.sealUrl : '';
-		const match = /\/seals\/(.+)-\d+$/.exec(sealUrl);
-		const source = match
-			? [...wishlists.values()].flat().find((registry) => registry.id === match[1])
-			: undefined;
+		const userId = 'demo-user';
+		const token = url.searchParams.get('token') ?? '';
+		const source = [...wishlists.values()].flat().find((registry) => registry.id === token);
 		if (!source) return error(404, 'Lien de wishlist invalide.', 'WISHLIST_SEAL_NOT_FOUND');
 		const imported: WishlistRegistry = {
 			...source,
@@ -601,7 +652,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			updatedAt: new Date().toISOString()
 		};
 		wishlists.set(userId, [imported, ...(wishlists.get(userId) ?? [])]);
-		return json(imported, 201);
+		return json(apiRegistry(imported), 201);
 	}
 	const wishlistRegistryMatch = /^\/wishlists\/([^/]+)(?:\/(cards|remove|share))?$/.exec(pathname);
 	if (wishlistRegistryMatch) {
@@ -610,7 +661,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const registries = wishlists.get(userId) ?? [];
 		const registry = registries.find((entry) => entry.id === decodeURIComponent(encodedId));
 		if (!registry) return error(404, 'Wishlist introuvable.', 'WISHLIST_NOT_FOUND');
-		if (normalizedMethod === 'GET' && !action) return json(registry);
+		if (normalizedMethod === 'GET' && !action) return json(apiRegistry(registry));
 		if (normalizedMethod === 'DELETE' && !action) {
 			wishlists.set(
 				userId,
@@ -619,11 +670,12 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			return json(undefined, 204);
 		}
 		if (normalizedMethod === 'POST' && action === 'cards') {
-			const cardId =
-				typeof asObject(body)?.cardId === 'string' ? (asObject(body)!.cardId as string) : '';
+			const cardId = url.searchParams.get('cardId') ?? '';
 			if (!mockCards.some((card) => card.id === cardId))
 				return error(404, 'Carte introuvable.', 'CARD_NOT_FOUND');
 			if (!registry.cardIds.includes(cardId)) registry.cardIds.push(cardId);
+			const card = mockCards.find((entry) => entry.id === cardId);
+			if (card && !registry.cards.some((entry) => entry.id === cardId)) registry.cards.push(card);
 			registry.updatedAt = new Date().toISOString();
 			return json(registry);
 		}
@@ -671,13 +723,25 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 					guildConversation.updatedAt = createdAt;
 				}
 			}
-			return json({ sealUrl: `https://encyclomestre.test/seals/${registry.id}-${Date.now()}` });
+			return json({ token: registry.id });
 		}
+	}
+	const wishlistRegistryCardMatch = /^\/wishlists\/([^/]+)\/cards\/([^/]+)$/.exec(pathname);
+	if (wishlistRegistryCardMatch && normalizedMethod === 'DELETE') {
+		const [, encodedId, encodedCardId] = wishlistRegistryCardMatch;
+		const registries = wishlists.get('demo-user') ?? [];
+		const registry = registries.find((entry) => entry.id === decodeURIComponent(encodedId));
+		if (!registry) return error(404, 'Wishlist introuvable.', 'WISHLIST_NOT_FOUND');
+		const cardId = decodeURIComponent(encodedCardId);
+		registry.cardIds = registry.cardIds.filter((entry) => entry !== cardId);
+		registry.cards = registry.cards.filter((entry) => entry.id !== cardId);
+		registry.updatedAt = new Date().toISOString();
+		return json(undefined, 204);
 	}
 	if (normalizedMethod === 'GET' && pathname === '/wishlist') {
 		const userId = url.searchParams.get('userId') ?? 'demo-user';
-		const page = Math.max(1, Number(url.searchParams.get('page') ?? 1));
-		const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get('pageSize') ?? 12)));
+		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
+		const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get('size') ?? 20)));
 		const query = url.searchParams.get('q')?.trim().toLocaleLowerCase('fr-FR');
 		const priority = url.searchParams.get('priority');
 		const hasAlert = url.searchParams.get('hasAlert') === 'true';
@@ -696,13 +760,20 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			return matchesQuery && matchesPriority && matchesAlert;
 		});
 		return json({
-			items: items.slice((page - 1) * pageSize, page * pageSize),
-			meta: {
-				page,
-				pageSize,
-				total: items.length,
-				totalPages: Math.max(1, Math.ceil(items.length / pageSize))
-			}
+			results: items.slice(page * pageSize, (page + 1) * pageSize).map((entry) => ({
+				...entry,
+				card: apiCard(entry.card),
+				hasAlert:
+					Boolean(entry.card.friendsWhoOwn.length) ||
+					sales.some((sale) => sale.cardId === entry.cardId && sale.type === 'auction')
+			})),
+			page,
+			nbResults: items.length,
+			size: pageSize,
+			sortBy: url.searchParams.get('sortBy') ?? 'name',
+			sortDirection: url.searchParams.get('sortDirection') ?? 'ASC',
+			filters: {},
+			q: query ?? null
 		});
 	}
 	if (normalizedMethod === 'GET' && pathname === '/wishlist/alerts') {
@@ -716,7 +787,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 								id: `friend-${entry.cardId}`,
 								cardId: entry.cardId,
 								type: 'friend-owner' as const,
-								context: card.friendsWhoOwn[0].username,
+								message: card.friendsWhoOwn[0].username,
 								createdAt: now
 							}
 						]
@@ -729,7 +800,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 								id: `auction-${entry.cardId}`,
 								cardId: entry.cardId,
 								type: 'auction' as const,
-								context: 'active',
+								message: 'active',
 								createdAt: now
 							}
 						]
@@ -747,6 +818,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const entries = wishlist.get(userId) ?? [];
 		const entry = entries.find((candidate) => candidate.cardId === cardId) ?? {
 			cardId,
+			card: mockCards.find((card) => card.id === cardId)!,
 			priority: 'medium' as const,
 			note: null,
 			createdAt: new Date().toISOString(),
@@ -754,7 +826,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		};
 		if (!entries.includes(entry)) entries.push(entry);
 		wishlist.set(userId, entries);
-		return json(entry, 201);
+		return json({ ...entry, card: apiCard(entry.card), hasAlert: false }, 201);
 	}
 	const wishlistMatch = /^\/wishlist\/([^/]+)$/.exec(pathname);
 	if (wishlistMatch) {
@@ -770,7 +842,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				entry.priority = input.priority;
 			if (typeof input.note === 'string' || input.note === null) entry.note = input.note;
 			entry.updatedAt = new Date().toISOString();
-			return json(entry);
+			return json({ ...entry, card: apiCard(entry.card), hasAlert: false });
 		}
 		if (normalizedMethod === 'DELETE') {
 			wishlist.set(
@@ -782,6 +854,14 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	}
 	if (normalizedMethod === 'GET' && pathname === '/boosters/inventory')
 		return json(boosterInventory(url.searchParams.get('userId') ?? 'demo-user'));
+	if (normalizedMethod === 'GET' && pathname === '/boosters/status') {
+		const inventory = boosterInventory('demo-user');
+		return json({
+			availableBoosters: inventory.available,
+			maxBoosters: inventory.capacity,
+			nextBoosterAvailableAt: inventory.nextRechargeAt
+		});
+	}
 	if (normalizedMethod === 'POST' && pathname === '/boosters/open') {
 		const userId =
 			typeof asObject(body)?.userId === 'string' ? (asObject(body)!.userId as string) : 'demo-user';
@@ -789,14 +869,18 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		if (!inventory.available) return error(409, 'Aucun paquet disponible.', 'BOOSTER_EMPTY');
 		const state = boosterReserve.get(userId)!;
 		state.available -= 1;
-		const pulls = Array.from({ length: 5 }, () => {
+		const cards = Array.from({ length: 5 }, (_, index) => {
 			const card = mockCards[Math.floor(Math.random() * mockCards.length)];
-			const ownedBefore = card.ownedCount;
 			card.ownedCount += 1;
-			return { card, ownedBefore, ownedAfter: card.ownedCount };
+			return {
+				userCardId: `booster-${Date.now()}-${index}`,
+				cardId: card.id,
+				acquiredAt: new Date().toISOString(),
+				tags: [],
+				card: apiCard(card)
+			};
 		});
-		const result: BoosterOpenResult = { pulls, inventory: boosterInventory(userId) };
-		return json(result);
+		return json({ cards });
 	}
 	if (normalizedMethod === 'GET' && pathname === '/sales') {
 		const sellerId = url.searchParams.get('sellerId');
@@ -805,29 +889,36 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const type = url.searchParams.get('type');
 		const maxPrice = Number(url.searchParams.get('maxPrice') ?? 0);
 		const bidderId = url.searchParams.get('bidderId');
-		return json(
-			sales
-				.filter(
-					(sale) =>
-						(!sellerId || sale.sellerId === sellerId) &&
-						(!cardId || sale.cardId === cardId) &&
-						(!bidderId ||
-							saleBids.some((bid) => bid.saleId === sale.id && bid.bidderId === bidderId)) &&
-						(!type || sale.type === type) &&
-						(!maxPrice || sale.price <= maxPrice) &&
-						(!query ||
-							mockCards
-								.find((card) => card.id === sale.cardId)
-								?.title.toLocaleLowerCase('fr-FR')
-								.includes(query) ||
-							users.get(sale.sellerId)?.username.toLocaleLowerCase('fr-FR').includes(query))
-				)
-				.map((sale) => ({
-					...sale,
-					sellerName: users.get(sale.sellerId)?.username ?? sale.sellerId,
-					status: 'active'
-				}))
-		);
+		const results = sales
+			.filter(
+				(sale) =>
+					(!sellerId || sale.sellerId === sellerId) &&
+					(!cardId || sale.cardId === cardId) &&
+					(!bidderId ||
+						saleBids.some((bid) => bid.saleId === sale.id && bid.bidderId === bidderId)) &&
+					(!type || sale.type === type) &&
+					(!maxPrice || sale.price <= maxPrice) &&
+					(!query ||
+						mockCards
+							.find((card) => card.id === sale.cardId)
+							?.title.toLocaleLowerCase('fr-FR')
+							.includes(query) ||
+						users.get(sale.sellerId)?.username.toLocaleLowerCase('fr-FR').includes(query))
+			)
+			.map((sale) => ({
+				...sale,
+				card: apiCard(mockCards.find((card) => card.id === sale.cardId)!),
+				sellerName: users.get(sale.sellerId)?.username ?? sale.sellerId,
+				status: 'active'
+			}));
+		return json({
+			results,
+			page: 0,
+			nbResults: results.length,
+			size: 100,
+			filters: {},
+			q: query || null
+		});
 	}
 	const saleDetailMatch = /^\/sales\/([^/]+)(?:\/(bids))?$/.exec(pathname);
 	if (saleDetailMatch && normalizedMethod === 'POST' && saleDetailMatch[2] === 'bids') {
@@ -854,6 +945,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			return json(saleBids.filter((bid) => bid.saleId === sale.id).toReversed());
 		return json({
 			...sale,
+			card: apiCard(mockCards.find((card) => card.id === sale.cardId)!),
 			sellerName: users.get(sale.sellerId)?.username ?? sale.sellerId,
 			status: 'active'
 		});
@@ -963,20 +1055,30 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	if (userCollectionMatch && normalizedMethod === 'GET') {
 		const userId = decodeURIComponent(userCollectionMatch[1]);
 		if (!users.has(userId)) return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
-		return json(
-			mockCards.filter((card) =>
-				userId === 'demo-user'
-					? card.ownedCount > 0
-					: card.friendsWhoOwn.some((friend) => friend.friendId === userId)
-			)
+		const cards = mockCards.filter((card) =>
+			userId === 'demo-user'
+				? card.ownedCount > 0
+				: card.friendsWhoOwn.some((friend) => friend.friendId === userId)
 		);
+		return json({
+			results: cards.map((card) => ({
+				userCardId: `owned-${userId}-${card.id}`,
+				cardId: card.id,
+				acquiredAt: card.acquiredAt ?? now,
+				tags: card.collectionTags ?? [],
+				card: apiCard(card)
+			})),
+			page: 0,
+			nbResults: cards.length,
+			size: 100
+		});
 	}
 	const cardMatch = /^\/cards\/([^/]+)(?:\/(price-history))?$/.exec(pathname);
 	if (cardMatch && normalizedMethod === 'GET') {
 		const [, encodedId, resource] = cardMatch;
 		const card = mockCards.find((candidate) => candidate.id === decodeURIComponent(encodedId));
 		if (!card) return error(404, 'Carte introuvable.', 'CARD_NOT_FOUND');
-		return resource === 'price-history' ? json(priceHistory(card.id)) : json(card);
+		return resource === 'price-history' ? json(priceHistory(card.id)) : json(apiCard(card));
 	}
 
 	const userMatch = /^\/users\/([^/]+)(?:\/(preferences))?$/.exec(pathname);

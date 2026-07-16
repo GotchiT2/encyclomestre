@@ -12,6 +12,7 @@ const registries: WishlistRegistrySummary[] = [
 		title: 'Première liste',
 		description: '',
 		cardIds: [],
+		cards: [],
 		createdAt: '',
 		updatedAt: '',
 		opportunityCount: 0
@@ -22,6 +23,7 @@ const registries: WishlistRegistrySummary[] = [
 		title: 'Deuxième liste',
 		description: '',
 		cardIds: ['42'],
+		cards: [],
 		createdAt: '',
 		updatedAt: '',
 		opportunityCount: 0

@@ -1,11 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { currentSession } from '$lib/auth/session';
-	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import {
 		addWishlistEntry,
 		addWishlistRegistryCard,
-		getCard,
 		getCards,
 		getWishlist,
 		getWishlistAlerts,
@@ -45,6 +43,8 @@
 	let hasAlert = $state(false);
 	let variant = $state<CardVariant>('all');
 	let page = $state(1);
+	let totalPages = $state(1);
+	let totalEntries = $state(0);
 	let pickerOpen = $state(false);
 	let editorOpen = $state(false);
 	let editingEntry = $state<WishlistEntry | null>(null);
@@ -53,35 +53,19 @@
 	let loading = $state(true);
 	let failed = $state(false);
 	let wishlistsLoaded = false;
-
-	const visibleEntries = $derived(
-		entries.filter((entry) => {
-			const card = cards.find((candidate) => candidate.id === entry.cardId);
-			const normalizedQuery = query.trim().toLocaleLowerCase('fr-FR');
-			return (
-				Boolean(card) &&
-				(!normalizedQuery || card!.title.toLocaleLowerCase('fr-FR').includes(normalizedQuery)) &&
-				(!selectedRarities.length || selectedRarities.includes(card!.rarity)) &&
-				matchesCardVariant(card!, variant) &&
-				(!priority || entry.priority === priority) &&
-				(!hasAlert || alerts.some((alert) => alert.cardId === entry.cardId))
-			);
-		})
-	);
-	const totalPages = $derived(Math.max(1, Math.ceil(visibleEntries.length / pageSize)));
+	let ready = $state(false);
+	let requestId = 0;
+	let filterTimer: number | undefined;
 	const filterKey = $derived(
 		JSON.stringify([query, selectedRarities, priority, hasAlert, variant])
 	);
 	let previousFilterKey = $state('');
 	const pagedEntries = $derived(
-		visibleEntries
-			.slice((page - 1) * pageSize, page * pageSize)
-			.flatMap((entry): WishlistCard[] => {
-				const card = cards.find((candidate) => candidate.id === entry.cardId);
-				return card
-					? [{ ...entry, card, alerts: alerts.filter((alert) => alert.cardId === entry.cardId) }]
-					: [];
-			})
+		entries.map((entry): WishlistCard => ({
+			...entry,
+			card: entry.card,
+			alerts: alerts.filter((alert) => alert.cardId === entry.cardId)
+		}))
 	);
 
 	$effect(() => {
@@ -91,30 +75,58 @@
 		}
 	});
 
+	$effect(() => {
+		if (!ready) return;
+		const currentRequest = ++requestId;
+		window.clearTimeout(filterTimer);
+		loading = true;
+		failed = false;
+		filterTimer = window.setTimeout(
+			async () => {
+				try {
+					const wishlist = await getWishlist(userId, {
+						page,
+						pageSize,
+						query: query.trim() || undefined,
+						rarities: selectedRarities,
+						priority: priority || undefined,
+						hasAlert,
+						variant,
+						sortBy: 'rarity',
+						sortDirection: 'DESC'
+					});
+					if (currentRequest !== requestId) return;
+					entries = wishlist.items;
+					cards = wishlist.items.map((entry) => entry.card);
+					totalEntries = wishlist.meta.total;
+					totalPages = wishlist.meta.totalPages;
+				} catch {
+					if (currentRequest === requestId) failed = true;
+				} finally {
+					if (currentRequest === requestId) loading = false;
+				}
+			},
+			query.trim() ? 350 : 50
+		);
+		return () => window.clearTimeout(filterTimer);
+	});
+
 	onMount(async () => {
 		userId = $currentSession?.user.id ?? 'demo-user';
 		try {
-			const [wishlist, wishlistAlerts] = await Promise.all([
-				getWishlist(userId, { page: 1, pageSize: 100 }),
-				getWishlistAlerts(userId)
-			]);
-			const wishlistCards = await Promise.all(
-				wishlist.items.map((entry) => getCard(entry.cardId).catch(() => null))
-			);
-			cards = wishlistCards.filter((card): card is CardRecord => card !== null);
-			entries = wishlist.items;
-			alerts = wishlistAlerts;
+			alerts = await getWishlistAlerts(userId);
 		} catch {
 			failed = true;
 		} finally {
-			loading = false;
+			ready = true;
 		}
 	});
 
 	async function addCard(card: CardRecord) {
 		const created = await addWishlistEntry(userId, card.id);
-		if (!cards.some((entry) => entry.id === card.id)) cards = [...cards, card];
+		if (!cards.some((entry) => entry.id === created.cardId)) cards = [...cards, created.card];
 		entries = [...entries.filter((entry) => entry.cardId !== card.id), created];
+		totalEntries = Math.max(totalEntries, entries.length);
 		pickerOpen = false;
 	}
 
@@ -143,6 +155,7 @@
 	async function remove(cardId: string) {
 		await removeWishlistEntry(userId, cardId);
 		entries = entries.filter((entry) => entry.cardId !== cardId);
+		totalEntries = Math.max(0, totalEntries - 1);
 		cards = cards.filter((card) => card.id !== cardId);
 		alerts = alerts.filter((alert) => alert.cardId !== cardId);
 		if (selectedCard?.id === cardId) selectedCard = null;
@@ -176,7 +189,7 @@
 	</PageHeader>
 	<div class="forge-panel-flat p-3">
 		<p class="forge-label">
-			{$_('wishlist.total', { values: { count: entries.length } })} · {$_('wishlist.alert_count', {
+			{$_('wishlist.total', { values: { count: totalEntries } })} · {$_('wishlist.alert_count', {
 				values: { count: alerts.length }
 			})}
 		</p>

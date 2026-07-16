@@ -1,7 +1,6 @@
 import type { CardRarity } from '$lib/types';
 import { getWikiForgeCollection, getWikiForgeTags, toCollectionPage } from '$lib/api';
 import { cardRarityCodeByName, cardRarityOptions } from '$lib/domain/cards/rarities';
-import { filterCardPageByVariant } from '$lib/domain/cards/variants';
 import type { CardVariant } from '$lib/types';
 import type { PageLoad } from './$types';
 
@@ -30,12 +29,11 @@ export const load: PageLoad = ({ fetch, url }) => {
 				sortDirection: sortBy === 'name' ? 'ASC' : 'DESC',
 				rarities: selectedRarities.map((rarity) => cardRarityCodeByName[rarity]),
 				tagIds: tagFilterIds.filter((id) => id !== '__untagged__'),
-				untagged
+				untagged,
+				variant
 			},
 			{ fetch }
-		)
-			.then(toCollectionPage)
-			.then((page) => filterCardPageByVariant(page, variant)),
+		).then(toCollectionPage),
 		tags: getWikiForgeTags({ fetch }),
 		filters: { query, selectedRarities, tagFilterIds, sortBy, variant }
 	};

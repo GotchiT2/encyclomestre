@@ -1,5 +1,5 @@
 import { apiRequest, type RequestOptions } from './client';
-import { toCardRecord, type WikiForgePage } from './wikiforge';
+import { toCardRecord, type WikiForgeCollectionCard, type WikiForgePage } from './wikiforge';
 import type {
 	CardRecord,
 	Friendship,
@@ -8,14 +8,6 @@ import type {
 	UpdateUserPreferencesInput,
 	User
 } from '$lib/types';
-
-interface PublicCollectionCard {
-	cardId: number;
-	rarity: string;
-	acquiredAt: string;
-	wikipediaTitle: string;
-	imageUrl: string;
-}
 
 export const getCurrentUser = (options?: RequestOptions) =>
 	apiRequest<User>('/api/users/me', options);
@@ -27,19 +19,15 @@ export const getUserCollection = async (
 	id: string,
 	options?: RequestOptions
 ): Promise<CardRecord[]> => {
-	const page = await apiRequest<WikiForgePage<PublicCollectionCard>>(
+	const page = await apiRequest<WikiForgePage<WikiForgeCollectionCard>>(
 		`/api/users/${encodeURIComponent(id)}/collection?page=0&size=100`,
 		options
 	);
-	return page.results.map((item) =>
-		toCardRecord({
-			id: item.cardId,
-			wikipediaTitle: item.wikipediaTitle,
-			imageUrl: item.imageUrl,
-			rarity: item.rarity,
-			acquiredAt: item.acquiredAt
-		})
-	);
+	return page.results.map((item) => ({
+		...toCardRecord({ ...item.card, id: item.cardId, acquiredAt: item.acquiredAt }),
+		catalogueId: item.cardId,
+		collectionTags: item.tags ?? []
+	}));
 };
 
 export const searchUsers = async (

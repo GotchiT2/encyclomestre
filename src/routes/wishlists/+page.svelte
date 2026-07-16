@@ -9,7 +9,6 @@
 		addWishlistRegistryCard,
 		createWishlistRegistry,
 		deleteWishlistRegistry,
-		getCard,
 		getCards,
 		getWishlistRegistry,
 		getWishlists,
@@ -70,19 +69,13 @@
 			})
 	);
 
-	async function ensureCards(cardIds: string[]) {
-		const knownIds = new Set(cards.map((card) => card.id));
-		const missingCards = await Promise.all(
-			cardIds
-				.filter((cardId) => !knownIds.has(cardId))
-				.map((cardId) => getCard(cardId).catch(() => null))
-		);
-		cards = [...cards, ...missingCards.filter((card): card is CardRecord => card !== null)];
+	function mergeCards(nextCards: CardRecord[]) {
+		cards = [...new Map([...cards, ...nextCards].map((card) => [card.id, card])).values()];
 	}
 
 	async function loadRegistry(id: string) {
 		const registry = await getWishlistRegistry(id, userId);
-		await ensureCards(registry.cardIds);
+		mergeCards(registry.cards);
 		return registry;
 	}
 
@@ -92,6 +85,7 @@
 		const imported = sharedToken ? await importWishlistRegistryFromLink(userId, sharedToken) : null;
 		const summaries = await getWishlists(userId);
 		registries = summaries;
+		mergeCards(summaries.flatMap((registry) => registry.cards));
 		const requestedRegistryId = imported?.id ?? currentPage.url.searchParams.get('registry');
 		const initialRegistry =
 			summaries.find((registry) => registry.id === requestedRegistryId) ?? summaries[0];
@@ -130,12 +124,15 @@
 		await addWishlistRegistryCard(activeRegistry.id, userId, card.id);
 		activeRegistry = {
 			...activeRegistry,
-			cardIds: [...new Set([...activeRegistry.cardIds, card.id])]
+			cardIds: [...new Set([...activeRegistry.cardIds, card.id])],
+			cards: [
+				...new Map([...activeRegistry.cards, card].map((entry) => [entry.id, entry])).values()
+			]
 		};
-		if (!cards.some((entry) => entry.id === card.id)) cards = [...cards, card];
+		mergeCards([card]);
 		registries = registries.map((registry) =>
 			registry.id === activeRegistry?.id
-				? { ...registry, cardIds: activeRegistry.cardIds }
+				? { ...registry, cardIds: activeRegistry.cardIds, cards: activeRegistry.cards }
 				: registry
 		);
 	}
@@ -145,11 +142,12 @@
 		await removeWishlistRegistryCard(activeRegistry.id, userId, cardId);
 		activeRegistry = {
 			...activeRegistry,
-			cardIds: activeRegistry.cardIds.filter((id) => id !== cardId)
+			cardIds: activeRegistry.cardIds.filter((id) => id !== cardId),
+			cards: activeRegistry.cards.filter((card) => card.id !== cardId)
 		};
 		registries = registries.map((registry) =>
 			registry.id === activeRegistry?.id
-				? { ...registry, cardIds: activeRegistry.cardIds }
+				? { ...registry, cardIds: activeRegistry.cardIds, cards: activeRegistry.cards }
 				: registry
 		);
 		if (selectedCard?.id === cardId) selectedCard = null;
@@ -164,7 +162,10 @@
 						...registry,
 						cardIds: selected
 							? [...new Set([...registry.cardIds, card.id])]
-							: registry.cardIds.filter((id) => id !== card.id)
+							: registry.cardIds.filter((id) => id !== card.id),
+						cards: selected
+							? [...new Map([...registry.cards, card].map((entry) => [entry.id, entry])).values()]
+							: registry.cards.filter((entry) => entry.id !== card.id)
 					}
 				: registry
 		);
@@ -173,7 +174,10 @@
 				...activeRegistry,
 				cardIds: selected
 					? [...new Set([...activeRegistry.cardIds, card.id])]
-					: activeRegistry.cardIds.filter((id) => id !== card.id)
+					: activeRegistry.cardIds.filter((id) => id !== card.id),
+				cards: selected
+					? [...new Map([...activeRegistry.cards, card].map((entry) => [entry.id, entry])).values()]
+					: activeRegistry.cards.filter((entry) => entry.id !== card.id)
 			};
 		}
 	}

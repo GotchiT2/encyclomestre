@@ -14,16 +14,17 @@ export const load: PageLoad = ({ params, fetch }) => {
 	const sales = getSales(params.id, { fetch }).catch(() => []);
 	const catalogue = Promise.all([collection, settings, sales]).then(
 		async ([ownedCards, profile, userSales]) => {
+			const hydratedSaleCards = userSales.flatMap((sale) => (sale.card ? [sale.card] : []));
 			const referencedIds = [
 				...new Set([
 					...ownedCards.map((card) => card.id),
 					...profile.wantedCardIds,
 					...profile.showcases.flatMap((showcase) => showcase.cardIds),
 					...(profile.avatarCardId ? [profile.avatarCardId] : []),
-					...userSales.map((sale) => sale.cardId)
+					...userSales.filter((sale) => !sale.card).map((sale) => sale.cardId)
 				])
 			];
-			const knownIds = new Set(ownedCards.map((card) => card.id));
+			const knownIds = new Set([...ownedCards, ...hydratedSaleCards].map((card) => card.id));
 			const missingCards = await Promise.all(
 				referencedIds
 					.filter((cardId) => !knownIds.has(cardId))
@@ -31,6 +32,9 @@ export const load: PageLoad = ({ params, fetch }) => {
 			);
 			const items = [
 				...ownedCards,
+				...hydratedSaleCards.filter(
+					(card) => !ownedCards.some((ownedCard) => ownedCard.id === card.id)
+				),
 				...missingCards.filter((card): card is NonNullable<typeof card> => card !== null)
 			];
 			return {

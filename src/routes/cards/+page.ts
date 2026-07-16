@@ -1,7 +1,6 @@
 import type { PageLoad } from './$types';
 import { getWikiForgeCards, toCardPage } from '$lib/api';
 import { cardRarityCodeByName, cardRarityOptions } from '$lib/domain/cards/rarities';
-import { filterCardPageByVariant } from '$lib/domain/cards/variants';
 import type { CardRarity, CardVariant } from '$lib/types';
 
 const rarities = new Set<CardRarity>(cardRarityOptions.map((rarity) => rarity.value));
@@ -26,12 +25,11 @@ export const load: PageLoad = ({ fetch, url }) => {
 				q: query,
 				sortBy,
 				sortDirection,
+				variant,
 				rarities: selectedRarities.map((rarity) => cardRarityCodeByName[rarity])
 			},
 			{ fetch }
-		)
-			.then(toCardPage)
-			.then((page) => filterCardPageByVariant(page, variant)),
+		).then(toCardPage),
 		filters: { query, selectedRarities, sortBy, sortDirection, variant }
 	};
 };

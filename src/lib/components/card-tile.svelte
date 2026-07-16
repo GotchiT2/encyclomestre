@@ -28,6 +28,7 @@
 			? '/images/card-L---Overframe-empty.png'
 			: frameByRarity[card.rarity]
 	);
+	const isFullArt = $derived(card.rarity === 'Légendaire' && card.isFullArt);
 	const titleLength = $derived(Math.max(1, card.title.trim().length));
 	const titleFontStyle = $derived(
 		`--card-title-mobile:${Math.min(0.78, Math.max(0.3, 13.5 / titleLength)).toFixed(3)}rem;--card-title-desktop:${Math.min(1.18, Math.max(0.45, 23 / titleLength)).toFixed(3)}rem`
@@ -42,11 +43,15 @@
 	class="wikiforge-card-size group/card relative overflow-hidden bg-transparent transition-[transform,filter] duration-300 hover:-translate-y-1 hover:drop-shadow-[0_0_1.25rem_rgb(25_167_170_/_18%)]"
 	data-testid="card-tile"
 	data-frame={frameSource}
+	data-layout={isFullArt ? 'full-art' : 'standard'}
 >
 	<div class="relative aspect-[862/1221]" aria-hidden="true">
 		<div
-			class="absolute top-[7%] right-[9%] bottom-[45.2%] left-[9%] overflow-hidden bg-cover bg-center bg-no-repeat bg-white"
+			class="absolute right-[9%] left-[9%] overflow-hidden bg-cover bg-center bg-no-repeat {isFullArt
+				? 'top-[6.3%] bottom-[9.9%]'
+				: 'top-[7%] bottom-[45.2%] bg-white'}"
 			style={`background-image:url(${JSON.stringify(card.imageUrl)})`}
+			data-testid="card-art"
 		></div>
 		<img
 			src={frameSource}
@@ -54,16 +59,20 @@
 			class="pointer-events-none absolute inset-0 z-10 size-full drop-shadow-[0_14px_16px_rgb(0_0_0_/_45%)] transition-[filter] duration-300 group-hover/card:drop-shadow-[0_0_0.7rem_rgb(254_184_35_/_18%)]"
 		/>
 		<p
-			class="absolute top-[55.9%] right-[15%] left-[15%] z-20 flex h-[8.6%] items-center whitespace-nowrap font-serif font-bold text-[length:var(--card-title-mobile)] text-[#f8cf51] drop-shadow-[0_2px_1px_rgb(0_0_0_/_85%)] lg:text-[length:var(--card-title-desktop)]"
+			class="absolute right-[15%] left-[15%] z-20 flex items-center whitespace-nowrap font-serif font-bold text-[length:var(--card-title-mobile)] text-[#f8cf51] drop-shadow-[0_2px_1px_rgb(0_0_0_/_85%)] lg:text-[length:var(--card-title-desktop)] {isFullArt
+				? 'top-[75.6%] h-[9.8%]'
+				: 'top-[55.9%] h-[8.6%]'}"
 			style={titleFontStyle}
 		>
 			{card.title}
 		</p>
-		<p
-			class="absolute top-[67%] right-[15%] left-[15%] z-20 line-clamp-2 h-[14%] overflow-hidden text-ellipsis font-serif text-[0.6rem] leading-[1.35] text-[#f8e3a0] lg:line-clamp-3 lg:text-[0.8rem]"
-		>
-			{card.shortDescription}
-		</p>
+		{#if !isFullArt}
+			<p
+				class="absolute top-[67%] right-[15%] left-[15%] z-20 line-clamp-2 h-[14%] overflow-hidden text-ellipsis font-serif text-[0.6rem] leading-[1.35] text-[#f8e3a0] lg:line-clamp-3 lg:text-[0.8rem]"
+			>
+				{card.shortDescription}
+			</p>
+		{/if}
 		<p
 			class="absolute right-[62%] bottom-[3.8%] left-[13%] z-20 truncate text-center font-serif text-[0.55rem] font-bold text-[#f8c943] drop-shadow-[0_2px_1px_rgb(0_0_0_/_85%)] lg:text-[0.8rem]"
 			aria-label={`ATK ${card.attack}`}

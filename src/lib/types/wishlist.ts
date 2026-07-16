@@ -2,6 +2,7 @@ export type WishlistPriority = 'low' | 'medium' | 'high';
 
 export interface WishlistEntry {
 	cardId: string;
+	card: import('./card').CardRecord;
 	priority: WishlistPriority;
 	note: string | null;
 	createdAt: string;
@@ -22,6 +23,10 @@ export interface WishlistQuery {
 	query?: string;
 	priority?: WishlistPriority;
 	hasAlert?: boolean;
+	rarities?: import('./card').CardRarity[];
+	variant?: import('./card').CardVariant;
+	sortBy?: 'name' | 'rarity';
+	sortDirection?: 'ASC' | 'DESC';
 }
 
 export interface WishlistRegistry {
@@ -30,6 +35,7 @@ export interface WishlistRegistry {
 	title: string;
 	description: string;
 	cardIds: string[];
+	cards: import('./card').CardRecord[];
 	createdAt: string;
 	updatedAt: string;
 }

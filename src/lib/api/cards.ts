@@ -1,7 +1,7 @@
 import { apiRequest, type RequestOptions } from './client';
 import { getWikiForgeCard, getWikiForgeCards, toCardPage, toCardRecord } from './wikiforge';
 import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
-import type { CardPriceHistory, CardRarity, CardRecord } from '$lib/types';
+import type { CardPriceHistory, CardRarity, CardRecord, CardVariant } from '$lib/types';
 
 export interface CardQuery {
 	page?: number;
@@ -11,6 +11,7 @@ export interface CardQuery {
 	rarities?: CardRarity[];
 	sortBy?: 'name' | 'rarity';
 	sortDirection?: 'ASC' | 'DESC';
+	variant?: CardVariant;
 }
 
 export const getCards = async (
@@ -21,7 +22,8 @@ export const getCards = async (
 		rarity,
 		rarities,
 		sortBy = 'name',
-		sortDirection = 'ASC'
+		sortDirection = 'ASC',
+		variant = 'all'
 	}: CardQuery = {},
 	options?: RequestOptions
 ) =>
@@ -35,7 +37,8 @@ export const getCards = async (
 					(value) => cardRarityCodeByName[value]
 				),
 				sortBy,
-				sortDirection
+				sortDirection,
+				variant
 			},
 			options
 		)

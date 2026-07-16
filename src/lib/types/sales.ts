@@ -2,6 +2,7 @@ export interface SaleListing {
 	id: string;
 	sellerId: string;
 	cardId: string;
+	card?: import('./card').CardRecord;
 	price: number;
 	currency: string;
 	type: 'auction' | 'direct';
