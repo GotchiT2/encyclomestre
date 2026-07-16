@@ -3,8 +3,8 @@
 	import CardEffects from './card-effects.svelte';
 	import type { CardRecord } from '$lib/types';
 	let { card }: { card: CardRecord } = $props();
-	const hasTilt = $derived(['R', 'SR', 'UR', 'L'].includes(card.rarityInitials));
-	const hasIllustrationEffect = $derived(['PC', 'R'].includes(card.rarityInitials));
+	const hasTilt = $derived(['PC', 'R', 'SR', 'UR', 'L'].includes(card.rarityInitials));
+	const hasIllustrationEffect = $derived(card.rarityInitials !== 'C');
 	let pointerX = $state(50);
 	let pointerY = $state(50);
 	let activeInteraction = $state(false);
@@ -52,7 +52,11 @@
 	<div class="card-hero-art relative overflow-hidden border border-primary/20 bg-background p-2">
 		<div class="relative overflow-hidden" data-testid="card-hero-illustration">
 			<img src={card.imageUrl} alt={card.title} class="aspect-[3/4] w-full object-cover" />
-			<CardEffects rarity={card.rarityInitials} active={activeInteraction} />
+			<CardEffects
+				rarity={card.rarityInitials}
+				fullArt={Boolean(card.isFullArt)}
+				active={activeInteraction}
+			/>
 		</div>
 	</div>
 	<p

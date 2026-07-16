@@ -31,8 +31,8 @@
 	);
 	const isFullArt = $derived(card.rarity === 'Légendaire' && card.isFullArt);
 	const titleLength = $derived(Math.max(1, card.title.trim().length));
-	const hasTilt = $derived(['R', 'SR', 'UR', 'L'].includes(card.rarityInitials));
-	const hasIllustrationEffect = $derived(['PC', 'R'].includes(card.rarityInitials));
+	const hasTilt = $derived(['PC', 'R', 'SR', 'UR', 'L'].includes(card.rarityInitials));
+	const hasIllustrationEffect = $derived(card.rarityInitials !== 'C');
 	let pointerX = $state(50);
 	let pointerY = $state(50);
 	let activeInteraction = $state(false);
@@ -94,7 +94,7 @@
 			style={`background-image:url(${JSON.stringify(card.imageUrl)})`}
 			data-testid="card-art"
 		>
-			<CardEffects rarity={card.rarityInitials} active={activeInteraction} />
+			<CardEffects rarity={card.rarityInitials} fullArt={isFullArt} active={activeInteraction} />
 		</div>
 		<img
 			src={frameSource}

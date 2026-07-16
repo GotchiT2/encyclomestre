@@ -43,6 +43,9 @@ describe('CardTile', () => {
 		await expect.element(page.getByLabelText('DEF 9800')).toBeVisible();
 		await expect.element(page.getByText('Notice encyclopédique.')).not.toBeInTheDocument();
 		await expect.element(page.getByTestId('card-art')).toHaveClass('top-[6.3%]');
+		await expect
+			.element(page.getByTestId('card-effects'))
+			.toHaveAttribute('data-profile', 'full-art');
 	});
 
 	it('keeps a long title in its dedicated card zone', async () => {
@@ -51,7 +54,7 @@ describe('CardTile', () => {
 		await expect.element(page.getByText(title)).toBeVisible();
 	});
 
-	it('activates the PC illustration effect on focus without tilting the card', async () => {
+	it('activates the PC illustration effect and tilt on focus', async () => {
 		render(CardTile, {
 			card: { ...card, rarity: 'Peu Commune', rarityInitials: 'PC' },
 			onOpen: vi.fn()
@@ -62,9 +65,35 @@ describe('CardTile', () => {
 		await expect
 			.element(page.getByTestId('card-tile'))
 			.toHaveAttribute('data-effect-active', 'true');
+		await expect.element(page.getByTestId('card-tile')).toHaveAttribute('data-tilt-active', 'true');
+	});
+
+	it('keeps common cards static and free from foil effects', async () => {
+		render(CardTile, {
+			card: { ...card, rarity: 'Commune', rarityInitials: 'C' },
+			onOpen: vi.fn()
+		});
+
+		document.querySelector<HTMLButtonElement>(`button[aria-label="${card.title}"]`)?.focus();
+		await expect.element(page.getByTestId('card-effects')).not.toBeInTheDocument();
+		await expect
+			.element(page.getByTestId('card-tile'))
+			.toHaveAttribute('data-effect-active', 'false');
 		await expect
 			.element(page.getByTestId('card-tile'))
 			.toHaveAttribute('data-tilt-active', 'false');
+	});
+
+	it('temporarily reinforces an ultra-rare foil effect on touch', async () => {
+		render(CardTile, {
+			card: { ...card, rarity: 'Ultra-Rare', rarityInitials: 'UR' }
+		});
+		const tile = document.querySelector<HTMLElement>('[data-testid="card-tile"]')!;
+
+		tile.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
+		await vi.waitFor(() => expect(tile).toHaveAttribute('data-effect-active', 'true'));
+		tile.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch' }));
+		await vi.waitFor(() => expect(tile).toHaveAttribute('data-effect-active', 'false'));
 	});
 
 	it('keeps the illustration effect inside the Wikipedia image area', async () => {

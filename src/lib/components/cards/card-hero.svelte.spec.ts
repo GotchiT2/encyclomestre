@@ -31,4 +31,19 @@ describe('CardHero', () => {
 		const effect = document.querySelector('[data-testid="card-effects"]');
 		expect(effect?.closest('[data-testid="card-hero-illustration"]')).not.toBeNull();
 	});
+
+	it('passes the dedicated Full Art profile to the illustration', async () => {
+		render(CardHero, {
+			card: {
+				...card,
+				rarity: 'Légendaire',
+				rarityInitials: 'L',
+				isFullArt: true
+			}
+		});
+
+		await expect
+			.element(page.getByTestId('card-effects'))
+			.toHaveAttribute('data-profile', 'full-art');
+	});
 });
