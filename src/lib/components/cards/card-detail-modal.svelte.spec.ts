@@ -9,7 +9,15 @@ vi.mock('$lib/api', () => ({
 	removeWikiForgeTag: vi.fn(),
 	createWikiForgeTag: vi.fn(),
 	updateWikiForgeTag: vi.fn(),
-	deleteWikiForgeTag: vi.fn()
+	deleteWikiForgeTag: vi.fn(),
+	getCardPriceHistory: vi.fn(async (cardId: string) => ({
+		cardId,
+		points: [
+			{ date: '2026-07-01', price: 120, currency: 'WF' },
+			{ date: '2026-07-02', price: 180, currency: 'WF' }
+		]
+	})),
+	getMarketListings: vi.fn(async () => [])
 }));
 
 import CardDetailModal from './card-detail-modal.svelte';
@@ -86,7 +94,15 @@ describe('CardDetailModal', () => {
 		expect(actionsRect.bottom).toBeLessThanOrEqual(modalRect.bottom);
 		expect(tabsRect.bottom).toBeLessThanOrEqual(actionsRect.top);
 		await expect.element(page.getByRole('tab', { name: 'Données' })).toBeVisible();
-		await page.getByRole('tab', { name: 'Marché' }).click();
+		await page.getByRole('button', { name: 'Marché', exact: true }).click();
+		await expect.element(page.getByTestId('card-market-modal')).toBeVisible();
+		expect(document.querySelector('[data-testid="card-market-modal"] polyline')).not.toBeNull();
+		document
+			.querySelector<HTMLButtonElement>('[data-testid="card-market-modal"] button[aria-label]')
+			?.click();
+		await vi.waitFor(() =>
+			expect(document.querySelector('[data-testid="card-market-modal"]')).toBeNull()
+		);
 		await page.getByRole('tab', { name: 'Données' }).click();
 		await expect
 			.element(page.getByRole('tab', { name: 'Données' }))

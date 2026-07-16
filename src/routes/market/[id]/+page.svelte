@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import CardTile from '$lib/components/card-tile.svelte';
+	import CardMarketModal from '$lib/components/cards/card-market-modal.svelte';
 	import { addSaleFavorite, getSaleFavorites, placeBid, removeSaleFavorite } from '$lib/api';
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -45,7 +46,6 @@
 {#await Promise.all([data.sale, data.bids, data.card, data.priceHistory])}
 	<p class="font-mono text-[10px] uppercase tracking-widest text-primary">{$_('market.loading')}</p>
 {:then [sale, bids, card, priceHistory]}
-	{@const prices = priceHistory.points.map((point) => point.price)}
 	<section class="flex flex-col gap-6 pb-12">
 		<a
 			href={resolve('/market')}
@@ -123,52 +123,14 @@
 					</div>{/each}
 			</div>
 		</section>
-		{#if showPrices}<section class="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4">
-				<div class="w-full max-w-2xl border-4 border-double border-primary/40 bg-card p-5">
-					<div class="flex justify-between gap-3">
-						<div>
-							<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-								{$_('market.price_history')}
-							</p>
-							<h2 class="mt-2 font-serif text-2xl font-black uppercase">{card.title}</h2>
-						</div>
-						<Button size="sm" variant="outline" onclick={() => (showPrices = false)}
-							>{$_('cardDetail.close')}</Button
-						>
-					</div>
-					<div class="mt-5 grid grid-cols-3 gap-2">
-						{#each ['last', 'average', 'high'] as metric (metric)}<div
-								class="border border-primary/30 p-3"
-							>
-								<p class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-									{$_(`market.metric_${metric}`)}
-								</p>
-								<p class="mt-2 font-mono text-lg text-primary">
-									{metric === 'last'
-										? (prices[0] ?? sale.price)
-										: metric === 'average'
-											? Math.round(
-													prices.reduce((total, price) => total + price, 0) /
-														Math.max(1, prices.length)
-												)
-											: Math.max(sale.price, ...prices)}
-								</p>
-							</div>{/each}
-					</div>
-					<div class="mt-5 max-h-52 overflow-y-auto border border-primary/20 bg-background">
-						{#each priceHistory.points as point (point.date)}
-							<div
-								class="flex items-center justify-between border-b border-primary/10 p-3 last:border-0"
-							>
-								<span class="text-xs text-muted-foreground"
-									>{new Date(point.date).toLocaleDateString('fr-FR')}</span
-								>
-								<span class="font-mono text-sm text-primary">{point.price} {point.currency}</span>
-							</div>
-						{/each}
-					</div>
-				</div>
-			</section>{/if}
+		{#if showPrices}
+			<CardMarketModal
+				{card}
+				history={priceHistory}
+				sales={[sale]}
+				onClose={() => (showPrices = false)}
+			/>
+		{/if}
 	</section>
 {:catch}<p class="border border-destructive/40 p-4 font-serif text-destructive">
 		{$_('market.empty')}

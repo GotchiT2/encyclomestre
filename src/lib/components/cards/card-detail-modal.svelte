@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardActions from './card-actions.svelte';
-	import CardMarketSummary from './card-market-summary.svelte';
+	import CardMarketModal from './card-market-modal.svelte';
 	import CardTagControls from './card-tag-controls.svelte';
 	import CardTelemetry from './card-telemetry.svelte';
 	import FriendOwnerLedger from '$lib/components/social/friend-owner-ledger.svelte';
@@ -26,8 +26,8 @@
 		wishlists = [],
 		tags = $bindable<CollectionTag[]>([]),
 		assignments = $bindable<CollectionTagAssignments>({}),
-		sales = [],
-		history = { cardId: card.id, points: [] },
+		sales,
+		history,
 		onToggleWishlist,
 		onClose
 	}: {
@@ -42,7 +42,8 @@
 		onClose: () => void;
 	} = $props();
 
-	let activeTab = $state<'data' | 'market' | 'social'>('data');
+	let activeTab = $state<'data' | 'social'>('data');
+	let marketOpen = $state(false);
 </script>
 
 <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
@@ -101,7 +102,7 @@
 								{wishlists}
 								{onToggleWishlist}
 								onTrade={() => undefined}
-								onMarket={() => goto(resolve('/market'))}
+								onMarket={() => (marketOpen = true)}
 								onSell={() => goto(resolve('/market'))}
 							/>
 						</div>
@@ -111,7 +112,7 @@
 							role="tablist"
 							aria-label={$_('cardDetail.tabs')}
 						>
-							{#each [{ id: 'data', label: 'cardDetail.data' }, { id: 'market', label: 'cardDetail.market_tab' }, { id: 'social', label: 'cardDetail.social' }] as tab (tab.id)}
+							{#each [{ id: 'data', label: 'cardDetail.data' }, { id: 'social', label: 'cardDetail.social' }] as tab, index (tab.id)}
 								<Button
 									variant="ghost"
 									class={activeTab === tab.id ? 'forge-nav-active' : ''}
@@ -119,6 +120,11 @@
 									role="tab"
 									aria-selected={activeTab === tab.id}>{$_(tab.label)}</Button
 								>
+								{#if index === 0}
+									<Button variant="ghost" onclick={() => (marketOpen = true)}>
+										{$_('cardDetail.market_tab')}
+									</Button>
+								{/if}
 							{/each}
 						</div>
 
@@ -129,8 +135,6 @@
 								{#if card.wikipediaUrl}<Button href={card.wikipediaUrl} target="_blank" class="mt-3"
 										>{$_('codex.wikipedia')}</Button
 									>{/if}
-							{:else if activeTab === 'market'}
-								<CardMarketSummary {sales} {history} onMarket={() => goto(resolve('/market'))} />
 							{:else}
 								<FriendOwnerLedger friends={card.friendsWhoOwn} />
 							{/if}
@@ -143,7 +147,7 @@
 					aria-label={$_('cardDetail.tabs')}
 					data-testid="card-detail-mobile-tabs"
 				>
-					{#each [{ id: 'data', label: 'cardDetail.data' }, { id: 'market', label: 'cardDetail.market_tab' }, { id: 'social', label: 'cardDetail.social' }] as tab (tab.id)}
+					{#each [{ id: 'data', label: 'cardDetail.data' }, { id: 'social', label: 'cardDetail.social' }] as tab, index (tab.id)}
 						<Button
 							variant="ghost"
 							class={`min-w-0 flex-1 px-2 ${activeTab === tab.id ? 'forge-nav-active' : ''}`}
@@ -151,6 +155,13 @@
 							role="tab"
 							aria-selected={activeTab === tab.id}>{$_(tab.label)}</Button
 						>
+						{#if index === 0}
+							<Button
+								variant="ghost"
+								class="min-w-0 flex-1 px-2"
+								onclick={() => (marketOpen = true)}>{$_('cardDetail.market_tab')}</Button
+							>
+						{/if}
 					{/each}
 				</div>
 				<div
@@ -162,7 +173,7 @@
 						{wishlists}
 						{onToggleWishlist}
 						onTrade={() => undefined}
-						onMarket={() => goto(resolve('/market'))}
+						onMarket={() => (marketOpen = true)}
 						onSell={() => goto(resolve('/market'))}
 					/>
 				</div>
@@ -170,6 +181,10 @@
 		</Dialog.Content>
 	</Dialog.Portal>
 </Dialog.Root>
+
+{#if marketOpen}
+	<CardMarketModal {card} {history} {sales} onClose={() => (marketOpen = false)} />
+{/if}
 
 <style>
 	.card-detail-preview :global(.wikiforge-card-size) {
