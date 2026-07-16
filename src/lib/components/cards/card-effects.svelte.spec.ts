@@ -5,22 +5,30 @@ import CardEffects from './card-effects.svelte';
 
 describe('CardEffects', () => {
 	it.each([
-		['PC', 'pc', '1', 'false'],
-		['R', 'r', '2', 'false'],
-		['SR', 'sr', '3', 'false'],
-		['UR', 'ur', '4', 'false'],
-		['L', 'l', '5', 'true']
-	] as const)('renders the progressive %s profile', async (rarity, profile, level, ambient) => {
-		render(CardEffects, { rarity, active: true });
+		['PC', 'pc', '1', 'false', '0'],
+		['R', 'r', '2', 'false', '0.1'],
+		['SR', 'sr', '3', 'false', '0.26'],
+		['UR', 'ur', '4', 'false', '0.34'],
+		['L', 'l', '5', 'true', '0.4']
+	] as const)(
+		'renders the progressive %s profile',
+		async (rarity, profile, level, ambient, varnish) => {
+			render(CardEffects, { rarity, active: true });
 
-		const effects = page.getByTestId('card-effects');
-		await expect.element(effects).toHaveAttribute('data-rarity', rarity);
-		await expect.element(effects).toHaveAttribute('data-profile', profile);
-		await expect.element(effects).toHaveAttribute('data-effect-level', level);
-		await expect.element(effects).toHaveAttribute('data-ambient', ambient);
-		await expect.element(effects).toHaveAttribute('data-active', 'true');
-		expect(document.querySelectorAll('[data-testid="card-effects"] > span')).toHaveLength(3);
-	});
+			const effects = page.getByTestId('card-effects');
+			await expect.element(effects).toHaveAttribute('data-rarity', rarity);
+			await expect.element(effects).toHaveAttribute('data-profile', profile);
+			await expect.element(effects).toHaveAttribute('data-effect-level', level);
+			await expect.element(effects).toHaveAttribute('data-ambient', ambient);
+			await expect.element(effects).toHaveAttribute('data-active', 'true');
+			expect(document.querySelectorAll('[data-testid="card-effects"] > span')).toHaveLength(3);
+			expect(
+				getComputedStyle(document.querySelector<HTMLElement>('[data-testid="card-effects"]')!)
+					.getPropertyValue('--varnish-active')
+					.trim()
+			).toBe(varnish);
+		}
+	);
 
 	it('uses a dedicated full-art profile', async () => {
 		render(CardEffects, { rarity: 'L', fullArt: true, active: true });
@@ -32,6 +40,11 @@ describe('CardEffects', () => {
 			.element(page.getByTestId('card-effects'))
 			.toHaveAttribute('data-effect-level', '6');
 		await expect.element(page.getByTestId('card-effects')).toHaveAttribute('data-ambient', 'true');
+		expect(
+			getComputedStyle(document.querySelector<HTMLElement>('[data-testid="card-effects"]')!)
+				.getPropertyValue('--varnish-active')
+				.trim()
+		).toBe('0.32');
 	});
 
 	it.each(['SR', 'UR'] as const)('keeps %s still at rest', (rarity) => {
@@ -41,6 +54,7 @@ describe('CardEffects', () => {
 		const sparkles = document.querySelector<HTMLElement>('.card-effects__sparkles');
 		expect(getComputedStyle(varnish!).animationName).toBe('none');
 		expect(getComputedStyle(sparkles!).animationName).toBe('none');
+		expect(getComputedStyle(varnish!).backgroundImage).toContain('radial-gradient');
 		expect(getComputedStyle(varnish!).backgroundImage).not.toContain('linear-gradient');
 		expect(getComputedStyle(varnish!).backgroundImage).not.toContain('repeating');
 	});

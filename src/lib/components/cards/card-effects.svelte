@@ -71,16 +71,18 @@
 	.card-effects__glare {
 		background:
 			radial-gradient(
-				ellipse 48% 34% at calc(var(--card-pointer-x, 50) * 1%) calc(var(--card-pointer-y, 50) * 1%),
-				rgb(255 255 255 / 92%) 0,
-				rgb(255 255 255 / 46%) 18%,
-				rgb(255 255 255 / 12%) 42%,
-				transparent 68%
+				ellipse 115% 85% at calc(var(--card-pointer-x, 50) * 1%)
+					calc(var(--card-pointer-y, 50) * 1%),
+				rgb(255 255 255 / 44%) 0,
+				rgb(255 255 255 / 22%) 34%,
+				rgb(255 255 255 / 6%) 60%,
+				transparent 82%
 			),
 			radial-gradient(
-				ellipse 82% 62% at calc(var(--card-pointer-x, 50) * 1%) calc(var(--card-pointer-y, 50) * 1%),
-				rgb(255 255 255 / 26%),
-				transparent 72%
+				ellipse 140% 110% at calc(100% - var(--card-pointer-x, 50) * 1%)
+					calc(100% - var(--card-pointer-y, 50) * 1%),
+				rgb(255 255 255 / 16%),
+				transparent 76%
 			);
 		mix-blend-mode: screen;
 		opacity: var(--glare-rest);
@@ -89,26 +91,28 @@
 	.card-effects__varnish {
 		background:
 			radial-gradient(
-				ellipse 58% 74% at calc(var(--card-pointer-x, 50) * 1% - 18%)
-					calc(var(--card-pointer-y, 50) * 1% + 10%),
-				rgb(142 214 210 / 78%),
-				rgb(194 232 229 / 34%) 38%,
-				transparent 72%
+				ellipse 105% 95% at calc(var(--card-pointer-x, 50) * 1% - 22%)
+					calc(var(--card-pointer-y, 50) * 1% + 12%),
+				rgb(142 214 210 / 48%),
+				rgb(194 232 229 / 18%) 48%,
+				transparent 82%
 			),
 			radial-gradient(
-				ellipse 52% 68% at calc(var(--card-pointer-x, 50) * 1% + 20%)
-					calc(var(--card-pointer-y, 50) * 1% - 12%),
-				rgb(245 218 144 / 76%),
-				rgb(255 246 211 / 26%) 42%,
-				transparent 74%
+				ellipse 98% 90% at calc(100% - var(--card-pointer-x, 50) * 1% + 22%)
+					calc(100% - var(--card-pointer-y, 50) * 1% - 12%),
+				rgb(245 218 144 / 44%),
+				rgb(255 246 211 / 16%) 50%,
+				transparent 84%
 			),
 			radial-gradient(
-				ellipse 72% 54% at calc(var(--card-pointer-x, 50) * 1%) calc(var(--card-pointer-y, 50) * 1%),
-				rgb(255 255 255 / 54%),
-				transparent 70%
+				ellipse 145% 105% at calc(var(--card-pointer-x, 50) * 1%)
+					calc(var(--card-pointer-y, 50) * 1%),
+				rgb(255 255 255 / 30%),
+				rgb(255 255 255 / 10%) 54%,
+				transparent 86%
 			);
-		filter: saturate(0.82) contrast(1.02);
-		mix-blend-mode: soft-light;
+		filter: saturate(0.74) contrast(1.01);
+		mix-blend-mode: screen;
 		opacity: var(--varnish-rest);
 	}
 
@@ -147,51 +151,53 @@
 	}
 
 	.card-effects[data-profile='pc'] {
-		--glare-active: 0.24;
+		--glare-active: 0.2;
 	}
 
 	.card-effects[data-profile='r'] {
-		--glare-active: 0.28;
-		--varnish-active: 0.08;
+		--glare-active: 0.22;
+		--varnish-active: 0.1;
 	}
 
 	.card-effects[data-profile='sr'] {
-		--glare-active: 0.26;
-		--varnish-active: 0.17;
+		--glare-active: 0.18;
+		--varnish-active: 0.26;
 	}
 
 	.card-effects[data-profile='ur'] {
-		--glare-active: 0.28;
-		--varnish-active: 0.22;
-		--sparkles-active: 0.08;
+		--glare-active: 0.2;
+		--varnish-active: 0.34;
+		--sparkles-active: 0.14;
 	}
 
 	.card-effects[data-profile='l'] {
-		--glare-active: 0.3;
-		--varnish-active: 0.24;
-		--sparkles-rest: 0.025;
-		--sparkles-active: 0.15;
+		--glare-active: 0.22;
+		--varnish-active: 0.4;
+		--sparkles-rest: 0.04;
+		--sparkles-active: 0.24;
 	}
 
 	.card-effects[data-profile='full-art'] {
-		--glare-active: 0.21;
-		--varnish-active: 0.18;
-		--sparkles-rest: 0.02;
-		--sparkles-active: 0.11;
+		--glare-active: 0.17;
+		--varnish-active: 0.32;
+		--sparkles-rest: 0.035;
+		--sparkles-active: 0.2;
 	}
 
 	.card-effects[data-profile='full-art'] .card-effects__glare {
 		background:
 			radial-gradient(
-				ellipse 58% 42% at calc(var(--card-pointer-x, 50) * 1%) calc(var(--card-pointer-y, 50) * 1%),
-				rgb(255 255 255 / 84%),
-				rgb(255 255 255 / 32%) 24%,
-				transparent 72%
+				ellipse 130% 96% at calc(var(--card-pointer-x, 50) * 1%)
+					calc(var(--card-pointer-y, 50) * 1%),
+				rgb(255 255 255 / 38%),
+				rgb(255 255 255 / 16%) 42%,
+				transparent 84%
 			),
 			radial-gradient(
-				ellipse 92% 74% at calc(var(--card-pointer-x, 50) * 1%) calc(var(--card-pointer-y, 50) * 1%),
-				rgb(255 255 255 / 20%),
-				transparent 76%
+				ellipse 160% 124% at calc(100% - var(--card-pointer-x, 50) * 1%)
+					calc(100% - var(--card-pointer-y, 50) * 1%),
+				rgb(255 255 255 / 14%),
+				transparent 82%
 			);
 	}
 
