@@ -61,6 +61,10 @@ Le frontend est prêt pour un déploiement Node/Docker. Dans Portainer, créez u
 
 Le proxy du NAS doit envoyer le domaine du frontend vers le port `3000` du conteneur. Ne publiez pas ce port directement sur Internet.
 
+### TrueNAS sans build Portainer
+
+Utilisez `docker-compose.truenas.yml` si Portainer échoue avant la lecture du Dockerfile. Cette stack n'utilise pas `build:` : elle récupère ce dépôt au démarrage, exécute `npm ci`, construit SvelteKit puis démarre le serveur Node. Les valeurs par défaut correspondent à `wikiforge.roselaqueen.fr`, `wikiforge-api.roselaqueen.fr` et au port NAS `32000`.
+
 ## DA
 
 ### Colors

@@ -1,0 +1,33 @@
+# TrueNAS / Portainer stack: no `build:` instruction is used. Portainer only
+# pulls this Node image; the container then clones and builds the repository.
+services:
+  wikiforge-frontend:
+    image: node:22-bookworm
+    container_name: wikiforge-frontend
+    restart: unless-stopped
+    working_dir: /workspace
+    environment:
+      WIKIFORGE_FRONTEND_GIT_URL: ${WIKIFORGE_FRONTEND_GIT_URL:-https://github.com/GotchiT2/encyclomestre.git}
+      WIKIFORGE_FRONTEND_GIT_BRANCH: ${WIKIFORGE_FRONTEND_GIT_BRANCH:-feat/api-part2}
+      WIKIFORGE_FRONTEND_GIT_TOKEN: ${WIKIFORGE_FRONTEND_GIT_TOKEN:-}
+      GIT_TERMINAL_PROMPT: "0"
+      ORIGIN: ${ORIGIN:-https://wikiforge.roselaqueen.fr}
+      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-https://wikiforge-api.roselaqueen.fr}
+      PUBLIC_API_MOCK_ENABLED: "false"
+      HOST: 0.0.0.0
+      PORT: 3000
+    ports:
+      - "${FRONTEND_PORT:-32000}:3000"
+    command: >
+      sh -ec "apt-get update && apt-get install -y --no-install-recommends git ca-certificates
+      && rm -rf /var/lib/apt/lists/* /app
+      && if [ -n \"$${WIKIFORGE_FRONTEND_GIT_TOKEN}\" ]; then
+        BASIC_AUTH=$$(printf 'x-access-token:%s' \"$${WIKIFORGE_FRONTEND_GIT_TOKEN}\" | base64 -w 0);
+        git -c http.extraHeader=\"AUTHORIZATION: basic $${BASIC_AUTH}\" clone --depth 1 --branch $${WIKIFORGE_FRONTEND_GIT_BRANCH} $${WIKIFORGE_FRONTEND_GIT_URL} /app;
+      else
+        git clone --depth 1 --branch $${WIKIFORGE_FRONTEND_GIT_BRANCH} $${WIKIFORGE_FRONTEND_GIT_URL} /app;
+      fi
+      && cd /app
+      && npm ci
+      && npm run build
+      && exec node build"
