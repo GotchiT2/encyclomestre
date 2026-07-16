@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import BoosterCardBack from './booster-card-back.svelte';
 	import { _ } from '$lib/i18n';
@@ -10,15 +11,50 @@
 		card,
 		revealed,
 		interactive = true,
+		detailsEnabled = true,
 		class: className,
-		onReveal
+		onReveal,
+		onOpenDetail
 	}: {
 		card: CardRecord;
 		revealed: boolean;
 		interactive?: boolean;
+		detailsEnabled?: boolean;
 		class?: string;
 		onReveal: () => void;
+		onOpenDetail: () => void;
 	} = $props();
+
+	let propagating = $state(false);
+	let previousRevealed = $state(false);
+	let propagationTimer: number | undefined;
+	let propagationFrame: number | undefined;
+	const actionable = $derived((!revealed && interactive) || (revealed && detailsEnabled));
+
+	function propagate() {
+		window.clearTimeout(propagationTimer);
+		window.cancelAnimationFrame(propagationFrame ?? 0);
+		propagating = false;
+		propagationFrame = requestAnimationFrame(() => {
+			propagating = true;
+			propagationTimer = window.setTimeout(() => (propagating = false), 1_250);
+		});
+	}
+
+	function activate() {
+		if (revealed) onOpenDetail();
+		else onReveal();
+	}
+
+	$effect(() => {
+		if (revealed && !previousRevealed) propagate();
+		previousRevealed = revealed;
+	});
+
+	onDestroy(() => {
+		window.clearTimeout(propagationTimer);
+		window.cancelAnimationFrame(propagationFrame ?? 0);
+	});
 </script>
 
 <div
@@ -26,11 +62,15 @@
 	class:is-revealed={revealed}
 	class:is-legendary={card.rarity === 'Légendaire'}
 	class:is-full-art={Boolean(card.isFullArt)}
+	class:is-propagating={propagating}
 	style={`--rarity-color:${card.rarityColor}`}
 	data-rarity={card.rarityInitials}
 	data-revealed={revealed}
 >
 	<div class="booster-rarity-aura" aria-hidden="true"></div>
+	<div class="booster-light-propagation" aria-hidden="true">
+		{#each [0, 1, 2] as wave (wave)}<span style={`--wave-index:${wave}`}></span>{/each}
+	</div>
 	{#if card.rarity !== 'Commune'}
 		<div class="booster-particles" aria-hidden="true">
 			{#each particles as index (index)}<span style={`--particle-index:${index}`}></span>{/each}
@@ -39,10 +79,13 @@
 	<button
 		type="button"
 		class="booster-card-button"
-		disabled={!interactive || revealed}
-		onclick={onReveal}
+		disabled={!actionable}
+		onclick={activate}
+		onpointerdown={(event) => {
+			if (event.pointerType !== 'mouse') propagate();
+		}}
 		aria-label={revealed
-			? card.title
+			? $_('boosters.open_card_detail', { values: { title: card.title } })
 			: $_('boosters.reveal_card', { values: { rarity: card.rarity } })}
 		data-booster-interactive
 	>
@@ -79,6 +122,55 @@
 		filter: blur(16px);
 		opacity: 0.64;
 		animation: booster-aura 2.2s ease-in-out infinite;
+	}
+
+	.booster-light-propagation,
+	.booster-light-propagation span {
+		position: absolute;
+		inset: -12%;
+		z-index: -1;
+		pointer-events: none;
+	}
+
+	.booster-light-propagation span {
+		border: 2px solid color-mix(in srgb, var(--rarity-color) 72%, transparent);
+		background: radial-gradient(
+			ellipse,
+			transparent 42%,
+			color-mix(in srgb, var(--rarity-color) 30%, transparent) 58%,
+			transparent 72%
+		);
+		box-shadow: 0 0 2rem color-mix(in srgb, var(--rarity-color) 42%, transparent);
+		filter: blur(7px);
+		opacity: 0;
+		transform: scale(0.58);
+	}
+
+	.booster-reveal-card:hover .booster-light-propagation span,
+	.booster-reveal-card:focus-within .booster-light-propagation span {
+		animation: booster-light-wave 1.85s ease-out infinite;
+		animation-delay: calc(var(--wave-index) * 360ms);
+	}
+
+	.is-propagating .booster-light-propagation span {
+		animation: booster-light-wave 1.2s ease-out both;
+		animation-delay: calc(var(--wave-index) * 150ms);
+	}
+
+	.booster-reveal-card:hover .booster-rarity-aura,
+	.booster-reveal-card:focus-within .booster-rarity-aura,
+	.is-propagating .booster-rarity-aura {
+		opacity: 1;
+		filter: blur(24px);
+	}
+
+	.booster-reveal-card[data-rarity='SR'] .booster-light-propagation,
+	.booster-reveal-card[data-rarity='UR'] .booster-light-propagation {
+		inset: -16%;
+	}
+
+	.booster-reveal-card[data-rarity='L'] .booster-light-propagation {
+		inset: -21%;
 	}
 
 	.booster-reveal-card[data-rarity='SR'] .booster-rarity-aura,
@@ -230,6 +322,20 @@
 		}
 	}
 
+	@keyframes booster-light-wave {
+		0% {
+			transform: scale(0.58);
+			opacity: 0;
+		}
+		18% {
+			opacity: 0.78;
+		}
+		100% {
+			transform: scale(1.48);
+			opacity: 0;
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.booster-card-flipper {
 			transition: none;
@@ -239,6 +345,13 @@
 		.is-revealed .booster-particles span,
 		.is-full-art.is-revealed::after {
 			animation: none;
+		}
+		.booster-reveal-card:hover .booster-light-propagation span,
+		.booster-reveal-card:focus-within .booster-light-propagation span,
+		.is-propagating .booster-light-propagation span {
+			animation: none;
+			opacity: 0.42;
+			transform: scale(1.08);
 		}
 		.booster-particles {
 			display: none;

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, untrack } from 'svelte';
 	import BoosterRevealCard from './booster-reveal-card.svelte';
 	import ForgePanel from '$lib/components/layout/forge-panel.svelte';
 	import HudStat from '$lib/components/layout/hud-stat.svelte';
@@ -19,8 +19,10 @@
 		openingId = 0,
 		cards,
 		error = false,
+		suspended = false,
 		onOpen,
-		onReset
+		onReset,
+		onOpenCard = () => undefined
 	}: {
 		available: number;
 		maximum: number;
@@ -29,8 +31,10 @@
 		openingId?: number;
 		cards: CardRecord[] | null;
 		error?: boolean;
+		suspended?: boolean;
 		onOpen: () => void;
 		onReset: () => void;
+		onOpenCard?: (card: CardRecord) => void;
 	} = $props();
 
 	const quickPreferenceKey = 'wikiforge.booster.quick-opening';
@@ -41,6 +45,7 @@
 	let quickOpening = $state(false);
 	let preferenceReady = $state(false);
 	let openRequested = $state(false);
+	let suspensionActive = $state(false);
 	let timers: number[] = [];
 	function schedule(callback: () => void, delay: number) {
 		const timer = window.setTimeout(callback, delay);
@@ -73,6 +78,7 @@
 		slots = nextCards.map((card) => ({ card, revealed: false }));
 		mobileIndex = 0;
 		phase = 'dealing';
+		if (suspended) return;
 		if (quickOpening) {
 			nextCards.forEach((_, index) => schedule(() => setSlotRevealed(index), 150 + index * 95));
 			schedule(() => (phase = 'complete'), 150 + nextCards.length * 95 + 180);
@@ -88,12 +94,13 @@
 	}
 
 	function requestOpen() {
-		if (!available || opening || openRequested) return;
+		if (!available || opening || openRequested || suspended) return;
 		openRequested = true;
 		onOpen();
 	}
 
 	function advance() {
+		if (suspended) return;
 		if (phase === 'revealing') {
 			revealNext();
 			return;
@@ -106,11 +113,13 @@
 	}
 
 	function handleStageClick(event: MouseEvent) {
+		if (suspended) return;
 		if (event.currentTarget !== event.target && isInteractiveTarget(event.target)) return;
 		advance();
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
+		if (suspended) return;
 		if (event.code !== 'Space' || event.repeat || isInteractiveTarget(event.target)) return;
 		if (phase !== 'revealing' && phase !== 'complete') return;
 		event.preventDefault();
@@ -126,6 +135,33 @@
 
 	$effect(() => {
 		if (preferenceReady) localStorage.setItem(quickPreferenceKey, String(quickOpening));
+	});
+
+	function resumeAfterSuspension() {
+		const nextIndex = slots.findIndex((slot) => !slot.revealed);
+		mobileIndex = nextIndex >= 0 ? nextIndex : Math.max(0, slots.length - 1);
+		if (!quickOpening && phase === 'dealing') {
+			phase = 'revealing';
+			return;
+		}
+		if (!quickOpening || nextIndex < 0 || (phase !== 'dealing' && phase !== 'revealing')) return;
+		phase = 'revealing';
+		const remaining = slots
+			.map((slot, index) => ({ slot, index }))
+			.filter(({ slot }) => !slot.revealed);
+		remaining.forEach(({ index }, position) =>
+			schedule(() => setSlotRevealed(index), 80 + position * 95)
+		);
+		schedule(() => (phase = 'complete'), 80 + remaining.length * 95 + 180);
+	}
+
+	$effect(() => {
+		if (suspended === suspensionActive) return;
+		suspensionActive = suspended;
+		untrack(() => {
+			if (suspended) clearTimers();
+			else resumeAfterSuspension();
+		});
 	});
 
 	$effect(() => {
@@ -240,8 +276,10 @@
 							<BoosterRevealCard
 								card={slot.card}
 								revealed={slot.revealed}
-								interactive={phase === 'revealing'}
+								interactive={phase === 'revealing' && !suspended}
+								detailsEnabled={!suspended}
 								onReveal={() => setSlotRevealed(index)}
+								onOpenDetail={() => onOpenCard(slot.card)}
 							/>
 						</div>
 					{/each}

@@ -66,13 +66,15 @@ describe('BoosterOpeningStage', () => {
 
 	it('reveals desktop cards in any order and advances with Space', async () => {
 		const onOpen = vi.fn();
+		const onOpenCard = vi.fn();
 		render(BoosterOpeningStage, {
 			available: 1,
 			maximum: 2,
 			opening: false,
 			cards,
 			onOpen,
-			onReset: vi.fn()
+			onReset: vi.fn(),
+			onOpenCard
 		});
 
 		const legendary = document.querySelector<HTMLButtonElement>('[data-rarity="L"] button');
@@ -83,6 +85,24 @@ describe('BoosterOpeningStage', () => {
 			expect(document.querySelector('[data-rarity="L"]')).toHaveAttribute('data-revealed', 'true')
 		);
 		expect(document.querySelector('[data-rarity="C"]')).toHaveAttribute('data-revealed', 'false');
+		await vi.waitFor(() =>
+			expect(legendary?.getAttribute('aria-label')).toBe('Afficher les détails de Carte légendaire')
+		);
+		const legendaryLocator = page.elementLocator(legendary!);
+		await legendaryLocator.hover();
+		expect(onOpenCard).not.toHaveBeenCalled();
+		const propagation = document.querySelector<HTMLElement>(
+			'[data-rarity="L"] .booster-light-propagation span'
+		);
+		expect(getComputedStyle(propagation!).animationName).toContain('booster-light-wave');
+		legendary?.dispatchEvent(
+			new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' })
+		);
+		await vi.waitFor(() =>
+			expect(document.querySelector('[data-rarity="L"]')).toHaveClass('is-propagating')
+		);
+		legendary?.click();
+		expect(onOpenCard).toHaveBeenCalledOnce();
 
 		window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
 		await expect.element(page.getByText('Toutes les cartes ont été affichées')).toBeVisible();
@@ -93,6 +113,30 @@ describe('BoosterOpeningStage', () => {
 		window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
 		window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', repeat: true }));
 		expect(onOpen).toHaveBeenCalledOnce();
+	});
+
+	it('suspends quick opening and resumes the remaining reveals after closing details', async () => {
+		localStorage.setItem('wikiforge.booster.quick-opening', 'true');
+		const props = {
+			available: 1,
+			maximum: 2,
+			opening: false,
+			cards,
+			suspended: true,
+			onOpen: vi.fn(),
+			onReset: vi.fn(),
+			onOpenCard: vi.fn()
+		};
+		const result = render(BoosterOpeningStage, props);
+
+		await new Promise((resolve) => window.setTimeout(resolve, 800));
+		expect(document.querySelectorAll('[data-revealed="true"]')).toHaveLength(0);
+		window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
+		expect(document.querySelectorAll('[data-revealed="true"]')).toHaveLength(0);
+
+		await result.rerender({ ...props, suspended: false });
+		await expect.element(page.getByText('Toutes les cartes ont été affichées')).toBeVisible();
+		expect(document.querySelectorAll('[data-revealed="true"]')).toHaveLength(cards.length);
 	});
 
 	it('exposes every rarity aura and the Full Art signature', () => {
