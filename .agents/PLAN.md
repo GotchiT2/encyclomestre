@@ -237,3 +237,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Recentrer le bouton de fermeture des modales compactes — `fix(dialog): center close icon`
 - [x] Stabiliser les suppressions, les chargements sociaux, les wishlists et les réactions — `fix(api): stabilize social and wishlist flows`
 - [x] Intégrer les UUID de variantes, les réponses hydratées et la composition Full Art — `feat(api): integrate collectible variants`
+- [x] Brancher les cartes recherchées sur le catalogue complet, centrer les éditeurs et stabiliser la largeur des pages sous modale — `fix(collection): connect searched cards and center dialogs`

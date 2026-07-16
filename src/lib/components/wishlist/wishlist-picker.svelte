@@ -16,12 +16,14 @@
 		open = $bindable(false),
 		existingCardIds,
 		loadCards,
-		onSelect
+		onSelect,
+		title = $_('wishlist.add_card')
 	}: {
 		open?: boolean;
 		existingCardIds: string[];
 		loadCards: (query: CardQuery) => Promise<PaginatedResponse<CardRecord>>;
 		onSelect: (card: CardRecord) => void | Promise<void>;
+		title?: string;
 	} = $props();
 
 	const pageSize = 12;
@@ -118,9 +120,7 @@
 				{$_('wishlist.catalogue')}
 			</p>
 			<span class="h-4 w-px bg-primary/25" aria-hidden="true"></span>
-			<Dialog.Title class="truncate text-lg leading-tight sm:text-xl"
-				>{$_('wishlist.add_card')}</Dialog.Title
-			>
+			<Dialog.Title class="truncate text-lg leading-tight sm:text-xl">{title}</Dialog.Title>
 		</div>
 		<div class="min-h-0 overflow-y-auto p-3 sm:p-4">
 			<CardSearchPanel>

@@ -29,12 +29,19 @@ describe('WishlistPicker', () => {
 			items: [card],
 			meta: { page: 1, pageSize: 12, total: 30, totalPages: 3 }
 		});
-		const props = { open: false, existingCardIds: [], loadCards, onSelect: vi.fn() };
+		const props = {
+			open: false,
+			existingCardIds: [],
+			loadCards,
+			onSelect: vi.fn(),
+			title: 'Cartes recherchées'
+		};
 		const result = render(WishlistPicker, props);
 
 		expect(loadCards).not.toHaveBeenCalled();
 		await result.rerender({ ...props, open: true });
 		await vi.waitFor(() => expect(loadCards).toHaveBeenCalledOnce());
+		await expect.element(page.getByRole('heading', { name: 'Cartes recherchées' })).toBeVisible();
 		expect(document.querySelector('[data-slot="dialog-content"]')).not.toBeNull();
 		expect(document.querySelector('[data-slot="sheet-content"]')).toBeNull();
 		const closeButton = document.querySelector<HTMLElement>('[data-slot="dialog-close"]');

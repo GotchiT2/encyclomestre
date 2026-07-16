@@ -29,5 +29,8 @@ describe('TagEditor', () => {
 		expect(editedColor.getBoundingClientRect().height).toBe(
 			editedName.getBoundingClientRect().height
 		);
+		expect(document.querySelector('[data-slot="dialog-content"]')).not.toBeNull();
+		expect(document.querySelector('[data-slot="sheet-content"]')).toBeNull();
+		expect(getComputedStyle(document.documentElement).scrollbarGutter).toContain('stable');
 	});
 });

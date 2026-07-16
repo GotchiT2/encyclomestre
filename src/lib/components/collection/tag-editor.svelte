@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button, buttonVariants } from '$lib/components/ui/button';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
-	import * as Sheet from '$lib/components/ui/sheet';
 	import { _ } from '$lib/i18n';
 	import { createWikiForgeTag, deleteWikiForgeTag, updateWikiForgeTag } from '$lib/api';
 	import type { CollectionTag, CollectionTagAssignments } from '$lib/types';
@@ -54,20 +54,19 @@
 	}
 </script>
 
-<Sheet.Root bind:open>
-	<Sheet.Trigger class={buttonVariants({ variant: 'outline', size: 'sm' })}
-		>{$_('collection.editTags')}</Sheet.Trigger
+<Dialog.Root bind:open>
+	<Dialog.Trigger class={buttonVariants({ variant: 'outline', size: 'sm' })}
+		>{$_('collection.editTags')}</Dialog.Trigger
 	>
-	<Sheet.Content
-		side="bottom"
-		class="data-[side=bottom]:right-auto data-[side=bottom]:bottom-auto data-[side=bottom]:left-1/2 data-[side=bottom]:-translate-x-1/2 top-1/2 max-h-[85dvh] w-[calc(100%-2rem)] max-w-2xl -translate-y-1/2 overflow-y-auto border-4 border-double border-primary/30 bg-card lg:max-h-[calc(100dvh-3rem)] lg:overflow-hidden"
+	<Dialog.Content
+		class="max-h-[calc(100dvh-2rem)] max-w-2xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0"
 	>
-		<Sheet.Header
-			><Sheet.Title>{$_('collection.tags')}</Sheet.Title><Sheet.Description
-				>{$_('collection.tagsDescription')}</Sheet.Description
-			></Sheet.Header
+		<Dialog.Header class="border-b border-primary/20 px-5 py-4 pr-14"
+			><Dialog.Title>{$_('collection.tags')}</Dialog.Title><Dialog.Description
+				>{$_('collection.tagsDescription')}</Dialog.Description
+			></Dialog.Header
 		>
-		<div class="flex min-h-0 flex-col gap-4 px-4">
+		<div class="flex min-h-0 flex-col gap-4 overflow-y-auto px-5 py-4">
 			<div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_4rem_auto]">
 				<Input
 					bind:value={draftTagName}
@@ -122,10 +121,10 @@
 						</li>{/each}
 				</ul>{/if}
 		</div>
-		<Sheet.Footer
-			><Sheet.Close class={buttonVariants({ variant: 'outline' })}
-				>{$_('common.cancel')}</Sheet.Close
-			></Sheet.Footer
+		<Dialog.Footer class="border-t border-primary/20 px-5 py-3"
+			><Dialog.Close class={buttonVariants({ variant: 'outline' })}
+				>{$_('common.cancel')}</Dialog.Close
+			></Dialog.Footer
 		>
-	</Sheet.Content>
-</Sheet.Root>
+	</Dialog.Content>
+</Dialog.Root>

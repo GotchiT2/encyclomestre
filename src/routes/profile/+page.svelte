@@ -2,13 +2,20 @@
 	import { onMount } from 'svelte';
 	import { _ } from '$lib/i18n';
 	import { currentSession } from '$lib/auth/session';
-	import { getCard, getMyProfileSettings, getSales, updateProfileSettings } from '$lib/api';
+	import {
+		getCard,
+		getCards,
+		getMyProfileSettings,
+		getSales,
+		updateProfileSettings
+	} from '$lib/api';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardPicker from '$lib/components/profile/card-picker.svelte';
 	import ProfileGallery from '$lib/components/profile/profile-gallery.svelte';
+	import WishlistPicker from '$lib/components/wishlist/wishlist-picker.svelte';
 	import { Button } from '$lib/components/ui/button';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
-	import * as Sheet from '$lib/components/ui/sheet';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import type {
 		CardRecord,
@@ -38,15 +45,15 @@
 	let pickerTitle = $state('');
 	let pickerCards = $state<CardRecord[]>([]);
 	let pickerAction = $state<(card: CardRecord) => void>(() => {});
+	let wantedPickerOpen = $state(false);
 	let galleryTitle = $state('');
 	let editingGalleryId = $state<string | null>(null);
 	let galleryEditorOpen = $state(false);
 	let newBioTag = $state('');
 
 	onMount(async () => {
-		const [collection, catalogue] = await Promise.all([data.collection, data.cards]);
+		const collection = await data.collection;
 		ownedCards = collection.items;
-		allCards = catalogue.items;
 		const userId = $currentSession?.user.id ?? 'demo-user';
 		const [profile, userSales] = await Promise.all([getMyProfileSettings(), getSales(userId)]);
 		settings = {
@@ -54,13 +61,7 @@
 			username: profile.username || $currentSession?.user.username || ''
 		};
 		sales = userSales;
-		allCards = [
-			...new Map(
-				[...allCards, ...userSales.flatMap((sale) => (sale.card ? [sale.card] : []))].map(
-					(card) => [card.id, card]
-				)
-			).values()
-		];
+		allCards = userSales.flatMap((sale) => (sale.card ? [sale.card] : []));
 		const knownIds = new Set(allCards.map((card) => card.id));
 		const referencedIds = [...new Set(settings.wantedCardIds)];
 		const missingCards = await Promise.all(
@@ -250,16 +251,7 @@
 				editable={false}
 				showTitle={false}
 				allowCardAdd={true}
-				onAddCard={() =>
-					openPicker(
-						$_('profile.wanted_title'),
-						allCards.filter((card) => !settings.wantedCardIds.includes(card.id)),
-						(card) =>
-							persist({
-								...settings,
-								wantedCardIds: [...settings.wantedCardIds, card.id].slice(0, 6)
-							})
-					)}
+				onAddCard={() => (wantedPickerOpen = true)}
 				onRemoveCard={(cardId) =>
 					persist({
 						...settings,
@@ -297,13 +289,25 @@
 	onSelect={(card) => pickerAction(card)}
 />
 
-<Sheet.Root bind:open={identityOpen}>
-	<Sheet.Content
-		side="right"
-		class="w-full border-l-4 border-double border-primary/40 bg-card p-5 sm:max-w-md"
-	>
-		<Sheet.Title class="font-serif text-2xl font-black uppercase tracking-tight"
-			>{$_('profile.edit_identity')}</Sheet.Title
+<WishlistPicker
+	bind:open={wantedPickerOpen}
+	existingCardIds={settings.wantedCardIds}
+	loadCards={getCards}
+	title={$_('profile.wanted_title')}
+	onSelect={async (card) => {
+		await persist({
+			...settings,
+			wantedCardIds: [...settings.wantedCardIds, card.id].slice(0, 6)
+		});
+		allCards = [...new Map([...allCards, card].map((entry) => [entry.id, entry])).values()];
+		wantedPickerOpen = false;
+	}}
+/>
+
+<Dialog.Root bind:open={identityOpen}>
+	<Dialog.Content class="max-w-lg p-5">
+		<Dialog.Title class="font-serif text-2xl font-black uppercase tracking-tight"
+			>{$_('profile.edit_identity')}</Dialog.Title
 		>
 		<div class="mt-5 space-y-4">
 			<label class="block font-mono text-[10px] uppercase tracking-widest text-primary"
@@ -349,16 +353,13 @@
 				}}>{$_('common.save')}</Button
 			>
 		</div>
-	</Sheet.Content>
-</Sheet.Root>
+	</Dialog.Content>
+</Dialog.Root>
 
-<Sheet.Root bind:open={galleryEditorOpen}>
-	<Sheet.Content
-		side="bottom"
-		class="border-4 border-double border-primary/40 bg-card p-5 sm:inset-x-[25%] sm:bottom-8"
-	>
-		<Sheet.Title class="font-serif text-xl font-black uppercase"
-			>{$_('profile.edit_gallery')}</Sheet.Title
+<Dialog.Root bind:open={galleryEditorOpen}>
+	<Dialog.Content class="max-w-lg p-5">
+		<Dialog.Title class="font-serif text-xl font-black uppercase"
+			>{$_('profile.edit_gallery')}</Dialog.Title
 		>
 		<Input bind:value={galleryTitle} class="mt-4 font-serif" />
 		<div class="mt-4 flex justify-end gap-2">
@@ -371,5 +372,5 @@
 				}}>{$_('common.save')}</Button
 			>
 		</div>
-	</Sheet.Content>
-</Sheet.Root>
+	</Dialog.Content>
+</Dialog.Root>
