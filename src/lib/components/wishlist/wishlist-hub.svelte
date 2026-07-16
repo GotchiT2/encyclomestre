@@ -52,10 +52,10 @@
 				</Button>
 				<Button
 					class="mt-3"
-					size="xs"
+					size="icon-sm"
 					variant="destructive"
 					aria-label={$_('wishlist.delete_registry')}
-					onclick={() => onDelete(registry)}><Trash2Icon />{$_('wishlist.delete_registry')}</Button
+					onclick={() => onDelete(registry)}><Trash2Icon /></Button
 				>
 			</div>
 		{/each}

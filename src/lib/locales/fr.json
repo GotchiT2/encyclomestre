@@ -350,7 +350,8 @@
 		"loading": "Chargement des messages…",
 		"empty": "Aucun message n’est disponible.",
 		"guild_share": "Wishlist partagée",
-		"open_share": "Ouvrir la wishlist"
+		"open_share": "Ouvrir la wishlist",
+		"back_to_conversations": "Retour aux conversations"
 	},
 	"market": {
 		"eyebrow": "Annonces actives",

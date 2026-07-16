@@ -69,11 +69,13 @@
 	{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('friends.loading')}
 		</p>{:else if visibleFriendships.length}<div class="grid gap-3 lg:grid-cols-2">
-			{#each visibleFriendships as friendship (friendship.id)}<article class="forge-panel p-4">
-					<div class="flex items-center justify-between gap-3">
+			{#each visibleFriendships as friendship (friendship.id)}<article
+					class="forge-panel min-w-0 p-3 sm:p-4"
+				>
+					<div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 						<a
 							href={resolve('/users/[id]', { id: friendship.user.id })}
-							class="flex min-w-0 items-center gap-3"
+							class="flex min-w-0 items-center gap-3 sm:flex-1"
 						>
 							<img
 								src={friendship.user.avatarUrl ?? ''}
@@ -89,26 +91,35 @@
 								</p>
 							</div>
 						</a>
-						<div class="flex flex-wrap justify-end gap-2">
+						<div
+							class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end"
+						>
 							{#if friendship.status === 'received'}<Button
 									size="sm"
+									class="w-full sm:w-auto"
 									onclick={() => respond(friendship.id, 'accepted')}>{$_('friends.accept')}</Button
 								><Button
 									size="sm"
 									variant="outline"
+									class="w-full sm:w-auto"
 									onclick={() => respond(friendship.id, 'rejected')}>{$_('friends.decline')}</Button
 								>{:else}<Button
 									size="sm"
 									variant="outline"
+									class="w-full sm:w-auto"
 									onclick={() => goto(`${resolve('/trades')}?partner=${friendship.user.id}`)}
 									>{$_('friends.trade')}</Button
 								><Button
 									size="sm"
 									variant="outline"
+									class="w-full sm:w-auto"
 									onclick={() => goto(`${resolve('/messages')}?user=${friendship.user.id}`)}
 									>{$_('friends.message')}</Button
-								>{/if}<Button size="sm" variant="destructive" onclick={() => remove(friendship.id)}
-								>{$_('friends.remove')}</Button
+								>{/if}<Button
+								class="col-span-2 w-full sm:w-auto"
+								size="sm"
+								variant="destructive"
+								onclick={() => remove(friendship.id)}>{$_('friends.remove')}</Button
 							>
 						</div>
 					</div>
