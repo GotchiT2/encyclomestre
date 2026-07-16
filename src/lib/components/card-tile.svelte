@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
+	import CardEffects from '$lib/components/cards/card-effects.svelte';
 	import type { CardRecord, CollectionTag } from '$lib/types';
 
 	let {
@@ -30,6 +31,11 @@
 	);
 	const isFullArt = $derived(card.rarity === 'Légendaire' && card.isFullArt);
 	const titleLength = $derived(Math.max(1, card.title.trim().length));
+	const hasTilt = $derived(['R', 'SR', 'UR', 'L'].includes(card.rarityInitials));
+	const hasIllustrationEffect = $derived(['PC', 'R'].includes(card.rarityInitials));
+	let pointerX = $state(50);
+	let pointerY = $state(50);
+	let activeInteraction = $state(false);
 	const titleFontStyle = $derived(
 		`--card-title-mobile:${Math.min(0.78, Math.max(0.3, 13.5 / titleLength)).toFixed(3)}rem;--card-title-desktop:${Math.min(1.18, Math.max(0.45, 23 / titleLength)).toFixed(3)}rem`
 	);
@@ -37,26 +43,63 @@
 	function handleOpen() {
 		onOpen?.(card);
 	}
+
+	function updateInteraction(event: PointerEvent) {
+		if (!hasTilt && !hasIllustrationEffect) return;
+		const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
+		pointerX = Math.max(0, Math.min(100, ((event.clientX - bounds.left) / bounds.width) * 100));
+		pointerY = Math.max(0, Math.min(100, ((event.clientY - bounds.top) / bounds.height) * 100));
+		activeInteraction = true;
+	}
+
+	function resetInteraction() {
+		pointerX = 50;
+		pointerY = 50;
+		activeInteraction = false;
+	}
+
+	const effectStyle = $derived(
+		`--card-pointer-x:${pointerX.toFixed(2)};--card-pointer-y:${pointerY.toFixed(2)};--card-rotate-x:${((pointerY - 50) * -0.05).toFixed(2)}deg;--card-rotate-y:${((pointerX - 50) * 0.05).toFixed(2)}deg`
+	);
 </script>
 
 <article
-	class="wikiforge-card-size group/card relative overflow-hidden bg-transparent transition-[transform,filter] duration-300 hover:-translate-y-1 hover:drop-shadow-[0_0_1.25rem_rgb(25_167_170_/_18%)]"
+	class="wikiforge-card-size card-effect-host relative overflow-hidden bg-transparent"
 	data-testid="card-tile"
 	data-frame={frameSource}
 	data-layout={isFullArt ? 'full-art' : 'standard'}
+	data-rarity={card.rarityInitials}
+	data-tilt-active={hasTilt && activeInteraction}
+	data-effect-active={hasIllustrationEffect && activeInteraction}
+	style={effectStyle}
+	onpointermove={updateInteraction}
+	onpointerdown={(event) => {
+		if (event.pointerType !== 'mouse' && (hasTilt || hasIllustrationEffect)) {
+			activeInteraction = true;
+		}
+	}}
+	onpointerleave={resetInteraction}
+	onpointerup={resetInteraction}
+	onpointercancel={resetInteraction}
+	onfocusin={() => {
+		if (hasTilt || hasIllustrationEffect) activeInteraction = true;
+	}}
+	onfocusout={resetInteraction}
 >
-	<div class="relative aspect-[862/1221]" aria-hidden="true">
+	<div class="card-effect-visual relative aspect-[862/1221]" aria-hidden="true">
 		<div
 			class="absolute right-[9%] left-[9%] overflow-hidden bg-cover bg-center bg-no-repeat {isFullArt
 				? 'top-[6.3%] bottom-[9.9%]'
 				: 'top-[7%] bottom-[45.2%] bg-white'}"
 			style={`background-image:url(${JSON.stringify(card.imageUrl)})`}
 			data-testid="card-art"
-		></div>
+		>
+			<CardEffects rarity={card.rarityInitials} active={activeInteraction} />
+		</div>
 		<img
 			src={frameSource}
 			alt=""
-			class="pointer-events-none absolute inset-0 z-10 size-full drop-shadow-[0_14px_16px_rgb(0_0_0_/_45%)] transition-[filter] duration-300 group-hover/card:drop-shadow-[0_0_0.7rem_rgb(254_184_35_/_18%)]"
+			class="pointer-events-none absolute inset-0 z-10 size-full drop-shadow-[0_14px_16px_rgb(0_0_0_/_45%)]"
 		/>
 		<p
 			class="absolute right-[15%] left-[15%] z-20 flex items-center whitespace-nowrap font-serif font-bold text-[length:var(--card-title-mobile)] text-[#f8cf51] drop-shadow-[0_2px_1px_rgb(0_0_0_/_85%)] lg:text-[length:var(--card-title-desktop)] {isFullArt
@@ -149,3 +192,29 @@
 		</details>
 	{/if}
 </article>
+
+<style>
+	.card-effect-host {
+		perspective: 900px;
+		transform-style: preserve-3d;
+	}
+
+	.card-effect-visual {
+		transform: translateY(0) rotateX(0deg) rotateY(0deg);
+		transform-style: preserve-3d;
+		transition: transform 220ms ease-out;
+		will-change: transform;
+	}
+
+	.card-effect-host[data-tilt-active='true'] .card-effect-visual {
+		transform: translateY(-0.12rem) rotateX(var(--card-rotate-x)) rotateY(var(--card-rotate-y));
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.card-effect-visual,
+		.card-effect-host[data-tilt-active='true'] .card-effect-visual {
+			transform: none;
+			transition: none;
+		}
+	}
+</style>

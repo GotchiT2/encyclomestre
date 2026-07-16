@@ -254,3 +254,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Charger les deux côtés d’un échange avec l’endpoint hydraté dédié sans parcourir les collections — `perf(trades): load detailed cards in one request`
 - [x] Présenter chaque échange comme une vue bilatérale détaillée avec cartes, crédits, actions et accès direct aux messages — `feat(trades): build bilateral offer summaries`
 - [x] Consommer les cartes embarquées des registres et créer ou retrouver les conversations directes depuis les échanges — `perf(trades): consume embedded cards and direct messages`
+- [x] Limiter les effets de rareté à un reflet neutre sur les illustrations PC/R et adoucir l'inclinaison 3D — `feat(cards): add subtle rarity illustration effects`

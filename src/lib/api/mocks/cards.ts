@@ -14,6 +14,7 @@ const articles: BaseArticle[] = [
 	['Red Velvet', 'Ultra-Rare', 8600, 8700, 1150000],
 	['Gee (chanson)', 'Rare', 7100, 6500, 890000],
 	['Ddu-Du Ddu-Du', 'Rare', 7900, 6800, 1450000],
+	['Seo Taiji and Boys', 'Peu Commune', 6200, 5900, 730000],
 	['K-pop', 'Commune', 5000, 5000, 12500000],
 	['Wonder Girls', 'Ultra-Rare', 8900, 8400, 780000],
 	['KARA (groupe)', 'Ultra-Rare', 8700, 8300, 650000],

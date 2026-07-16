@@ -51,6 +51,29 @@ describe('CardTile', () => {
 		await expect.element(page.getByText(title)).toBeVisible();
 	});
 
+	it('activates the PC illustration effect on focus without tilting the card', async () => {
+		render(CardTile, {
+			card: { ...card, rarity: 'Peu Commune', rarityInitials: 'PC' },
+			onOpen: vi.fn()
+		});
+
+		document.querySelector<HTMLButtonElement>(`button[aria-label="${card.title}"]`)?.focus();
+		await expect.element(page.getByTestId('card-effects')).toHaveAttribute('data-active', 'true');
+		await expect
+			.element(page.getByTestId('card-tile'))
+			.toHaveAttribute('data-effect-active', 'true');
+		await expect
+			.element(page.getByTestId('card-tile'))
+			.toHaveAttribute('data-tilt-active', 'false');
+	});
+
+	it('keeps the illustration effect inside the Wikipedia image area', async () => {
+		render(CardTile, { card: { ...card, rarity: 'Rare', rarityInitials: 'R' } });
+
+		const effect = document.querySelector('[data-testid="card-effects"]');
+		expect(effect?.closest('[data-testid="card-art"]')).not.toBeNull();
+	});
+
 	it.each([
 		['Commune', 'C', '/images/card-C-empty.png'],
 		['Peu Commune', 'PC', '/images/card-PC-empty.png'],
