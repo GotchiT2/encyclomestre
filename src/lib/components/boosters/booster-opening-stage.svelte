@@ -47,6 +47,13 @@
 	let openRequested = $state(false);
 	let suspensionActive = $state(false);
 	let mobileViewport = $state(false);
+	const awaitingMobileSummary = $derived(
+		mobileViewport &&
+			!quickOpening &&
+			phase === 'revealing' &&
+			slots.length > 0 &&
+			slots.every((slot) => slot.revealed)
+	);
 	let timers: number[] = [];
 	function schedule(callback: () => void, delay: number) {
 		const timer = window.setTimeout(callback, delay);
@@ -64,10 +71,8 @@
 		const remaining = slots.some((slot) => !slot.revealed);
 		if (!remaining) {
 			mobileIndex = slots.length - 1;
-			if (mobileViewport && !quickOpening) {
-				phase = 'revealing';
-				schedule(() => (phase = 'complete'), 900);
-			} else phase = 'complete';
+			if (mobileViewport && !quickOpening) phase = 'revealing';
+			else phase = 'complete';
 			return;
 		}
 		phase = 'revealing';
@@ -106,6 +111,10 @@
 	function advance() {
 		if (suspended) return;
 		if (phase === 'revealing') {
+			if (awaitingMobileSummary) {
+				phase = 'complete';
+				return;
+			}
 			revealNext();
 			return;
 		}
@@ -149,7 +158,7 @@
 	function resumeAfterSuspension() {
 		const nextIndex = slots.findIndex((slot) => !slot.revealed);
 		mobileIndex = nextIndex >= 0 ? nextIndex : Math.max(0, slots.length - 1);
-		if (nextIndex < 0 && phase === 'revealing') {
+		if (nextIndex < 0 && phase === 'revealing' && !awaitingMobileSummary) {
 			phase = 'complete';
 			return;
 		}
@@ -304,6 +313,8 @@
 					{#if phase === 'complete'}
 						<Button variant="outline" onclick={resetStage}>{$_('boosters.close')}</Button>
 						{#if available}<Button onclick={requestOpen}>{$_('boosters.open_next')}</Button>{/if}
+					{:else if awaitingMobileSummary}
+						<Button onclick={advance}>{$_('boosters.show_summary')}</Button>
 					{:else}
 						<p class="text-center text-xs text-muted-foreground sm:text-sm">
 							{$_('boosters.advance_instruction')}

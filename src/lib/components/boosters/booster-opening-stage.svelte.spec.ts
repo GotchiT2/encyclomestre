@@ -214,6 +214,11 @@ describe('BoosterOpeningStage', () => {
 			)
 		);
 		await new Promise((resolve) => window.setTimeout(resolve, 950));
+		expect(document.querySelector('.booster-deck')?.getAttribute('data-phase')).toBe('revealing');
+		await expect
+			.element(page.getByRole('button', { name: 'Afficher le récapitulatif' }))
+			.toBeVisible();
+		await page.getByRole('button', { name: 'Afficher le récapitulatif' }).click();
 		expect(document.querySelector('.booster-deck')?.getAttribute('data-phase')).toBe('complete');
 	});
 

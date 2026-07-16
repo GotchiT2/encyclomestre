@@ -63,11 +63,13 @@ describe('CardDetailModal', () => {
 		const actions = document.querySelector<HTMLElement>(
 			'[data-testid="card-detail-mobile-actions"]'
 		)!;
+		const overlay = document.querySelector<HTMLElement>('[data-testid="card-detail-overlay"]')!;
 		const modalRect = modal.getBoundingClientRect();
 		const actionsRect = actions.getBoundingClientRect();
 		expect(modalRect.left).toBeGreaterThanOrEqual(0);
 		expect(modalRect.right).toBeLessThanOrEqual(window.innerWidth);
 		expect(modalRect.bottom).toBeLessThanOrEqual(window.innerHeight);
+		expect(Number(getComputedStyle(overlay).zIndex)).toBeGreaterThan(40);
 		expect(actionsRect.bottom).toBeLessThanOrEqual(modalRect.bottom);
 		expect(actions.querySelectorAll('button')).toHaveLength(3);
 		for (const button of actions.querySelectorAll('button')) {

@@ -116,11 +116,11 @@
 		z-index: -2;
 		background: radial-gradient(
 			ellipse,
-			color-mix(in srgb, var(--rarity-color) 42%, transparent),
+			color-mix(in srgb, var(--rarity-color) 52%, transparent),
 			transparent 70%
 		);
 		filter: blur(22px);
-		opacity: 0.38;
+		opacity: 0.5;
 		animation: booster-aura 3.2s ease-in-out infinite;
 	}
 
@@ -133,15 +133,15 @@
 	}
 
 	.booster-light-propagation span {
-		border: 1px solid color-mix(in srgb, var(--rarity-color) 28%, transparent);
+		border: 1px solid color-mix(in srgb, var(--rarity-color) 38%, transparent);
 		background: radial-gradient(
 			ellipse,
 			transparent 48%,
-			color-mix(in srgb, var(--rarity-color) 14%, transparent) 62%,
+			color-mix(in srgb, var(--rarity-color) 20%, transparent) 62%,
 			transparent 78%
 		);
-		box-shadow: 0 0 1.5rem color-mix(in srgb, var(--rarity-color) 22%, transparent);
-		filter: blur(14px);
+		box-shadow: 0 0 1.75rem color-mix(in srgb, var(--rarity-color) 30%, transparent);
+		filter: blur(12px);
 		opacity: 0;
 		transform: scale(0.78);
 	}
@@ -160,7 +160,7 @@
 	.booster-reveal-card:hover .booster-rarity-aura,
 	.booster-reveal-card:focus-within .booster-rarity-aura,
 	.is-propagating .booster-rarity-aura {
-		opacity: 0.58;
+		opacity: 0.72;
 		filter: blur(27px);
 	}
 
@@ -175,12 +175,12 @@
 
 	.booster-reveal-card[data-rarity='SR'] .booster-rarity-aura,
 	.booster-reveal-card[data-rarity='UR'] .booster-rarity-aura {
-		opacity: 0.48;
+		opacity: 0.62;
 	}
 
 	.booster-reveal-card[data-rarity='L'] .booster-rarity-aura {
 		inset: -13%;
-		opacity: 0.58;
+		opacity: 0.72;
 		filter: blur(26px);
 	}
 
@@ -275,7 +275,7 @@
 	@keyframes booster-aura {
 		50% {
 			transform: scale(1.035);
-			opacity: 0.5;
+			opacity: 0.62;
 		}
 	}
 
@@ -328,10 +328,10 @@
 			opacity: 0;
 		}
 		22% {
-			opacity: 0.28;
+			opacity: 0.42;
 		}
 		100% {
-			transform: scale(1.25);
+			transform: scale(1.34);
 			opacity: 0;
 		}
 	}

@@ -250,6 +250,7 @@
 		"open_card_detail": "Afficher les détails de {title}",
 		"reveal_instruction": "Choisissez une carte à retourner",
 		"advance_instruction": "Cliquez dans la scène ou appuyez sur Espace pour continuer.",
+		"show_summary": "Afficher le récapitulatif",
 		"opening_error": "L’ouverture du booster a échoué",
 		"retry": "Réessayer"
 	},
