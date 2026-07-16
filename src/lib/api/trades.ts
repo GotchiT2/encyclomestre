@@ -1,5 +1,12 @@
 import { apiRequest, type RequestOptions } from './client';
-import type { CreateTradeOfferInput, TradeOffer, TradeParticipant } from '$lib/types';
+import { toCardRecord, type WikiForgeCard } from './wikiforge';
+import type {
+	CreateTradeOfferInput,
+	TradeCardDetail,
+	TradeCardSide,
+	TradeOffer,
+	TradeParticipant
+} from '$lib/types';
 
 interface ApiTradeParticipant {
 	id: string;
@@ -20,6 +27,12 @@ interface ApiTradeOffer {
 	offeredCredits: number;
 	requestedCredits: number;
 	createdAt: string;
+}
+
+interface ApiTradeCardDetail {
+	userCardId: string;
+	side: TradeCardSide;
+	card: WikiForgeCard;
 }
 
 const fallbackParticipant = (id: string): TradeParticipant => ({
@@ -54,6 +67,21 @@ export const getSentTradeOffers = async (options?: RequestOptions) =>
 
 export const getTradeHistory = async (options?: RequestOptions) =>
 	getTradeOfferGroup('/api/trades/history', options);
+
+export const getTradeCards = async (
+	id: string,
+	options?: RequestOptions
+): Promise<TradeCardDetail[]> =>
+	(
+		await apiRequest<ApiTradeCardDetail[]>(`/api/trades/${encodeURIComponent(id)}/cards`, options)
+	).map((entry) => {
+		const card = toCardRecord(entry.card);
+		return {
+			userCardId: entry.userCardId,
+			side: entry.side,
+			card: { ...card, id: entry.userCardId, catalogueId: card.id }
+		};
+	});
 
 export const getTradeOffers = async (_userId?: string, options?: RequestOptions) => {
 	const [received, sent, history] = await Promise.all([

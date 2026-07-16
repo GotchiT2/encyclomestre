@@ -69,6 +69,19 @@ describe('createMockApiResponse', () => {
 		expect((await history.json()) as { status: string }[]).toEqual(
 			expect.arrayContaining([expect.objectContaining({ status: 'accepted' })])
 		);
+		const detailedCards = createMockApiResponse({ path: '/api/trades/trade-001/cards' });
+		expect(await detailedCards.json()).toEqual([
+			expect.objectContaining({
+				userCardId: 'owned-friend-0-girls-generation-1',
+				side: 'offered',
+				card: expect.objectContaining({ wikipediaTitle: "Girls' Generation" })
+			}),
+			expect.objectContaining({
+				userCardId: 'owned-demo-user-2ne1-1',
+				side: 'requested',
+				card: expect.objectContaining({ wikipediaTitle: '2NE1' })
+			})
+		]);
 
 		const created = createMockApiResponse({
 			path: '/api/trades',

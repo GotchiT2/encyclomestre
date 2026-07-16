@@ -22,6 +22,14 @@ export interface TradeOffer {
 	updatedAt: string;
 }
 
+export type TradeCardSide = 'offered' | 'requested';
+
+export interface TradeCardDetail {
+	userCardId: string;
+	side: TradeCardSide;
+	card: import('./card').CardRecord;
+}
+
 export interface CreateTradeOfferInput {
 	initiatorId: string;
 	recipientId: string;

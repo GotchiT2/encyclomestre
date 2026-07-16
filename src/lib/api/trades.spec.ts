@@ -4,7 +4,7 @@ const { apiRequest } = vi.hoisted(() => ({ apiRequest: vi.fn() }));
 
 vi.mock('./client', () => ({ apiRequest }));
 
-import { getTradeOffers } from './trades';
+import { getTradeCards, getTradeOffers } from './trades';
 
 const apiOffer = (id: string, status: string) => ({
 	id,
@@ -56,6 +56,60 @@ describe('trade ledger', () => {
 			}),
 			expect.objectContaining({ id: 'sent', requestedCardIds: ['requested-sent'] }),
 			expect.objectContaining({ id: 'history', status: 'accepted' })
+		]);
+	});
+
+	it('loads both sides with one request and preserves each user-card identity', async () => {
+		apiRequest.mockReset();
+		apiRequest.mockResolvedValueOnce([
+			{
+				userCardId: 'offered-copy-uuid',
+				side: 'offered',
+				card: {
+					id: 'offered-variant-uuid',
+					variant: 'NORMAL',
+					isFullArt: false,
+					wikipediaTitle: 'Carte proposée',
+					imageUrl: '/card-placeholder.svg',
+					rarity: 'R'
+				}
+			},
+			{
+				userCardId: 'requested-copy-uuid',
+				side: 'requested',
+				card: {
+					id: 'requested-variant-uuid',
+					variant: 'FULL_ART',
+					isFullArt: true,
+					wikipediaTitle: 'Carte demandée',
+					imageUrl: '/card-placeholder.svg',
+					rarity: 'L'
+				}
+			}
+		]);
+
+		const cards = await getTradeCards('trade/1');
+
+		expect(apiRequest).toHaveBeenCalledOnce();
+		expect(apiRequest).toHaveBeenCalledWith('/api/trades/trade%2F1/cards', undefined);
+		expect(cards).toEqual([
+			expect.objectContaining({
+				userCardId: 'offered-copy-uuid',
+				side: 'offered',
+				card: expect.objectContaining({
+					id: 'offered-copy-uuid',
+					catalogueId: 'offered-variant-uuid'
+				})
+			}),
+			expect.objectContaining({
+				userCardId: 'requested-copy-uuid',
+				side: 'requested',
+				card: expect.objectContaining({
+					id: 'requested-copy-uuid',
+					catalogueId: 'requested-variant-uuid',
+					isFullArt: true
+				})
+			})
 		]);
 	});
 });

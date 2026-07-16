@@ -9,6 +9,7 @@
 		createTradeOffer,
 		getReceivedTradeOffers,
 		getSentTradeOffers,
+		getTradeCards,
 		getTradeHistory,
 		getTradePartners,
 		getUserCollection,
@@ -23,6 +24,7 @@
 	import type {
 		CardRecord,
 		CreateTradeOfferInput,
+		TradeCardDetail,
 		TradeOffer,
 		TradeParticipant,
 		User
@@ -47,6 +49,7 @@
 	let partnersRequest: Promise<User[]> | null = null;
 	type TradeTab = 'received' | 'sent' | 'history';
 	const tradeRequests = new SvelteMap<TradeTab, Promise<TradeOffer[]>>();
+	const tradeCardRequests = new SvelteMap<string, Promise<TradeCardDetail[]>>();
 
 	onMount(async () => {
 		currentUserId = $currentSession?.user.id ?? 'demo-user';
@@ -182,18 +185,21 @@
 	}
 
 	async function openTradeDetail(offer: TradeOffer) {
-		const [initiatorCollection, recipientCollection] = await Promise.all([
-			loadParticipantCollection(offer.initiatorId),
-			loadParticipantCollection(offer.recipientId)
-		]);
-		const initiatorCardsById = new Map(initiatorCollection.map((card) => [card.id, card]));
-		const recipientCardsById = new Map(recipientCollection.map((card) => [card.id, card]));
-		selectedOfferedCards = offer.offeredCardIds
-			.map((id) => initiatorCardsById.get(id))
-			.filter((card): card is CardRecord => Boolean(card));
-		selectedRequestedCards = offer.requestedCardIds
-			.map((id) => recipientCardsById.get(id))
-			.filter((card): card is CardRecord => Boolean(card));
+		let cardsRequest = tradeCardRequests.get(offer.id);
+		if (!cardsRequest) {
+			cardsRequest = getTradeCards(offer.id).catch((error) => {
+				tradeCardRequests.delete(offer.id);
+				throw error;
+			});
+			tradeCardRequests.set(offer.id, cardsRequest);
+		}
+		const tradeCards = await cardsRequest;
+		selectedOfferedCards = tradeCards
+			.filter((entry) => entry.side === 'offered')
+			.map((entry) => entry.card);
+		selectedRequestedCards = tradeCards
+			.filter((entry) => entry.side === 'requested')
+			.map((entry) => entry.card);
 		selectedOffer = offer;
 		detailOpen = true;
 	}

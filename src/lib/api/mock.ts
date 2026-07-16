@@ -1052,6 +1052,20 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		tradeOffers.unshift(offer);
 		return json(apiTradeOffer(offer));
 	}
+	const tradeCardsMatch = /^\/trades\/([^/]+)\/cards$/.exec(tradePathname);
+	if (tradeCardsMatch && normalizedMethod === 'GET') {
+		const offer = tradeOffers.find((entry) => entry.id === decodeURIComponent(tradeCardsMatch[1]));
+		if (!offer) return error(404, 'Offre introuvable.', 'TRADE_NOT_FOUND');
+		return json(
+			[
+				...offer.offeredCardIds.map((userCardId) => ({ userCardId, side: 'offered' })),
+				...offer.requestedCardIds.map((userCardId) => ({ userCardId, side: 'requested' }))
+			].flatMap((entry) => {
+				const card = mockCards.find((candidate) => entry.userCardId.endsWith(`-${candidate.id}`));
+				return card ? [{ ...entry, card: apiCard(card) }] : [];
+			})
+		);
+	}
 	const tradeMatch = /^\/trades\/([^/]+)$/.exec(tradePathname);
 	if (tradeMatch && normalizedMethod === 'PATCH') {
 		const offer = tradeOffers.find((entry) => entry.id === decodeURIComponent(tradeMatch[1]));
