@@ -245,7 +245,7 @@
 		"complete": "Toutes les cartes ont été affichées",
 		"reveal_progress": "Carte {current} / {total}",
 		"quick_mode": "Ouverture rapide",
-		"quick_mode_hint": "Animations courtes",
+		"quick_mode_hint": "Afficher directement le récapitulatif",
 		"reveal_card": "Retourner la carte {rarity}",
 		"open_card_detail": "Afficher les détails de {title}",
 		"reveal_instruction": "Choisissez une carte à retourner",

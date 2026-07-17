@@ -60,7 +60,7 @@
 <div
 	class={cn('booster-reveal-card', className)}
 	class:is-revealed={revealed}
-	class:is-legendary={card.rarity === 'Légendaire'}
+	class:is-legendary={card.rarityInitials === 'L'}
 	class:is-full-art={Boolean(card.isFullArt)}
 	class:is-propagating={propagating}
 	style={`--rarity-color:${card.rarityColor}`}

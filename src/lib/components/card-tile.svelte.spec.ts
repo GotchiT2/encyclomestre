@@ -48,6 +48,21 @@ describe('CardTile', () => {
 			.toHaveAttribute('data-profile', 'full-art');
 	});
 
+	it('contains landscape Full Art illustrations on a white background', async () => {
+		render(CardTile, {
+			card: { ...card, imageUrl: '/card-placeholder.svg', isFullArt: true }
+		});
+		const image = document.querySelector<HTMLImageElement>('[data-testid="card-art"] img');
+		expect(image).not.toBeNull();
+		Object.defineProperty(image, 'naturalWidth', { configurable: true, value: 1600 });
+		Object.defineProperty(image, 'naturalHeight', { configurable: true, value: 900 });
+		image?.dispatchEvent(new Event('load'));
+
+		await expect.element(page.getByTestId('card-art')).toHaveAttribute('data-landscape', 'true');
+		await expect.element(page.getByTestId('card-art')).toHaveClass('bg-white');
+		expect(image).toHaveClass('object-contain', 'object-[center_35%]');
+	});
+
 	it('keeps a long title in its dedicated card zone', async () => {
 		const title = 'Girls Generation Archives impériales de collection';
 		render(CardTile, { card: { ...card, title } });

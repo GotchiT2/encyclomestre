@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { onDestroy, onMount, untrack } from 'svelte';
+	import { onDestroy, onMount, tick, untrack } from 'svelte';
 	import BoosterRevealCard from './booster-reveal-card.svelte';
 	import ForgePanel from '$lib/components/layout/forge-panel.svelte';
 	import HudStat from '$lib/components/layout/hud-stat.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Switch } from '$lib/components/ui/switch';
 	import { _ } from '$lib/i18n';
+	import { cn } from '$lib/utils';
 	import type { CardRecord } from '$lib/types';
 
 	type BoosterPhase = 'idle' | 'opening' | 'dealing' | 'revealing' | 'complete' | 'error';
@@ -47,6 +48,19 @@
 	let openRequested = $state(false);
 	let suspensionActive = $state(false);
 	let mobileViewport = $state(false);
+	let deckElement = $state<HTMLDivElement>();
+	let scrollTimer: number | undefined;
+	const rarityOrder: Record<CardRecord['rarityInitials'], number> = {
+		C: 0,
+		PC: 1,
+		R: 2,
+		SR: 3,
+		UR: 4,
+		L: 5
+	};
+	const mobileSceneActive = $derived(
+		mobileViewport && ['dealing', 'revealing', 'complete'].includes(phase)
+	);
 	const awaitingMobileSummary = $derived(
 		mobileViewport &&
 			!quickOpening &&
@@ -63,6 +77,7 @@
 	function clearTimers() {
 		for (const timer of timers) window.clearTimeout(timer);
 		timers = [];
+		window.clearTimeout(scrollTimer);
 	}
 
 	function setSlotRevealed(index: number) {
@@ -84,16 +99,53 @@
 		clearTimers();
 		openRequested = false;
 		handledOpeningId = nextOpeningId;
-		slots = nextCards.map((card) => ({ card, revealed: false }));
+		const sortedCards = nextCards
+			.map((card, originalIndex) => ({ card, originalIndex }))
+			.sort(
+				(left, right) =>
+					rarityOrder[left.card.rarityInitials] - rarityOrder[right.card.rarityInitials] ||
+					left.originalIndex - right.originalIndex
+			)
+			.map(({ card }) => card);
+		slots = sortedCards.map((card) => ({ card, revealed: false }));
 		mobileIndex = 0;
 		phase = 'dealing';
 		if (suspended) return;
 		if (quickOpening) {
-			nextCards.forEach((_, index) => schedule(() => setSlotRevealed(index), 150 + index * 95));
-			schedule(() => (phase = 'complete'), 150 + nextCards.length * 95 + 180);
+			slots = slots.map((slot) => ({ ...slot, revealed: true }));
+			phase = 'complete';
 		} else {
 			schedule(() => (phase = 'revealing'), 720);
 		}
+	}
+
+	async function showMobileCard(index: number, behavior: ScrollBehavior = 'smooth') {
+		mobileIndex = Math.max(0, Math.min(index, slots.length - 1));
+		await tick();
+		const target = deckElement?.querySelector<HTMLElement>(
+			`[data-slot-index="${mobileIndex}"]`
+		);
+		target?.scrollIntoView({ behavior, block: 'nearest', inline: 'center' });
+	}
+
+	function syncMobileIndexFromScroll() {
+		window.clearTimeout(scrollTimer);
+		scrollTimer = window.setTimeout(() => {
+			if (!deckElement) return;
+			const deckCenter = deckElement.getBoundingClientRect().left + deckElement.clientWidth / 2;
+			const cards = [...deckElement.querySelectorAll<HTMLElement>('[data-slot-index]')];
+			const closest = cards.reduce(
+				(best, card) => {
+					const bounds = card.getBoundingClientRect();
+					const distance = Math.abs(bounds.left + bounds.width / 2 - deckCenter);
+					return distance < best.distance
+						? { index: Number(card.dataset.slotIndex), distance }
+						: best;
+				},
+				{ index: mobileIndex, distance: Number.POSITIVE_INFINITY }
+			);
+			mobileIndex = closest.index;
+		}, 80);
 	}
 
 	function revealNext() {
@@ -113,6 +165,7 @@
 		if (phase === 'revealing') {
 			if (awaitingMobileSummary) {
 				phase = 'complete';
+				void showMobileCard(0, 'auto');
 				return;
 			}
 			revealNext();
@@ -167,14 +220,9 @@
 			return;
 		}
 		if (!quickOpening || nextIndex < 0 || (phase !== 'dealing' && phase !== 'revealing')) return;
-		phase = 'revealing';
-		const remaining = slots
-			.map((slot, index) => ({ slot, index }))
-			.filter(({ slot }) => !slot.revealed);
-		remaining.forEach(({ index }, position) =>
-			schedule(() => setSlotRevealed(index), 80 + position * 95)
-		);
-		schedule(() => (phase = 'complete'), 80 + remaining.length * 95 + 180);
+		slots = slots.map((slot) => ({ ...slot, revealed: true }));
+		mobileIndex = 0;
+		phase = 'complete';
 	}
 
 	$effect(() => {
@@ -184,6 +232,18 @@
 			if (suspended) clearTimers();
 			else resumeAfterSuspension();
 		});
+	});
+
+	$effect(() => {
+		if (!mobileSceneActive) return;
+		const bodyOverflow = document.body.style.overflow;
+		const htmlOverflow = document.documentElement.style.overflow;
+		document.body.style.overflow = 'hidden';
+		document.documentElement.style.overflow = 'hidden';
+		return () => {
+			document.body.style.overflow = bodyOverflow;
+			document.documentElement.style.overflow = htmlOverflow;
+		};
 	});
 
 	$effect(() => {
@@ -210,7 +270,10 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <ForgePanel
-	class="relative isolate min-h-[38rem] overflow-hidden p-4 sm:p-6 lg:min-h-[45rem] lg:p-8"
+	class={cn(
+		'booster-stage relative isolate flex min-h-[38rem] flex-col overflow-hidden p-4 sm:p-6 lg:min-h-[45rem] lg:p-8',
+		mobileSceneActive && 'booster-mobile-fullscreen'
+	)}
 >
 	<div class="booster-stage-energy" aria-hidden="true"></div>
 	<div
@@ -285,14 +348,17 @@
 					{phase === 'complete' ? $_('boosters.complete') : $_('boosters.reveal_instruction')}
 				</p>
 				<div
+					bind:this={deckElement}
 					class="booster-deck mt-5"
 					data-phase={phase}
 					aria-label={$_('boosters.revealed_title')}
+					onscroll={syncMobileIndexFromScroll}
 				>
 					{#each slots as slot, index (slot.card.id)}
 						<div
 							class="booster-slot"
 							class:mobile-current={index === mobileIndex}
+							data-slot-index={index}
 							style={`--slot-index:${index};--slot-offset:${index - (slots.length - 1) / 2};--slot-arc:${Math.abs(index - (slots.length - 1) / 2) * 0.75}rem`}
 						>
 							<BoosterRevealCard
@@ -306,6 +372,31 @@
 						</div>
 					{/each}
 				</div>
+				{#if phase === 'complete' && mobileViewport && slots.length > 1}
+					<div class="booster-mobile-navigation" data-booster-interactive>
+						<Button
+							variant="outline"
+							size="sm"
+							disabled={mobileIndex === 0}
+							onclick={() => showMobileCard(mobileIndex - 1)}
+						>
+							{$_('boosters.previous')}
+						</Button>
+						<p class="forge-label">
+							{$_('boosters.reveal_progress', {
+								values: { current: mobileIndex + 1, total: slots.length }
+							})}
+						</p>
+						<Button
+							variant="outline"
+							size="sm"
+							disabled={mobileIndex === slots.length - 1}
+							onclick={() => showMobileCard(mobileIndex + 1)}
+						>
+							{$_('boosters.next')}
+						</Button>
+					</div>
+				{/if}
 				<div
 					class="mt-5 flex min-h-11 flex-wrap items-center justify-center gap-2"
 					data-booster-interactive
@@ -344,7 +435,17 @@
 	.booster-stage-content {
 		display: flex;
 		min-height: 31rem;
+		min-width: 0;
+		flex: 1;
 		flex-direction: column;
+	}
+
+	.booster-mobile-navigation {
+		display: flex;
+		width: min(100%, 28rem);
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
 	}
 
 	.booster-quick-toggle {
@@ -432,14 +533,40 @@
 	}
 
 	@media (max-width: 1023px) {
+		:global(.booster-mobile-fullscreen) {
+			position: fixed;
+			inset: 0;
+			z-index: 80;
+			height: 100dvh;
+			min-height: 0;
+			max-width: 100vw;
+			padding:
+				max(0.75rem, env(safe-area-inset-top))
+				max(1rem, env(safe-area-inset-right))
+				max(0.75rem, env(safe-area-inset-bottom))
+				max(1rem, env(safe-area-inset-left));
+			overflow: hidden;
+			clip-path: none;
+		}
 		.booster-stage-content {
-			min-height: 32rem;
+			min-height: 0;
+			overflow: hidden;
 		}
 		.booster-deck {
-			min-height: 22rem;
+			min-width: 0;
+			min-height: 0;
+			max-width: 100%;
+			flex: 1;
 			overflow-x: auto;
+			overflow-y: hidden;
 			justify-content: flex-start;
+			overscroll-behavior-x: contain;
+			scrollbar-width: none;
 			scroll-snap-type: x mandatory;
+			touch-action: pan-x;
+		}
+		.booster-deck::-webkit-scrollbar {
+			display: none;
 		}
 		.booster-deck:not([data-phase='complete']) {
 			justify-content: center;
@@ -450,12 +577,21 @@
 		}
 		.booster-deck[data-phase='complete'] {
 			gap: 0.8rem;
-			padding-inline: calc(50% - 6.5rem);
+			padding-inline: max(0px, calc(50% - min(29vw, 6.5rem)));
 		}
 		.booster-slot {
 			margin-inline: 0;
 			transform: none;
 			scroll-snap-align: center;
+		}
+		.booster-slot :global(.booster-reveal-card) {
+			width: min(58vw, 13rem, calc((100dvh - 15rem) * 0.706));
+		}
+		:global(.booster-mobile-fullscreen) .booster-stage-energy {
+			inset: 0;
+		}
+		:global(.booster-mobile-fullscreen) .booster-quick-toggle small {
+			display: none;
 		}
 	}
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import CardEffects from '$lib/components/cards/card-effects.svelte';
+	import { cn } from '$lib/utils';
 	import type { CardRecord, CollectionTag } from '$lib/types';
 
 	let {
@@ -36,6 +37,7 @@
 	let pointerX = $state(50);
 	let pointerY = $state(50);
 	let activeInteraction = $state(false);
+	let landscapeFullArt = $state(false);
 	const titleFontStyle = $derived(
 		`--card-title-mobile:${Math.min(0.78, Math.max(0.3, 13.5 / titleLength)).toFixed(3)}rem;--card-title-desktop:${Math.min(1.18, Math.max(0.45, 23 / titleLength)).toFixed(3)}rem`
 	);
@@ -61,6 +63,25 @@
 	const effectStyle = $derived(
 		`--card-pointer-x:${pointerX.toFixed(2)};--card-pointer-y:${pointerY.toFixed(2)};--card-rotate-x:${((pointerY - 50) * -0.05).toFixed(2)}deg;--card-rotate-y:${((pointerX - 50) * 0.05).toFixed(2)}deg`
 	);
+	const artImageClass = $derived(
+		cn(
+			'size-full',
+			isFullArt && landscapeFullArt
+				? 'object-contain object-[center_35%]'
+				: 'object-cover object-center'
+		)
+	);
+
+	function inspectIllustration(event: Event) {
+		const image = event.currentTarget as HTMLImageElement;
+		landscapeFullArt = Boolean(isFullArt) && image.naturalWidth > image.naturalHeight;
+	}
+
+	$effect(() => {
+		void card.imageUrl;
+		void isFullArt;
+		landscapeFullArt = false;
+	});
 </script>
 
 <article
@@ -88,12 +109,22 @@
 >
 	<div class="card-effect-visual relative aspect-[862/1221]" aria-hidden="true">
 		<div
-			class="absolute right-[9%] left-[9%] overflow-hidden bg-cover bg-center bg-no-repeat {isFullArt
+			class="absolute right-[9%] left-[9%] overflow-hidden {isFullArt
 				? 'top-[6.3%] bottom-[9.9%]'
 				: 'top-[7%] bottom-[45.2%] bg-white'}"
-			style={`background-image:url(${JSON.stringify(card.imageUrl)})`}
+			class:bg-white={isFullArt && landscapeFullArt}
 			data-testid="card-art"
+			data-landscape={landscapeFullArt}
 		>
+			<img
+				src={card.imageUrl}
+				alt=""
+				class={artImageClass}
+				onload={inspectIllustration}
+				onerror={(event) => {
+					(event.currentTarget as HTMLImageElement).src = '/card-placeholder.svg';
+				}}
+			/>
 			<CardEffects rarity={card.rarityInitials} fullArt={isFullArt} active={activeInteraction} />
 		</div>
 		<img
