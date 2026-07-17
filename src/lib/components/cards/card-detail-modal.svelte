@@ -4,12 +4,14 @@
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardActions from './card-actions.svelte';
 	import CardMarketModal from './card-market-modal.svelte';
+	import SaleListingDialog from '$lib/components/market/sale-listing-dialog.svelte';
 	import CardTagControls from './card-tag-controls.svelte';
 	import CardTelemetry from './card-telemetry.svelte';
 	import FriendOwnerLedger from '$lib/components/social/friend-owner-ledger.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Dialog } from 'bits-ui';
 	import { _ } from '$lib/i18n';
+	import { getVariantCopies } from '$lib/api';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type {
 		CardPriceHistory,
@@ -29,6 +31,7 @@
 		sales,
 		history,
 		onToggleWishlist,
+		onSaleCreated = () => undefined,
 		onClose
 	}: {
 		card: CardRecord;
@@ -39,11 +42,53 @@
 		sales?: SaleListing[];
 		history?: CardPriceHistory;
 		onToggleWishlist: (wishlistId: string, selected: boolean) => void | Promise<void>;
+		onSaleCreated?: (sale: SaleListing, userCardId: string) => void;
 		onClose: () => void;
 	} = $props();
 
 	let activeTab = $state<'data' | 'social'>('data');
 	let marketOpen = $state(false);
+	let saleDialogOpen = $state(false);
+	let copies = $state<CardRecord[]>([]);
+	let copiesLoading = $state(false);
+	const availableCopies = $derived(copies.filter((copy) => !copy.activeSale));
+	const activeSale = $derived(copies.find((copy) => copy.activeSale)?.activeSale);
+
+	$effect(() => {
+		const variantId = card.catalogueId ?? card.id;
+		copiesLoading = true;
+		void getVariantCopies(variantId)
+			.then((result) => {
+				copies = result;
+			})
+			.catch(() => {
+				copies = owned ? [card] : [];
+			})
+			.finally(() => {
+				copiesLoading = false;
+			});
+	});
+
+	function viewSale(saleId: string) {
+		onClose();
+		void goto(resolve('/market/[id]', { id: saleId }));
+	}
+
+	function handleSaleCreated(sale: SaleListing, userCardId: string) {
+		const summary = {
+			id: sale.id,
+			type: sale.type,
+			status: sale.status ?? ('active' as const),
+			price: sale.price,
+			currentPrice: sale.currentPrice ?? sale.price,
+			minimumBid: sale.minimumBid ?? Math.ceil(sale.price * 1.1),
+			endsAt: sale.endsAt ?? null
+		};
+		copies = copies.map((copy) =>
+			copy.id === userCardId ? { ...copy, activeSale: summary } : copy
+		);
+		onSaleCreated(sale, userCardId);
+	}
 </script>
 
 <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
@@ -102,8 +147,10 @@
 								{wishlists}
 								{onToggleWishlist}
 								onTrade={() => undefined}
-								onMarket={() => (marketOpen = true)}
-								onSell={() => goto(resolve('/market'))}
+								canSell={!copiesLoading && availableCopies.length > 0}
+								activeSaleId={activeSale?.id}
+								onSell={() => (saleDialogOpen = true)}
+								onViewSale={viewSale}
 							/>
 						</div>
 
@@ -173,8 +220,10 @@
 						{wishlists}
 						{onToggleWishlist}
 						onTrade={() => undefined}
-						onMarket={() => (marketOpen = true)}
-						onSell={() => goto(resolve('/market'))}
+						canSell={!copiesLoading && availableCopies.length > 0}
+						activeSaleId={activeSale?.id}
+						onSell={() => (saleDialogOpen = true)}
+						onViewSale={viewSale}
 					/>
 				</div>
 			</div>
@@ -185,6 +234,8 @@
 {#if marketOpen}
 	<CardMarketModal {card} {history} {sales} onClose={() => (marketOpen = false)} />
 {/if}
+
+<SaleListingDialog bind:open={saleDialogOpen} {copies} onCreated={handleSaleCreated} />
 
 <style>
 	.card-detail-preview :global(.wikiforge-card-size) {

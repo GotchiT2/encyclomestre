@@ -8,7 +8,9 @@ import type {
 	GuildMember,
 	GuildObjective,
 	GuildSummary,
-	PaginatedResponse
+	PaginatedResponse,
+	SaleState,
+	ActiveSaleSummary
 } from '$lib/types';
 import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/rarities';
 
@@ -41,6 +43,7 @@ export interface WikiForgeCollectionCard {
 	acquiredAt: string;
 	tags: CollectionTag[];
 	card: WikiForgeCard;
+	activeSale?: ActiveSaleSummary | null;
 }
 
 export interface WikiForgePage<T> {
@@ -64,6 +67,7 @@ export interface WikiForgeQuery {
 	tagIds?: string[];
 	untagged?: boolean;
 	variant?: CardVariant;
+	saleState?: SaleState;
 }
 
 const apiVariantByFilter: Record<CardVariant, 'ALL' | CardVariantCode> = {
@@ -84,6 +88,7 @@ function queryPath(endpoint: '/api/cards' | '/api/collection', query: WikiForgeQ
 	query.rarities?.forEach((rarity) => parameters.append('rarity', rarity));
 	query.tagIds?.forEach((tagId) => parameters.append('tag', tagId));
 	if (query.untagged) parameters.set('untagged', 'true');
+	if (endpoint === '/api/collection') parameters.set('saleState', query.saleState ?? 'ALL');
 	return `${endpoint}?${parameters}`;
 }
 
@@ -92,6 +97,12 @@ export const getWikiForgeCards = (query: WikiForgeQuery = {}, options?: RequestO
 
 export const getWikiForgeCollection = (query: WikiForgeQuery = {}, options?: RequestOptions) =>
 	apiRequest<WikiForgePage<WikiForgeCollectionCard>>(queryPath('/api/collection', query), options);
+
+export const getWikiForgeVariantCopies = (variantId: string, options?: RequestOptions) =>
+	apiRequest<WikiForgeCollectionCard[]>(
+		`/api/collection/variants/${encodeURIComponent(variantId)}/copies`,
+		options
+	);
 
 export const getWikiForgeCard = (id: string, options?: RequestOptions) =>
 	apiRequest<WikiForgeCard>(`/api/cards/${encodeURIComponent(id)}`, options);
@@ -223,7 +234,8 @@ export function toCollectionCardRecord(item: WikiForgeCollectionCard): CardRecor
 	return {
 		...toCardRecord({ ...item.card, id: item.userCardId, acquiredAt: item.acquiredAt }),
 		catalogueId: String(item.cardId),
-		collectionTags: item.tags ?? []
+		collectionTags: item.tags ?? [],
+		activeSale: item.activeSale ?? null
 	};
 }
 

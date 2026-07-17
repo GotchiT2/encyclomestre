@@ -215,6 +215,37 @@ describe('createMockApiResponse', () => {
 		]);
 	});
 
+	it('creates a sale for an exact copy and exposes it through collection filters', async () => {
+		const created = createMockApiResponse({
+			path: '/api/sales',
+			method: 'POST',
+			body: {
+				userCardId: 'owned-2ne1-1-2',
+				type: 'auction',
+				price: 10,
+				durationMinutes: 10
+			}
+		});
+		expect(created.status).toBe(201);
+		expect(await created.json()).toMatchObject({
+			userCardId: 'owned-2ne1-1-2',
+			minimumBid: 11,
+			status: 'active'
+		});
+
+		const copies = createMockApiResponse({
+			path: '/api/collection/variants/2ne1-1/copies'
+		});
+		expect(await copies.json()).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					userCardId: 'owned-2ne1-1-2',
+					activeSale: expect.objectContaining({ id: expect.any(String) })
+				})
+			])
+		);
+	});
+
 	it('resolves punctuation-normalized card ids', async () => {
 		const response = createMockApiResponse({ path: '/cards/g-i-dle-2' });
 		expect(response.status).toBe(200);

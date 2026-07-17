@@ -10,6 +10,21 @@ vi.mock('$lib/api', () => ({
 	createWikiForgeTag: vi.fn(),
 	updateWikiForgeTag: vi.fn(),
 	deleteWikiForgeTag: vi.fn(),
+	getVariantCopies: vi.fn(async () => []),
+	createSale: vi.fn(
+		async (input: { userCardId: string; type: 'auction' | 'direct'; price: number }) => ({
+			id: 'sale-created',
+			sellerId: 'demo-user',
+			cardId: 'card-1',
+			userCardId: input.userCardId,
+			price: input.price,
+			currentPrice: input.price,
+			minimumBid: Math.ceil(input.price * 1.1),
+			currency: 'CREDITS',
+			type: input.type,
+			status: 'active'
+		})
+	),
 	getCardPriceHistory: vi.fn(async (cardId: string) => ({
 		cardId,
 		points: [
@@ -110,7 +125,7 @@ describe('CardDetailModal', () => {
 		expect(tabs.getBoundingClientRect().bottom).toBeLessThanOrEqual(
 			actions.getBoundingClientRect().top
 		);
-		expect(actions.querySelectorAll('button')).toHaveLength(3);
+		expect(actions.querySelectorAll('button')).toHaveLength(2);
 		for (const button of actions.querySelectorAll('button')) {
 			expect(button.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
 		}

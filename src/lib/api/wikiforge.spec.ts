@@ -20,6 +20,15 @@ describe('WikiForge API adapters', () => {
 				isFullArt: true,
 				atk: 1200,
 				def: 900
+			},
+			activeSale: {
+				id: 'sale-uuid',
+				type: 'auction',
+				status: 'active',
+				price: 10,
+				currentPrice: 10,
+				minimumBid: 11,
+				endsAt: '2026-07-18T00:00:00Z'
 			}
 		});
 
@@ -31,7 +40,8 @@ describe('WikiForge API adapters', () => {
 			isFullArt: true,
 			attack: 1200,
 			defense: 900,
-			collectionTags: [{ id: 'tag-1' }]
+			collectionTags: [{ id: 'tag-1' }],
+			activeSale: { id: 'sale-uuid', minimumBid: 11 }
 		});
 	});
 

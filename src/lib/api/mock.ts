@@ -81,9 +81,16 @@ const sales: SaleListing[] = [
 		id: 'sale-001',
 		sellerId: 'demo-user',
 		cardId: 'girls-generation-1',
+		userCardId: 'owned-girls-generation-1',
 		price: 42.5,
+		currentPrice: 42.5,
+		minimumBid: 47,
 		currency: 'EUR',
-		type: 'direct'
+		type: 'direct',
+		status: 'active',
+		createdAt: now,
+		endsAt: null,
+		closedAt: null
 	},
 	{
 		id: 'sale-002',
@@ -110,6 +117,23 @@ const sales: SaleListing[] = [
 		type: 'direct'
 	}
 ];
+
+function activeSalePayload(userCardId: string) {
+	const sale = sales.find(
+		(entry) => entry.userCardId === userCardId && (entry.status ?? 'active') === 'active'
+	);
+	return sale
+		? {
+				id: sale.id,
+				type: sale.type,
+				status: sale.status ?? 'active',
+				price: sale.price,
+				currentPrice: sale.currentPrice ?? sale.price,
+				minimumBid: sale.minimumBid ?? Math.ceil(sale.price * 1.1),
+				endsAt: sale.endsAt ?? null
+			}
+		: null;
+}
 const saleBids: SaleBid[] = [
 	{
 		id: 'bid-1',
@@ -573,9 +597,13 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
 		const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get('size') ?? 20)));
 		const variant = url.searchParams.get('variant') ?? 'ALL';
+		const saleState = url.searchParams.get('saleState') ?? 'ALL';
 		const items = mockCards.filter(
 			(card) =>
 				card.ownedCount > 0 &&
+				(saleState === 'ALL' ||
+					(saleState === 'ACTIVE' && Boolean(activeSalePayload(`owned-${card.id}`))) ||
+					(saleState === 'AVAILABLE' && !activeSalePayload(`owned-${card.id}`))) &&
 				(variant === 'ALL' ||
 					(variant === 'FULL_ART' && card.isFullArt) ||
 					(variant === 'NORMAL' && !card.isFullArt))
@@ -586,12 +614,32 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				cardId: card.id,
 				acquiredAt: card.acquiredAt ?? now,
 				tags: card.collectionTags ?? [],
-				card: apiCard(card)
+				card: apiCard(card),
+				activeSale: activeSalePayload(`owned-${card.id}`)
 			})),
 			page,
 			nbResults: items.length,
 			size: pageSize
 		});
+	}
+	const variantCopiesMatch = /^\/collection\/variants\/([^/]+)\/copies$/.exec(pathname);
+	if (normalizedMethod === 'GET' && variantCopiesMatch) {
+		const variantId = decodeURIComponent(variantCopiesMatch[1]);
+		const card = mockCards.find((entry) => entry.id === variantId);
+		if (!card || card.ownedCount < 1) return json([]);
+		return json(
+			Array.from({ length: card.ownedCount }, (_, index) => {
+				const userCardId = index === 0 ? `owned-${card.id}` : `owned-${card.id}-${index + 1}`;
+				return {
+					userCardId,
+					cardId: card.id,
+					acquiredAt: card.acquiredAt ?? now,
+					tags: card.collectionTags ?? [],
+					card: apiCard(card),
+					activeSale: activeSalePayload(userCardId)
+				};
+			})
+		);
 	}
 	if (normalizedMethod === 'GET' && pathname === '/wishlists') {
 		const userId = url.searchParams.get('userId') ?? 'demo-user';
@@ -999,7 +1047,59 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			q: query || null
 		});
 	}
+	if (normalizedMethod === 'POST' && pathname === '/sales') {
+		const input = asObject(body);
+		const userCardId = typeof input?.userCardId === 'string' ? input.userCardId : '';
+		const type = input?.type === 'auction' || input?.type === 'direct' ? input.type : null;
+		const price = Number(input?.price);
+		const durationMinutes = Number(input?.durationMinutes);
+		if (!userCardId || !type || !Number.isInteger(price) || price < 1 || price > 999999)
+			return error(422, 'Paramètres de vente invalides.', 'SALE_INVALID');
+		if (
+			(type === 'auction' && ![1, 10, 60, 180, 360, 720, 1440].includes(durationMinutes)) ||
+			(type === 'direct' && input?.durationMinutes !== undefined)
+		)
+			return error(422, 'Durée de vente invalide.', 'SALE_DURATION_INVALID');
+		if (activeSalePayload(userCardId))
+			return error(409, 'Cet exemplaire est déjà en vente.', 'SALE_ALREADY_ACTIVE');
+		const card = mockCards
+			.toSorted((left, right) => right.id.length - left.id.length)
+			.find(
+				(entry) => userCardId === `owned-${entry.id}` || userCardId.startsWith(`owned-${entry.id}-`)
+			);
+		if (!card) return error(404, 'Exemplaire introuvable.', 'USER_CARD_NOT_FOUND');
+		const cardId = card.id;
+		const createdAt = new Date().toISOString();
+		const sale: SaleListing = {
+			id: `sale-${crypto.randomUUID()}`,
+			sellerId: 'demo-user',
+			sellerName: users.get('demo-user')?.username,
+			cardId,
+			userCardId,
+			card,
+			price,
+			currentPrice: price,
+			minimumBid: Math.ceil(price * 1.1),
+			currency: 'CREDITS',
+			type,
+			bidCount: 0,
+			status: 'active',
+			createdAt,
+			endsAt:
+				type === 'auction' ? new Date(Date.now() + durationMinutes * 60_000).toISOString() : null,
+			closedAt: null
+		};
+		sales.unshift(sale);
+		return json({ ...sale, card: apiCard(card) }, 201);
+	}
 	const saleDetailMatch = /^\/sales\/([^/]+)(?:\/(bids))?$/.exec(pathname);
+	if (saleDetailMatch && normalizedMethod === 'DELETE' && !saleDetailMatch[2]) {
+		const sale = sales.find((entry) => entry.id === decodeURIComponent(saleDetailMatch[1]));
+		if (!sale) return error(404, 'Annonce introuvable.', 'SALE_NOT_FOUND');
+		sale.status = 'cancelled';
+		sale.closedAt = new Date().toISOString();
+		return json(undefined, 204);
+	}
 	if (saleDetailMatch && normalizedMethod === 'POST' && saleDetailMatch[2] === 'bids') {
 		const sale = sales.find((entry) => entry.id === decodeURIComponent(saleDetailMatch[1]));
 		const amount = Number(asObject(body)?.amount ?? 0);

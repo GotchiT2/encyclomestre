@@ -34,6 +34,7 @@ export interface Card {
 	qScore?: number;
 	acquiredAt?: string;
 	collectionTags?: import('./tag').CollectionTag[];
+	activeSale?: import('./sales').ActiveSaleSummary | null;
 }
 
 export interface CardRecord extends Card {

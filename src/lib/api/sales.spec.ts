@@ -4,7 +4,7 @@ const { apiRequest } = vi.hoisted(() => ({ apiRequest: vi.fn() }));
 
 vi.mock('./client', () => ({ apiRequest }));
 
-import { getMarketListings } from './sales';
+import { createSale, getMarketListings } from './sales';
 
 describe('market sales', () => {
 	beforeEach(() => apiRequest.mockReset());
@@ -45,5 +45,42 @@ describe('market sales', () => {
 			cardId: 'variant-uuid',
 			card: { id: 'variant-uuid', variant: 'FULL_ART', isFullArt: true }
 		});
+	});
+
+	it('creates a sale for one owned card with the exact API payload', async () => {
+		apiRequest.mockResolvedValueOnce({
+			id: 'sale-created',
+			sellerId: 'demo-user',
+			cardId: 'variant-uuid',
+			userCardId: 'user-card-uuid',
+			card: {
+				id: 'variant-uuid',
+				variant: 'NORMAL',
+				isFullArt: false,
+				wikipediaTitle: 'Carte',
+				imageUrl: '',
+				rarity: 'R'
+			},
+			price: 10,
+			currentPrice: 10,
+			minimumBid: 11,
+			currency: 'CREDITS',
+			type: 'auction',
+			status: 'active'
+		});
+
+		const input = {
+			userCardId: 'user-card-uuid',
+			type: 'auction' as const,
+			price: 10,
+			durationMinutes: 60 as const
+		};
+		const sale = await createSale(input);
+
+		expect(apiRequest).toHaveBeenCalledWith('/api/sales', {
+			method: 'POST',
+			body: input
+		});
+		expect(sale).toMatchObject({ userCardId: input.userCardId, minimumBid: 11 });
 	});
 });

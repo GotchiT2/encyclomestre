@@ -160,6 +160,14 @@
 			{card.defense.toLocaleString('fr-FR')}
 		</p>
 	</div>
+	{#if card.activeSale}
+		<span
+			class="pointer-events-none absolute top-[8%] right-[7%] z-30 bg-primary px-2 py-1 font-mono text-[9px] font-black uppercase tracking-widest text-primary-foreground shadow-[0_0_16px_rgb(0_0_0_/_75%)]"
+			data-testid="card-active-sale"
+		>
+			{$_('collection.on_sale')}
+		</span>
+	{/if}
 	{#if onOpen}
 		<button
 			type="button"

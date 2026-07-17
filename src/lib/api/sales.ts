@@ -1,7 +1,7 @@
 import { apiRequest, type RequestOptions } from './client';
 import { getCard } from './cards';
 import { getUser } from './users';
-import type { SaleBid, SaleListing } from '$lib/types';
+import type { CreateSaleInput, SaleBid, SaleListing } from '$lib/types';
 import { toCardRecord, type WikiForgeCard, type WikiForgePage } from './wikiforge';
 
 interface ApiSale extends Omit<SaleListing, 'cardId' | 'card'> {
@@ -78,6 +78,25 @@ export const placeBid = async (id: string, amount: number, options?: RequestOpti
 			body: { amount }
 		})
 	);
+
+export const createSale = (input: CreateSaleInput, options?: RequestOptions) =>
+	apiRequest<ApiSale>('/api/sales', {
+		...options,
+		method: 'POST',
+		body: input
+	}).then(toSale);
+
+export const withdrawSale = (id: string, options?: RequestOptions) =>
+	apiRequest<void>(`/api/sales/${encodeURIComponent(id)}`, {
+		...options,
+		method: 'DELETE'
+	});
+
+export const purchaseSale = (id: string, options?: RequestOptions) =>
+	apiRequest<ApiSale>(`/api/sales/${encodeURIComponent(id)}/purchase`, {
+		...options,
+		method: 'POST'
+	}).then(toSale);
 
 export const getSaleFavorites = async (options?: RequestOptions) =>
 	(await apiRequest<ApiSale[]>('/api/users/me/sale-favorites', options)).map(toSale);
