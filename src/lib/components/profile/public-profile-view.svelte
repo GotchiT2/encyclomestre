@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import CardGrid from '$lib/components/collection/card-grid.svelte';
+	import ContextualCardRail from '$lib/components/cards/contextual-card-rail.svelte';
 	import FilterControls from '$lib/components/collection/filter-controls.svelte';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import ProfileGallery from '$lib/components/profile/profile-gallery.svelte';
@@ -213,12 +214,17 @@
 					<h2 class="font-serif text-2xl font-black uppercase tracking-tight text-foreground">
 						{$_('profile.wanted_title')}
 					</h2>
-					{#if wantedCards.length}<div class="wikiforge-card-grid mt-4">
-							{#each wantedCards as card (card.id)}<CardTile
-									{card}
-									showFriendOwners={false}
-								/>{/each}
-						</div>{:else}<p
+					{#if wantedCards.length}<ContextualCardRail
+							class="mt-4"
+							items={wantedCards}
+							label={$_('profile.wanted_title')}
+							itemKey={(card) => card.id}
+							desktopGridClass="lg:grid-cols-4 xl:grid-cols-5"
+						>
+							{#snippet children(card)}
+								<CardTile {card} showFriendOwners={false} />
+							{/snippet}
+						</ContextualCardRail>{:else}<p
 							class="mt-4 border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
 						>
 							{$_('friends.empty_wanted')}
@@ -229,12 +235,16 @@
 					<h2 class="font-serif text-2xl font-black uppercase tracking-tight text-foreground">
 						{$_('profile.sales_title')}
 					</h2>
-					{#if sales.length}<div class="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">
-							{#each sales as sale (sale.id)}
+					{#if sales.length}<ContextualCardRail
+							class="mt-4"
+							items={sales}
+							label={$_('profile.sales_title')}
+							itemKey={(sale) => sale.id}
+							desktopGridClass="lg:grid-cols-3 xl:grid-cols-4"
+						>
+							{#snippet children(sale)}
 								{@const card = saleCard(sale)}
-								{#if card}<article
-										class="w-36 shrink-0 snap-start border border-primary/30 bg-card p-2 sm:w-40"
-									>
+								{#if card}<article class="min-w-0 border border-primary/30 bg-card p-2">
 										<CardTile {card} showFriendOwners={false} />
 										<p class="mt-2 font-mono text-[10px] uppercase tracking-widest text-primary">
 											{sale.price}
@@ -243,8 +253,8 @@
 												: $_('cardDetail.direct_sale')}
 										</p>
 									</article>{/if}
-							{/each}
-						</div>{:else}<p
+							{/snippet}
+						</ContextualCardRail>{:else}<p
 							class="mt-4 border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
 						>
 							{$_('friends.empty_sales')}

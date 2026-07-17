@@ -170,6 +170,8 @@
 		"save": "Enregistrer",
 		"cancel": "Annuler",
 		"close": "Fermer",
+		"previous": "Précédent",
+		"next": "Suivant",
 		"expandFilters": "Afficher les filtres",
 		"collapseFilters": "Masquer les filtres"
 	},

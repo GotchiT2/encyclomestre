@@ -2,6 +2,7 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import '$lib/i18n';
+import '../../../app.css';
 import CardGrid from './card-grid.svelte';
 import type { CardRecord } from '$lib/types';
 
@@ -37,5 +38,30 @@ describe('CardGrid selection', () => {
 		const selection = page.getByRole('button', { name: 'Retirer cette carte de la sélection' });
 		await expect.element(selection).toHaveClass('z-30');
 		await expect.element(selection).toHaveAttribute('aria-pressed', 'true');
+	});
+
+	it('keeps two cards per row without page overflow on compact phones', async () => {
+		render(CardGrid, {
+			cards: [card, { ...card, id: 'second-card', title: 'Seconde carte' }],
+			tags: [],
+			assignments: {},
+			isSelectionMode: false,
+			selectedCardIds: [],
+			onToggleCard: vi.fn()
+		});
+
+		const grid = document.querySelector<HTMLElement>('.wikiforge-card-grid');
+		for (const [width, height] of [
+			[320, 568],
+			[360, 800],
+			[390, 844],
+			[430, 932]
+		]) {
+			await page.viewport(width, height);
+			expect(getComputedStyle(grid!).gridTemplateColumns.split(' ')).toHaveLength(2);
+			expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+				document.documentElement.clientWidth
+			);
+		}
 	});
 });

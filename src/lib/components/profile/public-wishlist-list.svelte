@@ -1,5 +1,6 @@
 <script lang="ts">
 	import CardTile from '$lib/components/card-tile.svelte';
+	import ContextualCardRail from '$lib/components/cards/contextual-card-rail.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
 	import type { PublicWishlist } from '$lib/types';
@@ -26,8 +27,14 @@
 					</p>
 				{/if}
 			</header>
-			<div class="mt-4 grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-				{#each wishlist.cards as entry (entry.card.id)}
+			<ContextualCardRail
+				class="mt-4"
+				items={wishlist.cards}
+				label={wishlist.title}
+				itemKey={(entry) => entry.card.id}
+				desktopGridClass="lg:grid-cols-4 xl:grid-cols-5"
+			>
+				{#snippet children(entry)}
 					<article class="min-w-0">
 						<CardTile card={entry.card} showFriendOwners={false} />
 						<p class="mt-2 min-h-8 font-mono text-[10px] uppercase tracking-widest text-primary">
@@ -45,8 +52,8 @@
 							</Button>
 						{/if}
 					</article>
-				{/each}
-			</div>
+				{/snippet}
+			</ContextualCardRail>
 		</section>
 	{/each}
 </div>

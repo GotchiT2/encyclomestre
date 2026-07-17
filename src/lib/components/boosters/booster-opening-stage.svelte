@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount, tick, untrack } from 'svelte';
+	import emblaCarouselSvelte from 'embla-carousel-svelte';
+	import type { EmblaCarouselType } from 'embla-carousel';
 	import BoosterRevealCard from './booster-reveal-card.svelte';
 	import ForgePanel from '$lib/components/layout/forge-panel.svelte';
 	import HudStat from '$lib/components/layout/hud-stat.svelte';
@@ -49,7 +51,7 @@
 	let suspensionActive = $state(false);
 	let mobileViewport = $state(false);
 	let deckElement = $state<HTMLDivElement>();
-	let scrollTimer: number | undefined;
+	let carouselApi = $state<EmblaCarouselType>();
 	const rarityOrder: Record<CardRecord['rarityInitials'], number> = {
 		C: 0,
 		PC: 1,
@@ -61,6 +63,12 @@
 	const mobileSceneActive = $derived(
 		mobileViewport && ['dealing', 'revealing', 'complete'].includes(phase)
 	);
+	const boosterCarouselOptions = $derived({
+		active: mobileViewport && phase === 'complete',
+		align: 'center' as const,
+		containScroll: 'trimSnaps' as const,
+		dragFree: true
+	});
 	const awaitingMobileSummary = $derived(
 		mobileViewport &&
 			!quickOpening &&
@@ -77,7 +85,6 @@
 	function clearTimers() {
 		for (const timer of timers) window.clearTimeout(timer);
 		timers = [];
-		window.clearTimeout(scrollTimer);
 	}
 
 	function setSlotRevealed(index: number) {
@@ -122,30 +129,21 @@
 	async function showMobileCard(index: number, behavior: ScrollBehavior = 'smooth') {
 		mobileIndex = Math.max(0, Math.min(index, slots.length - 1));
 		await tick();
-		const target = deckElement?.querySelector<HTMLElement>(
-			`[data-slot-index="${mobileIndex}"]`
-		);
+		if (carouselApi) {
+			carouselApi.scrollTo(mobileIndex, behavior !== 'smooth');
+			return;
+		}
+		const target = deckElement?.querySelector<HTMLElement>(`[data-slot-index="${mobileIndex}"]`);
 		target?.scrollIntoView({ behavior, block: 'nearest', inline: 'center' });
 	}
 
-	function syncMobileIndexFromScroll() {
-		window.clearTimeout(scrollTimer);
-		scrollTimer = window.setTimeout(() => {
-			if (!deckElement) return;
-			const deckCenter = deckElement.getBoundingClientRect().left + deckElement.clientWidth / 2;
-			const cards = [...deckElement.querySelectorAll<HTMLElement>('[data-slot-index]')];
-			const closest = cards.reduce(
-				(best, card) => {
-					const bounds = card.getBoundingClientRect();
-					const distance = Math.abs(bounds.left + bounds.width / 2 - deckCenter);
-					return distance < best.distance
-						? { index: Number(card.dataset.slotIndex), distance }
-						: best;
-				},
-				{ index: mobileIndex, distance: Number.POSITIVE_INFINITY }
-			);
-			mobileIndex = closest.index;
-		}, 80);
+	function handleCarouselInit(event: CustomEvent<EmblaCarouselType>) {
+		carouselApi = event.detail;
+		const updateIndex = () => {
+			if (phase === 'complete') mobileIndex = carouselApi?.selectedScrollSnap() ?? 0;
+		};
+		carouselApi.on('select', updateIndex);
+		carouselApi.on('reInit', updateIndex);
 	}
 
 	function revealNext() {
@@ -352,7 +350,8 @@
 					class="booster-deck mt-5"
 					data-phase={phase}
 					aria-label={$_('boosters.revealed_title')}
-					onscroll={syncMobileIndexFromScroll}
+					use:emblaCarouselSvelte={{ options: boosterCarouselOptions, plugins: [] }}
+					onemblaInit={handleCarouselInit}
 				>
 					{#each slots as slot, index (slot.card.id)}
 						<div
@@ -540,11 +539,8 @@
 			height: 100dvh;
 			min-height: 0;
 			max-width: 100vw;
-			padding:
-				max(0.75rem, env(safe-area-inset-top))
-				max(1rem, env(safe-area-inset-right))
-				max(0.75rem, env(safe-area-inset-bottom))
-				max(1rem, env(safe-area-inset-left));
+			padding: max(0.75rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+				max(0.75rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
 			overflow: hidden;
 			clip-path: none;
 		}

@@ -269,8 +269,12 @@ describe('BoosterOpeningStage', () => {
 		});
 
 		for (const [width, height] of [
+			[320, 568],
+			[360, 800],
 			[390, 844],
+			[430, 932],
 			[768, 1024],
+			[844, 390],
 			[1440, 900]
 		]) {
 			await page.viewport(width, height);

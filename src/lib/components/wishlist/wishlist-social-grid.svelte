@@ -1,5 +1,6 @@
 <script lang="ts">
 	import CardTile from '$lib/components/card-tile.svelte';
+	import ContextualCardRail from '$lib/components/cards/contextual-card-rail.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
 	import type { CardRecord, FriendOwnerInfo } from '$lib/types';
@@ -18,8 +19,13 @@
 </script>
 
 {#if cards.length}
-	<div class="wikiforge-card-grid">
-		{#each cards as card (card.id)}
+	<ContextualCardRail
+		items={cards}
+		label={$_('wishlist.cards_tab')}
+		itemKey={(card) => card.id}
+		desktopGridClass="lg:grid-cols-4 2xl:grid-cols-6"
+	>
+		{#snippet children(card)}
 			<article class="border border-primary/25 bg-card p-2">
 				<div class="relative">
 					<CardTile {card} showFriendOwners={false} {onOpen} />
@@ -66,8 +72,8 @@
 					{/if}
 				</div>
 			</article>
-		{/each}
-	</div>
+		{/snippet}
+	</ContextualCardRail>
 {:else}
 	<p
 		class="border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
