@@ -9,3 +9,8 @@ export interface Friendship {
 	createdAt: string;
 	lastActiveAt: string;
 }
+
+export interface UserBlock {
+	user: User;
+	createdAt: string;
+}

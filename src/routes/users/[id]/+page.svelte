@@ -6,11 +6,11 @@
 	let { data }: { data: PageData } = $props();
 </script>
 
-{#await Promise.all( [data.user, data.collection, data.catalogue, data.settings, data.summary, data.sales] )}
+{#await Promise.all( [data.user, data.collection, data.catalogue, data.settings, data.summary, data.sales, data.publicWishlists] )}
 	<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 		{$_('friends.loading')}
 	</p>
-{:then [user, collection, catalogue, settings, summary, sales]}
+{:then [user, collection, catalogue, settings, summary, sales, publicWishlists]}
 	<PublicProfileView
 		{user}
 		{collection}
@@ -18,6 +18,7 @@
 		{settings}
 		{summary}
 		{sales}
+		{publicWishlists}
 		tags={summary.publicTags}
 		assignments={{}}
 	/>

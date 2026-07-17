@@ -4,7 +4,7 @@ const { apiRequest } = vi.hoisted(() => ({ apiRequest: vi.fn() }));
 
 vi.mock('./client', () => ({ apiRequest }));
 
-import { getUserCollection, searchUsers } from './users';
+import { blockUser, getUserBlocks, getUserCollection, searchUsers, unblockUser } from './users';
 
 describe('searchUsers', () => {
 	beforeEach(() => apiRequest.mockReset());
@@ -69,5 +69,28 @@ describe('getUserCollection', () => {
 			expect.objectContaining({ id: 'user-card-1', catalogueId: 'variant-1' }),
 			expect.objectContaining({ id: 'user-card-2', catalogueId: 'variant-2' })
 		]);
+	});
+});
+
+describe('user blocks', () => {
+	beforeEach(() => apiRequest.mockReset());
+
+	it('uses the authenticated block registry endpoints', async () => {
+		apiRequest.mockResolvedValueOnce([]).mockResolvedValueOnce({
+			user: { id: 'friend-1' },
+			createdAt: '2026-07-17T00:00:00Z'
+		});
+
+		await getUserBlocks();
+		await blockUser('friend-1');
+		await unblockUser('friend-1');
+
+		expect(apiRequest).toHaveBeenNthCalledWith(1, '/api/users/me/blocks', undefined);
+		expect(apiRequest).toHaveBeenNthCalledWith(2, '/api/users/friend-1/block', {
+			method: 'PUT'
+		});
+		expect(apiRequest).toHaveBeenNthCalledWith(3, '/api/users/friend-1/block', {
+			method: 'DELETE'
+		});
 	});
 });

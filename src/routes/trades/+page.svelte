@@ -67,10 +67,13 @@
 			)
 				.split(',')
 				.filter(Boolean);
-			if (partnerId && cardIds.length) {
+			const offeredCardIds = (page.url.searchParams.get('offerCards') ?? '')
+				.split(',')
+				.filter(Boolean);
+			if (partnerId && (cardIds.length || offeredCardIds.length)) {
 				const tradePartners = await loadPartners();
 				const requestedPartner = tradePartners.find((partner) => partner.id === partnerId);
-				if (requestedPartner) await selectPartner(requestedPartner, cardIds);
+				if (requestedPartner) await selectPartner(requestedPartner, cardIds, offeredCardIds);
 			}
 		} finally {
 			loading = false;
@@ -122,16 +125,23 @@
 		return request;
 	}
 
-	async function selectPartner(partner: User, requestedCatalogueIds: string[] = []) {
+	async function selectPartner(
+		partner: User,
+		requestedCatalogueIds: string[] = [],
+		offeredUserCardIds: string[] = []
+	) {
 		selectedPartner = partner;
-		const [, collection] = await Promise.all([
+		const [myCollection, collection] = await Promise.all([
 			loadOwnedCards(),
 			loadParticipantCollection(partner.id)
 		]);
 		partnerCards = collection;
-		if (requestedCatalogueIds.length) {
+		if (requestedCatalogueIds.length || offeredUserCardIds.length) {
 			editorDraft = {
 				recipientId: partner.id,
+				offeredCardIds: myCollection
+					.filter((card) => offeredUserCardIds.includes(card.id))
+					.map((card) => card.id),
 				requestedCardIds: partnerCards
 					.filter((card) => requestedCatalogueIds.includes(card.catalogueId ?? card.id))
 					.map((card) => card.id)

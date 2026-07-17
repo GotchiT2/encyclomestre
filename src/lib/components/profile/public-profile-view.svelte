@@ -1,9 +1,13 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-navigation-without-resolve -- the resolved route receives dynamic query parameters */
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import CardGrid from '$lib/components/collection/card-grid.svelte';
 	import FilterControls from '$lib/components/collection/filter-controls.svelte';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import ProfileGallery from '$lib/components/profile/profile-gallery.svelte';
 	import RegistrySummary from '$lib/components/profile/registry-summary.svelte';
+	import PublicWishlistList from '$lib/components/profile/public-wishlist-list.svelte';
 	import { compareCardsByRarityDesc } from '$lib/domain/cards/rarities';
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import { _ } from '$lib/i18n';
@@ -15,11 +19,12 @@
 		CollectionTagAssignments,
 		ProfileRegistrySummary,
 		ProfileSettings,
+		PublicWishlist,
 		SaleListing,
 		User
 	} from '$lib/types';
 
-	type ProfileTab = 'showcase' | 'collection';
+	type ProfileTab = 'showcase' | 'wishlists' | 'collection';
 
 	const untaggedOption = '__untagged__';
 	let {
@@ -29,6 +34,7 @@
 		settings,
 		summary,
 		sales,
+		publicWishlists,
 		tags,
 		assignments
 	}: {
@@ -38,6 +44,7 @@
 		settings: ProfileSettings;
 		summary: ProfileRegistrySummary;
 		sales: SaleListing[];
+		publicWishlists: PublicWishlist[];
 		tags: CollectionTag[];
 		assignments: CollectionTagAssignments;
 	} = $props();
@@ -97,6 +104,12 @@
 	function saleCard(sale: SaleListing) {
 		return cardsById.get(sale.cardId);
 	}
+
+	function offerWishlistCard(userCardId: string) {
+		void goto(
+			`${resolve('/trades')}?partner=${encodeURIComponent(user.id)}&offerCards=${encodeURIComponent(userCardId)}`
+		);
+	}
 </script>
 
 <section
@@ -139,10 +152,19 @@
 	</header>
 
 	<div
-		class="grid grid-cols-2 border border-primary/30 bg-card p-1"
+		class="grid grid-cols-3 border border-primary/30 bg-card p-1"
 		role="tablist"
 		aria-label={$_('friends.profile_tabs')}
 	>
+		<button
+			class="h-10 font-mono text-[10px] font-bold uppercase tracking-widest {activeTab ===
+			'wishlists'
+				? 'bg-primary text-primary-foreground'
+				: 'text-primary'}"
+			role="tab"
+			aria-selected={activeTab === 'wishlists'}
+			onclick={() => (activeTab = 'wishlists')}>{$_('friends.wishlists_tab')}</button
+		>
 		<button
 			class="h-10 font-mono text-[10px] font-bold uppercase tracking-widest {activeTab ===
 			'showcase'
@@ -231,6 +253,16 @@
 			</div>
 			<RegistrySummary {summary} />
 		</div>
+	{:else if activeTab === 'wishlists'}
+		{#if publicWishlists.length}
+			<PublicWishlistList wishlists={publicWishlists} onTrade={offerWishlistCard} />
+		{:else}
+			<p
+				class="border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
+			>
+				{$_('friends.empty_public_wishlists')}
+			</p>
+		{/if}
 	{:else}
 		<div class="flex flex-col gap-6">
 			<FilterControls

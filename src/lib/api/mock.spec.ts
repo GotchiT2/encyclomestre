@@ -251,4 +251,51 @@ describe('createMockApiResponse', () => {
 		expect(response.status).toBe(200);
 		expect(await response.json()).toMatchObject({ id: 'g-i-dle-2' });
 	});
+
+	it('exposes only public friend wishlists with viewer copy ids', async () => {
+		const response = createMockApiResponse({ path: '/api/users/friend-0/wishlists' });
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual([
+			expect.objectContaining({
+				id: 'friend-0-public-wishlist',
+				cards: expect.arrayContaining([
+					expect.objectContaining({
+						viewerOwnedCount: expect.any(Number),
+						viewerUserCardIds: expect.any(Array)
+					})
+				])
+			})
+		]);
+	});
+
+	it('persists user blocks while retaining the friendship record', async () => {
+		const blocked = createMockApiResponse({
+			path: '/api/users/friend-0/block',
+			method: 'PUT'
+		});
+		expect(blocked.status).toBe(200);
+
+		const blocks = createMockApiResponse({ path: '/api/users/me/blocks' });
+		expect(await blocks.json()).toEqual([
+			expect.objectContaining({ user: expect.objectContaining({ id: 'friend-0' }) })
+		]);
+		const friends = createMockApiResponse({ path: '/api/friends' });
+		expect(await friends.json()).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ user: expect.objectContaining({ id: 'friend-0' }) })
+			])
+		);
+		const messages = createMockApiResponse({ path: '/api/messages?userId=demo-user' });
+		expect(await messages.json()).not.toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ participantIds: expect.arrayContaining(['friend-0']) })
+			])
+		);
+
+		const unblocked = createMockApiResponse({
+			path: '/api/users/friend-0/block',
+			method: 'DELETE'
+		});
+		expect(unblocked.status).toBe(204);
+	});
 });

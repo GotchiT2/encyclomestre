@@ -3,6 +3,7 @@ import type {
 	CardRecord,
 	GuildWishlistShare,
 	PaginatedResponse,
+	PublicWishlist,
 	WishlistAlert,
 	WishlistEntry,
 	WishlistPriority,
@@ -33,6 +34,14 @@ interface ApiWishlistRegistry extends Omit<WishlistRegistry, 'cardIds' | 'cards'
 	shareToken?: string | null;
 }
 
+interface ApiPublicWishlist extends Omit<PublicWishlist, 'cards'> {
+	cards: Array<{
+		card: WikiForgeCard;
+		viewerOwnedCount: number;
+		viewerUserCardIds: string[];
+	}>;
+}
+
 const toEntry = (entry: ApiWishlistEntry): WishlistEntry => ({
 	...entry,
 	cardId: entry.cardId,
@@ -41,6 +50,7 @@ const toEntry = (entry: ApiWishlistEntry): WishlistEntry => ({
 
 const toRegistry = (registry: ApiWishlistRegistry): WishlistRegistrySummary => ({
 	...registry,
+	isPublic: Boolean(registry.isPublic),
 	cardIds: registry.cardIds,
 	cards: (registry.cards ?? []).map(toCardRecord)
 });
@@ -156,7 +166,7 @@ export const getWishlistRegistryCards = async (
 
 export const createWishlistRegistry = async (
 	_userId: string,
-	input: Pick<WishlistRegistry, 'title' | 'description'>,
+	input: Pick<WishlistRegistry, 'title' | 'description' | 'isPublic'>,
 	options?: RequestOptions
 ) =>
 	toRegistry(
@@ -166,6 +176,36 @@ export const createWishlistRegistry = async (
 			body: input
 		})
 	);
+
+export const updateWishlistRegistry = async (
+	id: string,
+	input: Pick<WishlistRegistry, 'title' | 'description' | 'isPublic'>,
+	options?: RequestOptions
+) =>
+	toRegistry(
+		await apiRequest<ApiWishlistRegistry>(`/api/wishlists/${encodeURIComponent(id)}`, {
+			...options,
+			method: 'PATCH',
+			body: input
+		})
+	);
+
+export const getPublicWishlists = async (
+	userId: string,
+	options?: RequestOptions
+): Promise<PublicWishlist[]> =>
+	(
+		await apiRequest<ApiPublicWishlist[]>(
+			`/api/users/${encodeURIComponent(userId)}/wishlists`,
+			options
+		)
+	).map((wishlist) => ({
+		...wishlist,
+		cards: wishlist.cards.map((entry) => ({
+			...entry,
+			card: toCardRecord(entry.card)
+		}))
+	}));
 
 export const deleteWishlistRegistry = (id: string, _userId?: string, options?: RequestOptions) =>
 	apiRequest<void>(`/api/wishlists/${encodeURIComponent(id)}`, {

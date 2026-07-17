@@ -190,6 +190,7 @@ const wishlists = new Map<string, WishlistRegistry[]>([
 				userId: 'demo-user',
 				title: 'Cartes prioritaires',
 				description: 'Les cartes à obtenir en priorité.',
+				isPublic: true,
 				cardIds: ['girls-generation-1', 'blackpink-1', 'red-velvet-1'],
 				cards: mockCards.filter((card) =>
 					['girls-generation-1', 'blackpink-1', 'red-velvet-1'].includes(card.id)
@@ -202,6 +203,7 @@ const wishlists = new Map<string, WishlistRegistry[]>([
 				userId: 'demo-user',
 				title: 'Génération 2',
 				description: 'Cartes de la seconde génération.',
+				isPublic: false,
 				cardIds: ['girls-generation-2', '2ne1-1', 'kara-groupe-1'],
 				cards: mockCards.filter((card) =>
 					['girls-generation-2', '2ne1-1', 'kara-groupe-1'].includes(card.id)
@@ -210,8 +212,25 @@ const wishlists = new Map<string, WishlistRegistry[]>([
 				updatedAt: now
 			}
 		]
+	],
+	[
+		'friend-0',
+		[
+			{
+				id: 'friend-0-public-wishlist',
+				userId: 'friend-0',
+				title: 'Cartes recherchées',
+				description: 'Wishlist publique de SoneS9.',
+				isPublic: true,
+				cardIds: ['girls-generation-1', '2ne1-1'],
+				cards: mockCards.filter((card) => ['girls-generation-1', '2ne1-1'].includes(card.id)),
+				createdAt: now,
+				updatedAt: now
+			}
+		]
 	]
 ]);
+const blockedUserIds = new Set<string>();
 const guildWishlistShares: GuildWishlistShare[] = [];
 const conversations: Conversation[] = [
 	{
@@ -663,6 +682,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			userId,
 			title,
 			description,
+			isPublic: input?.isPublic === true,
 			cardIds: [],
 			cards: [],
 			createdAt: new Date().toISOString(),
@@ -678,7 +698,11 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const userId = url.searchParams.get('userId') ?? 'demo-user';
 		return json(
 			conversations
-				.filter((conversation) => conversation.participantIds.includes(userId))
+				.filter(
+					(conversation) =>
+						conversation.participantIds.includes(userId) &&
+						!conversation.participantIds.some((id) => blockedUserIds.has(id))
+				)
 				.toSorted((first, second) => second.updatedAt.localeCompare(first.updatedAt))
 		);
 	}
@@ -689,6 +713,8 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const participantId = asObject(body)?.participantId;
 		if (typeof participantId !== 'string' || !users.has(participantId))
 			return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
+		if (blockedUserIds.has(participantId))
+			return error(403, 'Cet utilisateur est bloqué.', 'USER_BLOCKED');
 		const existing = conversations.find(
 			(conversation) =>
 				conversation.kind === 'direct' &&
@@ -773,6 +799,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			id: `desiderata-${Date.now()}`,
 			userId,
 			title: source.title,
+			isPublic: false,
 			cardIds: [...source.cardIds],
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString()
@@ -788,6 +815,15 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const registry = registries.find((entry) => entry.id === decodeURIComponent(encodedId));
 		if (!registry) return error(404, 'Wishlist introuvable.', 'WISHLIST_NOT_FOUND');
 		if (normalizedMethod === 'GET' && !action) return json(apiRegistry(registry));
+		if (normalizedMethod === 'PATCH' && !action) {
+			const input = asObject(body) ?? {};
+			if (typeof input.title === 'string' && input.title.trim())
+				registry.title = input.title.trim();
+			if (typeof input.description === 'string') registry.description = input.description;
+			if (typeof input.isPublic === 'boolean') registry.isPublic = input.isPublic;
+			registry.updatedAt = new Date().toISOString();
+			return json(apiRegistry(registry));
+		}
 		if (normalizedMethod === 'GET' && action === 'cards') return json(registry.cards.map(apiCard));
 		if (normalizedMethod === 'DELETE' && !action) {
 			wishlists.set(
@@ -1019,6 +1055,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const results = sales
 			.filter(
 				(sale) =>
+					!blockedUserIds.has(sale.sellerId) &&
 					(!sellerId || sale.sellerId === sellerId) &&
 					(!cardId || sale.cardId === cardId) &&
 					(!bidderId ||
@@ -1133,7 +1170,12 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	if (normalizedMethod === 'GET' && tradePathname === '/trades/received') {
 		return json(
 			tradeOffers
-				.filter((offer) => offer.recipientId === 'demo-user' && offer.status === 'pending')
+				.filter(
+					(offer) =>
+						offer.recipientId === 'demo-user' &&
+						offer.status === 'pending' &&
+						!blockedUserIds.has(offer.initiatorId)
+				)
 				.map(apiTradeOffer)
 		);
 	}
@@ -1157,6 +1199,8 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	}
 	if (normalizedMethod === 'POST' && tradePathname === '/trades') {
 		const input = asObject(body);
+		if (typeof input?.recipientId === 'string' && blockedUserIds.has(input.recipientId))
+			return error(403, 'Cet utilisateur est bloqué.', 'USER_BLOCKED');
 		if (
 			!input ||
 			typeof input.recipientId !== 'string' ||
@@ -1212,6 +1256,51 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		offer.status = status;
 		offer.updatedAt = new Date().toISOString();
 		return json(apiTradeOffer(offer));
+	}
+	const publicWishlistMatch = /^\/users\/([^/]+)\/wishlists$/.exec(pathname);
+	if (publicWishlistMatch && normalizedMethod === 'GET') {
+		const ownerId = decodeURIComponent(publicWishlistMatch[1]);
+		if (!users.has(ownerId)) return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
+		return json(
+			(wishlists.get(ownerId) ?? [])
+				.filter((registry) => registry.isPublic)
+				.map((registry) => ({
+					id: registry.id,
+					userId: registry.userId,
+					title: registry.title,
+					description: registry.description,
+					cards: registry.cards.map((card) => ({
+						card: apiCard(card),
+						viewerOwnedCount: card.ownedCount,
+						viewerUserCardIds: Array.from({ length: card.ownedCount }, (_, index) =>
+							index === 0 ? `owned-${card.id}` : `owned-${card.id}-${index + 1}`
+						)
+					})),
+					updatedAt: registry.updatedAt
+				}))
+		);
+	}
+	if (normalizedMethod === 'GET' && pathname === '/users/me/blocks') {
+		return json(
+			[...blockedUserIds].flatMap((id) => {
+				const user = users.get(id);
+				return user ? [{ user, createdAt: now }] : [];
+			})
+		);
+	}
+	const userBlockMatch = /^\/users\/([^/]+)\/block$/.exec(pathname);
+	if (userBlockMatch) {
+		const id = decodeURIComponent(userBlockMatch[1]);
+		const user = users.get(id);
+		if (!user) return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
+		if (normalizedMethod === 'PUT') {
+			blockedUserIds.add(id);
+			return json({ user, createdAt: new Date().toISOString() });
+		}
+		if (normalizedMethod === 'DELETE') {
+			blockedUserIds.delete(id);
+			return json(undefined, 204);
+		}
 	}
 	const profileMatch = /^\/users\/([^/]+)\/profile$/.exec(pathname);
 	if (profileMatch) {

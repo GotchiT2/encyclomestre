@@ -265,5 +265,5 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 
 - [x] Stabiliser l’ouverture rapide et la scène mobile des boosters, ordonner les révélations de C à L et contenir les illustrations Full Art paysage — `fix(boosters): stabilize mobile opening and full art rendering`
 - [x] Créer et suivre les ventes liées aux exemplaires depuis le détail et la collection — `feat(market): create and track owned card listings`
-- [ ] Afficher les wishlists publiques et gérer le blocage des utilisateurs — `feat(social): expose public wishlists and user blocking`
+- [x] Afficher les wishlists publiques et gérer le blocage des utilisateurs — `feat(social): expose public wishlists and user blocking`
 - [ ] Ajouter les rails de cartes contextuels et auditer le reflow mobile — `refactor(ui): add responsive contextual card rails`

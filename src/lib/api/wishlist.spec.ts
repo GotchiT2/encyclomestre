@@ -8,9 +8,11 @@ import {
 	deleteWishlistRegistry,
 	getWishlist,
 	getWishlistRegistryCards,
+	getPublicWishlists,
 	getWishlists,
 	removeWishlistEntry,
-	removeWishlistRegistryCard
+	removeWishlistRegistryCard,
+	updateWishlistRegistry
 } from './wishlist';
 
 describe('wishlist deletions', () => {
@@ -141,6 +143,63 @@ describe('wishlist deletions', () => {
 			title: 'Carte légendaire',
 			attack: 90,
 			defense: 80
+		});
+	});
+
+	it('updates visibility and hydrates public wishlist ownership', async () => {
+		apiRequest
+			.mockResolvedValueOnce({
+				id: 'wishlist-uuid',
+				userId: 'user-1',
+				title: 'Publique',
+				description: '',
+				isPublic: true,
+				cardIds: [],
+				cards: [],
+				opportunityCount: 0,
+				createdAt: '',
+				updatedAt: ''
+			})
+			.mockResolvedValueOnce([
+				{
+					id: 'wishlist-uuid',
+					userId: 'friend-1',
+					title: 'Publique',
+					description: '',
+					updatedAt: '',
+					cards: [
+						{
+							card: {
+								id: 'variant-1',
+								variant: 'NORMAL',
+								isFullArt: false,
+								wikipediaTitle: 'Carte',
+								imageUrl: '',
+								rarity: 'R'
+							},
+							viewerOwnedCount: 1,
+							viewerUserCardIds: ['user-card-1']
+						}
+					]
+				}
+			]);
+
+		await updateWishlistRegistry('wishlist-uuid', {
+			title: 'Publique',
+			description: '',
+			isPublic: true
+		});
+		const publicLists = await getPublicWishlists('friend-1');
+
+		expect(apiRequest).toHaveBeenNthCalledWith(1, '/api/wishlists/wishlist-uuid', {
+			method: 'PATCH',
+			body: { title: 'Publique', description: '', isPublic: true }
+		});
+		expect(apiRequest).toHaveBeenNthCalledWith(2, '/api/users/friend-1/wishlists', undefined);
+		expect(publicLists[0].cards[0]).toMatchObject({
+			viewerOwnedCount: 1,
+			viewerUserCardIds: ['user-card-1'],
+			card: { id: 'variant-1' }
 		});
 	});
 });

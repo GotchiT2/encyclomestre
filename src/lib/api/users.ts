@@ -10,7 +10,8 @@ import type {
 	PaginatedResponse,
 	UpdateUserInput,
 	UpdateUserPreferencesInput,
-	User
+	User,
+	UserBlock
 } from '$lib/types';
 
 export const getCurrentUser = (options?: RequestOptions) =>
@@ -91,6 +92,21 @@ export const respondToFriendRequest = (
 
 export const removeFriend = (id: string, options?: RequestOptions) =>
 	apiRequest<void>(`/api/friends/${encodeURIComponent(id)}`, {
+		...options,
+		method: 'DELETE'
+	});
+
+export const getUserBlocks = (options?: RequestOptions) =>
+	apiRequest<UserBlock[]>('/api/users/me/blocks', options);
+
+export const blockUser = (id: string, options?: RequestOptions) =>
+	apiRequest<UserBlock>(`/api/users/${encodeURIComponent(id)}/block`, {
+		...options,
+		method: 'PUT'
+	});
+
+export const unblockUser = (id: string, options?: RequestOptions) =>
+	apiRequest<void>(`/api/users/${encodeURIComponent(id)}/block`, {
 		...options,
 		method: 'DELETE'
 	});

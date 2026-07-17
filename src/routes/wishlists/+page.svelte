@@ -15,7 +15,8 @@
 		getWishlists,
 		importWishlistRegistryFromLink,
 		removeWishlistRegistryCard,
-		shareWishlistRegistry
+		shareWishlistRegistry,
+		updateWishlistRegistry
 	} from '$lib/api';
 	import WishlistHub from '$lib/components/wishlist/wishlist-hub.svelte';
 	import CardDetailModal from '$lib/components/cards/card-detail-modal.svelte';
@@ -43,9 +44,11 @@
 	let loading = $state(true);
 	let pickerOpen = $state(false);
 	let createOpen = $state(false);
+	let editOpen = $state(false);
 	let shareOpen = $state(false);
 	let deleteOpen = $state(false);
 	let deletingRegistry = $state<WishlistRegistrySummary | null>(null);
+	let editingRegistry = $state<WishlistRegistrySummary | null>(null);
 	let selectedCard = $state<CardRecord | null>(null);
 	let tradeOpen = $state(false);
 	let tradeCard = $state<CardRecord | null>(null);
@@ -108,9 +111,24 @@
 		if (selectedId) activeRegistry = await loadRegistry(selectedId);
 	}
 
-	async function create(title: string, description: string) {
-		const created = await createWishlistRegistry(userId, { title, description });
+	async function create(title: string, description: string, isPublic: boolean) {
+		const created = await createWishlistRegistry(userId, { title, description, isPublic });
 		await refreshHub(created.id);
+	}
+
+	async function updateRegistry(title: string, description: string, isPublic: boolean) {
+		if (!editingRegistry) return;
+		const updated = await updateWishlistRegistry(editingRegistry.id, {
+			title,
+			description,
+			isPublic
+		});
+		registryCardsById.set(updated.id, Promise.resolve(activeRegistry?.cards ?? updated.cards));
+		registries = registries.map((registry) => (registry.id === updated.id ? updated : registry));
+		if (activeRegistry?.id === updated.id) {
+			activeRegistry = { ...activeRegistry, ...updated, cards: activeRegistry.cards };
+		}
+		editingRegistry = null;
 	}
 
 	async function removeRegistry() {
@@ -247,6 +265,10 @@
 			activeId={activeRegistry?.id ?? null}
 			onSelect={selectRegistry}
 			onCreate={() => (createOpen = true)}
+			onEdit={(registry) => {
+				editingRegistry = registry;
+				editOpen = true;
+			}}
 			onDelete={(registry) => {
 				deletingRegistry = registry;
 				deleteOpen = true;
@@ -317,9 +339,11 @@
 />
 <WishlistRegistryDrawers
 	bind:createOpen
+	bind:editOpen
 	bind:deleteOpen
-	registry={deletingRegistry}
+	registry={editingRegistry ?? deletingRegistry}
 	onCreate={create}
+	onUpdate={updateRegistry}
 	onDelete={removeRegistry}
 />
 {#if selectedCard}

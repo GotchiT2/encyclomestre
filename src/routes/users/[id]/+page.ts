@@ -3,6 +3,7 @@ import {
 	getCard,
 	getProfileRegistrySummary,
 	getProfileSettings,
+	getPublicWishlists,
 	getSales,
 	getUser,
 	getUserCollection
@@ -50,6 +51,7 @@ export const load: PageLoad = ({ params, fetch }) => {
 		catalogue,
 		settings,
 		summary: getProfileRegistrySummary(params.id, { fetch }),
-		sales
+		sales,
+		publicWishlists: getPublicWishlists(params.id, { fetch })
 	};
 };

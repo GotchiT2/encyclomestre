@@ -2,6 +2,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import type { WishlistRegistrySummary } from '$lib/types';
 
 	let {
@@ -9,12 +10,14 @@
 		activeId,
 		onSelect,
 		onCreate,
+		onEdit,
 		onDelete
 	}: {
 		registries: WishlistRegistrySummary[];
 		activeId: string | null;
 		onSelect: (id: string) => void;
 		onCreate: () => void;
+		onEdit: (registry: WishlistRegistrySummary) => void;
 		onDelete: (registry: WishlistRegistrySummary) => void;
 	} = $props();
 </script>
@@ -45,18 +48,30 @@
 						<span class="mt-1 block font-mono text-[9px] uppercase tracking-widest text-primary"
 							>{$_('wishlist.total', { values: { count: registry.cardIds.length } })}</span
 						>
+						<span
+							class="mt-1 block font-mono text-[9px] uppercase tracking-widest text-muted-foreground"
+						>
+							{registry.isPublic ? $_('wishlist.public') : $_('wishlist.private')}
+						</span>
 						<span class="mt-1 block font-mono text-[9px] uppercase tracking-widest text-emerald-300"
 							>{$_('wishlist.trade_match_alert')} · {registry.opportunityCount}</span
 						>
 					</span>
 				</Button>
-				<Button
-					class="mt-3"
-					size="icon-sm"
-					variant="destructive"
-					aria-label={$_('wishlist.delete_registry')}
-					onclick={() => onDelete(registry)}><Trash2Icon /></Button
-				>
+				<div class="mt-3 flex gap-2">
+					<Button
+						size="icon-sm"
+						variant="outline"
+						aria-label={$_('wishlist.edit_registry')}
+						onclick={() => onEdit(registry)}><PencilIcon /></Button
+					>
+					<Button
+						size="icon-sm"
+						variant="destructive"
+						aria-label={$_('wishlist.delete_registry')}
+						onclick={() => onDelete(registry)}><Trash2Icon /></Button
+					>
+				</div>
 			</div>
 		{/each}
 	</div>
