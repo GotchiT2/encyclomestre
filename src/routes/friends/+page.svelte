@@ -24,6 +24,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
 	import type { Friendship, User, UserBlock } from '$lib/types';
+	import UserPlusIcon from '@lucide/svelte/icons/user-plus';
 
 	let userId = $state('demo-user');
 	let friendships = $state<Friendship[]>([]);
@@ -88,19 +89,23 @@
 	}
 </script>
 
-<section class="flex flex-col gap-6 pb-12">
+<section class="flex flex-col gap-4 pb-8 sm:gap-5">
 	<PageHeader
 		eyebrow={$_('friends.eyebrow')}
 		title={$_('friends.title')}
 		description={$_('friends.description')}
 	>
 		{#snippet actions()}
-			<Button onclick={() => (inviteOpen = true)}>{$_('friends.add_action')}</Button>
+			<Button size="sm" onclick={() => (inviteOpen = true)}>
+				<UserPlusIcon data-icon="inline-start" />
+				{$_('friends.add_action')}
+			</Button>
 		{/snippet}
 	</PageHeader>
 
 	<div class="grid grid-cols-2 border border-primary/30 bg-card p-1" role="tablist">
 		<Button
+			size="sm"
 			variant={activeView === 'friends' ? 'default' : 'ghost'}
 			role="tab"
 			aria-selected={activeView === 'friends'}
@@ -109,6 +114,7 @@
 			{$_('friends.friends_tab')}
 		</Button>
 		<Button
+			size="sm"
 			variant={activeView === 'blocked' ? 'default' : 'ghost'}
 			role="tab"
 			aria-selected={activeView === 'blocked'}
@@ -119,7 +125,7 @@
 	</div>
 
 	{#if activeView === 'friends'}
-		<div class="forge-panel p-4">
+		<div class="forge-panel p-3">
 			<Input bind:value={query} placeholder={$_('friends.search')} />
 		</div>
 	{/if}
@@ -135,7 +141,7 @@
 			<EmptyState title={$_('friends.blocked_empty')} />
 		{/if}
 	{:else if visibleFriendships.length}
-		<div class="grid gap-3 lg:grid-cols-2">
+		<div class="flex flex-col gap-2">
 			{#each visibleFriendships as friendship (friendship.id)}
 				<FriendContactCard
 					{friendship}
