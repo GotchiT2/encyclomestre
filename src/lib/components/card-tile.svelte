@@ -10,12 +10,14 @@
 		showFriendOwners = true,
 		tags = [],
 		tagDisplay = 'bookmark',
+		stateIndicatorsOffset = 0,
 		onOpen
 	}: {
 		card: CardRecord;
 		showFriendOwners?: boolean;
 		tags?: CollectionTag[];
 		tagDisplay?: 'bookmark' | 'full';
+		stateIndicatorsOffset?: number;
 		onOpen?: (card: CardRecord) => void;
 	} = $props();
 
@@ -227,7 +229,10 @@
 		{/if}
 	{/if}
 	{#if card.ownedCount > 0 || card.wishlistMemberships?.length || (showFriendOwners && card.friendsWhoOwn.length)}
-		<div class="pointer-events-none absolute top-[8%] left-[7%] z-40">
+		<div
+			class="pointer-events-none absolute left-[7%] z-40"
+			style={`top:calc(8% + ${stateIndicatorsOffset}px)`}
+		>
 			<CardStateIndicators
 				ownedCount={card.ownedCount}
 				wishlists={card.wishlistMemberships}

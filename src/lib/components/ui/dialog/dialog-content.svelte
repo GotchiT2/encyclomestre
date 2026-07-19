@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Dialog as DialogPrimitive } from 'bits-ui';
-	import type { Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 	import DialogPortal from './dialog-portal.svelte';
 	import DialogOverlay from './dialog-overlay.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -8,6 +8,7 @@
 	import XIcon from '@lucide/svelte/icons/x';
 	import { cn, type WithoutChildrenOrChild } from '$lib/utils.js';
 	import type { ComponentProps } from 'svelte';
+	import { createModalLayer, modalZIndex } from './modal-layer';
 
 	let {
 		ref = $bindable(null),
@@ -15,23 +16,29 @@
 		portalProps,
 		children,
 		showCloseButton = true,
+		modalLayer,
+		style,
 		...restProps
 	}: WithoutChildrenOrChild<DialogPrimitive.ContentProps> & {
 		portalProps?: WithoutChildrenOrChild<ComponentProps<typeof DialogPortal>>;
 		children: Snippet;
 		showCloseButton?: boolean;
+		modalLayer?: number;
 	} = $props();
+
+	const layer = createModalLayer(untrack(() => modalLayer));
 </script>
 
 <DialogPortal {...portalProps}>
-	<DialogOverlay />
+	<DialogOverlay {layer} />
 	<DialogPrimitive.Content
 		bind:ref
 		data-slot="dialog-content"
 		class={cn(
-			'fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 gap-5 overflow-hidden border-4 border-double border-primary/40 bg-card p-0 text-foreground shadow-2xl outline-none',
+			'fixed top-1/2 left-1/2 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 gap-5 overflow-hidden border-4 border-double border-primary/40 bg-card p-0 text-foreground shadow-2xl outline-none',
 			className
 		)}
+		style={modalZIndex(layer + 1, style)}
 		{...restProps}
 	>
 		{@render children?.()}
