@@ -38,6 +38,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Protéger Collection et profil ; conserver l’URL d’origine dans `redirectTo` — `feat(auth): guard private registry routes`
 - [x] Ajouter la déconnexion et refléter l’état de session dans la navigation — `feat(auth): expose session controls in navigation`
 - [x] Protéger le Codex et le détail de carte — `fix(auth): guard codex routes`
+- [x] Verrouiller toutes les routes applicatives avec une garde globale — `fix(auth): require sessions across the application`
 
 ### 2. Codex et consultation des cartes
 
