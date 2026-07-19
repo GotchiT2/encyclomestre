@@ -69,6 +69,41 @@ describe('CardTile', () => {
 		await expect.element(page.getByText(title)).toBeVisible();
 	});
 
+	it('uses colored bookmarks for tags outside the detail view', async () => {
+		const tags = [{ id: 'tag-1', name: 'Favorite', color: '#ff6600' }];
+		render(CardTile, { card, tags });
+		await expect.element(page.getByTestId('card-tag-bookmarks')).toBeInTheDocument();
+		await expect
+			.element(page.getByLabelText('Favorite'))
+			.toHaveAttribute('style', expect.stringContaining('rgb(255, 102, 0)'));
+		await expect.element(page.getByText('Favorite')).not.toBeInTheDocument();
+	});
+
+	it('keeps full tag labels only when explicitly requested by the detail view', async () => {
+		render(CardTile, {
+			card,
+			tags: [{ id: 'tag-1', name: 'Favorite', color: '#ff6600' }],
+			tagDisplay: 'full'
+		});
+		await expect.element(page.getByText('Favorite')).toBeVisible();
+		await expect.element(page.getByTestId('card-tag-bookmarks')).not.toBeInTheDocument();
+	});
+
+	it('exposes compact ownership, wishlist and other-owner indicators', async () => {
+		render(CardTile, {
+			card: {
+				...card,
+				ownedCount: 2,
+				wishlistMemberships: [{ id: 'list-1', title: 'Priorités', defaultList: false }],
+				friendsWhoOwn: [{ friendId: 'friend-1', username: 'Ami', avatarUrl: '', ownedCount: 3 }]
+			}
+		});
+		await expect.element(page.getByLabelText(/2 exemplaire/)).toBeVisible();
+		await expect.element(page.getByLabelText(/Présente dans 1 wishlist/)).toBeVisible();
+		await page.getByLabelText(/Possédée par 1 autre/).click();
+		await expect.element(page.getByRole('menuitem', { name: /@Ami/ })).toBeVisible();
+	});
+
 	it('activates the PC illustration effect and tilt on focus', async () => {
 		render(CardTile, {
 			card: { ...card, rarity: 'Peu Commune', rarityInitials: 'PC' },

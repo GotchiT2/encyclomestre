@@ -1,5 +1,10 @@
 import type { CardRarity } from '$lib/types';
-import { getWikiForgeCollection, getWikiForgeTags, toCollectionPage } from '$lib/api';
+import {
+	getWikiForgeCollection,
+	getWikiForgeTags,
+	hydrateCardSocialStates,
+	toCollectionPage
+} from '$lib/api';
 import { cardRarityCodeByName, cardRarityOptions } from '$lib/domain/cards/rarities';
 import type { CardVariant, SaleState } from '$lib/types';
 import type { PageLoad } from './$types';
@@ -39,7 +44,10 @@ export const load: PageLoad = ({ fetch, url }) => {
 				saleState
 			},
 			{ fetch }
-		).then(toCollectionPage),
+		).then(async (response) => {
+			const page = toCollectionPage(response);
+			return { ...page, items: await hydrateCardSocialStates(page.items, { fetch }) };
+		}),
 		tags: getWikiForgeTags({ fetch }),
 		filters: { query, selectedRarities, tagFilterIds, sortBy, variant, saleState }
 	};

@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getWikiForgeCard, getWikiForgeCards, toCardRecord } = vi.hoisted(() => ({
+const { apiRequest, getWikiForgeCard, getWikiForgeCards, toCardRecord } = vi.hoisted(() => ({
+	apiRequest: vi.fn(),
 	getWikiForgeCard: vi.fn(),
 	getWikiForgeCards: vi.fn(),
 	toCardRecord: vi.fn((card: unknown) => card)
 }));
+
+vi.mock('./client', () => ({ apiRequest }));
 
 vi.mock('./wikiforge', () => ({
 	getWikiForgeCards,
@@ -20,6 +23,8 @@ describe('getCards', () => {
 		getWikiForgeCard.mockReset();
 		getWikiForgeCards.mockReset();
 		toCardRecord.mockClear();
+		apiRequest.mockReset();
+		apiRequest.mockResolvedValue([]);
 	});
 
 	it('forwards pagination, repeated rarities and descending rarity order', async () => {

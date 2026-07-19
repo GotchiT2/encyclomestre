@@ -29,7 +29,7 @@
 	async function openCard(card: CardRecord) {
 		selectedCard = card;
 		try {
-			selectedCard = { ...card, ...toCardRecord(await getWikiForgeCard(card.id)) };
+			selectedCard = { ...toCardRecord(await getWikiForgeCard(card.id)), ...card };
 		} catch {
 			selectedCard = card;
 		}

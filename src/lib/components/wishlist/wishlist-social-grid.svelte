@@ -28,7 +28,7 @@
 		{#snippet children(card)}
 			<article class="border border-primary/25 bg-card p-2">
 				<div class="relative">
-					<CardTile {card} showFriendOwners={false} {onOpen} />
+					<CardTile {card} showFriendOwners {onOpen} />
 					<Button
 						size="icon-xs"
 						variant="destructive"

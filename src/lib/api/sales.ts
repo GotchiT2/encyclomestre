@@ -1,5 +1,5 @@
 import { apiRequest, type RequestOptions } from './client';
-import { getCard } from './cards';
+import { getCard, hydrateCardSocialStates } from './cards';
 import { getUser } from './users';
 import type { CreateSaleInput, SaleBid, SaleListing } from '$lib/types';
 import { toCardRecord, type WikiForgeCard, type WikiForgePage } from './wikiforge';
@@ -48,11 +48,21 @@ export const getMarketListings = async (
 	if (input.sellerId) parameters.set('sellerId', input.sellerId);
 	if (input.bidderId) parameters.set('bidderId', input.bidderId);
 	const response = await apiRequest<WikiForgePage<ApiSale>>(`/api/sales?${parameters}`, options);
-	return response.results.map(toSale);
+	const sales = response.results.map(toSale);
+	const cards = await hydrateCardSocialStates(
+		sales.flatMap((sale) => (sale.card ? [sale.card] : [])),
+		options
+	);
+	const cardsById = new Map(cards.map((card) => [card.id, card]));
+	return sales.map((sale) => ({ ...sale, card: cardsById.get(sale.cardId) ?? sale.card }));
 };
 
-export const getSale = async (id: string, options?: RequestOptions) =>
-	toSale(await apiRequest<ApiSale>(`/api/sales/${encodeURIComponent(id)}`, options));
+export const getSale = async (id: string, options?: RequestOptions) => {
+	const sale = toSale(await apiRequest<ApiSale>(`/api/sales/${encodeURIComponent(id)}`, options));
+	if (!sale.card) return sale;
+	const [card] = await hydrateCardSocialStates([sale.card], options);
+	return { ...sale, card };
+};
 
 export const getSaleBids = async (id: string, options?: RequestOptions) => {
 	const bids = await apiRequest<ApiBid[]>(`/api/sales/${encodeURIComponent(id)}/bids`, options);

@@ -10,25 +10,34 @@
 	import MarketListings from '$lib/components/market/market-listings.svelte';
 	import MarketFilters from '$lib/components/market/market-filters.svelte';
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
+	import { sortMarketListings, type MarketSort } from '$lib/domain/market/auction-display';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
-	import type { CardRecord, CardVariant, SaleListing } from '$lib/types';
+	import type { CardRarity, CardRecord, CardVariant, SaleListing } from '$lib/types';
 
 	let cards = $state<CardRecord[]>([]);
 	let listings = $state<SaleListing[]>([]);
 	let query = $state('');
 	let variant = $state<CardVariant>('all');
+	let selectedRarities = $state<CardRarity[]>([]);
+	let sort = $state<MarketSort>('ending');
 	let loading = $state(true);
 	let activeTab = $state<'all' | 'mine' | 'bids' | 'history'>('all');
 	let historyTab = $state<'sold' | 'bought'>('sold');
 	let favoriteIds = $state<string[]>([]);
 	let filterTimer: number | undefined;
 	const visibleListings = $derived(
-		listings.filter((listing) => {
-			const card = cards.find((candidate) => candidate.id === listing.cardId);
-			return card ? matchesCardVariant(card, variant) : variant === 'all';
-		})
+		sortMarketListings(
+			listings.filter((listing) => {
+				const card = cards.find((candidate) => candidate.id === listing.cardId);
+				return card
+					? matchesCardVariant(card, variant) &&
+							(!selectedRarities.length || selectedRarities.includes(card.rarity))
+					: variant === 'all' && !selectedRarities.length;
+			}),
+			sort
+		)
 	);
 
 	onMount(async () => {
@@ -107,8 +116,10 @@
 	<MarketFilters
 		bind:query
 		bind:variant
+		bind:rarities={selectedRarities}
+		bind:sort
 		onSearch={() => scheduleRefresh(450)}
-		onVariantChange={() => scheduleRefresh(80)}
+		onFilterChange={() => undefined}
 	/>
 	{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('market.loading')}

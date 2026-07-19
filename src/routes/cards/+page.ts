@@ -1,5 +1,5 @@
 import type { PageLoad } from './$types';
-import { getWikiForgeCards, toCardPage } from '$lib/api';
+import { getWikiForgeCards, hydrateCardSocialStates, toCardPage } from '$lib/api';
 import { cardRarityCodeByName, cardRarityOptions } from '$lib/domain/cards/rarities';
 import type { CardRarity, CardVariant } from '$lib/types';
 
@@ -29,7 +29,10 @@ export const load: PageLoad = ({ fetch, url }) => {
 				rarities: selectedRarities.map((rarity) => cardRarityCodeByName[rarity])
 			},
 			{ fetch }
-		).then(toCardPage),
+		).then(async (response) => {
+			const page = toCardPage(response);
+			return { ...page, items: await hydrateCardSocialStates(page.items, { fetch }) };
+		}),
 		filters: { query, selectedRarities, sortBy, sortDirection, variant }
 	};
 };

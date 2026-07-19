@@ -12,6 +12,7 @@ import type {
 	WishlistRegistrySummary
 } from '$lib/types';
 import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
+import { hydrateCardSocialStates } from './cards';
 import { toCardRecord, type WikiForgeCard, type WikiForgePage } from './wikiforge';
 
 interface ApiWishlistEntry extends Omit<WishlistEntry, 'cardId' | 'card'> {
@@ -85,8 +86,13 @@ export const getWishlist = async (
 		`/api/wishlist?${parameters}`,
 		options
 	);
+	const items = response.results.map(toEntry);
+	const hydratedCards = await hydrateCardSocialStates(
+		items.map((entry) => entry.card),
+		options
+	);
 	return {
-		items: response.results.map(toEntry),
+		items: items.map((entry, index) => ({ ...entry, card: hydratedCards[index] })),
 		meta: {
 			page: response.page + 1,
 			pageSize: response.size,
@@ -159,10 +165,12 @@ export const getWishlistRegistry = async (
 export const getWishlistRegistryCards = async (
 	id: string,
 	options?: RequestOptions
-): Promise<CardRecord[]> =>
-	(
+): Promise<CardRecord[]> => {
+	const cards = (
 		await apiRequest<WikiForgeCard[]>(`/api/wishlists/${encodeURIComponent(id)}/cards`, options)
 	).map(toCardRecord);
+	return hydrateCardSocialStates(cards, options);
+};
 
 export const createWishlistRegistry = async (
 	_userId: string,

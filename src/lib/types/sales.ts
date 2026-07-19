@@ -10,8 +10,10 @@ export interface SaleListing {
 	currency: string;
 	type: 'auction' | 'direct';
 	sellerName?: string;
+	buyerId?: string | null;
+	buyerName?: string | null;
 	bidCount?: number;
-	status?: 'active' | 'sold' | 'cancelled';
+	status?: 'active' | 'sold' | 'cancelled' | 'expired';
 	createdAt?: string;
 	endsAt?: string | null;
 	closedAt?: string | null;

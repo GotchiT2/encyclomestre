@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import CardEffects from '$lib/components/cards/card-effects.svelte';
+	import CardStateIndicators from '$lib/components/cards/card-state-indicators.svelte';
 	import { cn } from '$lib/utils';
 	import type { CardRecord, CollectionTag } from '$lib/types';
 
@@ -8,11 +9,13 @@
 		card,
 		showFriendOwners = true,
 		tags = [],
+		tagDisplay = 'bookmark',
 		onOpen
 	}: {
 		card: CardRecord;
 		showFriendOwners?: boolean;
 		tags?: CollectionTag[];
+		tagDisplay?: 'bookmark' | 'full';
 		onOpen?: (card: CardRecord) => void;
 	} = $props();
 
@@ -177,58 +180,60 @@
 		></button>
 	{/if}
 	{#if tags.length}
-		<div class="absolute right-[8%] bottom-[11%] left-[8%] z-10 flex items-center gap-1">
-			{#each tags.slice(0, 2) as tag (tag.id)}
-				<span
-					class="max-w-20 truncate border border-primary/70 bg-background/90 px-1 py-0.5 font-mono text-[8px] font-bold uppercase tracking-wider text-foreground"
-					style={`border-color:${tag.color};color:${tag.color}`}>{tag.name}</span
-				>
-			{/each}
-			{#if tags.length > 2}
-				<details class="group/tags relative shrink-0">
-					<summary
-						class="cursor-pointer list-none border border-primary/70 bg-background/90 px-1 py-0.5 font-mono text-[8px] font-bold uppercase tracking-wider text-primary"
-						aria-label={$_('collection.moreTags', { values: { count: tags.length - 2 } })}
-						>+{tags.length - 2}</summary
-					>
-					<ul
-						class="absolute bottom-full left-0 mb-2 hidden min-w-32 border border-primary/40 bg-card p-2 shadow-xl group-open/tags:block"
-					>
-						{#each tags.slice(2) as tag (tag.id)}
-							<li
-								class="mb-1 last:mb-0 border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider"
-								style={`border-color:${tag.color};color:${tag.color}`}
-							>
-								{tag.name}
-							</li>
-						{/each}
-					</ul>
-				</details>
-			{/if}
-		</div>
-	{/if}
-	{#if showFriendOwners && card.friendsWhoOwn.length}
-		<details
-			class="group/friends absolute right-[8%] bottom-[17%] z-10 border border-primary/50 bg-background/90 px-1.5 py-0.5"
-		>
-			<summary
-				class="cursor-pointer list-none font-mono text-[8px] font-bold uppercase tracking-widest text-primary"
-				>{card.friendsWhoOwn.length} · {$_('codex.friends')}</summary
+		{#if tagDisplay === 'bookmark'}
+			<div
+				class="pointer-events-none absolute top-[18%] right-[2%] z-30 flex flex-col gap-1"
+				data-testid="card-tag-bookmarks"
 			>
-			<ul
-				class="absolute right-0 bottom-full mb-2 hidden min-w-40 border border-primary/40 bg-card p-2 shadow-xl group-open/friends:block"
-			>
-				{#each card.friendsWhoOwn as friend (friend.friendId)}
-					<li
-						class="flex items-center justify-between gap-2 py-1 font-mono text-[10px] uppercase tracking-widest text-foreground"
-					>
-						<span class="truncate">@{friend.username}</span><span class="text-primary"
-							>×{friend.ownedCount}</span
-						>
-					</li>
+				{#each tags as tag (tag.id)}
+					<span
+						class="h-8 w-2.5 border border-l-0 shadow-lg"
+						style={`border-color:${tag.color};background:${tag.color}`}
+						aria-label={tag.name}
+						title={tag.name}
+					></span>
 				{/each}
-			</ul>
-		</details>
+			</div>
+		{:else}
+			<div class="absolute right-[8%] bottom-[11%] left-[8%] z-30 flex items-center gap-1">
+				{#each tags.slice(0, 2) as tag (tag.id)}
+					<span
+						class="max-w-20 truncate border border-primary/70 bg-background/90 px-1 py-0.5 font-mono text-[8px] font-bold uppercase tracking-wider text-foreground"
+						style={`border-color:${tag.color};color:${tag.color}`}>{tag.name}</span
+					>
+				{/each}
+				{#if tags.length > 2}
+					<details class="group/tags relative shrink-0">
+						<summary
+							class="cursor-pointer list-none border border-primary/70 bg-background/90 px-1 py-0.5 font-mono text-[8px] font-bold uppercase tracking-wider text-primary"
+							aria-label={$_('collection.moreTags', { values: { count: tags.length - 2 } })}
+							>+{tags.length - 2}</summary
+						>
+						<ul
+							class="absolute bottom-full left-0 mb-2 hidden min-w-32 border border-primary/40 bg-card p-2 shadow-xl group-open/tags:block"
+						>
+							{#each tags.slice(2) as tag (tag.id)}
+								<li
+									class="mb-1 last:mb-0 border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider"
+									style={`border-color:${tag.color};color:${tag.color}`}
+								>
+									{tag.name}
+								</li>
+							{/each}
+						</ul>
+					</details>
+				{/if}
+			</div>
+		{/if}
+	{/if}
+	{#if card.ownedCount > 0 || card.wishlistMemberships?.length || (showFriendOwners && card.friendsWhoOwn.length)}
+		<div class="pointer-events-none absolute top-[8%] left-[7%] z-40">
+			<CardStateIndicators
+				ownedCount={card.ownedCount}
+				wishlists={card.wishlistMemberships}
+				owners={showFriendOwners ? card.friendsWhoOwn : []}
+			/>
+		</div>
 	{/if}
 </article>
 

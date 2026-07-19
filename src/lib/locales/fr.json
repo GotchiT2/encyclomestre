@@ -88,6 +88,12 @@
 			"alternative": "Alternatif"
 		}
 	},
+	"cardState": {
+		"owned": "{count} exemplaire(s) déjà possédé(s)",
+		"wishlisted": "Présente dans {count} wishlist(s)",
+		"default_wishlist": "Wishlist principale",
+		"other_owners": "Possédée par {count} autre(s) personne(s)"
+	},
 	"codex": {
 		"eyebrow": "Catalogue de cartes",
 		"title": "Toutes les cartes",
@@ -380,6 +386,10 @@
 		"description": "Consultez les ventes directes et les enchères en cours.",
 		"search": "Rechercher une carte ou un vendeur",
 		"filters": "Filtres",
+		"sort": "Trier les ventes",
+		"sort_ending": "Fin la plus proche",
+		"sort_bid_desc": "Mise la plus haute",
+		"sort_bid_asc": "Mise la plus basse",
 		"all_types": "Tous les types",
 		"auction": "Enchère",
 		"direct_sale": "Vente directe",
@@ -401,10 +411,18 @@
 		"buy": "Acheter",
 		"bid": "Enchérir",
 		"favorite": "Ajouter aux favoris",
+		"favorite_short": "Favori",
 		"open_listing": "Ouvrir l’enchère",
 		"back": "Retour au marché",
 		"sold_by": "Mise en vente par",
 		"current_bid": "Mise actuelle",
+		"starting_bid": "Mise de départ",
+		"sale_price": "Prix de vente",
+		"buyer": "Acheteur :",
+		"status_active": "Enchère en cours",
+		"status_sold": "Vente terminée",
+		"status_cancelled": "Vente annulée",
+		"status_expired": "Enchère sans acheteur",
 		"ends_in": "Fin dans {delay}",
 		"ends_local": "Fin locale : {date}",
 		"expired": "Enchère terminée",

@@ -3,7 +3,7 @@
 	import AuctionCountdown from '$lib/components/market/auction-countdown.svelte';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { auctionPrice } from '$lib/domain/market/auction-display';
+	import { salePricePresentation } from '$lib/domain/market/auction-display';
 	import { _ } from '$lib/i18n';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import HeartIcon from '@lucide/svelte/icons/heart';
@@ -24,14 +24,15 @@
 </script>
 
 <div
-	class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))] gap-3"
+	class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,15rem),1fr))] gap-3 lg:grid-cols-[repeat(auto-fill,minmax(15rem,1fr))]"
 	data-testid="market-listings"
 >
 	{#each listings as listing (listing.id)}
 		{@const card = cardsById.get(listing.cardId)}
+		{@const price = salePricePresentation(listing)}
 		{#if card}<article class="forge-panel-flat min-w-0 p-2">
 				<div class="relative">
-					<CardTile {card} showFriendOwners={false} />
+					<CardTile {card} showFriendOwners />
 					<a
 						href={resolve('/market/[id]', { id: listing.id })}
 						class="absolute inset-0"
@@ -42,12 +43,10 @@
 					<div class="flex items-start justify-between gap-2">
 						<div>
 							<p class="forge-label">
-								{listing.currentPrice === undefined
-									? $_('market.starting_price')
-									: $_('market.current_bid')}
+								{$_(price.label)}
 							</p>
 							<p class="mt-1 font-heading text-xl tracking-wide text-foreground">
-								{auctionPrice(listing.price, listing.currentPrice)}
+								{price.amount}
 								{listing.currency}
 							</p>
 						</div>
@@ -66,7 +65,7 @@
 							>
 						</div>
 					</div>
-					<AuctionCountdown endsAt={listing.endsAt} />
+					{#if listing.status !== 'cancelled'}<AuctionCountdown endsAt={listing.endsAt} />{/if}
 					<p class="mt-2 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
 						@{listing.sellerName}
 					</p>

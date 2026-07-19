@@ -4,18 +4,25 @@
 	import { _ } from '$lib/i18n';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import SlidersHorizontalIcon from '@lucide/svelte/icons/sliders-horizontal';
-	import type { CardVariant } from '$lib/types';
+	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
+	import { cardRarityOptions } from '$lib/domain/cards/rarities';
+	import type { MarketSort } from '$lib/domain/market/auction-display';
+	import type { CardRarity, CardVariant } from '$lib/types';
 
 	let {
 		query = $bindable(''),
 		variant = $bindable<CardVariant>('all'),
+		rarities = $bindable<CardRarity[]>([]),
+		sort = $bindable<MarketSort>('ending'),
 		onSearch,
-		onVariantChange
+		onFilterChange
 	}: {
 		query: string;
 		variant: CardVariant;
+		rarities: CardRarity[];
+		sort: MarketSort;
 		onSearch: () => void;
-		onVariantChange: () => void;
+		onFilterChange: () => void;
 	} = $props();
 </script>
 
@@ -47,10 +54,28 @@
 			class="min-w-52 border border-primary/35 bg-popover p-2 shadow-2xl"
 		>
 			<DropdownMenu.Label>{$_('cards.variant.label')}</DropdownMenu.Label>
-			<DropdownMenu.RadioGroup bind:value={variant} onValueChange={onVariantChange}>
+			<DropdownMenu.RadioGroup bind:value={variant} onValueChange={onFilterChange}>
 				{#each ['all', 'normal', 'alternative'] as option (option)}
 					<DropdownMenu.RadioItem value={option}
 						>{$_(`cards.variant.${option}`)}</DropdownMenu.RadioItem
+					>
+				{/each}
+			</DropdownMenu.RadioGroup>
+			<DropdownMenu.Separator />
+			<DropdownMenu.Label>{$_('codex.rarities')}</DropdownMenu.Label>
+			<div class="max-w-72 p-1">
+				<RaritySelector
+					options={cardRarityOptions}
+					bind:selected={rarities}
+					onChange={onFilterChange}
+				/>
+			</div>
+			<DropdownMenu.Separator />
+			<DropdownMenu.Label>{$_('market.sort')}</DropdownMenu.Label>
+			<DropdownMenu.RadioGroup bind:value={sort} onValueChange={onFilterChange}>
+				{#each ['ending', 'bid_desc', 'bid_asc'] as option (option)}
+					<DropdownMenu.RadioItem value={option}
+						>{$_(`market.sort_${option}`)}</DropdownMenu.RadioItem
 					>
 				{/each}
 			</DropdownMenu.RadioGroup>
