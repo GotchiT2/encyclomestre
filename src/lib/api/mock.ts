@@ -582,9 +582,27 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	}
 	if (normalizedMethod === 'GET' && pathname === '/users') {
 		const excludedId = url.searchParams.get('excludeId');
-		return json(
-			[...users.values()].filter((user) => user.id !== excludedId && user.role === 'user')
+		const excludeCurrent = url.searchParams.get('excludeCurrent') === 'true';
+		const query = url.searchParams.get('q')?.trim().toLocaleLowerCase('fr-FR') ?? '';
+		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
+		const size = Math.max(1, Math.min(100, Number(url.searchParams.get('size') ?? 20)));
+		const items = [...users.values()].filter(
+			(user) =>
+				user.role === 'user' &&
+				user.id !== excludedId &&
+				(!excludeCurrent || user.id !== 'demo-user') &&
+				(!query || user.username.toLocaleLowerCase('fr-FR').includes(query))
 		);
+		return json({
+			results: items.slice(page * size, (page + 1) * size),
+			page,
+			nbResults: items.length,
+			size,
+			sortBy: 'name',
+			sortDirection: 'ASC',
+			filters: { excludeCurrent },
+			q: query || null
+		});
 	}
 
 	if (normalizedMethod === 'GET' && pathname === '/cards') {
@@ -1400,7 +1418,14 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			if (!friendship) continue;
 			if (normalizedMethod === 'PATCH') {
 				const status = asObject(body)?.status;
-				if (status === 'accepted' || status === 'received') friendship.status = status;
+				if (status === 'rejected') {
+					friendships.set(
+						userId,
+						entries.filter((entry) => entry.id !== id)
+					);
+					return json({ ...friendship, status: 'rejected' });
+				}
+				if (status === 'accepted') friendship.status = status;
 				return json(friendship);
 			}
 			if (normalizedMethod === 'DELETE') {

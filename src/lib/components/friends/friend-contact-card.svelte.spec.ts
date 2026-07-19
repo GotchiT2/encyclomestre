@@ -30,21 +30,18 @@ const friendship: Friendship = {
 };
 
 describe('FriendContactCard', () => {
-	it('keeps the relationship but disables message and trade shortcuts when blocked', async () => {
+	it('exposes the shortcuts of an accepted friend', async () => {
 		render(FriendContactCard, {
 			friendship,
-			blocked: true,
-			onAccept: vi.fn(),
-			onDecline: vi.fn(),
 			onTrade: vi.fn(),
 			onMessage: vi.fn(),
 			onRemove: vi.fn(),
 			onBlock: vi.fn()
 		});
 
-		await expect.element(page.getByRole('button', { name: 'Échanger' })).toBeDisabled();
-		await expect.element(page.getByRole('button', { name: 'Écrire' })).toBeDisabled();
-		await expect.element(page.getByText('Utilisateur bloqué')).toBeVisible();
-		await expect.element(page.getByRole('button', { name: 'Débloquer' })).toBeEnabled();
+		await expect.element(page.getByRole('button', { name: 'Échanger' })).toBeEnabled();
+		await expect.element(page.getByRole('button', { name: 'Écrire' })).toBeEnabled();
+		await expect.element(page.getByText('Ami')).toBeVisible();
+		await expect.element(page.getByRole('button', { name: 'Bloquer' })).toBeEnabled();
 	});
 });

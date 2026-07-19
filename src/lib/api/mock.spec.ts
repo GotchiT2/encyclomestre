@@ -117,8 +117,8 @@ describe('createMockApiResponse', () => {
 	});
 
 	it('retourne les partenaires d’échange sans l’utilisateur courant', async () => {
-		const response = createMockApiResponse({ path: '/users?excludeId=demo-user' });
-		expect((await response.json()) as { id: string }[]).not.toContainEqual(
+		const response = createMockApiResponse({ path: '/users?excludeCurrent=true' });
+		expect(((await response.json()) as { results: { id: string }[] }).results).not.toContainEqual(
 			expect.objectContaining({ id: 'demo-user' })
 		);
 	});

@@ -9,6 +9,7 @@ import {
 	getWishlist,
 	getWishlistRegistryCards,
 	getPublicWishlists,
+	getPublicWishlistsState,
 	getWishlists,
 	removeWishlistEntry,
 	removeWishlistRegistryCard,
@@ -200,6 +201,15 @@ describe('wishlist deletions', () => {
 			viewerOwnedCount: 1,
 			viewerUserCardIds: ['user-card-1'],
 			card: { id: 'variant-1' }
+		});
+	});
+
+	it('keeps the public profile available when public wishlists fail', async () => {
+		apiRequest.mockRejectedValueOnce(new Error('API 500'));
+
+		await expect(getPublicWishlistsState('friend-1')).resolves.toEqual({
+			items: [],
+			unavailable: true
 		});
 	});
 });

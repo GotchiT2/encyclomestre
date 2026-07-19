@@ -207,6 +207,17 @@ export const getPublicWishlists = async (
 		}))
 	}));
 
+export const getPublicWishlistsState = async (
+	userId: string,
+	options?: RequestOptions
+): Promise<{ items: PublicWishlist[]; unavailable: boolean }> => {
+	try {
+		return { items: await getPublicWishlists(userId, options), unavailable: false };
+	} catch {
+		return { items: [], unavailable: true };
+	}
+};
+
 export const deleteWishlistRegistry = (id: string, _userId?: string, options?: RequestOptions) =>
 	apiRequest<void>(`/api/wishlists/${encodeURIComponent(id)}`, {
 		...options,

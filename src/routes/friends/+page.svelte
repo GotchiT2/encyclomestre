@@ -17,11 +17,14 @@
 	import BlockedUserList from '$lib/components/friends/blocked-user-list.svelte';
 	import FriendContactCard from '$lib/components/friends/friend-contact-card.svelte';
 	import FriendInviteDialog from '$lib/components/friends/friend-invite-dialog.svelte';
+	import FriendRequestCard from '$lib/components/friends/friend-request-card.svelte';
 	import UserBlockDialog from '$lib/components/friends/user-block-dialog.svelte';
 	import EmptyState from '$lib/components/layout/empty-state.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
+	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import { getPlayerRelationship } from '$lib/domain/friends/relationship';
 	import { _ } from '$lib/i18n';
 	import type { Friendship, User, UserBlock } from '$lib/types';
 	import UserPlusIcon from '@lucide/svelte/icons/user-plus';
@@ -35,9 +38,19 @@
 	let blockDialogOpen = $state(false);
 	let blockTarget = $state<User | null>(null);
 	let activeView = $state<'friends' | 'blocked'>('friends');
-	const visibleFriendships = $derived(
-		friendships.filter((friendship) =>
-			friendship.user.username.toLocaleLowerCase('fr-FR').includes(query.toLocaleLowerCase('fr-FR'))
+	const receivedRequests = $derived(
+		friendships.filter(
+			(friendship) => friendship.status === 'received' && !isBlocked(friendship.user.id)
+		)
+	);
+	const visibleFriends = $derived(
+		friendships.filter(
+			(friendship) =>
+				friendship.status === 'accepted' &&
+				!isBlocked(friendship.user.id) &&
+				friendship.user.username
+					.toLocaleLowerCase('fr-FR')
+					.includes(query.toLocaleLowerCase('fr-FR'))
 		)
 	);
 	const targetIsBlocked = $derived(
@@ -68,6 +81,14 @@
 		}
 		const block = await blockUser(blockTarget.id);
 		blocks = [...blocks.filter((entry) => entry.user.id !== block.user.id), block];
+		const friendship = friendships.find((entry) => entry.user.id === block.user.id);
+		if (friendship) {
+			try {
+				await removeFriend(friendship.id);
+			} finally {
+				friendships = friendships.filter((entry) => entry.id !== friendship.id);
+			}
+		}
 	}
 
 	async function invite(candidate: User) {
@@ -102,6 +123,32 @@
 			</Button>
 		{/snippet}
 	</PageHeader>
+
+	{#if !loading && receivedRequests.length}
+		<section class="flex flex-col gap-2" aria-labelledby="received-requests-title">
+			<div class="flex items-center gap-2">
+				<h2
+					id="received-requests-title"
+					class="font-serif text-xl font-black uppercase sm:text-2xl"
+				>
+					{$_('friends.received_title')}
+				</h2>
+				<Badge variant="secondary">
+					{$_('friends.received_count', { values: { count: receivedRequests.length } })}
+				</Badge>
+			</div>
+			<div class="flex flex-col gap-2">
+				{#each receivedRequests as friendship (friendship.id)}
+					<FriendRequestCard
+						{friendship}
+						onAccept={() => void respond(friendship.id, 'accepted')}
+						onDecline={() => void respond(friendship.id, 'rejected')}
+						onBlock={() => confirmBlockFor(friendship.user)}
+					/>
+				{/each}
+			</div>
+		</section>
+	{/if}
 
 	<div class="grid grid-cols-2 border border-primary/30 bg-card p-1" role="tablist">
 		<Button
@@ -140,14 +187,11 @@
 		{:else}
 			<EmptyState title={$_('friends.blocked_empty')} />
 		{/if}
-	{:else if visibleFriendships.length}
+	{:else if visibleFriends.length}
 		<div class="flex flex-col gap-2">
-			{#each visibleFriendships as friendship (friendship.id)}
+			{#each visibleFriends as friendship (friendship.id)}
 				<FriendContactCard
 					{friendship}
-					blocked={isBlocked(friendship.user.id)}
-					onAccept={() => void respond(friendship.id, 'accepted')}
-					onDecline={() => void respond(friendship.id, 'rejected')}
 					onTrade={() => void goto(`${resolve('/trades')}?partner=${friendship.user.id}`)}
 					onMessage={() => void goto(`${resolve('/messages')}?user=${friendship.user.id}`)}
 					onRemove={() => void remove(friendship.id)}
@@ -162,8 +206,8 @@
 
 <FriendInviteDialog
 	bind:open={inviteOpen}
-	existingUserIds={friendships.map((friendship) => friendship.user.id)}
 	loadUsers={(searchQuery) => searchUsers(searchQuery)}
+	relationshipFor={(candidateId) => getPlayerRelationship(candidateId, friendships, blocks).status}
 	onInvite={invite}
 />
 

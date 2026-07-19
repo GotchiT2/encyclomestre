@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
+	import PlayerRelationshipControl from '$lib/components/friends/player-relationship-control.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
-	import type { User } from '$lib/types';
+	import type { PlayerRelationshipStatus, User } from '$lib/types';
 
 	let {
 		open = $bindable(false),
-		existingUserIds,
 		loadUsers,
+		relationshipFor,
 		onInvite
 	}: {
 		open?: boolean;
-		existingUserIds: string[];
 		loadUsers: (query: string) => Promise<User[]>;
+		relationshipFor: (userId: string) => PlayerRelationshipStatus;
 		onInvite: (user: User) => void | Promise<void>;
 	} = $props();
 
@@ -41,7 +41,7 @@
 			try {
 				const users = await loadUsers(normalizedQuery);
 				if (currentRequest !== requestId) return;
-				candidates = users.filter((user) => !existingUserIds.includes(user.id));
+				candidates = users;
 			} finally {
 				if (currentRequest === requestId) loading = false;
 			}
@@ -90,11 +90,11 @@
 							</span>
 							<span class="min-w-0 flex-1 truncate font-serif font-bold">@{candidate.username}</span
 							>
-							<Button
-								size="sm"
-								disabled={Boolean(invitingId)}
-								onclick={() => void invite(candidate)}>{$_('friends.invite_action')}</Button
-							>
+							<PlayerRelationshipControl
+								status={relationshipFor(candidate.id)}
+								busy={invitingId === candidate.id}
+								onInvite={() => invite(candidate)}
+							/>
 						</li>
 					{/each}
 				</ul>

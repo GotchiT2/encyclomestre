@@ -6,24 +6,36 @@
 	import ContextualCardRail from '$lib/components/cards/contextual-card-rail.svelte';
 	import FilterControls from '$lib/components/collection/filter-controls.svelte';
 	import CardTile from '$lib/components/card-tile.svelte';
+	import PlayerRelationshipControl from '$lib/components/friends/player-relationship-control.svelte';
 	import ProfileGallery from '$lib/components/profile/profile-gallery.svelte';
 	import RegistrySummary from '$lib/components/profile/registry-summary.svelte';
 	import PublicWishlistList from '$lib/components/profile/public-wishlist-list.svelte';
+	import * as Alert from '$lib/components/ui/alert';
+	import {
+		createFriendRequest,
+		getFriends,
+		getPublicWishlistsState,
+		getUserBlocks
+	} from '$lib/api';
 	import { compareCardsByRarityDesc } from '$lib/domain/cards/rarities';
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
+	import { getPlayerRelationship } from '$lib/domain/friends/relationship';
 	import { _ } from '$lib/i18n';
+	import { onMount } from 'svelte';
 	import type {
 		CardRarity,
 		CardRecord,
 		CardVariant,
 		CollectionTag,
 		CollectionTagAssignments,
+		PlayerRelationshipStatus,
 		ProfileRegistrySummary,
 		ProfileSettings,
 		PublicWishlist,
 		SaleListing,
 		User
 	} from '$lib/types';
+	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
 
 	type ProfileTab = 'showcase' | 'wishlists' | 'collection';
 
@@ -35,7 +47,6 @@
 		settings,
 		summary,
 		sales,
-		publicWishlists,
 		tags,
 		assignments
 	}: {
@@ -45,7 +56,6 @@
 		settings: ProfileSettings;
 		summary: ProfileRegistrySummary;
 		sales: SaleListing[];
-		publicWishlists: PublicWishlist[];
 		tags: CollectionTag[];
 		assignments: CollectionTagAssignments;
 	} = $props();
@@ -56,6 +66,31 @@
 	let selectedRarities = $state<CardRarity[]>([]);
 	let tagFilterIds = $state<string[]>([]);
 	let variant = $state<CardVariant>('all');
+	let relationshipStatus = $state<PlayerRelationshipStatus | null>(null);
+	let inviting = $state(false);
+	let publicWishlists = $state<PublicWishlist[]>([]);
+	let publicWishlistsLoading = $state(true);
+	let publicWishlistsUnavailable = $state(false);
+
+	onMount(() => {
+		void Promise.all([loadRelationship(), loadPublicWishlists()]);
+	});
+
+	async function loadRelationship() {
+		try {
+			const [friendships, blocks] = await Promise.all([getFriends(), getUserBlocks()]);
+			relationshipStatus = getPlayerRelationship(user.id, friendships, blocks).status;
+		} catch {
+			relationshipStatus = 'none';
+		}
+	}
+
+	async function loadPublicWishlists() {
+		const result = await getPublicWishlistsState(user.id);
+		publicWishlists = result.items;
+		publicWishlistsUnavailable = result.unavailable;
+		publicWishlistsLoading = false;
+	}
 
 	const cardsById = $derived(new Map(catalogue.map((card) => [card.id, card])));
 	const wantedCards = $derived(
@@ -111,6 +146,17 @@
 			`${resolve('/trades')}?partner=${encodeURIComponent(user.id)}&offerCards=${encodeURIComponent(userCardId)}`
 		);
 	}
+
+	async function invitePlayer() {
+		if (relationshipStatus !== 'none' || inviting) return;
+		inviting = true;
+		try {
+			await createFriendRequest('', user.id);
+			relationshipStatus = 'pending';
+		} finally {
+			inviting = false;
+		}
+	}
 </script>
 
 <section
@@ -118,31 +164,38 @@
 	style={`--accent-copper:${settings.accentColor}`}
 >
 	<header class="border-b border-dashed border-primary/30 pb-6">
-		<div class="flex items-center gap-4">
-			{#if user.avatarUrl}
-				<img
-					src={user.avatarUrl}
-					alt=""
-					class="size-16 border-2 border-primary/40 bg-card object-cover"
-				/>
-			{:else}
-				<div
-					class="flex size-16 items-center justify-center border-2 border-primary/40 bg-card font-serif text-3xl font-black text-primary"
-				>
-					{user.username.slice(0, 1).toUpperCase()}
+		<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			<div class="flex min-w-0 items-center gap-4">
+				{#if user.avatarUrl}
+					<img
+						src={user.avatarUrl}
+						alt=""
+						class="size-16 border-2 border-primary/40 bg-card object-cover"
+					/>
+				{:else}
+					<div
+						class="flex size-16 items-center justify-center border-2 border-primary/40 bg-card font-serif text-3xl font-black text-primary"
+					>
+						{user.username.slice(0, 1).toUpperCase()}
+					</div>
+				{/if}
+				<div class="min-w-0">
+					<p class="font-mono text-[10px] uppercase tracking-[0.24em] text-primary">
+						{$_('friends.profile')}
+					</p>
+					<h1
+						class="mt-1 font-serif text-4xl font-black uppercase tracking-tight text-foreground sm:text-5xl"
+					>
+						@{settings.username || user.username}
+					</h1>
+					{#if user.bio}<p class="mt-2 font-serif italic text-muted-foreground">{user.bio}</p>{/if}
 				</div>
-			{/if}
-			<div class="min-w-0">
-				<p class="font-mono text-[10px] uppercase tracking-[0.24em] text-primary">
-					{$_('friends.profile')}
-				</p>
-				<h1
-					class="mt-1 font-serif text-4xl font-black uppercase tracking-tight text-foreground sm:text-5xl"
-				>
-					@{settings.username || user.username}
-				</h1>
-				{#if user.bio}<p class="mt-2 font-serif italic text-muted-foreground">{user.bio}</p>{/if}
 			</div>
+			<PlayerRelationshipControl
+				status={relationshipStatus}
+				busy={inviting}
+				onInvite={invitePlayer}
+			/>
 		</div>
 		{#if settings.bioTags.length}<div class="mt-4 flex flex-wrap gap-2">
 				{#each settings.bioTags as tag (tag)}<span
@@ -264,7 +317,19 @@
 			<RegistrySummary {summary} />
 		</div>
 	{:else if activeTab === 'wishlists'}
-		{#if publicWishlists.length}
+		{#if publicWishlistsLoading}
+			<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
+				{$_('friends.public_wishlists_loading')}
+			</p>
+		{:else if publicWishlistsUnavailable}
+			<Alert.Root variant="destructive">
+				<CircleAlertIcon />
+				<Alert.Title>{$_('friends.public_wishlists_error_title')}</Alert.Title>
+				<Alert.Description>
+					{$_('friends.public_wishlists_error_description')}
+				</Alert.Description>
+			</Alert.Root>
+		{:else if publicWishlists.length}
 			<PublicWishlistList wishlists={publicWishlists} onTrade={offerWishlistCard} />
 		{:else}
 			<p
