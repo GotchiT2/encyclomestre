@@ -30,6 +30,9 @@ describe('CardTile', () => {
 		await expect.element(page.getByTestId('card-tile')).toHaveClass('bg-transparent');
 		await page.getByRole('button', { name: card.title }).click();
 		expect(onOpen).toHaveBeenCalledWith(card);
+		await expect
+			.element(page.getByRole('button', { name: card.title }))
+			.toHaveClass('inset-0', 'size-auto', 'hover:bg-primary/20');
 		await expect.element(page.getByRole('link')).not.toBeInTheDocument();
 	});
 
@@ -102,6 +105,18 @@ describe('CardTile', () => {
 		await expect.element(page.getByLabelText(/Présente dans 1 wishlist/)).toBeVisible();
 		await page.getByLabelText(/Possédée par 1 autre/).click();
 		await expect.element(page.getByRole('menuitem', { name: /@Ami/ })).toBeVisible();
+	});
+
+	it('distinguishes the compared collection ownership count', async () => {
+		render(CardTile, {
+			card,
+			comparisonOwnership: { count: 4, label: 'Alice possède 4 exemplaires' }
+		});
+
+		await expect.element(page.getByLabelText('Alice possède 4 exemplaires')).toBeVisible();
+		await expect
+			.element(page.getByTestId('ownership-count-comparison'))
+			.toHaveClass('text-sky-200');
 	});
 
 	it('activates the PC illustration effect and tilt on focus', async () => {

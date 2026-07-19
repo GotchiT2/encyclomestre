@@ -31,17 +31,24 @@ describe('TradeCardPanel', () => {
 			items: cards,
 			meta: { page: 1, pageSize: 12, total: 36, totalPages: 3 }
 		}));
+		const loadComparisonCounts = vi.fn(async () => ({ 'variant-1': 3 }));
 		render(TradeCardPanel, {
 			title: 'Votre proposition',
 			scopeKey: 'user-1',
 			active: true,
-			loadCards
+			loadCards,
+			loadComparisonCounts,
+			comparisonOwnerName: 'Alice'
 		});
 
 		await vi.waitFor(() =>
 			expect(document.querySelectorAll('[data-testid="card-tile"]')).toHaveLength(12)
 		);
 		expect(loadCards).toHaveBeenCalledOnce();
+		expect(loadComparisonCounts).toHaveBeenCalledWith(
+			expect.arrayContaining(['variant-1', 'variant-12'])
+		);
+		await expect.element(page.getByLabelText('Alice possède 3 exemplaire(s)')).toBeVisible();
 		expect(loadCards).toHaveBeenNthCalledWith(
 			1,
 			expect.objectContaining({ rarities: [], page: 0, pageSize: 12 })
@@ -60,7 +67,7 @@ describe('TradeCardPanel', () => {
 		const grid = document.querySelector<HTMLElement>('[data-testid="card-tile"]')?.parentElement
 			?.parentElement;
 		expect(grid?.className).toContain('grid-cols-2');
-		expect(grid?.className).toContain('xl:grid-cols-7');
+		expect(grid?.className).toContain('xl:grid-cols-5');
 		await expect.element(page.getByText('Page 1 / 3')).toBeVisible();
 	});
 

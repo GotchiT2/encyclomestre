@@ -11,6 +11,7 @@ import {
 	getUserBlocks,
 	getUserCollection,
 	getUserCollectionCopies,
+	getUserCollectionCounts,
 	getUserCollectionPage,
 	searchUsers,
 	unblockUser
@@ -102,10 +103,11 @@ describe('getUserCollection', () => {
 	});
 
 	it('resolves prefilled cards with one batch request per owner', async () => {
-		apiRequest.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+		apiRequest.mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce({});
 
 		await getOwnedCollectionCards(['copy-1', 'copy-2']);
 		await getUserCollectionCopies('user-2', ['variant-1', 'variant-2']);
+		await getUserCollectionCounts('user-2', ['variant-1', 'variant-2']);
 
 		expect(apiRequest).toHaveBeenNthCalledWith(
 			1,
@@ -115,6 +117,11 @@ describe('getUserCollection', () => {
 		expect(apiRequest).toHaveBeenNthCalledWith(
 			2,
 			'/api/users/user-2/collection/copies?variantId=variant-1&variantId=variant-2',
+			undefined
+		);
+		expect(apiRequest).toHaveBeenNthCalledWith(
+			3,
+			'/api/users/user-2/collection/counts?variantId=variant-1&variantId=variant-2',
 			undefined
 		);
 	});

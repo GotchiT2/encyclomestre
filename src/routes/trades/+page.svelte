@@ -17,6 +17,7 @@
 		getTradePartners,
 		getOwnedCollectionCards,
 		getUserCollectionCopies,
+		getUserCollectionCounts,
 		getUserCollectionPage,
 		respondToTradeOffer
 	} from '$lib/api';
@@ -155,6 +156,16 @@
 		return getUserCollectionPage(selectedPartner.id, query);
 	}
 
+	function loadPartnerOwnershipCounts(variantIds: string[]) {
+		return selectedPartner
+			? getUserCollectionCounts(selectedPartner.id, variantIds)
+			: Promise.resolve({});
+	}
+
+	function loadViewerOwnershipCounts(variantIds: string[]) {
+		return getUserCollectionCounts(currentUserId, variantIds);
+	}
+
 	function participantAsUser(participant: TradeParticipant): User {
 		return {
 			...participant,
@@ -265,6 +276,8 @@
 	initialPartnerCards={partnerCards}
 	loadOwnedCards={loadOwnedTradeCards}
 	loadPartnerCards={loadPartnerTradeCards}
+	{loadPartnerOwnershipCounts}
+	{loadViewerOwnershipCounts}
 	bind:draft={editorDraft}
 	onSubmit={submitOffer}
 />

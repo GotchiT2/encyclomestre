@@ -1427,6 +1427,23 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				}))
 		);
 	}
+	const userCollectionCountsMatch = /^\/users\/([^/]+)\/collection\/counts$/.exec(pathname);
+	if (userCollectionCountsMatch && normalizedMethod === 'GET') {
+		const userId = decodeURIComponent(userCollectionCountsMatch[1]);
+		const variantIds = new Set(url.searchParams.getAll('variantId'));
+		return json(
+			Object.fromEntries(
+				mockCards.flatMap((card) => {
+					if (!variantIds.has(card.id)) return [];
+					const count =
+						userId === 'demo-user'
+							? card.ownedCount
+							: (card.friendsWhoOwn.find((friend) => friend.friendId === userId)?.ownedCount ?? 0);
+					return count > 0 ? [[card.id, count]] : [];
+				})
+			)
+		);
+	}
 	if (normalizedMethod === 'GET' && pathname === '/collection/copies') {
 		const userCardIds = new Set(url.searchParams.getAll('userCardId'));
 		return json(

@@ -278,3 +278,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Créer et suivre les ventes liées aux exemplaires depuis le détail et la collection — `feat(market): create and track owned card listings`
 - [x] Afficher les wishlists publiques et gérer le blocage des utilisateurs — `feat(social): expose public wishlists and user blocking`
 - [x] Ajouter les rails de cartes contextuels et auditer le reflow mobile — `refactor(ui): add responsive contextual card rails`
+- [x] Comparer les quantités possédées dans les sélecteurs d’échange, clarifier la mise en vente et restaurer le survol complet des cartes — `feat(cards): show cross-collection ownership`

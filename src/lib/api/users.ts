@@ -109,6 +109,22 @@ export const getUserCollectionCopies = async (
 	).map(toCollectionCardRecord);
 };
 
+export const getUserCollectionCounts = (
+	id: string,
+	variantIds: string[],
+	options?: RequestOptions
+): Promise<Record<string, number>> => {
+	if (!variantIds.length) return Promise.resolve({});
+	const parameters = new URLSearchParams();
+	for (const variantId of [...new Set(variantIds)].slice(0, 50)) {
+		parameters.append('variantId', variantId);
+	}
+	return apiRequest<Record<string, number>>(
+		`/api/users/${encodeURIComponent(id)}/collection/counts?${parameters}`,
+		options
+	);
+};
+
 export const getOwnedCollectionCards = async (
 	userCardIds: string[],
 	options?: RequestOptions

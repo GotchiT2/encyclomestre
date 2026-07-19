@@ -4,16 +4,18 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { _ } from '$lib/i18n';
 	import BookMarkedIcon from '@lucide/svelte/icons/book-marked';
-	import LibraryIcon from '@lucide/svelte/icons/library';
 	import UsersIcon from '@lucide/svelte/icons/users';
 	import type { CardWishlistReference, FriendOwnerInfo } from '$lib/types';
+	import OwnershipCountIndicator from './ownership-count-indicator.svelte';
 
 	let {
 		ownedCount = 0,
+		comparisonOwnership,
 		wishlists = [],
 		owners = []
 	}: {
 		ownedCount?: number;
+		comparisonOwnership?: { count: number; label: string };
 		wishlists?: CardWishlistReference[];
 		owners?: FriendOwnerInfo[];
 	} = $props();
@@ -30,13 +32,17 @@
 	data-testid="card-state-indicators"
 >
 	{#if ownedCount > 0}
-		<span
-			class="flex min-h-7 items-center gap-1 border border-emerald-300/60 bg-background/90 px-1.5 font-mono text-[9px] font-bold text-emerald-200 shadow-lg"
-			aria-label={$_('cardState.owned', { values: { count: ownedCount } })}
-			title={$_('cardState.owned', { values: { count: ownedCount } })}
-		>
-			<LibraryIcon class="size-3.5" /><span aria-hidden="true">×{ownedCount}</span>
-		</span>
+		<OwnershipCountIndicator
+			count={ownedCount}
+			label={$_('cardState.owned', { values: { count: ownedCount } })}
+		/>
+	{/if}
+	{#if comparisonOwnership && comparisonOwnership.count > 0}
+		<OwnershipCountIndicator
+			count={comparisonOwnership.count}
+			label={comparisonOwnership.label}
+			tone="comparison"
+		/>
 	{/if}
 	{#if wishlists.length}
 		<span

@@ -90,6 +90,8 @@
 	},
 	"cardState": {
 		"owned": "{count} exemplaire(s) déjà possédé(s)",
+		"owned_by_viewer": "Vous possédez {count} exemplaire(s)",
+		"owned_by": "{user} possède {count} exemplaire(s)",
 		"wishlisted": "Présente dans {count} wishlist(s)",
 		"default_wishlist": "Wishlist principale",
 		"other_owners": "Possédée par {count} autre(s) personne(s)"

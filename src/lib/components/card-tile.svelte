@@ -11,6 +11,7 @@
 		tags = [],
 		tagDisplay = 'bookmark',
 		stateIndicatorsOffset = 0,
+		comparisonOwnership,
 		onOpen
 	}: {
 		card: CardRecord;
@@ -18,6 +19,7 @@
 		tags?: CollectionTag[];
 		tagDisplay?: 'bookmark' | 'full';
 		stateIndicatorsOffset?: number;
+		comparisonOwnership?: { count: number; label: string };
 		onOpen?: (card: CardRecord) => void;
 	} = $props();
 
@@ -176,7 +178,7 @@
 	{#if onOpen}
 		<button
 			type="button"
-			class="absolute inset-0 rounded-none outline-offset-[-4px] focus-visible:outline-2 focus-visible:outline-primary"
+			class="absolute inset-0 z-30 size-auto cursor-pointer rounded-none bg-transparent transition-colors hover:bg-primary/20 focus-visible:bg-primary/15 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[-4px]"
 			aria-label={card.title}
 			onclick={handleOpen}
 		></button>
@@ -228,13 +230,14 @@
 			</div>
 		{/if}
 	{/if}
-	{#if card.ownedCount > 0 || card.wishlistMemberships?.length || (showFriendOwners && card.friendsWhoOwn.length)}
+	{#if card.ownedCount > 0 || comparisonOwnership?.count || card.wishlistMemberships?.length || (showFriendOwners && card.friendsWhoOwn.length)}
 		<div
 			class="pointer-events-none absolute left-[7%] z-40"
 			style={`top:calc(8% + ${stateIndicatorsOffset}px)`}
 		>
 			<CardStateIndicators
 				ownedCount={card.ownedCount}
+				{comparisonOwnership}
 				wishlists={card.wishlistMemberships}
 				owners={showFriendOwners ? card.friendsWhoOwn : []}
 			/>

@@ -53,6 +53,7 @@ describe('SaleListingDialog', () => {
 		const dialog = document.querySelector<HTMLElement>('[data-testid="sale-listing-dialog"]')!;
 		expect(dialog).toHaveClass('left-1/2', '-translate-x-1/2');
 		expect(dialog).toHaveClass('top-1/2', '-translate-y-1/2');
+		await expect.element(page.getByLabelText('Vous possédez 1 exemplaire(s)')).toBeVisible();
 
 		const price = document.querySelector<HTMLInputElement>('input[type="number"]')!;
 		expect(price.value).toBe('10');

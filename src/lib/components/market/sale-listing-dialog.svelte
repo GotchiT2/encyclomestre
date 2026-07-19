@@ -7,6 +7,7 @@
 	import { _ } from '$lib/i18n';
 	import { cn } from '$lib/utils';
 	import type { CardRecord, CreateSaleInput, SaleListing } from '$lib/types';
+	import OwnershipCountIndicator from '$lib/components/cards/ownership-count-indicator.svelte';
 
 	let {
 		open = $bindable(false),
@@ -81,12 +82,17 @@
 						<button
 							type="button"
 							class={cn(
-								'min-h-14 min-w-0 border border-primary/30 bg-background/70 p-3 text-left disabled:cursor-not-allowed disabled:opacity-45',
+								'relative min-h-14 min-w-0 border border-primary/30 bg-background/70 p-3 pr-16 text-left disabled:cursor-not-allowed disabled:opacity-45',
 								selectedCopyId === copy.id && 'border-primary bg-primary/10'
 							)}
 							disabled={Boolean(copy.activeSale)}
 							onclick={() => (selectedCopyId = copy.id)}
 						>
+							<OwnershipCountIndicator
+								count={copies.length}
+								label={$_('cardState.owned_by_viewer', { values: { count: copies.length } })}
+								class="pointer-events-none absolute top-2 right-2"
+							/>
 							<span class="block truncate font-serif text-sm font-bold">{copy.title}</span>
 							<span class="mt-1 block font-mono text-[10px] uppercase tracking-widest text-primary">
 								{copy.activeSale

@@ -19,6 +19,8 @@
 		initialPartnerCards = [],
 		loadOwnedCards,
 		loadPartnerCards,
+		loadPartnerOwnershipCounts,
+		loadViewerOwnershipCounts,
 		draft = $bindable<Partial<CreateTradeOfferInput>>({}),
 		onSubmit
 	}: {
@@ -29,6 +31,8 @@
 		initialPartnerCards?: CardRecord[];
 		loadOwnedCards: (query: TradeCardSearchQuery) => Promise<PaginatedResponse<CardRecord>>;
 		loadPartnerCards: (query: TradeCardSearchQuery) => Promise<PaginatedResponse<CardRecord>>;
+		loadPartnerOwnershipCounts: (variantIds: string[]) => Promise<Record<string, number>>;
+		loadViewerOwnershipCounts: (variantIds: string[]) => Promise<Record<string, number>>;
 		draft?: Partial<CreateTradeOfferInput>;
 		onSubmit: (input: CreateTradeOfferInput) => void;
 	} = $props();
@@ -91,6 +95,8 @@
 						active={activePanel === 'you'}
 						initialCards={initialOwnedCards}
 						loadCards={loadOwnedCards}
+						loadComparisonCounts={loadPartnerOwnershipCounts}
+						comparisonOwnerName={partner?.displayName || partner?.username}
 						bind:selectedIds={offeredIds}
 						bind:credits={offeredCredits}
 					/>
@@ -102,7 +108,8 @@
 						active={activePanel === 'partner'}
 						initialCards={initialPartnerCards}
 						loadCards={loadPartnerCards}
-						ownerName={partner?.username}
+						loadComparisonCounts={loadViewerOwnershipCounts}
+						comparisonOwnerIsViewer
 						bind:selectedIds={requestedIds}
 						bind:credits={requestedCredits}
 					/>

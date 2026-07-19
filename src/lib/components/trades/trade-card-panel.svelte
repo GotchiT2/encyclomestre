@@ -22,18 +22,22 @@
 		title,
 		scopeKey,
 		active = false,
-		ownerName,
+		comparisonOwnerName,
+		comparisonOwnerIsViewer = false,
 		initialCards = [],
 		loadCards,
+		loadComparisonCounts,
 		selectedIds = $bindable<string[]>([]),
 		credits = $bindable(0)
 	}: {
 		title: string;
 		scopeKey: string;
 		active?: boolean;
-		ownerName?: string;
+		comparisonOwnerName?: string;
+		comparisonOwnerIsViewer?: boolean;
 		initialCards?: CardRecord[];
 		loadCards: (query: TradeCardSearchQuery) => Promise<PaginatedResponse<CardRecord>>;
+		loadComparisonCounts?: (variantIds: string[]) => Promise<Record<string, number>>;
 		selectedIds?: string[];
 		credits?: number;
 	} = $props();
@@ -47,6 +51,7 @@
 	let total = $state(0);
 	let resultCards = $state<CardRecord[]>([]);
 	let knownCards = $state<CardRecord[]>([]);
+	let comparisonCounts = $state<Record<string, number>>({});
 	let hasLoaded = $state(false);
 	let loading = $state(false);
 	let failed = $state(false);
@@ -77,6 +82,7 @@
 		total = 0;
 		resultCards = [];
 		knownCards = [...initialCards];
+		comparisonCounts = {};
 		hasLoaded = false;
 		failed = false;
 	});
@@ -111,6 +117,12 @@
 				page: nextPage - 1,
 				pageSize
 			});
+			const variantIds = response.items.map((card) => card.catalogueId ?? card.id);
+			try {
+				comparisonCounts = loadComparisonCounts ? await loadComparisonCounts(variantIds) : {};
+			} catch {
+				comparisonCounts = {};
+			}
 			page = response.meta.page;
 			totalPages = response.meta.totalPages;
 			total = response.meta.total;
@@ -124,6 +136,19 @@
 		} finally {
 			loading = false;
 		}
+	}
+
+	function comparisonOwnership(card: CardRecord) {
+		const count = comparisonCounts[card.catalogueId ?? card.id] ?? 0;
+		if (!count) return undefined;
+		return {
+			count,
+			label: comparisonOwnerIsViewer
+				? $_('cardState.owned_by_viewer', { values: { count } })
+				: $_('cardState.owned_by', {
+						values: { user: comparisonOwnerName ?? '', count }
+					})
+		};
 	}
 </script>
 
@@ -234,25 +259,15 @@
 		<p class="mt-3 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
 			{$_('trades.filtered_card_count', { values: { count: total } })}
 		</p>
-		<div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7">
+		<div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
 			{#each resultCards.filter((card) => !selectedIds.includes(card.id)) as card (card.id)}
 				<div class="relative min-w-0">
-					<CardTile {card} tags={card.collectionTags ?? []} showFriendOwners={false} />
-					{#if ownerName}
-						<span
-							class="absolute top-2 right-2 z-10 border border-primary/60 bg-card px-1.5 py-1 font-mono text-[9px] uppercase tracking-wider text-primary"
-						>
-							{$_('trades.contact_owns', { values: { user: ownerName } })}
-						</span>
-					{/if}
-					<Button
-						aria-label={card.title}
-						class="absolute inset-0 z-20 h-full w-full border-0 bg-transparent text-transparent hover:bg-primary/20"
-						onclick={(event) => {
-							event.preventDefault();
-							event.stopPropagation();
-							selectedIds = [...selectedIds, card.id];
-						}}
+					<CardTile
+						{card}
+						tags={card.collectionTags ?? []}
+						showFriendOwners={false}
+						comparisonOwnership={comparisonOwnership(card)}
+						onOpen={() => (selectedIds = [...selectedIds, card.id])}
 					/>
 				</div>
 			{/each}
