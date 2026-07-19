@@ -1375,23 +1375,71 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	if (userCollectionMatch && normalizedMethod === 'GET') {
 		const userId = decodeURIComponent(userCollectionMatch[1]);
 		if (!users.has(userId)) return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
-		const cards = mockCards.filter((card) =>
-			userId === 'demo-user'
-				? card.ownedCount > 0
-				: card.friendsWhoOwn.some((friend) => friend.friendId === userId)
-		);
+		const query = (url.searchParams.get('q') ?? '').trim().toLocaleLowerCase('fr-FR');
+		const rarities = url.searchParams.getAll('rarity');
+		const variant = url.searchParams.get('variant') ?? 'ALL';
+		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
+		const size = Math.max(1, Math.min(24, Number(url.searchParams.get('size') ?? 12)));
+		const cards = mockCards
+			.filter((card) =>
+				userId === 'demo-user'
+					? card.ownedCount > 0
+					: card.friendsWhoOwn.some((friend) => friend.friendId === userId)
+			)
+			.filter((card) => !query || card.title.toLocaleLowerCase('fr-FR').includes(query))
+			.filter((card) => !rarities.length || rarities.includes(card.rarityInitials))
+			.filter(
+				(card) => variant === 'ALL' || (variant === 'FULL_ART' ? card.isFullArt : !card.isFullArt)
+			);
+		const results = cards.slice(page * size, (page + 1) * size);
 		return json({
-			results: cards.map((card) => ({
+			results: results.map((card) => ({
 				userCardId: `owned-${userId}-${card.id}`,
 				cardId: card.id,
 				acquiredAt: card.acquiredAt ?? now,
 				tags: card.collectionTags ?? [],
 				card: apiCard(card)
 			})),
-			page: 0,
+			page,
 			nbResults: cards.length,
-			size: 100
+			size
 		});
+	}
+	const userCollectionCopiesMatch = /^\/users\/([^/]+)\/collection\/copies$/.exec(pathname);
+	if (userCollectionCopiesMatch && normalizedMethod === 'GET') {
+		const userId = decodeURIComponent(userCollectionCopiesMatch[1]);
+		const variantIds = new Set(url.searchParams.getAll('variantId'));
+		return json(
+			mockCards
+				.filter(
+					(card) =>
+						variantIds.has(card.id) &&
+						(userId === 'demo-user'
+							? card.ownedCount > 0
+							: card.friendsWhoOwn.some((friend) => friend.friendId === userId))
+				)
+				.map((card) => ({
+					userCardId: `owned-${userId}-${card.id}`,
+					cardId: card.id,
+					acquiredAt: card.acquiredAt ?? now,
+					tags: card.collectionTags ?? [],
+					card: apiCard(card)
+				}))
+		);
+	}
+	if (normalizedMethod === 'GET' && pathname === '/collection/copies') {
+		const userCardIds = new Set(url.searchParams.getAll('userCardId'));
+		return json(
+			mockCards
+				.filter((card) => userCardIds.has(`owned-demo-user-${card.id}`))
+				.map((card) => ({
+					userCardId: `owned-demo-user-${card.id}`,
+					cardId: card.id,
+					acquiredAt: card.acquiredAt ?? now,
+					tags: card.collectionTags ?? [],
+					card: apiCard(card)
+				}))
+		);
 	}
 	if (normalizedMethod === 'POST' && pathname === '/cards/social-states') {
 		const input = asObject(body);

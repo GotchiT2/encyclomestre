@@ -15,7 +15,9 @@
 		getOrCreateDirectConversation,
 		getTradeHistory,
 		getTradePartners,
-		getUserCollection,
+		getOwnedCollectionCards,
+		getUserCollectionCopies,
+		getUserCollectionPage,
 		respondToTradeOffer
 	} from '$lib/api';
 	import TradeDetail from '$lib/components/trades/trade-detail.svelte';
@@ -47,8 +49,6 @@
 	let selectedOfferedCards = $state<CardRecord[]>([]);
 	let selectedRequestedCards = $state<CardRecord[]>([]);
 	let editorDraft = $state<Partial<CreateTradeOfferInput>>({});
-	const collectionsByUser = new SvelteMap<string, Promise<CardRecord[]>>();
-	let ownedCardsRequest: Promise<CardRecord[]> | null = null;
 	let partnersRequest: Promise<User[]> | null = null;
 	type TradeTab = 'received' | 'sent' | 'history';
 	const tradeRequests = new SvelteMap<TradeTab, Promise<TradeOffer[]>>();
@@ -98,16 +98,6 @@
 		return request;
 	}
 
-	async function loadOwnedCards() {
-		if (ownedCardsRequest) return ownedCardsRequest;
-		ownedCardsRequest = getUserCollection(currentUserId).then((collection) => {
-			ownedCards = collection;
-			collectionsByUser.set(currentUserId, Promise.resolve(collection));
-			return collection;
-		});
-		return ownedCardsRequest;
-	}
-
 	async function loadPartners() {
 		if (partnersRequest) return partnersRequest;
 		partnersRequest = getTradePartners(currentUserId).then((result) => {
@@ -117,42 +107,52 @@
 		return partnersRequest;
 	}
 
-	async function loadParticipantCollection(userId: string) {
-		const cached = collectionsByUser.get(userId);
-		if (cached) return cached;
-		const request = getUserCollection(userId).catch(() => []);
-		collectionsByUser.set(userId, request);
-		return request;
-	}
-
 	async function selectPartner(
 		partner: User,
 		requestedCatalogueIds: string[] = [],
 		offeredUserCardIds: string[] = []
 	) {
 		selectedPartner = partner;
-		const [myCollection, collection] = await Promise.all([
-			loadOwnedCards(),
-			loadParticipantCollection(partner.id)
-		]);
-		partnerCards = collection;
+		ownedCards = [];
+		partnerCards = [];
 		if (requestedCatalogueIds.length || offeredUserCardIds.length) {
+			const [resolvedOwnedCards, resolvedPartnerCards] = await Promise.all([
+				getOwnedCollectionCards(offeredUserCardIds),
+				getUserCollectionCopies(partner.id, requestedCatalogueIds)
+			]);
+			ownedCards = resolvedOwnedCards;
+			partnerCards = requestedCatalogueIds.flatMap((variantId) => {
+				const copy = resolvedPartnerCards.find(
+					(card) => (card.catalogueId ?? card.id) === variantId
+				);
+				return copy ? [copy] : [];
+			});
 			editorDraft = {
 				recipientId: partner.id,
-				offeredCardIds: myCollection
-					.filter((card) => offeredUserCardIds.includes(card.id))
-					.map((card) => card.id),
-				requestedCardIds: partnerCards
-					.filter((card) => requestedCatalogueIds.includes(card.catalogueId ?? card.id))
-					.map((card) => card.id)
+				offeredCardIds: ownedCards.map((card) => card.id),
+				requestedCardIds: partnerCards.map((card) => card.id)
 			};
 		}
 		editorOpen = true;
 	}
 
 	async function openPartnerPicker() {
-		await Promise.all([loadOwnedCards(), loadPartners()]);
+		await loadPartners();
 		partnerPickerOpen = true;
+	}
+
+	function loadOwnedTradeCards(query: Parameters<typeof getUserCollectionPage>[1]) {
+		return getUserCollectionPage(currentUserId, query);
+	}
+
+	function loadPartnerTradeCards(query: Parameters<typeof getUserCollectionPage>[1]) {
+		if (!selectedPartner) {
+			return Promise.resolve({
+				items: [],
+				meta: { page: 1, pageSize: query?.pageSize ?? 12, total: 0, totalPages: 1 }
+			});
+		}
+		return getUserCollectionPage(selectedPartner.id, query);
 	}
 
 	function participantAsUser(participant: TradeParticipant): User {
@@ -186,10 +186,11 @@
 
 	async function openCounterOffer(offer: TradeOffer) {
 		const counterpart = offer.initiatorId === currentUserId ? offer.recipient : offer.initiator;
-		await Promise.all([loadOwnedCards(), loadPartners()]);
 		selectedPartner =
 			partners.find((partner) => partner.id === counterpart.id) ?? participantAsUser(counterpart);
-		partnerCards = await loadParticipantCollection(selectedPartner.id);
+		const cards = tradeCardsByOffer.get(offer.id) ?? offer.cards ?? [];
+		ownedCards = cards.filter((entry) => entry.side === 'requested').map((entry) => entry.card);
+		partnerCards = cards.filter((entry) => entry.side === 'offered').map((entry) => entry.card);
 		editorDraft = {
 			recipientId: selectedPartner.id,
 			offeredCardIds: offer.requestedCardIds,
@@ -230,6 +231,7 @@
 				onclick={() => {
 					editorDraft = {};
 					selectedPartner = null;
+					ownedCards = [];
 					partnerCards = [];
 					void openPartnerPicker();
 				}}>{$_('trades.create_offer')}</Button
@@ -259,8 +261,10 @@
 	bind:open={editorOpen}
 	{currentUserId}
 	partner={selectedPartner}
-	{ownedCards}
-	cards={partnerCards}
+	initialOwnedCards={ownedCards}
+	initialPartnerCards={partnerCards}
+	loadOwnedCards={loadOwnedTradeCards}
+	loadPartnerCards={loadPartnerTradeCards}
 	bind:draft={editorDraft}
 	onSubmit={submitOffer}
 />

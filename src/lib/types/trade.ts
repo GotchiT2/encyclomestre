@@ -39,3 +39,12 @@ export interface CreateTradeOfferInput {
 	offeredCredits?: number;
 	requestedCredits?: number;
 }
+
+export interface TradeCardSearchQuery {
+	query?: string;
+	rarities?: import('./card').CardRarity[];
+	variant?: import('./card').CardVariant;
+	sortBy?: 'rarity' | 'name';
+	page?: number;
+	pageSize?: number;
+}
