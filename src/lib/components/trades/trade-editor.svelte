@@ -88,6 +88,7 @@
 					<TradeCardPanel
 						title={$_('trades.your_panel')}
 						scopeKey={currentUserId}
+						active={activePanel === 'you'}
 						initialCards={initialOwnedCards}
 						loadCards={loadOwnedCards}
 						bind:selectedIds={offeredIds}
@@ -98,6 +99,7 @@
 					<TradeCardPanel
 						title={$_('trades.partner_panel')}
 						scopeKey={partner?.id ?? 'no-partner'}
+						active={activePanel === 'partner'}
 						initialCards={initialPartnerCards}
 						loadCards={loadPartnerCards}
 						ownerName={partner?.username}

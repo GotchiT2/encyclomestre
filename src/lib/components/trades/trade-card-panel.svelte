@@ -21,6 +21,7 @@
 	let {
 		title,
 		scopeKey,
+		active = false,
 		ownerName,
 		initialCards = [],
 		loadCards,
@@ -29,6 +30,7 @@
 	}: {
 		title: string;
 		scopeKey: string;
+		active?: boolean;
 		ownerName?: string;
 		initialCards?: CardRecord[];
 		loadCards: (query: TradeCardSearchQuery) => Promise<PaginatedResponse<CardRecord>>;
@@ -49,6 +51,7 @@
 	let loading = $state(false);
 	let failed = $state(false);
 	let activeScope = $state('');
+	let initiallyLoadedScope = $state('');
 	const pageSize = 12;
 	const selectedCards = $derived(
 		selectedIds
@@ -76,6 +79,12 @@
 		knownCards = [...initialCards];
 		hasLoaded = false;
 		failed = false;
+	});
+
+	$effect(() => {
+		if (!active || activeScope !== scopeKey || initiallyLoadedScope === scopeKey) return;
+		initiallyLoadedScope = scopeKey;
+		void search();
 	});
 
 	function mergeCards(current: CardRecord[], incoming: CardRecord[]) {
