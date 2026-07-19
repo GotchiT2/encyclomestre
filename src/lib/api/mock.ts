@@ -83,13 +83,11 @@ const sales: SaleListing[] = [
 		cardId: 'girls-generation-1',
 		userCardId: 'owned-girls-generation-1',
 		price: 42.5,
-		currentPrice: 42.5,
-		minimumBid: 47,
 		currency: 'EUR',
-		type: 'direct',
+		type: 'auction',
 		status: 'active',
 		createdAt: now,
-		endsAt: null,
+		endsAt: '2026-07-19T10:00:20.000Z',
 		closedAt: null
 	},
 	{
@@ -98,15 +96,21 @@ const sales: SaleListing[] = [
 		cardId: 'red-velvet-1',
 		price: 65,
 		currency: 'EUR',
-		type: 'auction'
+		type: 'auction',
+		status: 'active',
+		endsAt: '2026-07-19T11:30:00.000Z'
 	},
 	{
 		id: 'sale-003',
 		sellerId: 'friend-0',
 		cardId: 'girls-generation-2',
 		price: 54,
+		currentPrice: 61,
+		minimumBid: 68,
 		currency: 'EUR',
-		type: 'auction'
+		type: 'auction',
+		status: 'active',
+		endsAt: '2026-07-19T14:00:00.000Z'
 	},
 	{
 		id: 'sale-004',
@@ -114,7 +118,9 @@ const sales: SaleListing[] = [
 		cardId: 'blackpink-1',
 		price: 39,
 		currency: 'EUR',
-		type: 'direct'
+		type: 'auction',
+		status: 'active',
+		endsAt: '2026-07-19T09:59:59.000Z'
 	}
 ];
 
@@ -1067,8 +1073,6 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const sellerId = url.searchParams.get('sellerId');
 		const cardId = url.searchParams.get('cardId');
 		const query = url.searchParams.get('q')?.toLocaleLowerCase('fr-FR') ?? '';
-		const type = url.searchParams.get('type');
-		const maxPrice = Number(url.searchParams.get('maxPrice') ?? 0);
 		const bidderId = url.searchParams.get('bidderId');
 		const results = sales
 			.filter(
@@ -1078,8 +1082,6 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 					(!cardId || sale.cardId === cardId) &&
 					(!bidderId ||
 						saleBids.some((bid) => bid.saleId === sale.id && bid.bidderId === bidderId)) &&
-					(!type || sale.type === type) &&
-					(!maxPrice || sale.price <= maxPrice) &&
 					(!query ||
 						mockCards
 							.find((card) => card.id === sale.cardId)
@@ -1158,8 +1160,10 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	if (saleDetailMatch && normalizedMethod === 'POST' && saleDetailMatch[2] === 'bids') {
 		const sale = sales.find((entry) => entry.id === decodeURIComponent(saleDetailMatch[1]));
 		const amount = Number(asObject(body)?.amount ?? 0);
-		if (!sale || amount <= sale.price) return error(422, 'Mise invalide.', 'BID_INVALID');
-		sale.price = amount;
+		if (!sale || amount < (sale.minimumBid ?? Math.ceil((sale.currentPrice ?? sale.price) * 1.1)))
+			return error(422, 'Mise invalide.', 'BID_INVALID');
+		sale.currentPrice = amount;
+		sale.minimumBid = Math.ceil(amount * 1.1);
 		const bid: SaleBid = {
 			id: `bid-${crypto.randomUUID()}`,
 			saleId: sale.id,

@@ -2,11 +2,14 @@
 	import { resolve } from '$app/paths';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardMarketModal from '$lib/components/cards/card-market-modal.svelte';
+	import AuctionCountdown from '$lib/components/market/auction-countdown.svelte';
 	import { addSaleFavorite, getSaleFavorites, placeBid, removeSaleFavorite } from '$lib/api';
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
+	import { auctionPrice, minimumAuctionBid } from '$lib/domain/market/auction-display';
+	import GavelIcon from '@lucide/svelte/icons/gavel';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -18,12 +21,8 @@
 		favoriteIds = (await getSaleFavorites()).map((sale) => sale.id);
 	});
 
-	function minimumBid(currentBid: number) {
-		return Math.ceil(currentBid * 1.1);
-	}
-
-	function updateBid(value: string, currentBid: number) {
-		const minimum = minimumBid(currentBid);
+	function updateBid(value: string, price: number, currentPrice?: number, minimumBid?: number) {
+		const minimum = minimumAuctionBid(price, currentPrice, minimumBid);
 		bidAmount = Math.max(minimum, Number(value) || minimum);
 	}
 
@@ -37,8 +36,13 @@
 		}
 	}
 
-	async function submitBid(saleId: string, currentBid: number) {
-		await placeBid(saleId, Math.max(bidAmount, minimumBid(currentBid)));
+	async function submitBid(
+		saleId: string,
+		price: number,
+		currentPrice?: number,
+		minimumBid?: number
+	) {
+		await placeBid(saleId, Math.max(bidAmount, minimumAuctionBid(price, currentPrice, minimumBid)));
 		location.reload();
 	}
 </script>
@@ -46,6 +50,8 @@
 {#await Promise.all([data.sale, data.bids, data.card, data.priceHistory])}
 	<p class="font-mono text-[10px] uppercase tracking-widest text-primary">{$_('market.loading')}</p>
 {:then [sale, bids, card, priceHistory]}
+	{@const currentPrice = auctionPrice(sale.price, sale.currentPrice)}
+	{@const minimumBid = minimumAuctionBid(sale.price, sale.currentPrice, sale.minimumBid)}
 	<section class="flex flex-col gap-6 pb-12">
 		<a
 			href={resolve('/market')}
@@ -77,35 +83,46 @@
 				</div>
 				<section class="mt-6 border-4 border-double border-primary/30 bg-card p-4">
 					<p class="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-						{$_('market.current_bid')}
+						{sale.currentPrice === undefined
+							? $_('market.starting_price')
+							: $_('market.current_bid')}
 					</p>
 					<p class="mt-2 font-mono text-3xl font-black text-primary">
-						{sale.price}
+						{currentPrice}
 						{sale.currency}
 					</p>
 					<p class="mt-3 font-serif text-sm">
 						{$_('market.leading_bidder')}
 						{bids[0]?.bidderName ?? $_('market.none')}
 					</p>
+					<AuctionCountdown endsAt={sale.endsAt} />
 				</section>
 				<section class="mt-4 border border-primary/30 bg-card p-4">
 					<div class="flex justify-between gap-3">
 						<p class="font-serif text-sm">{$_('market.wallet')} <strong>33 714</strong></p>
 						<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 							{$_('market.minimum_bid')}
-							{minimumBid(sale.price)}
+							{minimumBid}
 						</p>
 					</div>
 					<div class="mt-3 flex gap-2">
 						<Input
-							value={bidAmount || minimumBid(sale.price)}
+							value={bidAmount || minimumBid}
 							type="number"
-							min={minimumBid(sale.price)}
+							min={minimumBid}
 							placeholder={$_('market.bid_amount')}
-							oninput={(event) => updateBid(event.currentTarget.value, sale.price)}
+							oninput={(event) =>
+								updateBid(
+									event.currentTarget.value,
+									sale.price,
+									sale.currentPrice,
+									sale.minimumBid
+								)}
 						/><Button
-							disabled={bidAmount < minimumBid(sale.price)}
-							onclick={() => void submitBid(sale.id, sale.price)}>{$_('market.bid')}</Button
+							disabled={bidAmount < minimumBid}
+							onclick={() =>
+								void submitBid(sale.id, sale.price, sale.currentPrice, sale.minimumBid)}
+							><GavelIcon data-icon="inline-start" />{$_('market.bid')}</Button
 						>
 					</div>
 				</section>

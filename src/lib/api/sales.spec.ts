@@ -47,6 +47,12 @@ describe('market sales', () => {
 		});
 	});
 
+	it('does not send obsolete type or maximum-price filters', async () => {
+		apiRequest.mockResolvedValueOnce({ results: [] });
+		await getMarketListings({ query: 'card' });
+		expect(apiRequest).toHaveBeenCalledWith('/api/sales?page=0&size=100&q=card', undefined);
+	});
+
 	it('creates a sale for one owned card with the exact API payload', async () => {
 		apiRequest.mockResolvedValueOnce({
 			id: 'sale-created',

@@ -38,8 +38,6 @@ export const getCardSales = async (cardId: string, options?: RequestOptions) =>
 export const getMarketListings = async (
 	input: {
 		query?: string;
-		type?: SaleListing['type'];
-		maxPrice?: number;
 		sellerId?: string;
 		bidderId?: string;
 	} = {},
@@ -47,8 +45,6 @@ export const getMarketListings = async (
 ) => {
 	const parameters = new URLSearchParams({ page: '0', size: '100' });
 	if (input.query) parameters.set('q', input.query);
-	if (input.type) parameters.set('type', input.type);
-	if (input.maxPrice) parameters.set('maxPrice', String(input.maxPrice));
 	if (input.sellerId) parameters.set('sellerId', input.sellerId);
 	if (input.bidderId) parameters.set('bidderId', input.bidderId);
 	const response = await apiRequest<WikiForgePage<ApiSale>>(`/api/sales?${parameters}`, options);
