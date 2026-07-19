@@ -16,7 +16,7 @@ vi.mock('./wikiforge', () => ({
 	toCardPage: (page: unknown) => page
 }));
 
-import { getCard, getCards } from './cards';
+import { getCard, getCards, getCardSocialStates } from './cards';
 
 describe('getCards', () => {
 	beforeEach(() => {
@@ -64,5 +64,19 @@ describe('getCards', () => {
 		expect(first).toEqual({ id: 'cache-card-42' });
 		expect(second).toEqual(first);
 		expect(getWikiForgeCard).toHaveBeenCalledOnce();
+	});
+
+	it('posts unique card ids in the social-state request body', async () => {
+		apiRequest.mockResolvedValueOnce([
+			{ cardId: 'card-1', ownedCount: 1, wishlists: [], owners: [] }
+		]);
+
+		const states = await getCardSocialStates(['card-1', 'card-1', 'card-2']);
+
+		expect(apiRequest).toHaveBeenCalledWith('/api/cards/social-states', {
+			method: 'POST',
+			body: { cardIds: ['card-1', 'card-2'] }
+		});
+		expect(states.get('card-1')).toMatchObject({ ownedCount: 1 });
 	});
 });

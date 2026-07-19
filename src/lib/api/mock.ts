@@ -1393,9 +1393,13 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			size: 100
 		});
 	}
-	if (normalizedMethod === 'GET' && pathname === '/cards/social-states') {
+	if (normalizedMethod === 'POST' && pathname === '/cards/social-states') {
+		const input = asObject(body);
+		const cardIds = Array.isArray(input?.cardIds)
+			? input.cardIds.filter((cardId): cardId is string => typeof cardId === 'string').slice(0, 100)
+			: [];
 		return json(
-			url.searchParams.getAll('cardId').flatMap((cardId) => {
+			cardIds.flatMap((cardId) => {
 				const card = mockCards.find((candidate) => candidate.id === cardId);
 				if (!card) return [];
 				const namedLists = (wishlists.get('demo-user') ?? [])

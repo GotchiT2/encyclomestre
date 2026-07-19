@@ -2,6 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { createMockApiResponse } from './mock';
 
 describe('createMockApiResponse', () => {
+	it('reads social-state card ids from a POST body', async () => {
+		const response = createMockApiResponse({
+			path: '/api/cards/social-states',
+			method: 'POST',
+			body: { cardIds: ['girls-generation-1'] }
+		});
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual([
+			expect.objectContaining({ cardId: 'girls-generation-1' })
+		]);
+	});
+
 	it('retourne une réponse HTTP 200 avec le contrat de la carte', async () => {
 		const response = createMockApiResponse({ path: '/cards/girls-generation-1' });
 

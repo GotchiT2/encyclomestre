@@ -94,12 +94,11 @@ interface ApiCardSocialState {
 export const getCardSocialStates = async (cardIds: string[], options?: RequestOptions) => {
 	const uniqueIds = [...new Set(cardIds)].slice(0, 100);
 	if (!uniqueIds.length) return new Map<string, ApiCardSocialState>();
-	const parameters = new URLSearchParams();
-	uniqueIds.forEach((cardId) => parameters.append('cardId', cardId));
-	const states = await apiRequest<ApiCardSocialState[]>(
-		`/api/cards/social-states?${parameters}`,
-		options
-	);
+	const states = await apiRequest<ApiCardSocialState[]>('/api/cards/social-states', {
+		...options,
+		method: 'POST',
+		body: { cardIds: uniqueIds }
+	});
 	return new Map(states.map((state) => [state.cardId, state]));
 };
 
