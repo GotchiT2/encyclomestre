@@ -1,7 +1,7 @@
 import { apiRequest, type RequestOptions } from './client';
-import { getCard } from './cards';
+import { getCard, hydrateCardSocialStates } from './cards';
 import { getUser } from './users';
-import type { SaleBid, SaleListing } from '$lib/types';
+import type { CreateSaleInput, SaleBid, SaleListing } from '$lib/types';
 import { toCardRecord, type WikiForgeCard, type WikiForgePage } from './wikiforge';
 
 interface ApiSale extends Omit<SaleListing, 'cardId' | 'card'> {
@@ -38,8 +38,6 @@ export const getCardSales = async (cardId: string, options?: RequestOptions) =>
 export const getMarketListings = async (
 	input: {
 		query?: string;
-		type?: SaleListing['type'];
-		maxPrice?: number;
 		sellerId?: string;
 		bidderId?: string;
 	} = {},
@@ -47,16 +45,24 @@ export const getMarketListings = async (
 ) => {
 	const parameters = new URLSearchParams({ page: '0', size: '100' });
 	if (input.query) parameters.set('q', input.query);
-	if (input.type) parameters.set('type', input.type);
-	if (input.maxPrice) parameters.set('maxPrice', String(input.maxPrice));
 	if (input.sellerId) parameters.set('sellerId', input.sellerId);
 	if (input.bidderId) parameters.set('bidderId', input.bidderId);
 	const response = await apiRequest<WikiForgePage<ApiSale>>(`/api/sales?${parameters}`, options);
-	return response.results.map(toSale);
+	const sales = response.results.map(toSale);
+	const cards = await hydrateCardSocialStates(
+		sales.flatMap((sale) => (sale.card ? [sale.card] : [])),
+		options
+	);
+	const cardsById = new Map(cards.map((card) => [card.id, card]));
+	return sales.map((sale) => ({ ...sale, card: cardsById.get(sale.cardId) ?? sale.card }));
 };
 
-export const getSale = async (id: string, options?: RequestOptions) =>
-	toSale(await apiRequest<ApiSale>(`/api/sales/${encodeURIComponent(id)}`, options));
+export const getSale = async (id: string, options?: RequestOptions) => {
+	const sale = toSale(await apiRequest<ApiSale>(`/api/sales/${encodeURIComponent(id)}`, options));
+	if (!sale.card) return sale;
+	const [card] = await hydrateCardSocialStates([sale.card], options);
+	return { ...sale, card };
+};
 
 export const getSaleBids = async (id: string, options?: RequestOptions) => {
 	const bids = await apiRequest<ApiBid[]>(`/api/sales/${encodeURIComponent(id)}/bids`, options);
@@ -78,6 +84,25 @@ export const placeBid = async (id: string, amount: number, options?: RequestOpti
 			body: { amount }
 		})
 	);
+
+export const createSale = (input: CreateSaleInput, options?: RequestOptions) =>
+	apiRequest<ApiSale>('/api/sales', {
+		...options,
+		method: 'POST',
+		body: input
+	}).then(toSale);
+
+export const withdrawSale = (id: string, options?: RequestOptions) =>
+	apiRequest<void>(`/api/sales/${encodeURIComponent(id)}`, {
+		...options,
+		method: 'DELETE'
+	});
+
+export const purchaseSale = (id: string, options?: RequestOptions) =>
+	apiRequest<ApiSale>(`/api/sales/${encodeURIComponent(id)}/purchase`, {
+		...options,
+		method: 'POST'
+	}).then(toSale);
 
 export const getSaleFavorites = async (options?: RequestOptions) =>
 	(await apiRequest<ApiSale[]>('/api/users/me/sale-favorites', options)).map(toSale);

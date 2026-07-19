@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import CardTile from '$lib/components/card-tile.svelte';
+	import ContextualCardRail from '$lib/components/cards/contextual-card-rail.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import type { CardRecord, TradeOffer } from '$lib/types';
@@ -66,13 +67,17 @@
 				<div class="flex flex-col gap-5">
 					<section>
 						<h2 class="font-serif text-xl font-black uppercase">{$_('trades.offered')}</h2>
-						<div
-							class="mt-3 grid grid-cols-1 justify-items-center gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3"
+						<ContextualCardRail
+							class="mt-3"
+							items={offeredCards}
+							label={$_('trades.offered')}
+							itemKey={(card) => card.id}
+							desktopGridClass="lg:grid-cols-3 xl:grid-cols-4"
 						>
-							{#each offeredCards as card (card.id)}
+							{#snippet children(card)}
 								<CardTile {card} showFriendOwners={false} />
-							{/each}
-						</div>
+							{/snippet}
+						</ContextualCardRail>
 						{#if missingOfferedCards}
 							<p
 								class="mt-3 border border-destructive/35 bg-destructive/10 p-2 text-sm text-destructive"
@@ -91,13 +96,17 @@
 					</section>
 					<section>
 						<h2 class="font-serif text-xl font-black uppercase">{$_('trades.requested')}</h2>
-						<div
-							class="mt-3 grid grid-cols-1 justify-items-center gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3"
+						<ContextualCardRail
+							class="mt-3"
+							items={requestedCards}
+							label={$_('trades.requested')}
+							itemKey={(card) => card.id}
+							desktopGridClass="lg:grid-cols-3 xl:grid-cols-4"
 						>
-							{#each requestedCards as card (card.id)}
+							{#snippet children(card)}
 								<CardTile {card} showFriendOwners={false} />
-							{/each}
-						</div>
+							{/snippet}
+						</ContextualCardRail>
 						{#if missingRequestedCards}
 							<p
 								class="mt-3 border border-destructive/35 bg-destructive/10 p-2 text-sm text-destructive"

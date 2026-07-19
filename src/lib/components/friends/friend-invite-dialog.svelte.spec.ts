@@ -20,8 +20,8 @@ describe('FriendInviteDialog', () => {
 		const onInvite = vi.fn();
 		render(FriendInviteDialog, {
 			open: true,
-			existingUserIds: [],
 			loadUsers,
+			relationshipFor: () => 'none',
 			onInvite
 		});
 

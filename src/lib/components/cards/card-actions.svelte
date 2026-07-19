@@ -8,19 +8,23 @@
 		wishlists = [],
 		onToggleWishlist,
 		onTrade,
-		onMarket,
-		onSell
+		canSell = false,
+		activeSaleId,
+		onSell,
+		onViewSale
 	}: {
 		card: CardRecord;
 		wishlists?: WishlistRegistrySummary[];
 		onToggleWishlist: (wishlistId: string, selected: boolean) => void | Promise<void>;
 		onTrade: () => void;
-		onMarket: () => void;
+		canSell?: boolean;
+		activeSaleId?: string;
 		onSell: () => void;
+		onViewSale: (saleId: string) => void;
 	} = $props();
 </script>
 
-<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+<div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
 	<WishlistActionMenu
 		cardId={card.catalogueId ?? card.id}
 		{wishlists}
@@ -29,8 +33,12 @@
 	<Button variant="outline" disabled={!card.friendsWhoOwn.length} onclick={onTrade}
 		>{$_('cardDetail.trade')}</Button
 	>
-	<Button variant="outline" onclick={onMarket}>{$_('cardDetail.market')}</Button>
-	{#if card.ownedCount > 0}
+	{#if canSell}
 		<Button variant="outline" onclick={onSell}>{$_('cardDetail.sell')}</Button>
+	{/if}
+	{#if activeSaleId}
+		<Button variant="outline" onclick={() => onViewSale(activeSaleId)}>
+			{$_('cardDetail.view_sale')}
+		</Button>
 	{/if}
 </div>

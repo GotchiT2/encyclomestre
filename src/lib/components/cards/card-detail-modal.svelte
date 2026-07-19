@@ -4,13 +4,17 @@
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardActions from './card-actions.svelte';
 	import CardMarketModal from './card-market-modal.svelte';
+	import SaleListingDialog from '$lib/components/market/sale-listing-dialog.svelte';
 	import CardTagControls from './card-tag-controls.svelte';
+	import CardTradePartnerDialog from './card-trade-partner-dialog.svelte';
 	import CardTelemetry from './card-telemetry.svelte';
 	import FriendOwnerLedger from '$lib/components/social/friend-owner-ledger.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Dialog } from 'bits-ui';
 	import { _ } from '$lib/i18n';
+	import { getVariantCopies } from '$lib/api';
 	import XIcon from '@lucide/svelte/icons/x';
+	import { createModalLayer } from '$lib/components/ui/dialog/modal-layer';
 	import type {
 		CardPriceHistory,
 		CardRecord,
@@ -29,6 +33,7 @@
 		sales,
 		history,
 		onToggleWishlist,
+		onSaleCreated = () => undefined,
 		onClose
 	}: {
 		card: CardRecord;
@@ -39,22 +44,83 @@
 		sales?: SaleListing[];
 		history?: CardPriceHistory;
 		onToggleWishlist: (wishlistId: string, selected: boolean) => void | Promise<void>;
+		onSaleCreated?: (sale: SaleListing, userCardId: string) => void;
 		onClose: () => void;
 	} = $props();
 
+	const detailLayer = createModalLayer(100);
 	let activeTab = $state<'data' | 'social'>('data');
 	let marketOpen = $state(false);
+	let saleDialogOpen = $state(false);
+	let tradePartnerDialogOpen = $state(false);
+	let copies = $state<CardRecord[]>([]);
+	let copiesLoading = $state(false);
+	const availableCopies = $derived(copies.filter((copy) => !copy.activeSale));
+	const activeSale = $derived(copies.find((copy) => copy.activeSale)?.activeSale);
+
+	$effect(() => {
+		const variantId = card.catalogueId ?? card.id;
+		copiesLoading = true;
+		void getVariantCopies(variantId)
+			.then((result) => {
+				copies = result;
+			})
+			.catch(() => {
+				copies = owned ? [card] : [];
+			})
+			.finally(() => {
+				copiesLoading = false;
+			});
+	});
+
+	function viewSale(saleId: string) {
+		onClose();
+		void goto(resolve('/market/[id]', { id: saleId }));
+	}
+
+	function openTrade() {
+		if (card.friendsWhoOwn.length === 1) {
+			startTrade(card.friendsWhoOwn[0]);
+			return;
+		}
+		if (card.friendsWhoOwn.length > 1) tradePartnerDialogOpen = true;
+	}
+
+	function startTrade(owner: CardRecord['friendsWhoOwn'][number]) {
+		const cardId = card.catalogueId ?? card.id;
+		const target = `/trades?partner=${encodeURIComponent(owner.friendId)}&cards=${encodeURIComponent(cardId)}`;
+		onClose();
+		void goto(resolve(target as '/'));
+	}
+
+	function handleSaleCreated(sale: SaleListing, userCardId: string) {
+		const summary = {
+			id: sale.id,
+			type: sale.type,
+			status: sale.status ?? ('active' as const),
+			price: sale.price,
+			currentPrice: sale.currentPrice ?? sale.price,
+			minimumBid: sale.minimumBid ?? Math.ceil(sale.price * 1.1),
+			endsAt: sale.endsAt ?? null
+		};
+		copies = copies.map((copy) =>
+			copy.id === userCardId ? { ...copy, activeSale: summary } : copy
+		);
+		onSaleCreated(sale, userCardId);
+	}
 </script>
 
 <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
 	<Dialog.Portal>
 		<Dialog.Overlay
-			class="fixed inset-0 z-[100] bg-[rgb(1_5_10_/_88%)] backdrop-blur-sm"
+			class="fixed inset-0 bg-[rgb(1_5_10_/_88%)] backdrop-blur-sm"
+			style={`z-index:${detailLayer}`}
 			data-testid="card-detail-overlay"
 		/>
 		<Dialog.Content
 			preventScroll={false}
-			class="fixed inset-2 z-[101] h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-none overflow-hidden border border-primary/35 bg-card p-0 text-foreground shadow-2xl outline-none sm:top-1/2 sm:right-auto sm:bottom-auto sm:left-1/2 sm:h-auto sm:max-h-[calc(100dvh-2.5rem)] sm:w-[calc(100%-2.5rem)] sm:max-w-screen-xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:p-4"
+			class="fixed inset-2 h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-none overflow-hidden border border-primary/35 bg-card p-0 text-foreground shadow-2xl outline-none sm:top-1/2 sm:right-auto sm:bottom-auto sm:left-1/2 sm:h-auto sm:max-h-[calc(100dvh-2.5rem)] sm:w-[calc(100%-2.5rem)] sm:max-w-screen-xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:p-4"
+			style={`z-index:${detailLayer + 1}`}
 			data-testid="card-detail-modal"
 		>
 			<div
@@ -77,8 +143,10 @@
 					<div class="card-detail-preview mx-auto w-fit lg:sticky lg:top-0 lg:self-start">
 						<CardTile
 							{card}
+							stateIndicatorsOffset={10}
 							tags={tags.filter((tag) => (assignments[card.id] ?? []).includes(tag.id))}
-							showFriendOwners={false}
+							showFriendOwners
+							tagDisplay="full"
 						/>
 					</div>
 					<div class="flex min-h-0 min-w-0 flex-col gap-3">
@@ -101,9 +169,11 @@
 								card={{ ...card, ownedCount: owned ? Math.max(1, card.ownedCount) : 0 }}
 								{wishlists}
 								{onToggleWishlist}
-								onTrade={() => undefined}
-								onMarket={() => (marketOpen = true)}
-								onSell={() => goto(resolve('/market'))}
+								onTrade={openTrade}
+								canSell={!copiesLoading && availableCopies.length > 0}
+								activeSaleId={activeSale?.id}
+								onSell={() => (saleDialogOpen = true)}
+								onViewSale={viewSale}
 							/>
 						</div>
 
@@ -172,9 +242,11 @@
 						card={{ ...card, ownedCount: owned ? Math.max(1, card.ownedCount) : 0 }}
 						{wishlists}
 						{onToggleWishlist}
-						onTrade={() => undefined}
-						onMarket={() => (marketOpen = true)}
-						onSell={() => goto(resolve('/market'))}
+						onTrade={openTrade}
+						canSell={!copiesLoading && availableCopies.length > 0}
+						activeSaleId={activeSale?.id}
+						onSell={() => (saleDialogOpen = true)}
+						onViewSale={viewSale}
 					/>
 				</div>
 			</div>
@@ -185,6 +257,13 @@
 {#if marketOpen}
 	<CardMarketModal {card} {history} {sales} onClose={() => (marketOpen = false)} />
 {/if}
+
+<SaleListingDialog bind:open={saleDialogOpen} {copies} onCreated={handleSaleCreated} />
+<CardTradePartnerDialog
+	bind:open={tradePartnerDialogOpen}
+	owners={card.friendsWhoOwn}
+	onSelect={startTrade}
+/>
 
 <style>
 	.card-detail-preview :global(.wikiforge-card-size) {

@@ -4,12 +4,30 @@ import { render } from 'vitest-browser-svelte';
 import '$lib/i18n';
 import '../../../app.css';
 
+const { gotoMock } = vi.hoisted(() => ({ gotoMock: vi.fn() }));
+vi.mock('$app/navigation', () => ({ goto: gotoMock }));
+
 vi.mock('$lib/api', () => ({
 	applyWikiForgeTag: vi.fn(),
 	removeWikiForgeTag: vi.fn(),
 	createWikiForgeTag: vi.fn(),
 	updateWikiForgeTag: vi.fn(),
 	deleteWikiForgeTag: vi.fn(),
+	getVariantCopies: vi.fn(async () => []),
+	createSale: vi.fn(
+		async (input: { userCardId: string; type: 'auction' | 'direct'; price: number }) => ({
+			id: 'sale-created',
+			sellerId: 'demo-user',
+			cardId: 'card-1',
+			userCardId: input.userCardId,
+			price: input.price,
+			currentPrice: input.price,
+			minimumBid: Math.ceil(input.price * 1.1),
+			currency: 'CREDITS',
+			type: input.type,
+			status: 'active'
+		})
+	),
 	getCardPriceHistory: vi.fn(async (cardId: string) => ({
 		cardId,
 		points: [
@@ -42,7 +60,10 @@ const card: CardRecord = {
 };
 
 describe('CardDetailModal', () => {
-	afterEach(async () => page.viewport(1280, 720));
+	afterEach(async () => {
+		gotoMock.mockClear();
+		await page.viewport(1280, 720);
+	});
 
 	it('uses its content height without an internal desktop scrollbar', async () => {
 		await page.viewport(1280, 720);
@@ -96,6 +117,9 @@ describe('CardDetailModal', () => {
 		await expect.element(page.getByRole('tab', { name: 'Données' })).toBeVisible();
 		await page.getByRole('button', { name: 'Marché', exact: true }).click();
 		await expect.element(page.getByTestId('card-market-modal')).toBeVisible();
+		expect(
+			Number(getComputedStyle(page.getByTestId('card-market-modal').element()).zIndex)
+		).toBeGreaterThan(Number(getComputedStyle(modal).zIndex));
 		expect(document.querySelector('[data-testid="card-market-modal"] polyline')).not.toBeNull();
 		document
 			.querySelector<HTMLButtonElement>('[data-testid="card-market-modal"] button[aria-label]')
@@ -110,10 +134,70 @@ describe('CardDetailModal', () => {
 		expect(tabs.getBoundingClientRect().bottom).toBeLessThanOrEqual(
 			actions.getBoundingClientRect().top
 		);
-		expect(actions.querySelectorAll('button')).toHaveLength(3);
+		expect(actions.querySelectorAll('button')).toHaveLength(2);
 		for (const button of actions.querySelectorAll('button')) {
 			expect(button.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
 		}
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+	});
+
+	it('stacks tag management above the card detail and offsets state indicators', async () => {
+		render(CardDetailModal, {
+			card: { ...card, ownedCount: 2 },
+			owned: true,
+			tags: [],
+			assignments: {},
+			onToggleWishlist: vi.fn(),
+			onClose: vi.fn()
+		});
+
+		const indicators = page.getByTestId('card-state-indicators');
+		await expect.element(indicators).toBeVisible();
+		expect(indicators.element().parentElement?.style.top).toContain('10px');
+
+		await page.getByRole('button', { name: 'Gérer les étiquettes' }).click();
+		const tagDialog = page.getByRole('dialog', { name: 'Étiquettes' });
+		await expect.element(tagDialog).toBeVisible();
+		const detail = page.getByTestId('card-detail-modal').element();
+		expect(Number(getComputedStyle(tagDialog.element()).zIndex)).toBeGreaterThan(
+			Number(getComputedStyle(detail).zIndex)
+		);
+		expect(tagDialog.element().contains(document.activeElement)).toBe(true);
+	});
+
+	it('opens a prefilled trade directly for one owner and a selector for several owners', async () => {
+		const oneOwner = { friendId: 'friend-1', username: 'alice', avatarUrl: '', ownedCount: 1 };
+		const onClose = vi.fn();
+		const view = render(CardDetailModal, {
+			card: { ...card, catalogueId: 'variant-1', friendsWhoOwn: [oneOwner] },
+			onToggleWishlist: vi.fn(),
+			onClose
+		});
+
+		await page.getByRole('button', { name: 'Proposer un échange' }).click();
+		expect(onClose).toHaveBeenCalledOnce();
+		expect(gotoMock).toHaveBeenCalledWith('/trades?partner=friend-1&cards=variant-1');
+		view.unmount();
+
+		render(CardDetailModal, {
+			card: {
+				...card,
+				friendsWhoOwn: [
+					oneOwner,
+					{ friendId: 'friend-2', username: 'bob', avatarUrl: '', ownedCount: 3 }
+				]
+			},
+			onToggleWishlist: vi.fn(),
+			onClose: vi.fn()
+		});
+
+		await page.getByRole('button', { name: 'Proposer un échange' }).click();
+		const selector = page.getByTestId('card-trade-partner-dialog');
+		await expect.element(selector).toBeVisible();
+		expect(Number(getComputedStyle(selector.element()).zIndex)).toBeGreaterThan(
+			Number(getComputedStyle(page.getByTestId('card-detail-modal').element()).zIndex)
+		);
+		await expect.element(page.getByRole('button', { name: /@alice/ })).toBeVisible();
+		await expect.element(page.getByRole('button', { name: /@bob/ })).toBeVisible();
 	});
 });

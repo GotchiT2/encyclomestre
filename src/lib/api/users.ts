@@ -5,13 +5,63 @@ import {
 	type WikiForgePage
 } from './wikiforge';
 import type {
+	CardRarity,
 	CardRecord,
+	CardVariant,
 	Friendship,
 	PaginatedResponse,
 	UpdateUserInput,
 	UpdateUserPreferencesInput,
-	User
+	User,
+	UserBlock
 } from '$lib/types';
+import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
+
+export interface UserCollectionPageQuery {
+	query?: string;
+	rarities?: CardRarity[];
+	variant?: CardVariant;
+	sortBy?: 'rarity' | 'name';
+	page?: number;
+	pageSize?: number;
+}
+
+const apiVariantByFilter: Record<CardVariant, 'ALL' | 'NORMAL' | 'FULL_ART'> = {
+	all: 'ALL',
+	normal: 'NORMAL',
+	alternative: 'FULL_ART'
+};
+
+export const getUserCollectionPage = async (
+	id: string,
+	query: UserCollectionPageQuery = {},
+	options?: RequestOptions
+): Promise<PaginatedResponse<CardRecord>> => {
+	const parameters = new URLSearchParams({
+		page: String(Math.max(0, query.page ?? 0)),
+		size: String(Math.min(24, Math.max(1, query.pageSize ?? 12))),
+		sortBy: query.sortBy ?? 'rarity',
+		sortDirection: query.sortBy === 'name' ? 'ASC' : 'DESC',
+		variant: apiVariantByFilter[query.variant ?? 'all']
+	});
+	if (query.query?.trim()) parameters.set('q', query.query.trim());
+	for (const rarity of query.rarities ?? []) {
+		parameters.append('rarity', cardRarityCodeByName[rarity]);
+	}
+	const response = await apiRequest<WikiForgePage<WikiForgeCollectionCard>>(
+		`/api/users/${encodeURIComponent(id)}/collection?${parameters}`,
+		options
+	);
+	return {
+		items: response.results.map(toCollectionCardRecord),
+		meta: {
+			page: response.page + 1,
+			pageSize: response.size,
+			total: response.nbResults,
+			totalPages: Math.max(1, Math.ceil(response.nbResults / Math.max(1, response.size)))
+		}
+	};
+};
 
 export const getCurrentUser = (options?: RequestOptions) =>
 	apiRequest<User>('/api/users/me', options);
@@ -41,6 +91,54 @@ export const getUserCollection = async (
 	return [firstPage, ...remainingPages].flatMap((page) => page.results.map(toCollectionCardRecord));
 };
 
+export const getUserCollectionCopies = async (
+	id: string,
+	variantIds: string[],
+	options?: RequestOptions
+): Promise<CardRecord[]> => {
+	if (!variantIds.length) return [];
+	const parameters = new URLSearchParams();
+	for (const variantId of [...new Set(variantIds)].slice(0, 50)) {
+		parameters.append('variantId', variantId);
+	}
+	return (
+		await apiRequest<WikiForgeCollectionCard[]>(
+			`/api/users/${encodeURIComponent(id)}/collection/copies?${parameters}`,
+			options
+		)
+	).map(toCollectionCardRecord);
+};
+
+export const getUserCollectionCounts = (
+	id: string,
+	variantIds: string[],
+	options?: RequestOptions
+): Promise<Record<string, number>> => {
+	if (!variantIds.length) return Promise.resolve({});
+	const parameters = new URLSearchParams();
+	for (const variantId of [...new Set(variantIds)].slice(0, 50)) {
+		parameters.append('variantId', variantId);
+	}
+	return apiRequest<Record<string, number>>(
+		`/api/users/${encodeURIComponent(id)}/collection/counts?${parameters}`,
+		options
+	);
+};
+
+export const getOwnedCollectionCards = async (
+	userCardIds: string[],
+	options?: RequestOptions
+): Promise<CardRecord[]> => {
+	if (!userCardIds.length) return [];
+	const parameters = new URLSearchParams();
+	for (const userCardId of [...new Set(userCardIds)].slice(0, 50)) {
+		parameters.append('userCardId', userCardId);
+	}
+	return (
+		await apiRequest<WikiForgeCollectionCard[]>(`/api/collection/copies?${parameters}`, options)
+	).map(toCollectionCardRecord);
+};
+
 export const searchUsers = async (
 	query: string,
 	{ page = 0, size = 20 }: { page?: number; size?: number } = {},
@@ -62,7 +160,10 @@ export const searchUsers = async (
 export const getTradePartners = async (
 	_userId?: string,
 	options?: RequestOptions
-): Promise<User[]> => searchUsers('', { size: 100 }, options);
+): Promise<User[]> =>
+	(await getFriends(undefined, options))
+		.filter((friendship) => friendship.status === 'accepted')
+		.map((friendship) => friendship.user);
 
 export const getFriends = (_userId?: string, options?: RequestOptions) =>
 	apiRequest<Friendship[]>('/api/friends', options);
@@ -91,6 +192,21 @@ export const respondToFriendRequest = (
 
 export const removeFriend = (id: string, options?: RequestOptions) =>
 	apiRequest<void>(`/api/friends/${encodeURIComponent(id)}`, {
+		...options,
+		method: 'DELETE'
+	});
+
+export const getUserBlocks = (options?: RequestOptions) =>
+	apiRequest<UserBlock[]>('/api/users/me/blocks', options);
+
+export const blockUser = (id: string, options?: RequestOptions) =>
+	apiRequest<UserBlock>(`/api/users/${encodeURIComponent(id)}/block`, {
+		...options,
+		method: 'PUT'
+	});
+
+export const unblockUser = (id: string, options?: RequestOptions) =>
+	apiRequest<void>(`/api/users/${encodeURIComponent(id)}/block`, {
 		...options,
 		method: 'DELETE'
 	});

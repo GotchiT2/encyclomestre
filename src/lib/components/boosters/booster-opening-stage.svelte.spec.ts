@@ -188,6 +188,25 @@ describe('BoosterOpeningStage', () => {
 		await expect.element(page.getByRole('switch', { name: 'Ouverture rapide' })).toBeChecked();
 	});
 
+	it('opens the mobile quick mode directly on the first recap card', async () => {
+		await page.viewport(390, 844);
+		localStorage.setItem('wikiforge.booster.quick-opening', 'true');
+		render(BoosterOpeningStage, {
+			available: 0,
+			maximum: 1,
+			opening: false,
+			cards: [cards[1], cards[0]],
+			onOpen: vi.fn(),
+			onReset: vi.fn()
+		});
+
+		await expect.element(page.getByText('Toutes les cartes ont été affichées')).toBeVisible();
+		expect(document.querySelectorAll('[data-revealed="true"]')).toHaveLength(cards.length);
+		expect(document.querySelector('[data-slot-index="0"] [data-rarity="C"]')).not.toBeNull();
+		await expect.element(page.getByText('Carte 1 / 2')).toBeVisible();
+		expect(document.body.style.overflow).toBe('hidden');
+	});
+
 	it('keeps the final mobile card visible before showing the recap', async () => {
 		await page.viewport(390, 844);
 		render(BoosterOpeningStage, {
@@ -250,8 +269,12 @@ describe('BoosterOpeningStage', () => {
 		});
 
 		for (const [width, height] of [
+			[320, 568],
+			[360, 800],
 			[390, 844],
+			[430, 932],
 			[768, 1024],
+			[844, 390],
 			[1440, 900]
 		]) {
 			await page.viewport(width, height);

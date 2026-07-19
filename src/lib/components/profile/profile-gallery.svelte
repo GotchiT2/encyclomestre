@@ -1,5 +1,6 @@
 <script lang="ts">
 	import CardTile from '$lib/components/card-tile.svelte';
+	import ContextualCardRail from '$lib/components/cards/contextual-card-rail.svelte';
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
 	import PlusIcon from '@lucide/svelte/icons/plus';
@@ -53,8 +54,13 @@
 					>
 				</div>{/if}
 		</header>{/if}
-	<div class="wikiforge-card-grid">
-		{#each cards as card (card.id)}
+	<ContextualCardRail
+		items={cards}
+		label={gallery.title}
+		itemKey={(card) => card.id}
+		desktopGridClass="lg:grid-cols-3 xl:grid-cols-6"
+	>
+		{#snippet children(card)}
 			<div class="wikiforge-card-size relative">
 				<CardTile {card} showFriendOwners={false} />
 				{#if onRemoveCard}<Button
@@ -65,7 +71,9 @@
 						onclick={() => onRemoveCard?.(card.id)}><XIcon /></Button
 					>{/if}
 			</div>
-		{/each}
+		{/snippet}
+	</ContextualCardRail>
+	<div class="mt-3 flex justify-center">
 		{#if allowCardAdd && cards.length < 6}
 			<Button
 				variant="outline"

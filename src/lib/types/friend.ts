@@ -9,3 +9,15 @@ export interface Friendship {
 	createdAt: string;
 	lastActiveAt: string;
 }
+
+export interface UserBlock {
+	user: User;
+	createdAt: string;
+}
+
+export type PlayerRelationshipStatus = 'friend' | 'pending' | 'blocked' | 'none';
+
+export interface PlayerRelationship {
+	status: PlayerRelationshipStatus;
+	friendshipId?: string;
+}

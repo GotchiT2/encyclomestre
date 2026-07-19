@@ -2,6 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { createMockApiResponse } from './mock';
 
 describe('createMockApiResponse', () => {
+	it('reads social-state card ids from a POST body', async () => {
+		const response = createMockApiResponse({
+			path: '/api/cards/social-states',
+			method: 'POST',
+			body: { cardIds: ['girls-generation-1'] }
+		});
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual([
+			expect.objectContaining({ cardId: 'girls-generation-1' })
+		]);
+	});
+
 	it('retourne une réponse HTTP 200 avec le contrat de la carte', async () => {
 		const response = createMockApiResponse({ path: '/cards/girls-generation-1' });
 
@@ -117,8 +130,8 @@ describe('createMockApiResponse', () => {
 	});
 
 	it('retourne les partenaires d’échange sans l’utilisateur courant', async () => {
-		const response = createMockApiResponse({ path: '/users?excludeId=demo-user' });
-		expect((await response.json()) as { id: string }[]).not.toContainEqual(
+		const response = createMockApiResponse({ path: '/users?excludeCurrent=true' });
+		expect(((await response.json()) as { results: { id: string }[] }).results).not.toContainEqual(
 			expect.objectContaining({ id: 'demo-user' })
 		);
 	});
@@ -215,9 +228,87 @@ describe('createMockApiResponse', () => {
 		]);
 	});
 
+	it('creates a sale for an exact copy and exposes it through collection filters', async () => {
+		const created = createMockApiResponse({
+			path: '/api/sales',
+			method: 'POST',
+			body: {
+				userCardId: 'owned-2ne1-1-2',
+				type: 'auction',
+				price: 10,
+				durationMinutes: 10
+			}
+		});
+		expect(created.status).toBe(201);
+		expect(await created.json()).toMatchObject({
+			userCardId: 'owned-2ne1-1-2',
+			minimumBid: 11,
+			status: 'active'
+		});
+
+		const copies = createMockApiResponse({
+			path: '/api/collection/variants/2ne1-1/copies'
+		});
+		expect(await copies.json()).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					userCardId: 'owned-2ne1-1-2',
+					activeSale: expect.objectContaining({ id: expect.any(String) })
+				})
+			])
+		);
+	});
+
 	it('resolves punctuation-normalized card ids', async () => {
 		const response = createMockApiResponse({ path: '/cards/g-i-dle-2' });
 		expect(response.status).toBe(200);
 		expect(await response.json()).toMatchObject({ id: 'g-i-dle-2' });
+	});
+
+	it('exposes only public friend wishlists with viewer copy ids', async () => {
+		const response = createMockApiResponse({ path: '/api/users/friend-0/wishlists' });
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual([
+			expect.objectContaining({
+				id: 'friend-0-public-wishlist',
+				cards: expect.arrayContaining([
+					expect.objectContaining({
+						viewerOwnedCount: expect.any(Number),
+						viewerUserCardIds: expect.any(Array)
+					})
+				])
+			})
+		]);
+	});
+
+	it('persists user blocks while retaining the friendship record', async () => {
+		const blocked = createMockApiResponse({
+			path: '/api/users/friend-0/block',
+			method: 'PUT'
+		});
+		expect(blocked.status).toBe(200);
+
+		const blocks = createMockApiResponse({ path: '/api/users/me/blocks' });
+		expect(await blocks.json()).toEqual([
+			expect.objectContaining({ user: expect.objectContaining({ id: 'friend-0' }) })
+		]);
+		const friends = createMockApiResponse({ path: '/api/friends' });
+		expect(await friends.json()).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ user: expect.objectContaining({ id: 'friend-0' }) })
+			])
+		);
+		const messages = createMockApiResponse({ path: '/api/messages?userId=demo-user' });
+		expect(await messages.json()).not.toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ participantIds: expect.arrayContaining(['friend-0']) })
+			])
+		);
+
+		const unblocked = createMockApiResponse({
+			path: '/api/users/friend-0/block',
+			method: 'DELETE'
+		});
+		expect(unblocked.status).toBe(204);
 	});
 });

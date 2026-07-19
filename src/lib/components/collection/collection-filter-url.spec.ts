@@ -9,7 +9,8 @@ describe('buildCollectionFilterTarget', () => {
 				sortBy: 'rarity',
 				selectedRarities: [],
 				tagFilterIds: [],
-				variant: 'all'
+				variant: 'all',
+				saleState: 'ALL'
 			})
 		).toBe('/collection');
 	});
@@ -21,10 +22,11 @@ describe('buildCollectionFilterTarget', () => {
 				sortBy: 'name',
 				selectedRarities: ['Rare'],
 				tagFilterIds: ['tag-1', untaggedFilterId],
-				variant: 'alternative'
+				variant: 'alternative',
+				saleState: 'ACTIVE'
 			})
 		).toBe(
-			'/collection?q=test&sortBy=name&rarity=Rare&tag=tag-1&untagged=true&variant=alternative'
+			'/collection?q=test&sortBy=name&rarity=Rare&tag=tag-1&untagged=true&variant=alternative&saleState=ACTIVE'
 		);
 	});
 });

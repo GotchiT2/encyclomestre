@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getWikiForgeCard, getWikiForgeCards, toCardRecord } = vi.hoisted(() => ({
+const { apiRequest, getWikiForgeCard, getWikiForgeCards, toCardRecord } = vi.hoisted(() => ({
+	apiRequest: vi.fn(),
 	getWikiForgeCard: vi.fn(),
 	getWikiForgeCards: vi.fn(),
 	toCardRecord: vi.fn((card: unknown) => card)
 }));
+
+vi.mock('./client', () => ({ apiRequest }));
 
 vi.mock('./wikiforge', () => ({
 	getWikiForgeCards,
@@ -13,13 +16,15 @@ vi.mock('./wikiforge', () => ({
 	toCardPage: (page: unknown) => page
 }));
 
-import { getCard, getCards } from './cards';
+import { getCard, getCards, getCardSocialStates } from './cards';
 
 describe('getCards', () => {
 	beforeEach(() => {
 		getWikiForgeCard.mockReset();
 		getWikiForgeCards.mockReset();
 		toCardRecord.mockClear();
+		apiRequest.mockReset();
+		apiRequest.mockResolvedValue([]);
 	});
 
 	it('forwards pagination, repeated rarities and descending rarity order', async () => {
@@ -59,5 +64,30 @@ describe('getCards', () => {
 		expect(first).toEqual({ id: 'cache-card-42' });
 		expect(second).toEqual(first);
 		expect(getWikiForgeCard).toHaveBeenCalledOnce();
+	});
+
+	it('posts unique card ids in the social-state request body', async () => {
+		apiRequest.mockResolvedValueOnce([
+			{ cardId: 'card-1', ownedCount: 1, wishlists: [], owners: [] }
+		]);
+
+		const states = await getCardSocialStates(['card-1', 'card-1', 'card-2']);
+
+		expect(apiRequest).toHaveBeenCalledWith('/api/cards/social-states', {
+			method: 'POST',
+			body: { cardIds: ['card-1', 'card-2'] }
+		});
+		expect(states.get('card-1')).toMatchObject({ ownedCount: 1 });
+	});
+
+	it('does not request personalized social states without an authenticated session', async () => {
+		const localStorage = { getItem: vi.fn(() => null), removeItem: vi.fn() };
+		vi.stubGlobal('localStorage', localStorage);
+
+		const states = await getCardSocialStates(['card-1']);
+
+		expect(states).toEqual(new Map());
+		expect(apiRequest).not.toHaveBeenCalled();
+		vi.unstubAllGlobals();
 	});
 });

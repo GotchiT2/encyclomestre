@@ -24,8 +24,10 @@
 		CardRarity,
 		CardRecord,
 		CardVariant,
+		ActiveSaleSummary,
 		CollectionTag,
 		CollectionTagAssignments,
+		SaleState,
 		WishlistRegistrySummary
 	} from '$lib/types';
 	import { cardRarityOptions } from '$lib/domain/cards/rarities';
@@ -44,6 +46,7 @@
 	let assignments = $state<CollectionTagAssignments>({});
 	let tagFilterIds = $state<string[]>([]);
 	let variant = $state<CardVariant>('all');
+	let saleState = $state<SaleState>('ALL');
 	let isSelectionMode = $state(false);
 	let selectedCardIds = $state<string[]>([]);
 	let bulkTagId = $state('');
@@ -52,6 +55,7 @@
 	let wishlists = $state<WishlistRegistrySummary[]>([]);
 	let filterTimer: number | undefined;
 	let filtersReady = $state(false);
+	let saleOverrides = $state<Record<string, ActiveSaleSummary>>({});
 
 	onMount(async () => {
 		query = data.filters.query;
@@ -59,6 +63,7 @@
 		selectedRarities = data.filters.selectedRarities;
 		tagFilterIds = data.filters.tagFilterIds;
 		variant = data.filters.variant;
+		saleState = data.filters.saleState;
 		const [collection, apiTags, wishlistRegistries] = await Promise.all([
 			data.collection,
 			data.tags,
@@ -75,7 +80,7 @@
 	});
 
 	$effect(() => {
-		const snapshot = { query, sortBy, selectedRarities, tagFilterIds, variant };
+		const snapshot = { query, sortBy, selectedRarities, tagFilterIds, variant, saleState };
 		if (!filtersReady) return;
 		window.clearTimeout(filterTimer);
 		filterTimer = window.setTimeout(() => {
@@ -135,6 +140,7 @@
 		tagFilterIds = [];
 		sortBy = 'rarity';
 		variant = 'all';
+		saleState = 'ALL';
 	}
 
 	function visibleCards(cards: CardRecord[]) {
@@ -161,7 +167,16 @@
 					return rarityOrder || a.title.localeCompare(b.title, 'fr');
 				}
 				return a.title.localeCompare(b.title, 'fr');
-			});
+			})
+			.map((card) =>
+				saleOverrides[card.id] ? { ...card, activeSale: saleOverrides[card.id] } : card
+			)
+			.filter(
+				(card) =>
+					saleState === 'ALL' ||
+					(saleState === 'ACTIVE' && Boolean(card.activeSale)) ||
+					(saleState === 'AVAILABLE' && !card.activeSale)
+			);
 	}
 </script>
 
@@ -178,6 +193,7 @@
 		bind:selectedRarities
 		bind:tagFilterIds
 		bind:variant
+		bind:saleState
 		{tags}
 		{untaggedOption}
 		onOpenTagEditor={() => (isTagEditorOpen = true)}
@@ -238,6 +254,20 @@
 		bind:assignments
 		onToggleWishlist={(wishlistId, selected) =>
 			void toggleWishlist(wishlistId, selectedCard!, selected)}
+		onSaleCreated={(sale, userCardId) => {
+			const current = selectedCard;
+			const summary: ActiveSaleSummary = {
+				id: sale.id,
+				type: sale.type,
+				status: sale.status ?? 'active',
+				price: sale.price,
+				currentPrice: sale.currentPrice ?? sale.price,
+				minimumBid: sale.minimumBid ?? Math.ceil(sale.price * 1.1),
+				endsAt: sale.endsAt ?? null
+			};
+			saleOverrides = { ...saleOverrides, [userCardId]: summary };
+			if (current?.id === userCardId) selectedCard = { ...current, activeSale: summary };
+		}}
 		onClose={() => (selectedCard = null)}
 	/>
 {/if}

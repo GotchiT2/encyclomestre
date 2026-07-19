@@ -1,7 +1,12 @@
 import type { CardRarity } from '$lib/types';
-import { getWikiForgeCollection, getWikiForgeTags, toCollectionPage } from '$lib/api';
+import {
+	getWikiForgeCollection,
+	getWikiForgeTags,
+	hydrateCardSocialStates,
+	toCollectionPage
+} from '$lib/api';
 import { cardRarityCodeByName, cardRarityOptions } from '$lib/domain/cards/rarities';
-import type { CardVariant } from '$lib/types';
+import type { CardVariant, SaleState } from '$lib/types';
 import type { PageLoad } from './$types';
 
 const validRarities = new Set(cardRarityOptions.map((rarity) => rarity.value));
@@ -20,6 +25,11 @@ export const load: PageLoad = ({ fetch, url }) => {
 			? url.searchParams.get('variant')
 			: 'all'
 	) as CardVariant;
+	const saleState = (
+		['ACTIVE', 'AVAILABLE'].includes(url.searchParams.get('saleState') ?? '')
+			? url.searchParams.get('saleState')
+			: 'ALL'
+	) as SaleState;
 	return {
 		collection: getWikiForgeCollection(
 			{
@@ -30,11 +40,15 @@ export const load: PageLoad = ({ fetch, url }) => {
 				rarities: selectedRarities.map((rarity) => cardRarityCodeByName[rarity]),
 				tagIds: tagFilterIds.filter((id) => id !== '__untagged__'),
 				untagged,
-				variant
+				variant,
+				saleState
 			},
 			{ fetch }
-		).then(toCollectionPage),
+		).then(async (response) => {
+			const page = toCollectionPage(response);
+			return { ...page, items: await hydrateCardSocialStates(page.items, { fetch }) };
+		}),
 		tags: getWikiForgeTags({ fetch }),
-		filters: { query, selectedRarities, tagFilterIds, sortBy, variant }
+		filters: { query, selectedRarities, tagFilterIds, sortBy, variant, saleState }
 	};
 };

@@ -9,6 +9,7 @@
 	import { _ } from '$lib/i18n';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { CardPriceHistory, CardRecord, SaleListing } from '$lib/types';
+	import { createModalLayer } from '$lib/components/ui/dialog/modal-layer';
 
 	let {
 		card,
@@ -21,6 +22,7 @@
 		sales?: SaleListing[];
 		onClose: () => void;
 	} = $props();
+	const layer = createModalLayer();
 
 	const initialData = untrack(() => {
 		const cardId = card.catalogueId ?? card.id;
@@ -65,10 +67,11 @@
 
 <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
 	<Dialog.Portal>
-		<Dialog.Overlay class="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md" />
+		<Dialog.Overlay class="fixed inset-0 bg-black/80 backdrop-blur-md" style={`z-index:${layer}`} />
 		<Dialog.Content
 			preventScroll={false}
-			class="fixed top-1/2 left-1/2 z-[111] flex max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden border border-primary/45 bg-card text-foreground shadow-2xl outline-none sm:max-h-[calc(100dvh-2.5rem)] sm:w-[calc(100%-2.5rem)]"
+			class="fixed top-1/2 left-1/2 flex max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden border border-primary/45 bg-card text-foreground shadow-2xl outline-none sm:max-h-[calc(100dvh-2.5rem)] sm:w-[calc(100%-2.5rem)]"
+			style={`z-index:${layer + 1}`}
 			data-testid="card-market-modal"
 		>
 			<header

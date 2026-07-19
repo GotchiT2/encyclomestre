@@ -31,7 +31,7 @@
 	<div class="wikiforge-card-grid">
 		{#each entries as entry (entry.cardId)}
 			<div class="wikiforge-card-size relative">
-				<CardTile card={entry.card} showFriendOwners={false} {onOpen} />
+				<CardTile card={entry.card} showFriendOwners {onOpen} />
 				<div class="absolute top-2 right-2 z-20 flex gap-1">
 					<Button
 						size="icon-xs"

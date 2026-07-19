@@ -33,7 +33,7 @@
 			<CardTile
 				{card}
 				tags={cardTags(card.id)}
-				showFriendOwners={false}
+				showFriendOwners
 				onOpen={isSelectionMode ? undefined : onOpenCard}
 			/>{#if isSelectionMode}<Button
 					variant="ghost"

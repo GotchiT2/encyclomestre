@@ -5,6 +5,12 @@ export interface FriendOwnerInfo {
 	ownedCount: number;
 }
 
+export interface CardWishlistReference {
+	id: string | null;
+	title: string | null;
+	defaultList: boolean;
+}
+
 export type CardRarity =
 	'Légendaire' | 'Ultra-Rare' | 'Super-Rare' | 'Rare' | 'Peu Commune' | 'Commune';
 export type CardRarityInitials = 'L' | 'UR' | 'SR' | 'R' | 'PC' | 'C';
@@ -29,11 +35,13 @@ export interface Card {
 	ownedCount: number;
 	globalSupply: number;
 	friendsWhoOwn: FriendOwnerInfo[];
+	wishlistMemberships?: CardWishlistReference[];
 	isFullArt?: boolean;
 	category?: string;
 	qScore?: number;
 	acquiredAt?: string;
 	collectionTags?: import('./tag').CollectionTag[];
+	activeSale?: import('./sales').ActiveSaleSummary | null;
 }
 
 export interface CardRecord extends Card {

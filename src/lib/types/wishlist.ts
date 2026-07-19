@@ -34,6 +34,7 @@ export interface WishlistRegistry {
 	userId: string;
 	title: string;
 	description: string;
+	isPublic: boolean;
 	cardIds: string[];
 	cards: import('./card').CardRecord[];
 	createdAt: string;
@@ -42,6 +43,21 @@ export interface WishlistRegistry {
 
 export interface WishlistRegistrySummary extends WishlistRegistry {
 	opportunityCount: number;
+}
+
+export interface PublicWishlistCard {
+	card: import('./card').CardRecord;
+	viewerOwnedCount: number;
+	viewerUserCardIds: string[];
+}
+
+export interface PublicWishlist {
+	id: string;
+	userId: string;
+	title: string;
+	description: string;
+	cards: PublicWishlistCard[];
+	updatedAt: string;
 }
 
 export interface GuildWishlistShare {

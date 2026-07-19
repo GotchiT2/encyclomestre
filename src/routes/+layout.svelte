@@ -21,7 +21,7 @@
 <div class="min-h-screen bg-transparent">
 	<AppNavigation />
 	<main
-		class="forge-scene mx-auto min-h-screen max-w-screen-2xl px-4 pt-26 pb-24 sm:px-6 lg:px-10 lg:pb-12"
+		class="forge-scene mx-auto min-h-screen max-w-screen-2xl px-4 pt-24 pb-20 sm:px-5 lg:px-8 lg:pb-10"
 	>
 		{@render children()}
 	</main>

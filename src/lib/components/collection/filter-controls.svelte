@@ -3,12 +3,13 @@
 	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
 	import CardSearchPanel from '$lib/components/cards/card-search-panel.svelte';
 	import TagFilterSelector from '$lib/components/collection/tag-filter-selector.svelte';
+	import * as ToggleGroup from '$lib/components/ui/toggle-group';
 	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { Button } from '$lib/components/ui/button';
 	import * as Field from '$lib/components/ui/field';
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
-	import type { CardRarity, CardVariant, CollectionTag } from '$lib/types';
+	import type { CardRarity, CardVariant, CollectionTag, SaleState } from '$lib/types';
 
 	type SortBy = 'name' | 'rarity';
 	let {
@@ -17,6 +18,7 @@
 		selectedRarities = $bindable<CardRarity[]>([]),
 		tagFilterIds = $bindable<string[]>([]),
 		variant = $bindable<CardVariant>('all'),
+		saleState = $bindable<SaleState>('ALL'),
 		tags,
 		untaggedOption,
 		allowTagCreation = true,
@@ -28,12 +30,17 @@
 		selectedRarities: CardRarity[];
 		tagFilterIds: string[];
 		variant?: CardVariant;
+		saleState?: SaleState;
 		tags: CollectionTag[];
 		untaggedOption: string;
 		allowTagCreation?: boolean;
 		onOpenTagEditor: () => void;
 		onClear: () => void;
 	} = $props();
+
+	function changeSaleState(value: string | string[]) {
+		if (value === 'ALL' || value === 'ACTIVE' || value === 'AVAILABLE') saleState = value;
+	}
 </script>
 
 <CardSearchPanel class="forge-panel" contentClass="p-4 sm:p-5">
@@ -68,6 +75,28 @@
 
 		<CardVariantSelector bind:value={variant} />
 
+		<Field.FieldSet class="gap-2">
+			<Field.FieldLegend class="forge-label">{$_('collection.sale_state')}</Field.FieldLegend>
+			<ToggleGroup.Root
+				type="single"
+				value={saleState}
+				onValueChange={changeSaleState}
+				variant="outline"
+				spacing={1}
+				class="grid grid-cols-3"
+			>
+				<ToggleGroup.Item value="ALL" class="min-h-11 px-2">
+					{$_('collection.sale_all')}
+				</ToggleGroup.Item>
+				<ToggleGroup.Item value="ACTIVE" class="min-h-11 px-2">
+					{$_('collection.sale_active')}
+				</ToggleGroup.Item>
+				<ToggleGroup.Item value="AVAILABLE" class="min-h-11 px-2">
+					{$_('collection.sale_available')}
+				</ToggleGroup.Item>
+			</ToggleGroup.Root>
+		</Field.FieldSet>
+
 		<Field.Field>
 			<Field.FieldLabel class="forge-label">{$_('collection.tags')}</Field.FieldLabel>
 			<TagFilterSelector
@@ -80,7 +109,7 @@
 		</Field.Field>
 	</Field.FieldGroup>
 
-	{#if query || selectedRarities.length || tagFilterIds.length || sortBy !== 'rarity' || variant !== 'all'}
+	{#if query || selectedRarities.length || tagFilterIds.length || sortBy !== 'rarity' || variant !== 'all' || saleState !== 'ALL'}
 		<Button size="sm" variant="ghost" class="mt-4 w-fit" onclick={onClear}
 			>{$_('collection.clearFilters')}</Button
 		>

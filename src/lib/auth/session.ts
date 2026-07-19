@@ -9,7 +9,12 @@ export function restoreSession(storage: Storage) {
 	if (!rawSession) return null;
 
 	try {
-		return JSON.parse(rawSession) as AuthSession;
+		const session = JSON.parse(rawSession) as Partial<AuthSession>;
+		if (!session.user || typeof session.user.id !== 'string') {
+			storage.removeItem(sessionStorageKey);
+			return null;
+		}
+		return session as AuthSession;
 	} catch {
 		storage.removeItem(sessionStorageKey);
 		return null;

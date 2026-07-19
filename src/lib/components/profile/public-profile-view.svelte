@@ -1,25 +1,43 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-navigation-without-resolve -- the resolved route receives dynamic query parameters */
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import CardGrid from '$lib/components/collection/card-grid.svelte';
+	import ContextualCardRail from '$lib/components/cards/contextual-card-rail.svelte';
 	import FilterControls from '$lib/components/collection/filter-controls.svelte';
 	import CardTile from '$lib/components/card-tile.svelte';
+	import PlayerRelationshipControl from '$lib/components/friends/player-relationship-control.svelte';
 	import ProfileGallery from '$lib/components/profile/profile-gallery.svelte';
 	import RegistrySummary from '$lib/components/profile/registry-summary.svelte';
+	import PublicWishlistList from '$lib/components/profile/public-wishlist-list.svelte';
+	import * as Alert from '$lib/components/ui/alert';
+	import {
+		createFriendRequest,
+		getFriends,
+		getPublicWishlistsState,
+		getUserBlocks
+	} from '$lib/api';
 	import { compareCardsByRarityDesc } from '$lib/domain/cards/rarities';
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
+	import { getPlayerRelationship } from '$lib/domain/friends/relationship';
 	import { _ } from '$lib/i18n';
+	import { onMount } from 'svelte';
 	import type {
 		CardRarity,
 		CardRecord,
 		CardVariant,
 		CollectionTag,
 		CollectionTagAssignments,
+		PlayerRelationshipStatus,
 		ProfileRegistrySummary,
 		ProfileSettings,
+		PublicWishlist,
 		SaleListing,
 		User
 	} from '$lib/types';
+	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
 
-	type ProfileTab = 'showcase' | 'collection';
+	type ProfileTab = 'showcase' | 'wishlists' | 'collection';
 
 	const untaggedOption = '__untagged__';
 	let {
@@ -48,6 +66,31 @@
 	let selectedRarities = $state<CardRarity[]>([]);
 	let tagFilterIds = $state<string[]>([]);
 	let variant = $state<CardVariant>('all');
+	let relationshipStatus = $state<PlayerRelationshipStatus | null>(null);
+	let inviting = $state(false);
+	let publicWishlists = $state<PublicWishlist[]>([]);
+	let publicWishlistsLoading = $state(true);
+	let publicWishlistsUnavailable = $state(false);
+
+	onMount(() => {
+		void Promise.all([loadRelationship(), loadPublicWishlists()]);
+	});
+
+	async function loadRelationship() {
+		try {
+			const [friendships, blocks] = await Promise.all([getFriends(), getUserBlocks()]);
+			relationshipStatus = getPlayerRelationship(user.id, friendships, blocks).status;
+		} catch {
+			relationshipStatus = 'none';
+		}
+	}
+
+	async function loadPublicWishlists() {
+		const result = await getPublicWishlistsState(user.id);
+		publicWishlists = result.items;
+		publicWishlistsUnavailable = result.unavailable;
+		publicWishlistsLoading = false;
+	}
 
 	const cardsById = $derived(new Map(catalogue.map((card) => [card.id, card])));
 	const wantedCards = $derived(
@@ -97,6 +140,23 @@
 	function saleCard(sale: SaleListing) {
 		return cardsById.get(sale.cardId);
 	}
+
+	function offerWishlistCard(userCardId: string) {
+		void goto(
+			`${resolve('/trades')}?partner=${encodeURIComponent(user.id)}&offerCards=${encodeURIComponent(userCardId)}`
+		);
+	}
+
+	async function invitePlayer() {
+		if (relationshipStatus !== 'none' || inviting) return;
+		inviting = true;
+		try {
+			await createFriendRequest('', user.id);
+			relationshipStatus = 'pending';
+		} finally {
+			inviting = false;
+		}
+	}
 </script>
 
 <section
@@ -104,31 +164,38 @@
 	style={`--accent-copper:${settings.accentColor}`}
 >
 	<header class="border-b border-dashed border-primary/30 pb-6">
-		<div class="flex items-center gap-4">
-			{#if user.avatarUrl}
-				<img
-					src={user.avatarUrl}
-					alt=""
-					class="size-16 border-2 border-primary/40 bg-card object-cover"
-				/>
-			{:else}
-				<div
-					class="flex size-16 items-center justify-center border-2 border-primary/40 bg-card font-serif text-3xl font-black text-primary"
-				>
-					{user.username.slice(0, 1).toUpperCase()}
+		<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			<div class="flex min-w-0 items-center gap-4">
+				{#if user.avatarUrl}
+					<img
+						src={user.avatarUrl}
+						alt=""
+						class="size-16 border-2 border-primary/40 bg-card object-cover"
+					/>
+				{:else}
+					<div
+						class="flex size-16 items-center justify-center border-2 border-primary/40 bg-card font-serif text-3xl font-black text-primary"
+					>
+						{user.username.slice(0, 1).toUpperCase()}
+					</div>
+				{/if}
+				<div class="min-w-0">
+					<p class="font-mono text-[10px] uppercase tracking-[0.24em] text-primary">
+						{$_('friends.profile')}
+					</p>
+					<h1
+						class="mt-1 font-serif text-4xl font-black uppercase tracking-tight text-foreground sm:text-5xl"
+					>
+						@{settings.username || user.username}
+					</h1>
+					{#if user.bio}<p class="mt-2 font-serif italic text-muted-foreground">{user.bio}</p>{/if}
 				</div>
-			{/if}
-			<div class="min-w-0">
-				<p class="font-mono text-[10px] uppercase tracking-[0.24em] text-primary">
-					{$_('friends.profile')}
-				</p>
-				<h1
-					class="mt-1 font-serif text-4xl font-black uppercase tracking-tight text-foreground sm:text-5xl"
-				>
-					@{settings.username || user.username}
-				</h1>
-				{#if user.bio}<p class="mt-2 font-serif italic text-muted-foreground">{user.bio}</p>{/if}
 			</div>
+			<PlayerRelationshipControl
+				status={relationshipStatus}
+				busy={inviting}
+				onInvite={invitePlayer}
+			/>
 		</div>
 		{#if settings.bioTags.length}<div class="mt-4 flex flex-wrap gap-2">
 				{#each settings.bioTags as tag (tag)}<span
@@ -139,10 +206,19 @@
 	</header>
 
 	<div
-		class="grid grid-cols-2 border border-primary/30 bg-card p-1"
+		class="grid grid-cols-3 border border-primary/30 bg-card p-1"
 		role="tablist"
 		aria-label={$_('friends.profile_tabs')}
 	>
+		<button
+			class="h-10 font-mono text-[10px] font-bold uppercase tracking-widest {activeTab ===
+			'wishlists'
+				? 'bg-primary text-primary-foreground'
+				: 'text-primary'}"
+			role="tab"
+			aria-selected={activeTab === 'wishlists'}
+			onclick={() => (activeTab = 'wishlists')}>{$_('friends.wishlists_tab')}</button
+		>
 		<button
 			class="h-10 font-mono text-[10px] font-bold uppercase tracking-widest {activeTab ===
 			'showcase'
@@ -191,12 +267,17 @@
 					<h2 class="font-serif text-2xl font-black uppercase tracking-tight text-foreground">
 						{$_('profile.wanted_title')}
 					</h2>
-					{#if wantedCards.length}<div class="wikiforge-card-grid mt-4">
-							{#each wantedCards as card (card.id)}<CardTile
-									{card}
-									showFriendOwners={false}
-								/>{/each}
-						</div>{:else}<p
+					{#if wantedCards.length}<ContextualCardRail
+							class="mt-4"
+							items={wantedCards}
+							label={$_('profile.wanted_title')}
+							itemKey={(card) => card.id}
+							desktopGridClass="lg:grid-cols-4 xl:grid-cols-5"
+						>
+							{#snippet children(card)}
+								<CardTile {card} showFriendOwners={false} />
+							{/snippet}
+						</ContextualCardRail>{:else}<p
 							class="mt-4 border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
 						>
 							{$_('friends.empty_wanted')}
@@ -207,12 +288,16 @@
 					<h2 class="font-serif text-2xl font-black uppercase tracking-tight text-foreground">
 						{$_('profile.sales_title')}
 					</h2>
-					{#if sales.length}<div class="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">
-							{#each sales as sale (sale.id)}
+					{#if sales.length}<ContextualCardRail
+							class="mt-4"
+							items={sales}
+							label={$_('profile.sales_title')}
+							itemKey={(sale) => sale.id}
+							desktopGridClass="lg:grid-cols-3 xl:grid-cols-4"
+						>
+							{#snippet children(sale)}
 								{@const card = saleCard(sale)}
-								{#if card}<article
-										class="w-36 shrink-0 snap-start border border-primary/30 bg-card p-2 sm:w-40"
-									>
+								{#if card}<article class="min-w-0 border border-primary/30 bg-card p-2">
 										<CardTile {card} showFriendOwners={false} />
 										<p class="mt-2 font-mono text-[10px] uppercase tracking-widest text-primary">
 											{sale.price}
@@ -221,8 +306,8 @@
 												: $_('cardDetail.direct_sale')}
 										</p>
 									</article>{/if}
-							{/each}
-						</div>{:else}<p
+							{/snippet}
+						</ContextualCardRail>{:else}<p
 							class="mt-4 border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
 						>
 							{$_('friends.empty_sales')}
@@ -231,6 +316,28 @@
 			</div>
 			<RegistrySummary {summary} />
 		</div>
+	{:else if activeTab === 'wishlists'}
+		{#if publicWishlistsLoading}
+			<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
+				{$_('friends.public_wishlists_loading')}
+			</p>
+		{:else if publicWishlistsUnavailable}
+			<Alert.Root variant="destructive">
+				<CircleAlertIcon />
+				<Alert.Title>{$_('friends.public_wishlists_error_title')}</Alert.Title>
+				<Alert.Description>
+					{$_('friends.public_wishlists_error_description')}
+				</Alert.Description>
+			</Alert.Root>
+		{:else if publicWishlists.length}
+			<PublicWishlistList wishlists={publicWishlists} onTrade={offerWishlistCard} />
+		{:else}
+			<p
+				class="border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
+			>
+				{$_('friends.empty_public_wishlists')}
+			</p>
+		{/if}
 	{:else}
 		<div class="flex flex-col gap-6">
 			<FilterControls

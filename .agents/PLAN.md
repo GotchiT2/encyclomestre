@@ -38,6 +38,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Protéger Collection et profil ; conserver l’URL d’origine dans `redirectTo` — `feat(auth): guard private registry routes`
 - [x] Ajouter la déconnexion et refléter l’état de session dans la navigation — `feat(auth): expose session controls in navigation`
 - [x] Protéger le Codex et le détail de carte — `fix(auth): guard codex routes`
+- [x] Verrouiller toutes les routes applicatives avec une garde globale — `fix(auth): require sessions across the application`
 
 ### 2. Codex et consultation des cartes
 
@@ -242,14 +243,19 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Ouvrir le détail des cartes révélées et ajouter des propagations lumineuses au survol, au focus et au toucher — `feat(boosters): open card details from reveals`
 - [x] Relancer la recharge des boosters, conserver la dernière révélation mobile et fiabiliser le détail responsive — `fix(boosters): refine recharge and mobile experience`
 - [x] Placer le détail au-dessus des menus, confirmer le récapitulatif mobile et rééquilibrer les halos — `fix(boosters): polish mobile reveal interactions`
+- [x] Empiler les modales imbriquées et préremplir les échanges depuis le détail — `fix(cards): stack nested dialogs and prefill trades`
 - [x] Compacter les informations du détail et renforcer la présence visuelle de la carte — `refactor(cards): emphasize card in detail modal`
 - [x] Maintenir les onglets du détail visibles au-dessus des actions sur mobile — `fix(cards): keep detail tabs visible on mobile`
 - [x] Centraliser la vue marché et le graphe de prix dans une modale partagée — `feat(market): centralize card market modal`
 - [x] Adapter les amis et wishlists au mobile, puis reconstruire la messagerie en liste et discussion responsive — `fix(social): rebuild responsive friends and messages`
+- [x] Compacter les interactions, les espacements et le registre d’amis sur tous les écrans — `fix(ui): improve interaction density and friends layout`
+- [x] Séparer les demandes reçues, exposer les relations et stabiliser les profils publics — `fix(friends): surface relationship states and stabilize profiles`
 - [x] Remplacer le registre global des échanges par les flux reçus, envoyés et historiques — `fix(trades): connect split trade ledgers`
 - [x] Afficher les participants et résoudre les cartes d’échange depuis les UUID d’exemplaires — `fix(trades): hydrate participants and traded cards`
 - [x] Verrouiller la modale d’offre, séparer les cartes par propriétaire et masquer les identifiants techniques — `fix(trades): stabilize offer detail modal`
 - [x] Limiter le chargement initial aux offres reçues et différer les autres registres, collections et partenaires jusqu’aux actions utilisateur — `perf(trades): defer collection hydration`
+- [x] Charger les cartes d’échange par filtres et pages limitées — `fix(trades): lazy-load filtered card pages`
+- [x] Afficher la première page de l’onglet d’échange actif — `fix(trades): show initial card page`
 - [x] Charger les cartes détaillées d’une wishlist nommée avec son endpoint hydraté dédié — `perf(wishlist): load registry cards in one request`
 - [x] Charger les deux côtés d’un échange avec l’endpoint hydraté dédié sans parcourir les collections — `perf(trades): load detailed cards in one request`
 - [x] Présenter chaque échange comme une vue bilatérale détaillée avec cartes, crédits, actions et accès direct aux messages — `feat(trades): build bilateral offer summaries`
@@ -260,3 +266,16 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Répartir la brillance foil et renforcer sa progression sur les raretés supérieures — `fix(cards): balance foil brightness`
 - [x] Dockeriser le frontend SvelteKit et fournir la stack Portainer de production — `feat(deploy): add Portainer frontend stack`
 - [x] Ajouter les stacks TrueNAS sans build Portainer et le clonage Git au démarrage — `feat(deploy): add TrueNAS repository stacks`
+
+## 9. Ventes liées aux exemplaires, wishlists publiques et responsive mobile
+
+- [x] Recentrer le marché sur les enchères compactes, les timers et les filtres rétractables — `feat(market): compact auction marketplace`
+- [x] Enrichir les ventes et les cartes avec états finaux, possession, wishlists et propriétaires — `feat(cards): enrich sale and ownership views`
+- [x] Envoyer les identifiants des états sociaux de cartes dans un corps POST validé — `fix(api): post social-state card ids`
+- [x] Éviter les appels d’états sociaux personnalisés sans session authentifiée — `fix(api): skip unauthenticated social states`
+
+- [x] Stabiliser l’ouverture rapide et la scène mobile des boosters, ordonner les révélations de C à L et contenir les illustrations Full Art paysage — `fix(boosters): stabilize mobile opening and full art rendering`
+- [x] Créer et suivre les ventes liées aux exemplaires depuis le détail et la collection — `feat(market): create and track owned card listings`
+- [x] Afficher les wishlists publiques et gérer le blocage des utilisateurs — `feat(social): expose public wishlists and user blocking`
+- [x] Ajouter les rails de cartes contextuels et auditer le reflow mobile — `refactor(ui): add responsive contextual card rails`
+- [x] Comparer les quantités possédées dans les sélecteurs d’échange, clarifier la mise en vente et restaurer le survol complet des cartes — `feat(cards): show cross-collection ownership`

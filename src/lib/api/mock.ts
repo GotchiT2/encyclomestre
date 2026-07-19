@@ -28,6 +28,9 @@ export interface MockApiRequest {
 }
 
 const now = '2026-07-11T09:00:00.000Z';
+const auctionSoon = new Date(Date.now() + 45_000).toISOString();
+const auctionLater = new Date(Date.now() + 3_600_000).toISOString();
+const auctionPast = new Date(Date.now() - 60_000).toISOString();
 const apiCard = (card: CardRecord) => ({
 	id: card.id,
 	baseCardId: card.baseCardId ?? (Number.parseInt(card.id.replace(/\D/g, ''), 10) || 0),
@@ -81,9 +84,14 @@ const sales: SaleListing[] = [
 		id: 'sale-001',
 		sellerId: 'demo-user',
 		cardId: 'girls-generation-1',
+		userCardId: 'owned-girls-generation-1',
 		price: 42.5,
 		currency: 'EUR',
-		type: 'direct'
+		type: 'auction',
+		status: 'active',
+		createdAt: now,
+		endsAt: auctionSoon,
+		closedAt: null
 	},
 	{
 		id: 'sale-002',
@@ -91,15 +99,26 @@ const sales: SaleListing[] = [
 		cardId: 'red-velvet-1',
 		price: 65,
 		currency: 'EUR',
-		type: 'auction'
+		type: 'auction',
+		status: 'cancelled',
+		endsAt: auctionLater,
+		closedAt: now
 	},
 	{
 		id: 'sale-003',
 		sellerId: 'friend-0',
 		cardId: 'girls-generation-2',
 		price: 54,
+		currentPrice: 61,
+		minimumBid: 68,
+		bidCount: 3,
 		currency: 'EUR',
-		type: 'auction'
+		type: 'auction',
+		status: 'sold',
+		buyerId: 'demo-user',
+		buyerName: 'collectionneur-demo',
+		endsAt: auctionPast,
+		closedAt: now
 	},
 	{
 		id: 'sale-004',
@@ -107,9 +126,29 @@ const sales: SaleListing[] = [
 		cardId: 'blackpink-1',
 		price: 39,
 		currency: 'EUR',
-		type: 'direct'
+		type: 'auction',
+		status: 'expired',
+		endsAt: auctionPast,
+		closedAt: now
 	}
 ];
+
+function activeSalePayload(userCardId: string) {
+	const sale = sales.find(
+		(entry) => entry.userCardId === userCardId && (entry.status ?? 'active') === 'active'
+	);
+	return sale
+		? {
+				id: sale.id,
+				type: sale.type,
+				status: sale.status ?? 'active',
+				price: sale.price,
+				currentPrice: sale.currentPrice ?? sale.price,
+				minimumBid: sale.minimumBid ?? Math.ceil(sale.price * 1.1),
+				endsAt: sale.endsAt ?? null
+			}
+		: null;
+}
 const saleBids: SaleBid[] = [
 	{
 		id: 'bid-1',
@@ -166,6 +205,7 @@ const wishlists = new Map<string, WishlistRegistry[]>([
 				userId: 'demo-user',
 				title: 'Cartes prioritaires',
 				description: 'Les cartes à obtenir en priorité.',
+				isPublic: true,
 				cardIds: ['girls-generation-1', 'blackpink-1', 'red-velvet-1'],
 				cards: mockCards.filter((card) =>
 					['girls-generation-1', 'blackpink-1', 'red-velvet-1'].includes(card.id)
@@ -178,6 +218,7 @@ const wishlists = new Map<string, WishlistRegistry[]>([
 				userId: 'demo-user',
 				title: 'Génération 2',
 				description: 'Cartes de la seconde génération.',
+				isPublic: false,
 				cardIds: ['girls-generation-2', '2ne1-1', 'kara-groupe-1'],
 				cards: mockCards.filter((card) =>
 					['girls-generation-2', '2ne1-1', 'kara-groupe-1'].includes(card.id)
@@ -186,8 +227,25 @@ const wishlists = new Map<string, WishlistRegistry[]>([
 				updatedAt: now
 			}
 		]
+	],
+	[
+		'friend-0',
+		[
+			{
+				id: 'friend-0-public-wishlist',
+				userId: 'friend-0',
+				title: 'Cartes recherchées',
+				description: 'Wishlist publique de SoneS9.',
+				isPublic: true,
+				cardIds: ['girls-generation-1', '2ne1-1'],
+				cards: mockCards.filter((card) => ['girls-generation-1', '2ne1-1'].includes(card.id)),
+				createdAt: now,
+				updatedAt: now
+			}
+		]
 	]
 ]);
+const blockedUserIds = new Set<string>();
 const guildWishlistShares: GuildWishlistShare[] = [];
 const conversations: Conversation[] = [
 	{
@@ -539,9 +597,27 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	}
 	if (normalizedMethod === 'GET' && pathname === '/users') {
 		const excludedId = url.searchParams.get('excludeId');
-		return json(
-			[...users.values()].filter((user) => user.id !== excludedId && user.role === 'user')
+		const excludeCurrent = url.searchParams.get('excludeCurrent') === 'true';
+		const query = url.searchParams.get('q')?.trim().toLocaleLowerCase('fr-FR') ?? '';
+		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
+		const size = Math.max(1, Math.min(100, Number(url.searchParams.get('size') ?? 20)));
+		const items = [...users.values()].filter(
+			(user) =>
+				user.role === 'user' &&
+				user.id !== excludedId &&
+				(!excludeCurrent || user.id !== 'demo-user') &&
+				(!query || user.username.toLocaleLowerCase('fr-FR').includes(query))
 		);
+		return json({
+			results: items.slice(page * size, (page + 1) * size),
+			page,
+			nbResults: items.length,
+			size,
+			sortBy: 'name',
+			sortDirection: 'ASC',
+			filters: { excludeCurrent },
+			q: query || null
+		});
 	}
 
 	if (normalizedMethod === 'GET' && pathname === '/cards') {
@@ -573,9 +649,13 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
 		const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get('size') ?? 20)));
 		const variant = url.searchParams.get('variant') ?? 'ALL';
+		const saleState = url.searchParams.get('saleState') ?? 'ALL';
 		const items = mockCards.filter(
 			(card) =>
 				card.ownedCount > 0 &&
+				(saleState === 'ALL' ||
+					(saleState === 'ACTIVE' && Boolean(activeSalePayload(`owned-${card.id}`))) ||
+					(saleState === 'AVAILABLE' && !activeSalePayload(`owned-${card.id}`))) &&
 				(variant === 'ALL' ||
 					(variant === 'FULL_ART' && card.isFullArt) ||
 					(variant === 'NORMAL' && !card.isFullArt))
@@ -586,12 +666,32 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				cardId: card.id,
 				acquiredAt: card.acquiredAt ?? now,
 				tags: card.collectionTags ?? [],
-				card: apiCard(card)
+				card: apiCard(card),
+				activeSale: activeSalePayload(`owned-${card.id}`)
 			})),
 			page,
 			nbResults: items.length,
 			size: pageSize
 		});
+	}
+	const variantCopiesMatch = /^\/collection\/variants\/([^/]+)\/copies$/.exec(pathname);
+	if (normalizedMethod === 'GET' && variantCopiesMatch) {
+		const variantId = decodeURIComponent(variantCopiesMatch[1]);
+		const card = mockCards.find((entry) => entry.id === variantId);
+		if (!card || card.ownedCount < 1) return json([]);
+		return json(
+			Array.from({ length: card.ownedCount }, (_, index) => {
+				const userCardId = index === 0 ? `owned-${card.id}` : `owned-${card.id}-${index + 1}`;
+				return {
+					userCardId,
+					cardId: card.id,
+					acquiredAt: card.acquiredAt ?? now,
+					tags: card.collectionTags ?? [],
+					card: apiCard(card),
+					activeSale: activeSalePayload(userCardId)
+				};
+			})
+		);
 	}
 	if (normalizedMethod === 'GET' && pathname === '/wishlists') {
 		const userId = url.searchParams.get('userId') ?? 'demo-user';
@@ -615,6 +715,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			userId,
 			title,
 			description,
+			isPublic: input?.isPublic === true,
 			cardIds: [],
 			cards: [],
 			createdAt: new Date().toISOString(),
@@ -630,7 +731,11 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const userId = url.searchParams.get('userId') ?? 'demo-user';
 		return json(
 			conversations
-				.filter((conversation) => conversation.participantIds.includes(userId))
+				.filter(
+					(conversation) =>
+						conversation.participantIds.includes(userId) &&
+						!conversation.participantIds.some((id) => blockedUserIds.has(id))
+				)
 				.toSorted((first, second) => second.updatedAt.localeCompare(first.updatedAt))
 		);
 	}
@@ -641,6 +746,8 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const participantId = asObject(body)?.participantId;
 		if (typeof participantId !== 'string' || !users.has(participantId))
 			return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
+		if (blockedUserIds.has(participantId))
+			return error(403, 'Cet utilisateur est bloqué.', 'USER_BLOCKED');
 		const existing = conversations.find(
 			(conversation) =>
 				conversation.kind === 'direct' &&
@@ -725,6 +832,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			id: `desiderata-${Date.now()}`,
 			userId,
 			title: source.title,
+			isPublic: false,
 			cardIds: [...source.cardIds],
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString()
@@ -740,6 +848,15 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const registry = registries.find((entry) => entry.id === decodeURIComponent(encodedId));
 		if (!registry) return error(404, 'Wishlist introuvable.', 'WISHLIST_NOT_FOUND');
 		if (normalizedMethod === 'GET' && !action) return json(apiRegistry(registry));
+		if (normalizedMethod === 'PATCH' && !action) {
+			const input = asObject(body) ?? {};
+			if (typeof input.title === 'string' && input.title.trim())
+				registry.title = input.title.trim();
+			if (typeof input.description === 'string') registry.description = input.description;
+			if (typeof input.isPublic === 'boolean') registry.isPublic = input.isPublic;
+			registry.updatedAt = new Date().toISOString();
+			return json(apiRegistry(registry));
+		}
 		if (normalizedMethod === 'GET' && action === 'cards') return json(registry.cards.map(apiCard));
 		if (normalizedMethod === 'DELETE' && !action) {
 			wishlists.set(
@@ -965,18 +1082,15 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const sellerId = url.searchParams.get('sellerId');
 		const cardId = url.searchParams.get('cardId');
 		const query = url.searchParams.get('q')?.toLocaleLowerCase('fr-FR') ?? '';
-		const type = url.searchParams.get('type');
-		const maxPrice = Number(url.searchParams.get('maxPrice') ?? 0);
 		const bidderId = url.searchParams.get('bidderId');
 		const results = sales
 			.filter(
 				(sale) =>
+					!blockedUserIds.has(sale.sellerId) &&
 					(!sellerId || sale.sellerId === sellerId) &&
 					(!cardId || sale.cardId === cardId) &&
 					(!bidderId ||
 						saleBids.some((bid) => bid.saleId === sale.id && bid.bidderId === bidderId)) &&
-					(!type || sale.type === type) &&
-					(!maxPrice || sale.price <= maxPrice) &&
 					(!query ||
 						mockCards
 							.find((card) => card.id === sale.cardId)
@@ -987,8 +1101,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			.map((sale) => ({
 				...sale,
 				card: apiCard(mockCards.find((card) => card.id === sale.cardId)!),
-				sellerName: users.get(sale.sellerId)?.username ?? sale.sellerId,
-				status: 'active'
+				sellerName: users.get(sale.sellerId)?.username ?? sale.sellerId
 			}));
 		return json({
 			results,
@@ -999,12 +1112,66 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			q: query || null
 		});
 	}
+	if (normalizedMethod === 'POST' && pathname === '/sales') {
+		const input = asObject(body);
+		const userCardId = typeof input?.userCardId === 'string' ? input.userCardId : '';
+		const type = input?.type === 'auction' || input?.type === 'direct' ? input.type : null;
+		const price = Number(input?.price);
+		const durationMinutes = Number(input?.durationMinutes);
+		if (!userCardId || !type || !Number.isInteger(price) || price < 1 || price > 999999)
+			return error(422, 'Paramètres de vente invalides.', 'SALE_INVALID');
+		if (
+			(type === 'auction' && ![1, 10, 60, 180, 360, 720, 1440].includes(durationMinutes)) ||
+			(type === 'direct' && input?.durationMinutes !== undefined)
+		)
+			return error(422, 'Durée de vente invalide.', 'SALE_DURATION_INVALID');
+		if (activeSalePayload(userCardId))
+			return error(409, 'Cet exemplaire est déjà en vente.', 'SALE_ALREADY_ACTIVE');
+		const card = mockCards
+			.toSorted((left, right) => right.id.length - left.id.length)
+			.find(
+				(entry) => userCardId === `owned-${entry.id}` || userCardId.startsWith(`owned-${entry.id}-`)
+			);
+		if (!card) return error(404, 'Exemplaire introuvable.', 'USER_CARD_NOT_FOUND');
+		const cardId = card.id;
+		const createdAt = new Date().toISOString();
+		const sale: SaleListing = {
+			id: `sale-${crypto.randomUUID()}`,
+			sellerId: 'demo-user',
+			sellerName: users.get('demo-user')?.username,
+			cardId,
+			userCardId,
+			card,
+			price,
+			currentPrice: price,
+			minimumBid: Math.ceil(price * 1.1),
+			currency: 'CREDITS',
+			type,
+			bidCount: 0,
+			status: 'active',
+			createdAt,
+			endsAt:
+				type === 'auction' ? new Date(Date.now() + durationMinutes * 60_000).toISOString() : null,
+			closedAt: null
+		};
+		sales.unshift(sale);
+		return json({ ...sale, card: apiCard(card) }, 201);
+	}
 	const saleDetailMatch = /^\/sales\/([^/]+)(?:\/(bids))?$/.exec(pathname);
+	if (saleDetailMatch && normalizedMethod === 'DELETE' && !saleDetailMatch[2]) {
+		const sale = sales.find((entry) => entry.id === decodeURIComponent(saleDetailMatch[1]));
+		if (!sale) return error(404, 'Annonce introuvable.', 'SALE_NOT_FOUND');
+		sale.status = 'cancelled';
+		sale.closedAt = new Date().toISOString();
+		return json(undefined, 204);
+	}
 	if (saleDetailMatch && normalizedMethod === 'POST' && saleDetailMatch[2] === 'bids') {
 		const sale = sales.find((entry) => entry.id === decodeURIComponent(saleDetailMatch[1]));
 		const amount = Number(asObject(body)?.amount ?? 0);
-		if (!sale || amount <= sale.price) return error(422, 'Mise invalide.', 'BID_INVALID');
-		sale.price = amount;
+		if (!sale || amount < (sale.minimumBid ?? Math.ceil((sale.currentPrice ?? sale.price) * 1.1)))
+			return error(422, 'Mise invalide.', 'BID_INVALID');
+		sale.currentPrice = amount;
+		sale.minimumBid = Math.ceil(amount * 1.1);
 		const bid: SaleBid = {
 			id: `bid-${crypto.randomUUID()}`,
 			saleId: sale.id,
@@ -1025,15 +1192,19 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		return json({
 			...sale,
 			card: apiCard(mockCards.find((card) => card.id === sale.cardId)!),
-			sellerName: users.get(sale.sellerId)?.username ?? sale.sellerId,
-			status: 'active'
+			sellerName: users.get(sale.sellerId)?.username ?? sale.sellerId
 		});
 	}
 	const tradePathname = pathname.replace(/^\/api(?=\/trades(?:\/|$))/, '');
 	if (normalizedMethod === 'GET' && tradePathname === '/trades/received') {
 		return json(
 			tradeOffers
-				.filter((offer) => offer.recipientId === 'demo-user' && offer.status === 'pending')
+				.filter(
+					(offer) =>
+						offer.recipientId === 'demo-user' &&
+						offer.status === 'pending' &&
+						!blockedUserIds.has(offer.initiatorId)
+				)
 				.map(apiTradeOffer)
 		);
 	}
@@ -1057,6 +1228,8 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	}
 	if (normalizedMethod === 'POST' && tradePathname === '/trades') {
 		const input = asObject(body);
+		if (typeof input?.recipientId === 'string' && blockedUserIds.has(input.recipientId))
+			return error(403, 'Cet utilisateur est bloqué.', 'USER_BLOCKED');
 		if (
 			!input ||
 			typeof input.recipientId !== 'string' ||
@@ -1113,6 +1286,51 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		offer.updatedAt = new Date().toISOString();
 		return json(apiTradeOffer(offer));
 	}
+	const publicWishlistMatch = /^\/users\/([^/]+)\/wishlists$/.exec(pathname);
+	if (publicWishlistMatch && normalizedMethod === 'GET') {
+		const ownerId = decodeURIComponent(publicWishlistMatch[1]);
+		if (!users.has(ownerId)) return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
+		return json(
+			(wishlists.get(ownerId) ?? [])
+				.filter((registry) => registry.isPublic)
+				.map((registry) => ({
+					id: registry.id,
+					userId: registry.userId,
+					title: registry.title,
+					description: registry.description,
+					cards: registry.cards.map((card) => ({
+						card: apiCard(card),
+						viewerOwnedCount: card.ownedCount,
+						viewerUserCardIds: Array.from({ length: card.ownedCount }, (_, index) =>
+							index === 0 ? `owned-${card.id}` : `owned-${card.id}-${index + 1}`
+						)
+					})),
+					updatedAt: registry.updatedAt
+				}))
+		);
+	}
+	if (normalizedMethod === 'GET' && pathname === '/users/me/blocks') {
+		return json(
+			[...blockedUserIds].flatMap((id) => {
+				const user = users.get(id);
+				return user ? [{ user, createdAt: now }] : [];
+			})
+		);
+	}
+	const userBlockMatch = /^\/users\/([^/]+)\/block$/.exec(pathname);
+	if (userBlockMatch) {
+		const id = decodeURIComponent(userBlockMatch[1]);
+		const user = users.get(id);
+		if (!user) return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
+		if (normalizedMethod === 'PUT') {
+			blockedUserIds.add(id);
+			return json({ user, createdAt: new Date().toISOString() });
+		}
+		if (normalizedMethod === 'DELETE') {
+			blockedUserIds.delete(id);
+			return json(undefined, 204);
+		}
+	}
 	const profileMatch = /^\/users\/([^/]+)\/profile$/.exec(pathname);
 	if (profileMatch) {
 		const id = decodeURIComponent(profileMatch[1]);
@@ -1157,23 +1375,122 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	if (userCollectionMatch && normalizedMethod === 'GET') {
 		const userId = decodeURIComponent(userCollectionMatch[1]);
 		if (!users.has(userId)) return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
-		const cards = mockCards.filter((card) =>
-			userId === 'demo-user'
-				? card.ownedCount > 0
-				: card.friendsWhoOwn.some((friend) => friend.friendId === userId)
-		);
+		const query = (url.searchParams.get('q') ?? '').trim().toLocaleLowerCase('fr-FR');
+		const rarities = url.searchParams.getAll('rarity');
+		const variant = url.searchParams.get('variant') ?? 'ALL';
+		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
+		const size = Math.max(1, Math.min(24, Number(url.searchParams.get('size') ?? 12)));
+		const cards = mockCards
+			.filter((card) =>
+				userId === 'demo-user'
+					? card.ownedCount > 0
+					: card.friendsWhoOwn.some((friend) => friend.friendId === userId)
+			)
+			.filter((card) => !query || card.title.toLocaleLowerCase('fr-FR').includes(query))
+			.filter((card) => !rarities.length || rarities.includes(card.rarityInitials))
+			.filter(
+				(card) => variant === 'ALL' || (variant === 'FULL_ART' ? card.isFullArt : !card.isFullArt)
+			);
+		const results = cards.slice(page * size, (page + 1) * size);
 		return json({
-			results: cards.map((card) => ({
+			results: results.map((card) => ({
 				userCardId: `owned-${userId}-${card.id}`,
 				cardId: card.id,
 				acquiredAt: card.acquiredAt ?? now,
 				tags: card.collectionTags ?? [],
 				card: apiCard(card)
 			})),
-			page: 0,
+			page,
 			nbResults: cards.length,
-			size: 100
+			size
 		});
+	}
+	const userCollectionCopiesMatch = /^\/users\/([^/]+)\/collection\/copies$/.exec(pathname);
+	if (userCollectionCopiesMatch && normalizedMethod === 'GET') {
+		const userId = decodeURIComponent(userCollectionCopiesMatch[1]);
+		const variantIds = new Set(url.searchParams.getAll('variantId'));
+		return json(
+			mockCards
+				.filter(
+					(card) =>
+						variantIds.has(card.id) &&
+						(userId === 'demo-user'
+							? card.ownedCount > 0
+							: card.friendsWhoOwn.some((friend) => friend.friendId === userId))
+				)
+				.map((card) => ({
+					userCardId: `owned-${userId}-${card.id}`,
+					cardId: card.id,
+					acquiredAt: card.acquiredAt ?? now,
+					tags: card.collectionTags ?? [],
+					card: apiCard(card)
+				}))
+		);
+	}
+	const userCollectionCountsMatch = /^\/users\/([^/]+)\/collection\/counts$/.exec(pathname);
+	if (userCollectionCountsMatch && normalizedMethod === 'GET') {
+		const userId = decodeURIComponent(userCollectionCountsMatch[1]);
+		const variantIds = new Set(url.searchParams.getAll('variantId'));
+		return json(
+			Object.fromEntries(
+				mockCards.flatMap((card) => {
+					if (!variantIds.has(card.id)) return [];
+					const count =
+						userId === 'demo-user'
+							? card.ownedCount
+							: (card.friendsWhoOwn.find((friend) => friend.friendId === userId)?.ownedCount ?? 0);
+					return count > 0 ? [[card.id, count]] : [];
+				})
+			)
+		);
+	}
+	if (normalizedMethod === 'GET' && pathname === '/collection/copies') {
+		const userCardIds = new Set(url.searchParams.getAll('userCardId'));
+		return json(
+			mockCards
+				.filter((card) => userCardIds.has(`owned-demo-user-${card.id}`))
+				.map((card) => ({
+					userCardId: `owned-demo-user-${card.id}`,
+					cardId: card.id,
+					acquiredAt: card.acquiredAt ?? now,
+					tags: card.collectionTags ?? [],
+					card: apiCard(card)
+				}))
+		);
+	}
+	if (normalizedMethod === 'POST' && pathname === '/cards/social-states') {
+		const input = asObject(body);
+		const cardIds = Array.isArray(input?.cardIds)
+			? input.cardIds.filter((cardId): cardId is string => typeof cardId === 'string').slice(0, 100)
+			: [];
+		return json(
+			cardIds.flatMap((cardId) => {
+				const card = mockCards.find((candidate) => candidate.id === cardId);
+				if (!card) return [];
+				const namedLists = (wishlists.get('demo-user') ?? [])
+					.filter((registry) => registry.cardIds.includes(cardId))
+					.map((registry) => ({ id: registry.id, title: registry.title, defaultList: false }));
+				const inDefaultList = (wishlist.get('demo-user') ?? []).some(
+					(entry) => entry.cardId === cardId
+				);
+				return [
+					{
+						cardId,
+						ownedCount: card.ownedCount,
+						wishlists: [
+							...namedLists,
+							...(inDefaultList ? [{ id: null, title: null, defaultList: true }] : [])
+						],
+						owners: card.friendsWhoOwn.map((owner) => ({
+							userId: owner.friendId,
+							username: owner.username,
+							avatarUrl: owner.avatarUrl,
+							ownedCount: owner.ownedCount
+						}))
+					}
+				];
+			})
+		);
 	}
 	const cardMatch = /^\/cards\/([^/]+)(?:\/(price-history))?$/.exec(pathname);
 	if (cardMatch && normalizedMethod === 'GET') {
@@ -1211,7 +1528,14 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			if (!friendship) continue;
 			if (normalizedMethod === 'PATCH') {
 				const status = asObject(body)?.status;
-				if (status === 'accepted' || status === 'received') friendship.status = status;
+				if (status === 'rejected') {
+					friendships.set(
+						userId,
+						entries.filter((entry) => entry.id !== id)
+					);
+					return json({ ...friendship, status: 'rejected' });
+				}
+				if (status === 'accepted') friendship.status = status;
 				return json(friendship);
 			}
 			if (normalizedMethod === 'DELETE') {

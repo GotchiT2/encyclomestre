@@ -2,11 +2,18 @@
 	import { resolve } from '$app/paths';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardMarketModal from '$lib/components/cards/card-market-modal.svelte';
+	import AuctionCountdown from '$lib/components/market/auction-countdown.svelte';
 	import { addSaleFavorite, getSaleFavorites, placeBid, removeSaleFavorite } from '$lib/api';
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
+	import {
+		isSaleOpen,
+		minimumAuctionBid,
+		salePricePresentation
+	} from '$lib/domain/market/auction-display';
+	import GavelIcon from '@lucide/svelte/icons/gavel';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -18,12 +25,8 @@
 		favoriteIds = (await getSaleFavorites()).map((sale) => sale.id);
 	});
 
-	function minimumBid(currentBid: number) {
-		return Math.ceil(currentBid * 1.1);
-	}
-
-	function updateBid(value: string, currentBid: number) {
-		const minimum = minimumBid(currentBid);
+	function updateBid(value: string, price: number, currentPrice?: number, minimumBid?: number) {
+		const minimum = minimumAuctionBid(price, currentPrice, minimumBid);
 		bidAmount = Math.max(minimum, Number(value) || minimum);
 	}
 
@@ -37,8 +40,13 @@
 		}
 	}
 
-	async function submitBid(saleId: string, currentBid: number) {
-		await placeBid(saleId, Math.max(bidAmount, minimumBid(currentBid)));
+	async function submitBid(
+		saleId: string,
+		price: number,
+		currentPrice?: number,
+		minimumBid?: number
+	) {
+		await placeBid(saleId, Math.max(bidAmount, minimumAuctionBid(price, currentPrice, minimumBid)));
 		location.reload();
 	}
 </script>
@@ -46,13 +54,16 @@
 {#await Promise.all([data.sale, data.bids, data.card, data.priceHistory])}
 	<p class="font-mono text-[10px] uppercase tracking-widest text-primary">{$_('market.loading')}</p>
 {:then [sale, bids, card, priceHistory]}
+	{@const price = salePricePresentation(sale)}
+	{@const minimumBid = minimumAuctionBid(sale.price, sale.currentPrice, sale.minimumBid)}
+	{@const canBid = isSaleOpen(sale)}
 	<section class="flex flex-col gap-6 pb-12">
 		<a
 			href={resolve('/market')}
 			class="font-mono text-[10px] uppercase tracking-widest text-primary">← {$_('market.back')}</a
 		>
 		<div class="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
-			<CardTile {card} showFriendOwners={false} />
+			<CardTile {card} showFriendOwners />
 			<div class="min-w-0">
 				<div class="flex items-start justify-between gap-3">
 					<div>
@@ -68,47 +79,73 @@
 							aria-label={$_('market.price_history')}
 							onclick={() => (showPrices = true)}>↗</Button
 						><Button
-							size="sm"
+							size="xs"
 							variant={favoriteIds.includes(sale.id) ? 'default' : 'outline'}
+							aria-label={$_('market.favorite')}
 							onclick={() => void toggleFavorite(sale.id)}
-							>{favoriteIds.includes(sale.id) ? '♥' : '♡'} {$_('market.favorite')}</Button
+							>{favoriteIds.includes(sale.id) ? '♥' : '♡'} {$_('market.favorite_short')}</Button
 						>
 					</div>
 				</div>
-				<section class="mt-6 border-4 border-double border-primary/30 bg-card p-4">
+				<section
+					class="mt-6 border-4 border-double bg-card p-4 {sale.status === 'cancelled'
+						? 'border-destructive/55 bg-destructive/5'
+						: 'border-primary/30'}"
+				>
+					<p
+						class="mb-3 inline-flex border border-primary/30 px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-widest {sale.status ===
+						'cancelled'
+							? 'border-destructive/50 text-destructive'
+							: 'text-primary'}"
+					>
+						{$_(`market.status_${sale.status ?? 'active'}`)}
+					</p>
 					<p class="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-						{$_('market.current_bid')}
+						{$_(price.label)}
 					</p>
 					<p class="mt-2 font-mono text-3xl font-black text-primary">
-						{sale.price}
+						{price.amount}
 						{sale.currency}
 					</p>
-					<p class="mt-3 font-serif text-sm">
-						{$_('market.leading_bidder')}
-						{bids[0]?.bidderName ?? $_('market.none')}
-					</p>
-				</section>
-				<section class="mt-4 border border-primary/30 bg-card p-4">
-					<div class="flex justify-between gap-3">
-						<p class="font-serif text-sm">{$_('market.wallet')} <strong>33 714</strong></p>
-						<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-							{$_('market.minimum_bid')}
-							{minimumBid(sale.price)}
+					{#if sale.buyerName}
+						<p class="mt-3 font-serif text-sm">{$_('market.buyer')} @{sale.buyerName}</p>
+					{:else if canBid && bids.length}
+						<p class="mt-3 font-serif text-sm">
+							{$_('market.leading_bidder')}
+							{bids[0]?.bidderName}
 						</p>
-					</div>
-					<div class="mt-3 flex gap-2">
-						<Input
-							value={bidAmount || minimumBid(sale.price)}
-							type="number"
-							min={minimumBid(sale.price)}
-							placeholder={$_('market.bid_amount')}
-							oninput={(event) => updateBid(event.currentTarget.value, sale.price)}
-						/><Button
-							disabled={bidAmount < minimumBid(sale.price)}
-							onclick={() => void submitBid(sale.id, sale.price)}>{$_('market.bid')}</Button
-						>
-					</div>
+					{/if}
+					{#if sale.status !== 'cancelled'}<AuctionCountdown endsAt={sale.endsAt} />{/if}
 				</section>
+				{#if canBid}<section class="mt-4 border border-primary/30 bg-card p-4">
+						<div class="flex justify-between gap-3">
+							<p class="font-serif text-sm">{$_('market.wallet')} <strong>33 714</strong></p>
+							<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
+								{$_('market.minimum_bid')}
+								{minimumBid}
+							</p>
+						</div>
+						<div class="mt-3 flex gap-2">
+							<Input
+								value={bidAmount || minimumBid}
+								type="number"
+								min={minimumBid}
+								placeholder={$_('market.bid_amount')}
+								oninput={(event) =>
+									updateBid(
+										event.currentTarget.value,
+										sale.price,
+										sale.currentPrice,
+										sale.minimumBid
+									)}
+							/><Button
+								disabled={bidAmount < minimumBid}
+								onclick={() =>
+									void submitBid(sale.id, sale.price, sale.currentPrice, sale.minimumBid)}
+								><GavelIcon data-icon="inline-start" />{$_('market.bid')}</Button
+							>
+						</div>
+					</section>{/if}
 			</div>
 		</div>
 		<section>

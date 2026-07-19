@@ -3,6 +3,7 @@ import type {
 	CardRecord,
 	GuildWishlistShare,
 	PaginatedResponse,
+	PublicWishlist,
 	WishlistAlert,
 	WishlistEntry,
 	WishlistPriority,
@@ -11,6 +12,7 @@ import type {
 	WishlistRegistrySummary
 } from '$lib/types';
 import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
+import { hydrateCardSocialStates } from './cards';
 import { toCardRecord, type WikiForgeCard, type WikiForgePage } from './wikiforge';
 
 interface ApiWishlistEntry extends Omit<WishlistEntry, 'cardId' | 'card'> {
@@ -33,6 +35,14 @@ interface ApiWishlistRegistry extends Omit<WishlistRegistry, 'cardIds' | 'cards'
 	shareToken?: string | null;
 }
 
+interface ApiPublicWishlist extends Omit<PublicWishlist, 'cards'> {
+	cards: Array<{
+		card: WikiForgeCard;
+		viewerOwnedCount: number;
+		viewerUserCardIds: string[];
+	}>;
+}
+
 const toEntry = (entry: ApiWishlistEntry): WishlistEntry => ({
 	...entry,
 	cardId: entry.cardId,
@@ -41,6 +51,7 @@ const toEntry = (entry: ApiWishlistEntry): WishlistEntry => ({
 
 const toRegistry = (registry: ApiWishlistRegistry): WishlistRegistrySummary => ({
 	...registry,
+	isPublic: Boolean(registry.isPublic),
 	cardIds: registry.cardIds,
 	cards: (registry.cards ?? []).map(toCardRecord)
 });
@@ -75,8 +86,13 @@ export const getWishlist = async (
 		`/api/wishlist?${parameters}`,
 		options
 	);
+	const items = response.results.map(toEntry);
+	const hydratedCards = await hydrateCardSocialStates(
+		items.map((entry) => entry.card),
+		options
+	);
 	return {
-		items: response.results.map(toEntry),
+		items: items.map((entry, index) => ({ ...entry, card: hydratedCards[index] })),
 		meta: {
 			page: response.page + 1,
 			pageSize: response.size,
@@ -149,14 +165,16 @@ export const getWishlistRegistry = async (
 export const getWishlistRegistryCards = async (
 	id: string,
 	options?: RequestOptions
-): Promise<CardRecord[]> =>
-	(
+): Promise<CardRecord[]> => {
+	const cards = (
 		await apiRequest<WikiForgeCard[]>(`/api/wishlists/${encodeURIComponent(id)}/cards`, options)
 	).map(toCardRecord);
+	return hydrateCardSocialStates(cards, options);
+};
 
 export const createWishlistRegistry = async (
 	_userId: string,
-	input: Pick<WishlistRegistry, 'title' | 'description'>,
+	input: Pick<WishlistRegistry, 'title' | 'description' | 'isPublic'>,
 	options?: RequestOptions
 ) =>
 	toRegistry(
@@ -166,6 +184,47 @@ export const createWishlistRegistry = async (
 			body: input
 		})
 	);
+
+export const updateWishlistRegistry = async (
+	id: string,
+	input: Pick<WishlistRegistry, 'title' | 'description' | 'isPublic'>,
+	options?: RequestOptions
+) =>
+	toRegistry(
+		await apiRequest<ApiWishlistRegistry>(`/api/wishlists/${encodeURIComponent(id)}`, {
+			...options,
+			method: 'PATCH',
+			body: input
+		})
+	);
+
+export const getPublicWishlists = async (
+	userId: string,
+	options?: RequestOptions
+): Promise<PublicWishlist[]> =>
+	(
+		await apiRequest<ApiPublicWishlist[]>(
+			`/api/users/${encodeURIComponent(userId)}/wishlists`,
+			options
+		)
+	).map((wishlist) => ({
+		...wishlist,
+		cards: wishlist.cards.map((entry) => ({
+			...entry,
+			card: toCardRecord(entry.card)
+		}))
+	}));
+
+export const getPublicWishlistsState = async (
+	userId: string,
+	options?: RequestOptions
+): Promise<{ items: PublicWishlist[]; unavailable: boolean }> => {
+	try {
+		return { items: await getPublicWishlists(userId, options), unavailable: false };
+	} catch {
+		return { items: [], unavailable: true };
+	}
+};
 
 export const deleteWishlistRegistry = (id: string, _userId?: string, options?: RequestOptions) =>
 	apiRequest<void>(`/api/wishlists/${encodeURIComponent(id)}`, {

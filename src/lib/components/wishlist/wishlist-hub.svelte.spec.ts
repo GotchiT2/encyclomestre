@@ -11,6 +11,7 @@ const registries: WishlistRegistrySummary[] = [
 		userId: 'user-1',
 		title: 'Première liste',
 		description: '',
+		isPublic: true,
 		cardIds: [],
 		cards: [],
 		createdAt: '',
@@ -22,6 +23,7 @@ const registries: WishlistRegistrySummary[] = [
 		userId: 'user-1',
 		title: 'Deuxième liste',
 		description: '',
+		isPublic: false,
 		cardIds: ['42'],
 		cards: [],
 		createdAt: '',
@@ -38,6 +40,7 @@ describe('WishlistHub', () => {
 			activeId: registries[0].id,
 			onSelect: vi.fn(),
 			onCreate: vi.fn(),
+			onEdit: vi.fn(),
 			onDelete
 		});
 

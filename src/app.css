@@ -120,6 +120,16 @@
 		-webkit-tap-highlight-color: transparent;
 	}
 
+	button:not(:disabled),
+	select:not(:disabled),
+	summary,
+	[role='button']:not([aria-disabled='true']),
+	[role='tab']:not([aria-disabled='true']),
+	label[for],
+	input:is([type='checkbox'], [type='radio']):not(:disabled) {
+		cursor: pointer;
+	}
+
 	input,
 	select,
 	textarea {
@@ -137,11 +147,31 @@
 }
 
 @utility wikiforge-card-grid {
-	@apply grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] justify-items-center gap-x-5 gap-y-8 xl:grid-cols-[repeat(auto-fit,minmax(17rem,1fr))];
+	@apply grid min-w-0 grid-cols-2 justify-items-center gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6;
 }
 
 @utility wikiforge-card-size {
-	@apply w-52 xl:w-[17rem];
+	@apply w-full;
+}
+
+main,
+section,
+article {
+	min-width: 0;
+}
+
+@media (max-width: 639px) {
+	input,
+	select,
+	textarea {
+		font-size: 1rem;
+	}
+
+	[class*='text-[8px]'],
+	[class*='text-[9px]'],
+	[class*='text-[10px]'] {
+		font-size: 0.6875rem;
+	}
 }
 
 @utility forge-panel {

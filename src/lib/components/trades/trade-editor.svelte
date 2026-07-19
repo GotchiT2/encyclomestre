@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
-	import type { CardRecord, CreateTradeOfferInput, User } from '$lib/types';
+	import type {
+		CardRecord,
+		CreateTradeOfferInput,
+		PaginatedResponse,
+		TradeCardSearchQuery,
+		User
+	} from '$lib/types';
 	import TradeCardPanel from './trade-card-panel.svelte';
 	import TradeModal from './trade-modal.svelte';
 
@@ -9,16 +15,24 @@
 		open = $bindable(false),
 		currentUserId,
 		partner,
-		ownedCards,
-		cards,
+		initialOwnedCards = [],
+		initialPartnerCards = [],
+		loadOwnedCards,
+		loadPartnerCards,
+		loadPartnerOwnershipCounts,
+		loadViewerOwnershipCounts,
 		draft = $bindable<Partial<CreateTradeOfferInput>>({}),
 		onSubmit
 	}: {
 		open?: boolean;
 		currentUserId: string;
 		partner: User | null;
-		ownedCards: CardRecord[];
-		cards: CardRecord[];
+		initialOwnedCards?: CardRecord[];
+		initialPartnerCards?: CardRecord[];
+		loadOwnedCards: (query: TradeCardSearchQuery) => Promise<PaginatedResponse<CardRecord>>;
+		loadPartnerCards: (query: TradeCardSearchQuery) => Promise<PaginatedResponse<CardRecord>>;
+		loadPartnerOwnershipCounts: (variantIds: string[]) => Promise<Record<string, number>>;
+		loadViewerOwnershipCounts: (variantIds: string[]) => Promise<Record<string, number>>;
 		draft?: Partial<CreateTradeOfferInput>;
 		onSubmit: (input: CreateTradeOfferInput) => void;
 	} = $props();
@@ -73,19 +87,33 @@
 					>{partner?.displayName || partner?.username}</Button
 				>
 			</nav>
-			<div class="mt-4">
-				{#if activePanel === 'you'}<TradeCardPanel
+			<div class="mt-3">
+				<div class:hidden={activePanel !== 'you'}>
+					<TradeCardPanel
 						title={$_('trades.your_panel')}
-						cards={ownedCards}
+						scopeKey={currentUserId}
+						active={activePanel === 'you'}
+						initialCards={initialOwnedCards}
+						loadCards={loadOwnedCards}
+						loadComparisonCounts={loadPartnerOwnershipCounts}
+						comparisonOwnerName={partner?.displayName || partner?.username}
 						bind:selectedIds={offeredIds}
 						bind:credits={offeredCredits}
-					/>{:else}<TradeCardPanel
+					/>
+				</div>
+				<div class:hidden={activePanel !== 'partner'}>
+					<TradeCardPanel
 						title={$_('trades.partner_panel')}
-						{cards}
-						ownerName={partner?.username}
+						scopeKey={partner?.id ?? 'no-partner'}
+						active={activePanel === 'partner'}
+						initialCards={initialPartnerCards}
+						loadCards={loadPartnerCards}
+						loadComparisonCounts={loadViewerOwnershipCounts}
+						comparisonOwnerIsViewer
 						bind:selectedIds={requestedIds}
 						bind:credits={requestedCredits}
-					/>{/if}
+					/>
+				</div>
 			</div>
 			{#if error}<p
 					class="mt-4 border border-destructive/50 bg-destructive/10 p-3 font-serif italic text-destructive"
