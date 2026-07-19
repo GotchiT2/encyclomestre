@@ -1,4 +1,5 @@
 import { apiRequest, type RequestOptions } from './client';
+import { restoreSession } from '$lib/auth/session';
 import { getWikiForgeCard, getWikiForgeCards, toCardPage, toCardRecord } from './wikiforge';
 import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 import type {
@@ -94,6 +95,9 @@ interface ApiCardSocialState {
 export const getCardSocialStates = async (cardIds: string[], options?: RequestOptions) => {
 	const uniqueIds = [...new Set(cardIds)].slice(0, 100);
 	if (!uniqueIds.length) return new Map<string, ApiCardSocialState>();
+	if (typeof localStorage !== 'undefined' && !restoreSession(localStorage)?.accessToken) {
+		return new Map<string, ApiCardSocialState>();
+	}
 	const states = await apiRequest<ApiCardSocialState[]>('/api/cards/social-states', {
 		...options,
 		method: 'POST',

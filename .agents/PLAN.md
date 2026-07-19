@@ -269,6 +269,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Recentrer le marché sur les enchères compactes, les timers et les filtres rétractables — `feat(market): compact auction marketplace`
 - [x] Enrichir les ventes et les cartes avec états finaux, possession, wishlists et propriétaires — `feat(cards): enrich sale and ownership views`
 - [x] Envoyer les identifiants des états sociaux de cartes dans un corps POST validé — `fix(api): post social-state card ids`
+- [x] Éviter les appels d’états sociaux personnalisés sans session authentifiée — `fix(api): skip unauthenticated social states`
 
 - [x] Stabiliser l’ouverture rapide et la scène mobile des boosters, ordonner les révélations de C à L et contenir les illustrations Full Art paysage — `fix(boosters): stabilize mobile opening and full art rendering`
 - [x] Créer et suivre les ventes liées aux exemplaires depuis le détail et la collection — `feat(market): create and track owned card listings`

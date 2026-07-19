@@ -79,4 +79,15 @@ describe('getCards', () => {
 		});
 		expect(states.get('card-1')).toMatchObject({ ownedCount: 1 });
 	});
+
+	it('does not request personalized social states without an authenticated session', async () => {
+		const localStorage = { getItem: vi.fn(() => null), removeItem: vi.fn() };
+		vi.stubGlobal('localStorage', localStorage);
+
+		const states = await getCardSocialStates(['card-1']);
+
+		expect(states).toEqual(new Map());
+		expect(apiRequest).not.toHaveBeenCalled();
+		vi.unstubAllGlobals();
+	});
 });
