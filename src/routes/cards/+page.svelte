@@ -4,6 +4,7 @@
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardDetailModal from '$lib/components/cards/card-detail-modal.svelte';
 	import CatalogueFilters from '$lib/components/cards/catalogue-filters.svelte';
+	import CatalogueResultSummary from '$lib/components/cards/catalogue-result-summary.svelte';
 	import EmptyState from '$lib/components/layout/empty-state.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -70,6 +71,7 @@
 			{$_('codex.loading')}
 		</p>
 	{:then result}
+		<CatalogueResultSummary total={result.meta.total} rarityResults={result.rarityResults} />
 		{#if result.items.length}
 			<div class="wikiforge-card-grid">
 				{#each result.items as card (card.id)}

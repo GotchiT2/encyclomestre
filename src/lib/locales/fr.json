@@ -123,7 +123,10 @@
 		"ascending": "Croissant",
 		"descending": "Décroissant",
 		"sortDirection": "Ordre",
-		"filtersUpdating": "Mise à jour des résultats…"
+		"filtersUpdating": "Mise à jour des résultats…",
+		"resultsCount": "{count} résultat(s)",
+		"rarityResults": "Répartition des résultats par rareté",
+		"rarityResultsCount": "{rarity} : {count} carte(s)"
 	},
 	"collection": {
 		"eyebrow": "Inventaire personnel",

@@ -39,6 +39,10 @@ export interface PublicPagesRequestOptions {
 	signal?: AbortSignal;
 }
 
+export interface PublicCataloguePage extends PaginatedResponse<CardRecord> {
+	rarityResults: Record<WikiForgePublicPageRarity, number>;
+}
+
 const defaultPublicPagesApiBaseUrl = 'https://api.wikiforge.fr';
 const publicPagesPageSize = 50;
 
@@ -106,9 +110,10 @@ export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecor
 	};
 }
 
-export function toPublicPage(source: WikiForgePublicPagesResponse): PaginatedResponse<CardRecord> {
+export function toPublicPage(source: WikiForgePublicPagesResponse): PublicCataloguePage {
 	return {
 		items: source.results.map(toPublicPageCardRecord),
+		rarityResults: source.rarityResults,
 		meta: {
 			page: source.page + 1,
 			pageSize: publicPagesPageSize,

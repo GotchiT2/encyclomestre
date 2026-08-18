@@ -49,6 +49,7 @@ describe('WikiForge public pages API', () => {
 		});
 
 		expect(page.meta).toEqual({ page: 1, pageSize: 50, total: 51, totalPages: 2 });
+		expect(page.rarityResults).toEqual({ L: 1, UR: 0, SR: 0, R: 0, PC: 0, C: 50 });
 		expect(page.items[0]).toMatchObject({
 			id: '42',
 			title: 'Paris',
