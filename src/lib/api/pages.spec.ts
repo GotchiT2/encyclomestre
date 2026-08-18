@@ -58,6 +58,8 @@ describe('WikiForge public pages API', () => {
 			globalSupply: 3,
 			wikipediaUrl: 'https://fr.wikipedia.org/?curid=42'
 		});
-		expect(page.items[0].imageUrl).toContain('Paris.jpg');
+		expect(page.items[0].imageUrl).toBe(
+			'https://fr.wikipedia.org/wiki/Special:FilePath/Paris.jpg?width=250'
+		);
 	});
 });

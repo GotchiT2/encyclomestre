@@ -97,7 +97,7 @@ export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecor
 		rarityColor: rarity.color,
 		viewCount: card.viewCount,
 		imageUrl: imageName
-			? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(imageName)}?width=600`
+			? `https://fr.wikipedia.org/wiki/Special:FilePath/${encodeURIComponent(imageName)}?width=250`
 			: '/card-placeholder.svg',
 		wikipediaUrl: `https://fr.wikipedia.org/?curid=${card.id}`,
 		attack: card.atk,
