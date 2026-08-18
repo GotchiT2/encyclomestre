@@ -43,6 +43,16 @@
 		restoreSearchFocus = focusSearchInput;
 		debounceTimer = window.setTimeout(() => form.requestSubmit(), delay);
 	}
+
+	function handleTextInput() {
+		if (/\s$/.test(localQuery)) {
+			window.clearTimeout(debounceTimer);
+			pending = false;
+			restoreSearchFocus = false;
+			return;
+		}
+		scheduleSubmit(450, true);
+	}
 </script>
 
 <form bind:this={form} method="GET">
@@ -55,7 +65,7 @@
 					name="q"
 					bind:value={localQuery}
 					placeholder={$_('codex.search')}
-					oninput={() => scheduleSubmit(450, true)}
+					oninput={handleTextInput}
 				/>
 			</label>
 			<label class="grid gap-2">

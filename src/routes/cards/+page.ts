@@ -6,7 +6,7 @@ import type { CardRarity } from '$lib/types';
 const rarities = new Set<CardRarity>(cardRarityOptions.map((rarity) => rarity.value));
 
 export const load: PageLoad = ({ fetch, url }) => {
-	const query = url.searchParams.get('q')?.trim() ?? '';
+	const query = url.searchParams.get('q') ?? '';
 	const selectedRarities = url.searchParams
 		.getAll('rarity')
 		.filter((rarity) => rarities.has(rarity as CardRarity))

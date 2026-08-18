@@ -43,4 +43,24 @@ describe('CatalogueFilters', () => {
 		]);
 		requestSubmit.mockRestore();
 	});
+
+	it('preserves a trailing space without refreshing the results', async () => {
+		const requestSubmit = vi
+			.spyOn(HTMLFormElement.prototype, 'requestSubmit')
+			.mockImplementation(() => undefined);
+		render(CatalogueFilters, {
+			query: 'Nouvelle',
+			sortBy: 'rarity',
+			sortDirection: 'DESC',
+			selectedRarities: []
+		});
+
+		const searchInput = page.getByPlaceholder('Rechercher une carte');
+		await searchInput.fill('Nouvelle ');
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		expect(requestSubmit).not.toHaveBeenCalled();
+		await expect.element(searchInput).toHaveValue('Nouvelle ');
+		requestSubmit.mockRestore();
+	});
 });
