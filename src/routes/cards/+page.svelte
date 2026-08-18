@@ -8,7 +8,13 @@
 	import EmptyState from '$lib/components/layout/empty-state.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { addWishlistRegistryCard, getWishlists, removeWishlistRegistryCard } from '$lib/api';
+	import {
+		addWishlistRegistryCard,
+		getWikiForgePublicPage,
+		getWishlists,
+		removeWishlistRegistryCard,
+		toPublicPageCardRecord
+	} from '$lib/api';
 	import { _ } from '$lib/i18n';
 	import { restoreSession } from '$lib/auth/session';
 	import type { CardRecord, WishlistRegistrySummary } from '$lib/types';
@@ -16,6 +22,7 @@
 
 	let { data }: { data: PageData } = $props();
 	let selectedCard = $state<CardRecord | null>(null);
+	let detailRequest = $state(0);
 	let wishlists = $state<WishlistRegistrySummary[]>([]);
 
 	onMount(async () => {
@@ -24,7 +31,19 @@
 	});
 
 	async function openCard(card: CardRecord) {
+		const request = ++detailRequest;
 		selectedCard = card;
+		try {
+			const detailedCard = toPublicPageCardRecord(await getWikiForgePublicPage(card.id));
+			if (detailRequest === request && selectedCard?.id === card.id) selectedCard = detailedCard;
+		} catch {
+			// The catalogue summary stays usable if the provisional detail endpoint is unavailable.
+		}
+	}
+
+	function closeCard() {
+		detailRequest += 1;
+		selectedCard = null;
 	}
 
 	async function toggleWishlist(wishlistId: string, cardId: string, selected: boolean) {
@@ -105,6 +124,6 @@
 		{wishlists}
 		onToggleWishlist={(wishlistId, selected) =>
 			void toggleWishlist(wishlistId, selectedCard!.id, selected)}
-		onClose={() => (selectedCard = null)}
+		onClose={closeCard}
 	/>
 {/if}
