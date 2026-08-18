@@ -82,6 +82,26 @@ export async function getWikiForgePublicPages(
 	return response.json() as Promise<WikiForgePublicPagesResponse>;
 }
 
+/**
+ * Public card detail source. The API returns the same card shape as an item
+ * from the paginated catalogue, so both views share one display mapping.
+ */
+export async function getWikiForgePublicPage(
+	id: string | number,
+	options: PublicPagesRequestOptions = {}
+): Promise<WikiForgePublicPageCard> {
+	const response = await (options.fetch ?? fetch)(
+		publicPagesApiUrl(`/pages/${encodeURIComponent(String(id))}`),
+		{
+			headers: { accept: 'application/json' },
+			credentials: 'omit',
+			signal: options.signal
+		}
+	);
+	if (!response.ok) throw new Error(`Erreur API carte (${response.status})`);
+	return response.json() as Promise<WikiForgePublicPageCard>;
+}
+
 export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecord {
 	const rarity = cardRarityByCode[card.rarity] ?? cardRarityByCode.C;
 	const imageName = card.image?.trim();

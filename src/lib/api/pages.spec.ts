@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getWikiForgePublicPages, toPublicPage } from './pages';
+import { getWikiForgePublicPage, getWikiForgePublicPages, toPublicPage } from './pages';
 
 describe('WikiForge public pages API', () => {
 	it('uses the public catalogue contract without local authentication', async () => {
@@ -21,6 +21,28 @@ describe('WikiForge public pages API', () => {
 
 		expect(fetcher).toHaveBeenCalledWith(
 			'https://api.wikiforge.fr/pages?page=2&sortBy=name&sortDirection=DESC&q=Paris&rarity=L',
+			expect.objectContaining({ credentials: 'omit' })
+		);
+	});
+
+	it('loads one public card from its dedicated endpoint', async () => {
+		const fetcher = vi.fn(async () =>
+			Response.json({
+				id: 42,
+				title: 'Paris',
+				atk: 120,
+				length: 50,
+				viewCount: 1000,
+				rarity: 'L',
+				createdAt: '2026-08-18T12:00:00Z',
+				globalCount: 3
+			})
+		);
+
+		await getWikiForgePublicPage('42', { fetch: fetcher as typeof fetch });
+
+		expect(fetcher).toHaveBeenCalledWith(
+			'https://api.wikiforge.fr/pages/42',
 			expect.objectContaining({ credentials: 'omit' })
 		);
 	});

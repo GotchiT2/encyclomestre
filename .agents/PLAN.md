@@ -278,6 +278,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Stabiliser le focus de recherche pendant les rafraîchissements du catalogue — `fix(cards): preserve focus during catalogue search`
 - [x] Afficher le volume des résultats et leur répartition par rareté — `feat(cards): show catalogue rarity results`
 - [x] Construire les images du catalogue public avec Special:FilePath — `fix(cards): use Wikipedia file paths`
+- [x] Rétablir le détail de carte public depuis l'API WikiForge — `feat(cards): restore public card detail route`
 
 - [x] Stabiliser l’ouverture rapide et la scène mobile des boosters, ordonner les révélations de C à L et contenir les illustrations Full Art paysage — `fix(boosters): stabilize mobile opening and full art rendering`
 - [x] Créer et suivre les ventes liées aux exemplaires depuis le détail et la collection — `feat(market): create and track owned card listings`
