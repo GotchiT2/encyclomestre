@@ -27,6 +27,7 @@
 	let {
 		card,
 		owned = false,
+		loadVariantCopies = true,
 		wishlists = [],
 		tags = $bindable<CollectionTag[]>([]),
 		assignments = $bindable<CollectionTagAssignments>({}),
@@ -38,6 +39,7 @@
 	}: {
 		card: CardRecord;
 		owned?: boolean;
+		loadVariantCopies?: boolean;
 		wishlists?: WishlistRegistrySummary[];
 		tags?: CollectionTag[];
 		assignments?: CollectionTagAssignments;
@@ -59,6 +61,11 @@
 	const activeSale = $derived(copies.find((copy) => copy.activeSale)?.activeSale);
 
 	$effect(() => {
+		if (!loadVariantCopies) {
+			copies = [];
+			copiesLoading = false;
+			return;
+		}
 		const variantId = card.catalogueId ?? card.id;
 		copiesLoading = true;
 		void getVariantCopies(variantId)

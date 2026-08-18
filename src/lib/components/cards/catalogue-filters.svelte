@@ -1,42 +1,46 @@
 <script lang="ts">
 	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
-	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
 	import CardSearchPanel from '$lib/components/cards/card-search-panel.svelte';
 	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
-	import type { CardRarity, CardVariant } from '$lib/types';
+	import type { CardRarity } from '$lib/types';
 
 	let {
 		query,
 		sortBy,
 		sortDirection,
-		selectedRarities,
-		variant = 'all'
+		selectedRarities
 	}: {
 		query: string;
 		sortBy: string;
 		sortDirection: string;
 		selectedRarities: CardRarity[];
-		variant?: CardVariant;
 	} = $props();
 
 	let form: HTMLFormElement;
+	let searchInput = $state<HTMLInputElement | null>(null);
 	let debounceTimer: number | undefined;
 	let localQuery = $state('');
 	let localRarities = $state<CardRarity[]>([]);
-	let localVariant = $state<CardVariant>('all');
 	let pending = $state(false);
+	let restoreSearchFocus = $state(false);
 
 	$effect(() => {
 		localQuery = query;
 		localRarities = [...selectedRarities];
-		localVariant = variant;
 	});
 
-	function scheduleSubmit(delay = 400) {
+	$effect(() => {
+		if (!restoreSearchFocus || query !== localQuery) return;
+		restoreSearchFocus = false;
+		requestAnimationFrame(() => searchInput?.focus({ preventScroll: true }));
+	});
+
+	function scheduleSubmit(delay = 400, focusSearchInput = false) {
 		window.clearTimeout(debounceTimer);
 		pending = true;
+		restoreSearchFocus = focusSearchInput;
 		debounceTimer = window.setTimeout(() => form.requestSubmit(), delay);
 	}
 </script>
@@ -47,10 +51,11 @@
 			<label class="grid gap-2">
 				<span class="forge-label">{$_('codex.search')}</span>
 				<Input
+					bind:ref={searchInput}
 					name="q"
 					bind:value={localQuery}
 					placeholder={$_('codex.search')}
-					oninput={() => scheduleSubmit(450)}
+					oninput={() => scheduleSubmit(450, true)}
 				/>
 			</label>
 			<label class="grid gap-2">
@@ -76,15 +81,10 @@
 				options={cardRarityOptions}
 				bind:selected={localRarities}
 				name="rarity"
+				multiple={false}
 				onChange={() => scheduleSubmit(80)}
 			/>
 		</fieldset>
-		<CardVariantSelector
-			bind:value={localVariant}
-			name="variant"
-			onChange={() => scheduleSubmit(80)}
-			class="mt-5"
-		/>
 		<p
 			class="mt-3 min-h-4 text-[10px] font-bold tracking-wider text-[var(--energy-soft)] uppercase"
 			aria-live="polite"

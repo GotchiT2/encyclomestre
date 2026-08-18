@@ -7,14 +7,9 @@
 	import EmptyState from '$lib/components/layout/empty-state.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import {
-		addWishlistRegistryCard,
-		getWikiForgeCard,
-		getWishlists,
-		removeWishlistRegistryCard,
-		toCardRecord
-	} from '$lib/api';
+	import { addWishlistRegistryCard, getWishlists, removeWishlistRegistryCard } from '$lib/api';
 	import { _ } from '$lib/i18n';
+	import { restoreSession } from '$lib/auth/session';
 	import type { CardRecord, WishlistRegistrySummary } from '$lib/types';
 	import type { PageData } from './$types';
 
@@ -23,16 +18,12 @@
 	let wishlists = $state<WishlistRegistrySummary[]>([]);
 
 	onMount(async () => {
+		if (!restoreSession(localStorage)?.accessToken) return;
 		wishlists = await getWishlists();
 	});
 
 	async function openCard(card: CardRecord) {
 		selectedCard = card;
-		try {
-			selectedCard = { ...toCardRecord(await getWikiForgeCard(card.id)), ...card };
-		} catch {
-			selectedCard = card;
-		}
 	}
 
 	async function toggleWishlist(wishlistId: string, cardId: string, selected: boolean) {
@@ -58,7 +49,6 @@
 			sortDirection: data.filters.sortDirection
 		});
 		data.filters.selectedRarities.forEach((rarity) => parameters.append('rarity', rarity));
-		parameters.set('variant', data.filters.variant);
 		return `/cards?${parameters}`;
 	}
 </script>
@@ -74,7 +64,6 @@
 		sortBy={data.filters.sortBy}
 		sortDirection={data.filters.sortDirection}
 		selectedRarities={data.filters.selectedRarities}
-		variant={data.filters.variant}
 	/>
 	{#await data.cards}
 		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
@@ -110,6 +99,7 @@
 {#if selectedCard}
 	<CardDetailModal
 		card={selectedCard}
+		loadVariantCopies={false}
 		{wishlists}
 		onToggleWishlist={(wishlistId, selected) =>
 			void toggleWishlist(wishlistId, selectedCard!.id, selected)}

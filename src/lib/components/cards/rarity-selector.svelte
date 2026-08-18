@@ -8,18 +8,22 @@
 		options,
 		selected = $bindable<CardRarity[]>([]),
 		name,
+		multiple = true,
 		onChange
 	}: {
 		options: RarityOption[];
 		selected: CardRarity[];
 		name?: string;
+		multiple?: boolean;
 		onChange?: () => void;
 	} = $props();
 
 	function toggle(value: CardRarity) {
 		selected = selected.includes(value)
 			? selected.filter((rarity) => rarity !== value)
-			: [...selected, value];
+			: multiple
+				? [...selected, value]
+				: [value];
 		onChange?.();
 	}
 </script>

@@ -4,7 +4,10 @@ import { render } from 'vitest-browser-svelte';
 import '$lib/i18n';
 import '../../../app.css';
 
-const { gotoMock } = vi.hoisted(() => ({ gotoMock: vi.fn() }));
+const { gotoMock, getVariantCopiesMock } = vi.hoisted(() => ({
+	gotoMock: vi.fn(),
+	getVariantCopiesMock: vi.fn(async () => [])
+}));
 vi.mock('$app/navigation', () => ({ goto: gotoMock }));
 
 vi.mock('$lib/api', () => ({
@@ -13,7 +16,7 @@ vi.mock('$lib/api', () => ({
 	createWikiForgeTag: vi.fn(),
 	updateWikiForgeTag: vi.fn(),
 	deleteWikiForgeTag: vi.fn(),
-	getVariantCopies: vi.fn(async () => []),
+	getVariantCopies: getVariantCopiesMock,
 	createSale: vi.fn(
 		async (input: { userCardId: string; type: 'auction' | 'direct'; price: number }) => ({
 			id: 'sale-created',
@@ -62,7 +65,20 @@ const card: CardRecord = {
 describe('CardDetailModal', () => {
 	afterEach(async () => {
 		gotoMock.mockClear();
+		getVariantCopiesMock.mockClear();
 		await page.viewport(1280, 720);
+	});
+
+	it('does not load local collection copies for a public catalogue card', async () => {
+		render(CardDetailModal, {
+			card,
+			loadVariantCopies: false,
+			onToggleWishlist: vi.fn(),
+			onClose: vi.fn()
+		});
+
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(getVariantCopiesMock).not.toHaveBeenCalled();
 	});
 
 	it('uses its content height without an internal desktop scrollbar', async () => {
