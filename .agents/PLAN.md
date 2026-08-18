@@ -275,6 +275,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Éviter les appels d’états sociaux personnalisés sans session authentifiée — `fix(api): skip unauthenticated social states`
 - [x] Brancher la recherche globale sur le catalogue public et préserver le focus de saisie — `feat(cards): use public page catalogue search`
 - [x] Préserver les espaces de saisie avant de relancer la recherche globale — `fix(cards): preserve search whitespace`
+- [x] Stabiliser le focus de recherche pendant les rafraîchissements du catalogue — `fix(cards): preserve focus during catalogue search`
 
 - [x] Stabiliser l’ouverture rapide et la scène mobile des boosters, ordonner les révélations de C à L et contenir les illustrations Full Art paysage — `fix(boosters): stabilize mobile opening and full art rendering`
 - [x] Créer et suivre les ventes liées aux exemplaires depuis le détail et la collection — `feat(market): create and track owned card listings`

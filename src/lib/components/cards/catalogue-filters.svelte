@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
 	import CardSearchPanel from '$lib/components/cards/card-search-panel.svelte';
 	import { cardRarityOptions } from '$lib/domain/cards/rarities';
@@ -51,11 +54,27 @@
 			restoreSearchFocus = false;
 			return;
 		}
-		scheduleSubmit(450, true);
+		scheduleSubmit(650, true);
+	}
+
+	async function submitFilters(event: SubmitEvent) {
+		event.preventDefault();
+		const parameters = new SvelteURLSearchParams();
+		for (const [key, value] of new FormData(form)) {
+			if (typeof value === 'string') parameters.append(key, value);
+		}
+		// The route itself is resolved; the form values provide its query string.
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		await goto(`${resolve('/cards')}?${parameters}`, {
+			keepFocus: true,
+			noScroll: true,
+			replaceState: true
+		});
+		pending = false;
 	}
 </script>
 
-<form bind:this={form} method="GET">
+<form bind:this={form} method="GET" onsubmit={submitFilters}>
 	<CardSearchPanel class="forge-panel" contentClass="p-4 sm:p-5">
 		<div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem_12rem]">
 			<label class="grid gap-2">

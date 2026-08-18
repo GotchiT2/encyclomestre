@@ -1,10 +1,16 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import '$lib/i18n';
+
+const { gotoMock } = vi.hoisted(() => ({ gotoMock: vi.fn() }));
+vi.mock('$app/navigation', () => ({ goto: gotoMock }));
+
 import CatalogueFilters from './catalogue-filters.svelte';
 
 describe('CatalogueFilters', () => {
+	afterEach(() => gotoMock.mockReset());
+
 	it('applies text filters after a short debounce without a submit button', async () => {
 		const requestSubmit = vi
 			.spyOn(HTMLFormElement.prototype, 'requestSubmit')
@@ -19,7 +25,7 @@ describe('CatalogueFilters', () => {
 		const searchInput = page.getByPlaceholder('Rechercher une carte');
 		await searchInput.fill('Mars');
 		expect(requestSubmit).not.toHaveBeenCalled();
-		await new Promise((resolve) => setTimeout(resolve, 500));
+		await new Promise((resolve) => setTimeout(resolve, 700));
 		expect(requestSubmit).toHaveBeenCalledOnce();
 		await result.rerender({
 			query: 'Mars',
@@ -42,6 +48,27 @@ describe('CatalogueFilters', () => {
 			'LLégendaire'
 		]);
 		requestSubmit.mockRestore();
+	});
+
+	it('navigates without releasing focus when filters are submitted', async () => {
+		render(CatalogueFilters, {
+			query: 'Mars',
+			sortBy: 'rarity',
+			sortDirection: 'DESC',
+			selectedRarities: []
+		});
+
+		const searchInput = page.getByPlaceholder('Rechercher une carte');
+		await searchInput.click();
+		document.querySelector<HTMLFormElement>('form')?.requestSubmit();
+
+		await vi.waitFor(() =>
+			expect(gotoMock).toHaveBeenCalledWith(
+				expect.stringContaining('?q=Mars&sortBy=rarity&sortDirection=DESC'),
+				expect.objectContaining({ keepFocus: true, noScroll: true, replaceState: true })
+			)
+		);
+		expect(document.activeElement).toBe(await searchInput.element());
 	});
 
 	it('preserves a trailing space without refreshing the results', async () => {
