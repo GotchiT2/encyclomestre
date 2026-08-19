@@ -1,12 +1,12 @@
 import type { User } from './user';
 
 export interface LoginInput {
-	email: string;
+	username: string;
 	password: string;
 }
 
 export interface AuthSession {
-	accessToken?: string;
-	refreshToken?: string;
+	access_token?: string;
+	refresh_token?: string;
 	user: User;
 }

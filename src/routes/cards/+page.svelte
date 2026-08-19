@@ -26,7 +26,7 @@
 	let wishlists = $state<WishlistRegistrySummary[]>([]);
 
 	onMount(async () => {
-		if (!restoreSession(localStorage)?.accessToken) return;
+		if (!restoreSession(localStorage)?.access_token) return;
 		wishlists = await getWishlists();
 	});
 

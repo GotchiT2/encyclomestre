@@ -20,7 +20,7 @@
 		error = undefined;
 		isSubmitting = true;
 		try {
-			const session = await register({ email, password });
+			const session = await register({ username: email, password });
 			persistSession(localStorage, session);
 			const user = await updateUser(session.user.id, { username, displayName: username });
 			persistSession(localStorage, { ...session, user });

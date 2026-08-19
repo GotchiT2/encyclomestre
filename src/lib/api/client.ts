@@ -21,7 +21,7 @@ export class ApiError extends Error {
 }
 
 function apiUrl(path: string): string {
-	const baseUrl = (env.PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
+	const baseUrl = (env.PUBLIC_CARDS_API_BASE_URL ?? '').replace(/\/$/, '');
 	return baseUrl ? `${baseUrl}${path}` : path;
 }
 
@@ -43,14 +43,14 @@ async function refreshSession(fetcher: Fetcher): Promise<boolean> {
 
 	refreshSessionPromise = (async () => {
 		const session = restoreSession(localStorage);
-		if (!session?.refreshToken) return false;
+		if (!session?.refresh_token) return false;
 
 		try {
 			const response = await fetcher(apiUrl('/api/auth/refresh'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { accept: 'application/json', 'content-type': 'application/json' },
-				body: JSON.stringify({ refreshToken: session.refreshToken })
+				body: JSON.stringify({ refreshToken: session.refresh_token })
 			});
 			if (!response.ok) return false;
 
@@ -82,7 +82,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 async function request<T>(path: string, options: RequestOptions, didRefresh: boolean): Promise<T> {
 	const { body, fetch: fetcher = fetch, headers, ...init } = options;
 	const session = typeof localStorage === 'undefined' ? null : restoreSession(localStorage);
-	const accessToken = session?.accessToken;
+	const accessToken = session?.access_token;
 	const response = isMockApiEnabled()
 		? await (async () => {
 				const delay = mockDelay();
@@ -94,10 +94,14 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 				headers: {
 					accept: 'application/json',
 					...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
-					...(body === undefined ? {} : { 'content-type': 'application/json' }),
+					...(body === undefined
+						? {}
+						: body instanceof URLSearchParams
+							? { 'content-type': 'application/x-www-form-urlencoded' }
+							: { 'content-type': 'application/json' }),
 					...headers
 				},
-				body: body === undefined ? undefined : JSON.stringify(body),
+				body: body === undefined ? undefined : body instanceof URLSearchParams ? body : JSON.stringify(body),
 				...init
 			});
 
@@ -111,7 +115,7 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 	if (canRefresh) {
 		const currentSession = restoreSession(localStorage);
 		const tokenWasAlreadyRenewed =
-			Boolean(accessToken) && currentSession?.accessToken !== accessToken;
+			Boolean(accessToken) && currentSession?.access_token !== accessToken;
 		const refreshed = tokenWasAlreadyRenewed || (await refreshSession(fetcher));
 		if (refreshed) return request<T>(path, options, true);
 

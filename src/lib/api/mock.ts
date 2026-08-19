@@ -516,8 +516,8 @@ function makeUser(input: CreateUserInput): User {
 
 function session(user: User): AuthSession {
 	return {
-		accessToken: `mock-access-token-${user.id}`,
-		refreshToken: `mock-refresh-token-${user.id}`,
+		access_token: `mock-access-token-${user.id}`,
+		refresh_token: `mock-refresh-token-${user.id}`,
 		user
 	};
 }

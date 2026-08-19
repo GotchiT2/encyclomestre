@@ -21,7 +21,7 @@
 		error = undefined;
 		isSubmitting = true;
 		try {
-			const session = await login({ email, password });
+			const session = await login({ username: email, password });
 			persistSession(localStorage, session);
 			await goto(resolve(getSafeRedirectTarget(page.url.searchParams.get('redirectTo')) as '/'));
 		} catch (cause) {

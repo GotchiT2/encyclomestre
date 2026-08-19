@@ -35,7 +35,7 @@ describe('apiRequest authentication recovery', () => {
 
 	beforeEach(() => {
 		storage = createStorage();
-		persistSession(storage, { accessToken: 'expired', refreshToken: 'refresh', user });
+		persistSession(storage, { access_token: 'expired', refresh_token: 'refresh', user });
 		vi.stubGlobal('localStorage', storage);
 	});
 
@@ -63,8 +63,8 @@ describe('apiRequest authentication recovery', () => {
 
 		expect(responses).toEqual([{ ok: true }, { ok: true }]);
 		expect(refreshCalls).toBe(1);
-		expect(restoreSession(storage)?.accessToken).toBe('renewed');
-		expect(restoreSession(storage)?.refreshToken).toBe('rotated');
+		expect(restoreSession(storage)?.access_token).toBe('renewed');
+		expect(restoreSession(storage)?.refresh_token).toBe('rotated');
 	});
 
 	it('supprime la session lorsque le renouvellement est refusé', async () => {
