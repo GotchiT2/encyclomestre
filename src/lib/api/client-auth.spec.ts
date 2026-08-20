@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('$env/dynamic/public', () => ({
-	env: { PUBLIC_API_MOCK_ENABLED: 'false', PUBLIC_API_BASE_URL: 'http://localhost:8080' }
+	env: {
+		PUBLIC_API_MOCK_ENABLED: 'false',
+		PUBLIC_API_BASE_URL: 'https://wikiforge-api.roselaqueen.fr',
+		PUBLIC_CARDS_API_BASE_URL: 'https://api.wikiforge.fr'
+	}
 }));
 
 import { persistSession, restoreSession } from '$lib/auth/session';
@@ -46,6 +50,7 @@ describe('apiRequest authentication recovery', () => {
 		const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
 			if (String(input).endsWith('/oauth2/token')) {
 				refreshCalls += 1;
+				expect(String(input)).toBe('https://api.wikiforge.fr/oauth2/token');
 				await new Promise((resolve) => setTimeout(resolve, 0));
 				expect(new Headers(init?.headers).get('content-type')).toBe(
 					'application/x-www-form-urlencoded'

@@ -197,6 +197,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 
 - [x] Brancher l'authentification WikiForge avec session locale et renouvellement de jeton — `feat(api): connect WikiForge authentication`
 - [x] Migrer la connexion vers OAuth2, charger `/users/me` et révoquer les sessions — `feat(auth): migrate login to OAuth2`
+- [x] Isoler OAuth2 et `/users/me` sur l'API Cards tout en gardant l'API historique pour le reste — `fix(auth): route OAuth through cards API`
 
 2. `feat(messages): build conversations and guild shares`
 

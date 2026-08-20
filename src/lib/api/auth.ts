@@ -30,12 +30,14 @@ export async function login(input: LoginInput, options?: RequestOptions): Promis
 		...options,
 		method: 'POST',
 		body: oauthForm({ grant_type: 'password', username: input.email, password: input.password }),
-		skipAuth: true
+		skipAuth: true,
+		apiTarget: 'cards'
 	});
 	const user = await apiRequest<User>('/users/me', {
 		...options,
 		headers: { ...options?.headers, authorization: bearerAuthorization(tokens) },
-		skipAuth: true
+		skipAuth: true,
+		apiTarget: 'cards'
 	});
 	return {
 		accessToken: tokens.access_token,
@@ -52,12 +54,13 @@ export const logout = (options?: RequestOptions) => {
 		...options,
 		method: 'POST',
 		body: oauthForm({ token: refreshToken, token_type_hint: 'refresh_token' }),
-		skipAuth: true
+		skipAuth: true,
+		apiTarget: 'cards'
 	});
 };
 
 export const logoutAll = (options?: RequestOptions) =>
-	apiRequest<void>('/auth/logout-all', { ...options, method: 'POST' });
+	apiRequest<void>('/auth/logout-all', { ...options, method: 'POST', apiTarget: 'cards' });
 
 export const forgotPassword = (email: string, options?: RequestOptions) =>
 	apiRequest<void>('/api/auth/forgot-password', {

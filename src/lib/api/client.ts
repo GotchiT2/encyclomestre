@@ -5,10 +5,14 @@ import type { OAuth2TokenResponse } from '$lib/types';
 
 export type Fetcher = typeof fetch;
 
+export type ApiTarget = 'legacy' | 'cards';
+
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
 	body?: unknown;
 	fetch?: Fetcher;
 	skipAuth?: boolean;
+	/** Selects the public API that owns this endpoint. Defaults to the legacy platform API. */
+	apiTarget?: ApiTarget;
 }
 
 export class ApiError extends Error {
@@ -22,8 +26,10 @@ export class ApiError extends Error {
 	}
 }
 
-function apiUrl(path: string): string {
-	const baseUrl = (env.PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
+function apiUrl(path: string, apiTarget: ApiTarget = 'legacy'): string {
+	const baseUrl = (
+		apiTarget === 'cards' ? env.PUBLIC_CARDS_API_BASE_URL : env.PUBLIC_API_BASE_URL
+	)?.replace(/\/$/, '');
 	return baseUrl ? `${baseUrl}${path}` : path;
 }
 
@@ -48,7 +54,7 @@ async function refreshSession(fetcher: Fetcher): Promise<boolean> {
 		if (!session?.refreshToken) return false;
 
 		try {
-			const response = await fetcher(apiUrl('/oauth2/token'), {
+			const response = await fetcher(apiUrl('/oauth2/token', 'cards'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: {
@@ -93,7 +99,14 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 }
 
 async function request<T>(path: string, options: RequestOptions, didRefresh: boolean): Promise<T> {
-	const { body, fetch: fetcher = fetch, headers, skipAuth = false, ...init } = options;
+	const {
+		body,
+		fetch: fetcher = fetch,
+		headers,
+		skipAuth = false,
+		apiTarget = 'legacy',
+		...init
+	} = options;
 	const session = typeof localStorage === 'undefined' ? null : restoreSession(localStorage);
 	const accessToken = skipAuth ? undefined : session?.accessToken;
 	const response = isMockApiEnabled()
@@ -102,7 +115,7 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 				if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
 				return createMockApiResponse({ path, method: init.method, body });
 			})()
-		: await fetcher(apiUrl(path), {
+		: await fetcher(apiUrl(path, apiTarget), {
 				credentials: 'include',
 				headers: {
 					accept: 'application/json',
