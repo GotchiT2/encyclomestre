@@ -196,8 +196,9 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Commencer le branchement WikiForge du catalogue, de la collection, des boosters et du détail carte — `feat(api): start WikiForge catalogue collection and boosters integration`
 
 - [x] Brancher l'authentification WikiForge avec session locale et renouvellement de jeton — `feat(api): connect WikiForge authentication`
-- [x] Migrer la connexion vers OAuth2, charger `/users/me` et révoquer les sessions — `feat(auth): migrate login to OAuth2`
-- [x] Isoler OAuth2 et `/users/me` sur l'API Cards tout en gardant l'API historique pour le reste — `fix(auth): route OAuth through cards API`
+- [x] Migrer la connexion vers OAuth2, charger le profil courant et révoquer les sessions — `feat(auth): migrate login to OAuth2`
+- [x] Isoler OAuth2 et `/me` sur l'API Cards tout en gardant l'API historique pour le reste — `fix(auth): route OAuth through cards API`
+- [x] Suivre le nouvel endpoint de profil OAuth2 `/me` — `fix(auth): use current user endpoint`
 
 2. `feat(messages): build conversations and guild shares`
 

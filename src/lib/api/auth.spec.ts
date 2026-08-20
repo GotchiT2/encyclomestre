@@ -69,7 +69,7 @@ describe('OAuth2 authentication', () => {
 				});
 			}
 
-			expect(String(input)).toBe('https://api.wikiforge.fr/users/me');
+			expect(String(input)).toBe('https://api.wikiforge.fr/me');
 			expect(new Headers(init?.headers).get('authorization')).toBe('Bearer access');
 			return Response.json(user);
 		});

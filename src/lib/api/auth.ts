@@ -33,7 +33,7 @@ export async function login(input: LoginInput, options?: RequestOptions): Promis
 		skipAuth: true,
 		apiTarget: 'cards'
 	});
-	const user = await apiRequest<User>('/users/me', {
+	const user = await apiRequest<User>('/me', {
 		...options,
 		headers: { ...options?.headers, authorization: bearerAuthorization(tokens) },
 		skipAuth: true,

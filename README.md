@@ -58,7 +58,7 @@ You can preview the production build with `npm run preview`.
 Le frontend est prêt pour un déploiement Node/Docker. Dans Portainer, créez une stack depuis ce dépôt avec `docker-compose.portainer.yml`, puis renseignez les variables du fichier `.env.production.example`.
 
 - Définissez `ORIGIN=https://www.wikiforge.fr`, `PUBLIC_API_BASE_URL=https://wikiforge-api.roselaqueen.fr`, `PUBLIC_CARDS_API_BASE_URL=https://api.wikiforge.fr` et `FRONTEND_PORT=32000`. L'API doit autoriser `https://www.wikiforge.fr` dans sa configuration CORS.
-- Les fonctions existantes restent sur `PUBLIC_API_BASE_URL`. OAuth2, le rafraîchissement/révocation de session et `/users/me` utilisent `PUBLIC_CARDS_API_BASE_URL`.
+- Les fonctions existantes restent sur `PUBLIC_API_BASE_URL`. OAuth2, le rafraîchissement/révocation de session et `/me` utilisent `PUBLIC_CARDS_API_BASE_URL`.
 
 Le proxy du NAS doit envoyer le domaine du frontend vers le port `3000` du conteneur. Ne publiez pas ce port directement sur Internet.
 

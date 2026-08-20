@@ -64,7 +64,7 @@ export const getUserCollectionPage = async (
 };
 
 export const getCurrentUser = (options?: RequestOptions) =>
-	apiRequest<User>('/users/me', { ...options, apiTarget: 'cards' });
+	apiRequest<User>('/me', { ...options, apiTarget: 'cards' });
 
 export const getUser = (id: string, options?: RequestOptions) =>
 	apiRequest<User>(`/api/users/${encodeURIComponent(id)}`, options);
