@@ -266,6 +266,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Répartir la brillance foil et renforcer sa progression sur les raretés supérieures — `fix(cards): balance foil brightness`
 - [x] Dockeriser le frontend SvelteKit et fournir la stack Portainer de production — `feat(deploy): add Portainer frontend stack`
 - [x] Ajouter les stacks TrueNAS sans build Portainer et le clonage Git au démarrage — `feat(deploy): add TrueNAS repository stacks`
+- [x] Générer un build statique SPA destiné à Nginx — `feat(deploy): generate static frontend build`
 
 ## 9. Ventes liées aux exemplaires, wishlists publiques et responsive mobile
 
