@@ -9,10 +9,9 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 3000
-      # Public API hostname. Leave empty only when the NAS reverse proxy routes
-      # the same frontend hostname's /api path to the API container.
-      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-}
-      PUBLIC_API_MOCK_ENABLED: "false"
+      # Public API hostname used by the browser for OAuth2 and platform requests.
+      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-https://api.wikiforge.fr}
+      PUBLIC_API_MOCK_ENABLED: 'false'
       ORIGIN: ${ORIGIN}
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - '${FRONTEND_PORT:-3000}:3000'

@@ -63,8 +63,7 @@ export const getUserCollectionPage = async (
 	};
 };
 
-export const getCurrentUser = (options?: RequestOptions) =>
-	apiRequest<User>('/api/users/me', options);
+export const getCurrentUser = (options?: RequestOptions) => apiRequest<User>('/users/me', options);
 
 export const getUser = (id: string, options?: RequestOptions) =>
 	apiRequest<User>(`/api/users/${encodeURIComponent(id)}`, options);

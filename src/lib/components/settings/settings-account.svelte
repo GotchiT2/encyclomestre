@@ -7,10 +7,12 @@
 	let {
 		username = $bindable(''),
 		onLogout,
+		onLogoutAll,
 		onDelete
 	}: {
 		username?: string;
 		onLogout: () => void;
+		onLogoutAll: () => void;
 		onDelete: () => void;
 	} = $props();
 	let confirmOpen = $state(false);
@@ -32,7 +34,13 @@
 		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('settings.session')}
 		</p>
-		<Button variant="outline" class="mt-3" onclick={onLogout}>{$_('navigation.logout')}</Button>
+		<p class="mt-2 font-serif italic text-muted-foreground">
+			{$_('settings.logout_all_hint')}
+		</p>
+		<div class="mt-3 flex flex-wrap gap-2">
+			<Button variant="outline" onclick={onLogout}>{$_('navigation.logout')}</Button>
+			<Button variant="outline" onclick={onLogoutAll}>{$_('settings.logout_all')}</Button>
+		</div>
 	</section>
 	<section class="border border-destructive/50 bg-destructive/10 p-4">
 		<p class="font-mono text-[10px] uppercase tracking-widest text-destructive">

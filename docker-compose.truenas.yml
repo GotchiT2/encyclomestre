@@ -10,14 +10,14 @@ services:
       WIKIFORGE_FRONTEND_GIT_URL: ${WIKIFORGE_FRONTEND_GIT_URL:-https://github.com/GotchiT2/encyclomestre.git}
       WIKIFORGE_FRONTEND_GIT_BRANCH: ${WIKIFORGE_FRONTEND_GIT_BRANCH:-feat/api-part2}
       WIKIFORGE_FRONTEND_GIT_TOKEN: ${WIKIFORGE_FRONTEND_GIT_TOKEN:-}
-      GIT_TERMINAL_PROMPT: "0"
-      ORIGIN: ${ORIGIN:-https://wikiforge.roselaqueen.fr}
-      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-https://wikiforge-api.roselaqueen.fr}
-      PUBLIC_API_MOCK_ENABLED: "false"
+      GIT_TERMINAL_PROMPT: '0'
+      ORIGIN: ${ORIGIN:-https://www.wikiforge.fr}
+      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-https://api.wikiforge.fr}
+      PUBLIC_API_MOCK_ENABLED: 'false'
       HOST: 0.0.0.0
       PORT: 3000
     ports:
-      - "${FRONTEND_PORT:-32000}:3000"
+      - '${FRONTEND_PORT:-32000}:3000'
     command: >
       sh -ec "apt-get update && apt-get install -y --no-install-recommends git ca-certificates
       && rm -rf /var/lib/apt/lists/* /app

@@ -230,6 +230,8 @@
 		"identity": "Identité du compte",
 		"username": "Pseudonyme",
 		"session": "Session",
+		"logout_all": "Déconnecter tous les appareils",
+		"logout_all_hint": "Révoquez toutes les sessions ouvertes sur vos autres appareils.",
 		"danger": "Zone sensible",
 		"delete_hint": "Cette action supprime définitivement votre compte local.",
 		"delete_account": "Supprimer mon compte",

@@ -9,6 +9,7 @@
 		getCurrentUser,
 		getMyProfileSettings,
 		logout,
+		logoutAll,
 		updateProfileSettings,
 		updateUserPreferences
 	} from '$lib/api';
@@ -55,6 +56,14 @@
 			await goto(resolve('/'));
 		}
 	}
+	async function logoutFromAllDevices() {
+		try {
+			await logoutAll();
+		} finally {
+			clearSession(localStorage);
+			await goto(resolve('/'));
+		}
+	}
 	async function deleteAccount() {
 		await deleteUser(userId);
 		clearSession(localStorage);
@@ -79,6 +88,7 @@
 		/><CensoredKeywords bind:keywords={profile.censoredKeywords} /><SettingsAccount
 			bind:username={profile.username}
 			onLogout={logoutFromSettings}
+			onLogoutAll={logoutFromAllDevices}
 			onDelete={deleteAccount}
 		/>
 	{/if}

@@ -56,14 +56,14 @@ You can preview the production build with `npm run preview`.
 
 Le frontend est prêt pour un déploiement Node/Docker. Dans Portainer, créez une stack depuis ce dépôt avec `docker-compose.portainer.yml`, puis renseignez les variables du fichier `.env.production.example`.
 
-- Avec vos sous-domaines, définissez `ORIGIN=https://wikiforge.roselaqueen.fr`, `PUBLIC_API_BASE_URL=https://wikiforge-api.roselaqueen.fr` et `FRONTEND_PORT=32000`. Configurez l'API avec `CORS_ALLOWED_ORIGINS=https://wikiforge.roselaqueen.fr` et publiez-la sur le port `32001` du NAS.
-- Avec un seul domaine et une règle de proxy `/api` vers l'API, laissez `PUBLIC_API_BASE_URL` vide : le navigateur appellera le même domaine, sans CORS.
+- Définissez `ORIGIN=https://www.wikiforge.fr`, `PUBLIC_API_BASE_URL=https://api.wikiforge.fr` et `FRONTEND_PORT=32000`. L'API doit autoriser `https://www.wikiforge.fr` dans sa configuration CORS.
+- Le navigateur contacte directement l'API publique pour les routes OAuth2 et les données applicatives ; ne laissez pas `PUBLIC_API_BASE_URL` vide en production.
 
 Le proxy du NAS doit envoyer le domaine du frontend vers le port `3000` du conteneur. Ne publiez pas ce port directement sur Internet.
 
 ### TrueNAS sans build Portainer
 
-Utilisez `docker-compose.truenas.yml` si Portainer échoue avant la lecture du Dockerfile. Cette stack n'utilise pas `build:` : elle récupère ce dépôt au démarrage, exécute `npm ci`, construit SvelteKit puis démarre le serveur Node. Les valeurs par défaut correspondent à `wikiforge.roselaqueen.fr`, `wikiforge-api.roselaqueen.fr` et au port NAS `32000`.
+Utilisez `docker-compose.truenas.yml` si Portainer échoue avant la lecture du Dockerfile. Cette stack n'utilise pas `build:` : elle récupère ce dépôt au démarrage, exécute `npm ci`, construit SvelteKit puis démarre le serveur Node. Les valeurs par défaut utilisent `https://api.wikiforge.fr` pour l'API publique et le port NAS `32000`.
 
 ## DA
 

@@ -1,12 +1,14 @@
 import { env } from '$env/dynamic/public';
 import { createMockApiResponse } from './mock';
 import { clearSession, restoreSession, persistSession } from '$lib/auth/session';
+import type { OAuth2TokenResponse } from '$lib/types';
 
 export type Fetcher = typeof fetch;
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
 	body?: unknown;
 	fetch?: Fetcher;
+	skipAuth?: boolean;
 }
 
 export class ApiError extends Error {
@@ -46,16 +48,27 @@ async function refreshSession(fetcher: Fetcher): Promise<boolean> {
 		if (!session?.refreshToken) return false;
 
 		try {
-			const response = await fetcher(apiUrl('/api/auth/refresh'), {
+			const response = await fetcher(apiUrl('/oauth2/token'), {
 				method: 'POST',
 				credentials: 'include',
-				headers: { accept: 'application/json', 'content-type': 'application/json' },
-				body: JSON.stringify({ refreshToken: session.refreshToken })
+				headers: {
+					accept: 'application/json',
+					'content-type': 'application/x-www-form-urlencoded'
+				},
+				body: new URLSearchParams({
+					grant_type: 'refresh_token',
+					refresh_token: session.refreshToken
+				})
 			});
 			if (!response.ok) return false;
 
-			const tokens = await response.json();
-			persistSession(localStorage, { ...session, ...tokens });
+			const tokens = (await response.json()) as OAuth2TokenResponse;
+			if (!tokens.access_token) return false;
+			persistSession(localStorage, {
+				...session,
+				accessToken: tokens.access_token,
+				refreshToken: tokens.refresh_token || session.refreshToken
+			});
 			return true;
 		} catch {
 			return false;
@@ -80,9 +93,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 }
 
 async function request<T>(path: string, options: RequestOptions, didRefresh: boolean): Promise<T> {
-	const { body, fetch: fetcher = fetch, headers, ...init } = options;
+	const { body, fetch: fetcher = fetch, headers, skipAuth = false, ...init } = options;
 	const session = typeof localStorage === 'undefined' ? null : restoreSession(localStorage);
-	const accessToken = session?.accessToken;
+	const accessToken = skipAuth ? undefined : session?.accessToken;
 	const response = isMockApiEnabled()
 		? await (async () => {
 				const delay = mockDelay();
@@ -94,19 +107,31 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 				headers: {
 					accept: 'application/json',
 					...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
-					...(body === undefined ? {} : { 'content-type': 'application/json' }),
+					...(body === undefined
+						? {}
+						: body instanceof URLSearchParams
+							? { 'content-type': 'application/x-www-form-urlencoded' }
+							: { 'content-type': 'application/json' }),
 					...headers
 				},
-				body: body === undefined ? undefined : JSON.stringify(body),
+				body:
+					body === undefined
+						? undefined
+						: body instanceof URLSearchParams
+							? body
+							: JSON.stringify(body),
 				...init
 			});
 
 	const isAuthenticationFailure = response.status === 401 || response.status === 403;
 	const canRefresh =
 		!didRefresh &&
+		!skipAuth &&
 		isAuthenticationFailure &&
 		typeof localStorage !== 'undefined' &&
-		!path.startsWith('/api/auth/');
+		!path.startsWith('/api/auth/') &&
+		!path.startsWith('/oauth2/') &&
+		!path.startsWith('/auth/');
 
 	if (canRefresh) {
 		const currentSession = restoreSession(localStorage);
@@ -129,7 +154,12 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 			'message' in payload &&
 			typeof payload.message === 'string'
 				? payload.message
-				: `Erreur API (${response.status})`;
+				: typeof payload === 'object' &&
+					  payload &&
+					  'error' in payload &&
+					  typeof payload.error === 'string'
+					? payload.error
+					: `Erreur API (${response.status})`;
 		throw new ApiError(response.status, payload, message);
 	}
 

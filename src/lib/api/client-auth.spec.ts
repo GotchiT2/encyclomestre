@@ -41,19 +41,30 @@ describe('apiRequest authentication recovery', () => {
 
 	afterEach(() => vi.unstubAllGlobals());
 
-	it('renouvelle une seule fois les appels simultanés refusés avec un statut 403', async () => {
+	it('renouvelle une seule fois les appels simultanés refusés avec un statut 401', async () => {
 		let refreshCalls = 0;
 		const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
-			if (String(input).endsWith('/api/auth/refresh')) {
+			if (String(input).endsWith('/oauth2/token')) {
 				refreshCalls += 1;
 				await new Promise((resolve) => setTimeout(resolve, 0));
-				return Response.json({ accessToken: 'renewed', refreshToken: 'rotated' });
+				expect(new Headers(init?.headers).get('content-type')).toBe(
+					'application/x-www-form-urlencoded'
+				);
+				expect(init?.body).toBeInstanceOf(URLSearchParams);
+				expect((init?.body as URLSearchParams).get('grant_type')).toBe('refresh_token');
+				expect((init?.body as URLSearchParams).get('refresh_token')).toBe('refresh');
+				return Response.json({
+					access_token: 'renewed',
+					refresh_token: 'rotated',
+					token_type: 'Bearer',
+					expires_in: 3600
+				});
 			}
 
 			const authorization = new Headers(init?.headers).get('authorization');
 			return authorization === 'Bearer renewed'
 				? Response.json({ ok: true })
-				: Response.json({ message: 'Token expiré' }, { status: 403 });
+				: Response.json({ message: 'Token expiré' }, { status: 401 });
 		});
 
 		const responses = await Promise.all([
@@ -69,9 +80,9 @@ describe('apiRequest authentication recovery', () => {
 
 	it('supprime la session lorsque le renouvellement est refusé', async () => {
 		const fetcher = vi.fn(async (input: string | URL | Request) =>
-			String(input).endsWith('/api/auth/refresh')
-				? Response.json({ message: 'Refresh expiré' }, { status: 403 })
-				: Response.json({ message: 'Token expiré' }, { status: 403 })
+			String(input).endsWith('/oauth2/token')
+				? Response.json({ error: 'invalid_grant' }, { status: 400 })
+				: Response.json({ message: 'Token expiré' }, { status: 401 })
 		);
 
 		await expect(

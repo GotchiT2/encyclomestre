@@ -498,6 +498,10 @@ function asObject(value: unknown): Record<string, unknown> | undefined {
 		: undefined;
 }
 
+function asForm(value: unknown): Record<string, string> | undefined {
+	return value instanceof URLSearchParams ? Object.fromEntries(value.entries()) : undefined;
+}
+
 function makeUser(input: CreateUserInput): User {
 	const id = `user-${crypto.randomUUID()}`;
 	return {
@@ -519,6 +523,15 @@ function session(user: User): AuthSession {
 		accessToken: `mock-access-token-${user.id}`,
 		refreshToken: `mock-refresh-token-${user.id}`,
 		user
+	};
+}
+
+function oauthTokens(user: User) {
+	return {
+		access_token: `mock-access-token-${user.id}`,
+		refresh_token: `mock-refresh-token-${user.id}`,
+		token_type: 'Bearer',
+		expires_in: 3600
 	};
 }
 
@@ -560,6 +573,24 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	const { pathname } = url;
 	const normalizedMethod = method.toUpperCase();
 
+	if (normalizedMethod === 'POST' && pathname === '/oauth2/revoke') return json(undefined);
+	if (normalizedMethod === 'POST' && pathname === '/auth/logout-all') return json(undefined, 204);
+	if (normalizedMethod === 'POST' && pathname === '/oauth2/token') {
+		const input = asForm(body);
+		if (input?.grant_type === 'refresh_token' && input.refresh_token) {
+			return json(oauthTokens(users.get('demo-user')!));
+		}
+		if (input?.grant_type !== 'password' || !input.username || !input.password) {
+			return error(400, 'Identifiants OAuth invalides.', 'INVALID_GRANT');
+		}
+		const user =
+			[...users.values()].find((candidate) => candidate.email === input.username) ??
+			users.get('demo-user')!;
+		return json(oauthTokens(user));
+	}
+	if (normalizedMethod === 'GET' && pathname === '/users/me') {
+		return json(users.get('demo-user')!);
+	}
 	if (normalizedMethod === 'POST' && pathname === '/auth/logout') return json(undefined, 204);
 	if (normalizedMethod === 'POST' && pathname === '/auth/login') {
 		const input = asObject(body);

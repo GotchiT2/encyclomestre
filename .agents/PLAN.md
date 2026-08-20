@@ -195,7 +195,8 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 
 - [x] Commencer le branchement WikiForge du catalogue, de la collection, des boosters et du détail carte — `feat(api): start WikiForge catalogue collection and boosters integration`
 
-- [x] Brancher l’authentification WikiForge avec session locale et renouvellement de jeton — `feat(api): connect WikiForge authentication`
+- [x] Brancher l'authentification WikiForge avec session locale et renouvellement de jeton — `feat(api): connect WikiForge authentication`
+- [x] Migrer la connexion vers OAuth2, charger `/users/me` et révoquer les sessions — `feat(auth): migrate login to OAuth2`
 
 2. `feat(messages): build conversations and guild shares`
 
