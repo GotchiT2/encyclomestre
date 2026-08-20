@@ -1,4 +1,5 @@
 import { apiRequest, type RequestOptions } from './client';
+import { toCurrentUser, type OAuthCurrentUserResponse } from './current-user';
 import { restoreSession } from '$lib/auth/session';
 import type { AuthSession, LoginInput, OAuth2TokenResponse, User } from '$lib/types';
 
@@ -33,12 +34,13 @@ export async function login(input: LoginInput, options?: RequestOptions): Promis
 		skipAuth: true,
 		apiTarget: 'cards'
 	});
-	const user = await apiRequest<User>('/me', {
+	const profile = await apiRequest<OAuthCurrentUserResponse>('/me', {
 		...options,
 		headers: { ...options?.headers, authorization: bearerAuthorization(tokens) },
 		skipAuth: true,
 		apiTarget: 'cards'
 	});
+	const user = toCurrentUser(profile);
 	return {
 		accessToken: tokens.access_token,
 		refreshToken: tokens.refresh_token,

@@ -199,6 +199,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Migrer la connexion vers OAuth2, charger le profil courant et révoquer les sessions — `feat(auth): migrate login to OAuth2`
 - [x] Isoler OAuth2 et `/me` sur l'API Cards tout en gardant l'API historique pour le reste — `fix(auth): route OAuth through cards API`
 - [x] Suivre le nouvel endpoint de profil OAuth2 `/me` — `fix(auth): use current user endpoint`
+- [x] Adapter le profil OAuth2 au modèle de session existant avant la redirection — `fix(auth): normalize OAuth current user`
 
 2. `feat(messages): build conversations and guild shares`
 

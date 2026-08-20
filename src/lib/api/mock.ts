@@ -589,7 +589,14 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		return json(oauthTokens(user));
 	}
 	if (normalizedMethod === 'GET' && pathname === '/me') {
-		return json(users.get('demo-user')!);
+		const user = users.get('demo-user')!;
+		return json({
+			id: user.id,
+			name: user.displayName,
+			email: user.email,
+			roles: [user.role.toUpperCase()],
+			createdAt: user.createdAt
+		});
 	}
 	if (normalizedMethod === 'POST' && pathname === '/auth/logout') return json(undefined, 204);
 	if (normalizedMethod === 'POST' && pathname === '/auth/login') {

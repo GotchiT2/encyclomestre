@@ -27,13 +27,21 @@ function createStorage() {
 }
 
 const user: User = {
-	id: 'user-1',
-	username: 'demo',
-	displayName: 'Demo',
+	id: '1',
+	username: 'Test',
+	displayName: 'Test',
 	email: 'demo@example.test',
 	role: 'user',
-	createdAt: '2026-01-01',
-	updatedAt: '2026-01-01'
+	createdAt: '2026-08-20T14:11:51.007077',
+	updatedAt: '2026-08-20T14:11:51.007077'
+};
+
+const oauthProfile = {
+	id: 1,
+	name: 'Test',
+	email: 'demo@example.test',
+	roles: ['USER'],
+	createdAt: '2026-08-20T14:11:51.007077'
 };
 
 describe('OAuth2 authentication', () => {
@@ -71,7 +79,7 @@ describe('OAuth2 authentication', () => {
 
 			expect(String(input)).toBe('https://api.wikiforge.fr/me');
 			expect(new Headers(init?.headers).get('authorization')).toBe('Bearer access');
-			return Response.json(user);
+			return Response.json(oauthProfile);
 		});
 
 		await expect(
