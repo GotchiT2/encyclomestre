@@ -124,14 +124,7 @@
 			{:else}
 				<div class="wikiforge-card-grid mt-4">
 					{#each visibleCards as card (card.id)}
-						<div class="wikiforge-card-size relative">
-							<CardTile {card} showFriendOwners={false} />
-							<Button
-								aria-label={card.title}
-								class="absolute inset-0 z-20 size-full border-0 bg-transparent text-transparent hover:bg-primary/20"
-								onclick={() => void select(card)}
-							/>
-						</div>
+						<CardTile {card} showFriendOwners={false} onOpen={select} />
 					{/each}
 				</div>
 			{/if}

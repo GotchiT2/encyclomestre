@@ -52,7 +52,8 @@
 	let totalPages = $state(1);
 	let loading = $state(true);
 	let listLoading = $state(false);
-	let failed = $state(false);
+	let groupsFailed = $state(false);
+	let entriesFailed = $state(false);
 	let pickerOpen = $state(false);
 	let accessOpen = $state(false);
 	let createOpen = $state(false);
@@ -86,7 +87,7 @@
 		}
 		const currentRequest = ++requestId;
 		listLoading = true;
-		failed = false;
+		entriesFailed = false;
 		try {
 			const result = await getWishlistPage(activeWishlist.id, {
 				page,
@@ -100,7 +101,7 @@
 			total = result.meta.total;
 			totalPages = result.meta.totalPages;
 		} catch {
-			if (currentRequest === requestId) failed = true;
+			if (currentRequest === requestId) entriesFailed = true;
 		} finally {
 			if (currentRequest === requestId) listLoading = false;
 		}
@@ -114,16 +115,20 @@
 		return () => window.clearTimeout(debounceTimer);
 	});
 
-	onMount(async () => {
+	async function loadGroups() {
+		loading = true;
+		groupsFailed = false;
 		try {
 			await refreshGroups();
 		} catch {
-			failed = true;
+			groupsFailed = true;
 		} finally {
 			loading = false;
 			ready = true;
 		}
-	});
+	}
+
+	onMount(loadGroups);
 
 	function selectWishlist(wishlist: WishlistRegistrySummary) {
 		activeWishlist = wishlist;
@@ -235,8 +240,11 @@
 	/>
 	{#if loading}
 		<p class="forge-label">{$_('wishlist.loading')}</p>
-	{:else if failed && !activeWishlist}
-		<p class="text-destructive">{$_('wishlist.load_error')}</p>
+	{:else if groupsFailed && !activeWishlist}
+		<div class="forge-panel-flat flex flex-wrap items-center justify-between gap-3 p-4">
+			<p class="text-destructive">{$_('wishlist.groups_load_error')}</p>
+			<Button variant="outline" onclick={() => void loadGroups()}>{$_('common.retry')}</Button>
+		</div>
 	{:else}
 		<WishlistHub
 			{groups}
@@ -290,8 +298,13 @@
 				<p class="forge-label">{$_('wishlist.results_count', { values: { count: total } })}</p>
 				{#if listLoading}
 					<p class="forge-label">{$_('wishlist.loading')}</p>
-				{:else if failed}
-					<p class="text-destructive">{$_('wishlist.load_error')}</p>
+				{:else if entriesFailed}
+					<div class="forge-panel-flat flex flex-wrap items-center justify-between gap-3 p-4">
+						<p class="text-destructive">{$_('wishlist.cards_load_error')}</p>
+						<Button variant="outline" onclick={() => void loadEntries()}
+							>{$_('common.retry')}</Button
+						>
+					</div>
 				{:else}
 					<WishlistSocialGrid
 						{entries}

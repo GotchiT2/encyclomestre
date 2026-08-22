@@ -23,7 +23,11 @@ describe('WishlistActionMenu', () => {
 		});
 
 		await page.getByRole('button', { name: 'Ajouter à une wishlist' }).click();
-		await page.getByRole('menuitem', { name: 'Cartes recherchées' }).click();
+		const destination = page.getByRole('menuitem', { name: 'Cartes recherchées' });
+		expect(destination.element().closest('[data-slot="dropdown-menu-content"]')).toHaveStyle({
+			zIndex: '120'
+		});
+		await destination.click();
 		expect(onToggle).toHaveBeenCalledWith('wishlist-1', true);
 	});
 });

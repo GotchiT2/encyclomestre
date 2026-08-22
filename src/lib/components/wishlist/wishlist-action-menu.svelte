@@ -31,7 +31,7 @@
 			<Button {...props}>{$_('cardDetail.add_wishlist')}</Button>
 		{/snippet}
 	</DropdownMenu.Trigger>
-	<DropdownMenu.Content preventScroll={false} align="start" class="min-w-64">
+	<DropdownMenu.Content preventScroll={false} align="start" class="min-w-64" style="z-index:120">
 		<DropdownMenu.Group>
 			{#each wishlists as wishlist (wishlist.id)}
 				<DropdownMenu.Item
