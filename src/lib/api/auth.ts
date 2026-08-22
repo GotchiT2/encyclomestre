@@ -32,13 +32,13 @@ export async function login(input: LoginInput, options?: RequestOptions): Promis
 		method: 'POST',
 		body: oauthForm({ grant_type: 'password', username: input.email, password: input.password }),
 		skipAuth: true,
-		apiTarget: 'cards'
+		apiTarget: 'wikiforge'
 	});
 	const profile = await apiRequest<OAuthCurrentUserResponse>('/me', {
 		...options,
 		headers: { ...options?.headers, authorization: bearerAuthorization(tokens) },
 		skipAuth: true,
-		apiTarget: 'cards'
+		apiTarget: 'wikiforge'
 	});
 	const user = toCurrentUser(profile);
 	return {
@@ -57,12 +57,12 @@ export const logout = (options?: RequestOptions) => {
 		method: 'POST',
 		body: oauthForm({ token: refreshToken, token_type_hint: 'refresh_token' }),
 		skipAuth: true,
-		apiTarget: 'cards'
+		apiTarget: 'wikiforge'
 	});
 };
 
 export const logoutAll = (options?: RequestOptions) =>
-	apiRequest<void>('/auth/logout-all', { ...options, method: 'POST', apiTarget: 'cards' });
+	apiRequest<void>('/auth/logout-all', { ...options, method: 'POST', apiTarget: 'wikiforge' });
 
 export const forgotPassword = (email: string, options?: RequestOptions) =>
 	apiRequest<void>('/api/auth/forgot-password', {

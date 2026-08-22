@@ -66,7 +66,7 @@ export const getUserCollectionPage = async (
 
 export const getCurrentUser = async (options?: RequestOptions) =>
 	toCurrentUser(
-		await apiRequest<OAuthCurrentUserResponse>('/me', { ...options, apiTarget: 'cards' })
+		await apiRequest<OAuthCurrentUserResponse>('/me', { ...options, apiTarget: 'wikiforge' })
 	);
 
 export const getUser = (id: string, options?: RequestOptions) =>

@@ -7,7 +7,6 @@
 		getWikiForgeTags,
 		getWishlists,
 		openWikiForgeBooster,
-		removeWishlistRegistryCard,
 		toCollectionCardRecord
 	} from '$lib/api';
 	import BoosterOpeningStage from '$lib/components/boosters/booster-opening-stage.svelte';
@@ -119,19 +118,10 @@
 	}
 
 	async function toggleWishlist(wishlistId: string, card: CardRecord, selected: boolean) {
-		const cardId = card.catalogueId ?? card.id;
-		if (selected) await addWishlistRegistryCard(wishlistId, '', cardId);
-		else await removeWishlistRegistryCard(wishlistId, '', cardId);
-		wishlists = wishlists.map((wishlist) =>
-			wishlist.id === wishlistId
-				? {
-						...wishlist,
-						cardIds: selected
-							? [...new Set([...wishlist.cardIds, cardId])]
-							: wishlist.cardIds.filter((id) => id !== cardId)
-					}
-				: wishlist
-		);
+		if (!selected) return;
+		const pageId = String(card.baseCardId ?? card.catalogueId ?? card.id);
+		await addWishlistRegistryCard(wishlistId, '', pageId);
+		wishlists = await getWishlists();
 	}
 </script>
 

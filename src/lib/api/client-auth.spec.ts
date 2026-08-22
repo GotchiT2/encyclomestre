@@ -4,6 +4,7 @@ vi.mock('$env/dynamic/public', () => ({
 	env: {
 		PUBLIC_API_MOCK_ENABLED: 'false',
 		PUBLIC_API_BASE_URL: 'https://wikiforge-api.roselaqueen.fr',
+		PUBLIC_WIKIFORGE_API_BASE_URL: 'https://api.wikiforge.fr',
 		PUBLIC_CARDS_API_BASE_URL: 'https://api.wikiforge.fr'
 	}
 }));
@@ -75,11 +76,11 @@ describe('apiRequest authentication recovery', () => {
 		const responses = await Promise.all([
 			apiRequest<{ ok: boolean }>('/dashboard', {
 				fetch: fetcher as typeof fetch,
-				apiTarget: 'cards'
+				apiTarget: 'wikiforge'
 			}),
 			apiRequest<{ ok: boolean }>('/friends', {
 				fetch: fetcher as typeof fetch,
-				apiTarget: 'cards'
+				apiTarget: 'wikiforge'
 			})
 		]);
 
@@ -97,13 +98,15 @@ describe('apiRequest authentication recovery', () => {
 		);
 
 		await expect(
-			apiRequest('/dashboard', { fetch: fetcher as typeof fetch, apiTarget: 'cards' })
+			apiRequest('/dashboard', { fetch: fetcher as typeof fetch, apiTarget: 'wikiforge' })
 		).rejects.toBeInstanceOf(ApiError);
 		expect(restoreSession(storage)).toBeNull();
 	});
 
-	it('conserve la session lorsqu’une route legacy rejette le jeton OAuth Cards', async () => {
-		const fetcher = vi.fn().mockResolvedValue(Response.json({ message: 'Non autorisé' }, { status: 401 }));
+	it('conserve la session lorsqu’une route legacy rejette le jeton OAuth WikiForge', async () => {
+		const fetcher = vi
+			.fn()
+			.mockResolvedValue(Response.json({ message: 'Non autorisé' }, { status: 401 }));
 
 		await expect(
 			apiRequest('/api/dashboard', { fetch: fetcher as typeof fetch })

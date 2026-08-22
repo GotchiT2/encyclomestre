@@ -1,10 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('$env/dynamic/public', () => ({
+	env: {
+		PUBLIC_API_MOCK_ENABLED: 'false',
+		PUBLIC_WIKIFORGE_API_BASE_URL: 'https://api.wikiforge.fr'
+	}
+}));
+
 import { getWikiForgePublicPage, getWikiForgePublicPages, toPublicPage } from './pages';
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('WikiForge public pages API', () => {
-	it('uses the public catalogue contract without local authentication', async () => {
+	it('uses the canonical catalogue contract', async () => {
 		const fetcher = vi.fn(async () =>
 			Response.json({
 				nbResults: 0,
@@ -23,7 +31,7 @@ describe('WikiForge public pages API', () => {
 
 		expect(fetcher).toHaveBeenCalledWith(
 			'https://api.wikiforge.fr/pages?page=2&sortBy=name&sortDirection=DESC&q=Paris&rarity=L',
-			expect.objectContaining({ credentials: 'omit' })
+			expect.objectContaining({ credentials: 'include' })
 		);
 	});
 
@@ -45,16 +53,15 @@ describe('WikiForge public pages API', () => {
 
 		expect(fetcher).toHaveBeenCalledWith(
 			'https://api.wikiforge.fr/pages/42',
-			expect.objectContaining({ credentials: 'omit' })
+			expect.objectContaining({ credentials: 'include' })
 		);
 	});
 
-	it('forwards the current OAuth access token to the Cards API', async () => {
+	it('forwards the current OAuth access token to WikiForge', async () => {
 		vi.stubGlobal('localStorage', {
 			length: 1,
 			clear: vi.fn(),
-			getItem: () =>
-				JSON.stringify({ accessToken: 'cards-access-token', user: { id: '1' } }),
+			getItem: () => JSON.stringify({ accessToken: 'cards-access-token', user: { id: '1' } }),
 			key: () => null,
 			setItem: vi.fn(),
 			removeItem: vi.fn()

@@ -1,7 +1,6 @@
-import { env } from '$env/dynamic/public';
-import { restoreSession } from '$lib/auth/session';
 import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/rarities';
 import type { CardRecord, PaginatedResponse } from '$lib/types';
+import { apiRequest } from './client';
 
 export type WikiForgePublicPageRarity = CardRarityCode;
 
@@ -11,7 +10,7 @@ export interface WikiForgePublicPageCard {
 	description?: string;
 	image?: string;
 	atk: number;
-	length: number;
+	length?: number;
 	viewCount: number;
 	rarity: WikiForgePublicPageRarity;
 	createdAt: string;
@@ -31,6 +30,7 @@ export interface WikiForgePublicPagesQuery {
 	q?: string;
 	page?: number;
 	rarity?: WikiForgePublicPageRarity;
+	rarities?: WikiForgePublicPageRarity[];
 	sortBy?: 'name' | 'rarity';
 	sortDirection?: 'ASC' | 'DESC';
 }
@@ -44,16 +44,7 @@ export interface PublicCataloguePage extends PaginatedResponse<CardRecord> {
 	rarityResults: Record<WikiForgePublicPageRarity, number>;
 }
 
-const defaultPublicPagesApiBaseUrl = 'https://api.wikiforge.fr';
 const publicPagesPageSize = 50;
-
-function publicPagesApiUrl(path: string): string {
-	const baseUrl = (env.PUBLIC_CARDS_API_BASE_URL ?? defaultPublicPagesApiBaseUrl).replace(
-		/\/$/,
-		''
-	);
-	return `${baseUrl}${path}`;
-}
 
 function publicPagesPath(query: WikiForgePublicPagesQuery): string {
 	const parameters = new URLSearchParams({
@@ -62,31 +53,22 @@ function publicPagesPath(query: WikiForgePublicPagesQuery): string {
 		sortDirection: query.sortDirection ?? 'ASC'
 	});
 	if (query.q?.trim()) parameters.set('q', query.q.trim());
-	if (query.rarity) parameters.set('rarity', query.rarity);
+	for (const rarity of query.rarities ?? (query.rarity ? [query.rarity] : [])) {
+		parameters.append('rarity', rarity);
+	}
 	return `/pages?${parameters}`;
 }
 
-function cardsAuthorizationHeader(): HeadersInit {
-	const accessToken =
-		typeof localStorage === 'undefined' ? undefined : restoreSession(localStorage)?.accessToken;
-	return accessToken ? { authorization: `Bearer ${accessToken}` } : {};
-}
-
-/**
- * Public catalogue source. It deliberately bypasses the authenticated local
- * WikiForge API: this is the future canonical source for global card search.
- */
+/** Canonical WikiForge catalogue source. */
 export async function getWikiForgePublicPages(
 	query: WikiForgePublicPagesQuery = {},
 	options: PublicPagesRequestOptions = {}
 ): Promise<WikiForgePublicPagesResponse> {
-	const response = await (options.fetch ?? fetch)(publicPagesApiUrl(publicPagesPath(query)), {
-		headers: { accept: 'application/json', ...cardsAuthorizationHeader() },
-		credentials: 'omit',
-		signal: options.signal
+	return apiRequest<WikiForgePublicPagesResponse>(publicPagesPath(query), {
+		fetch: options.fetch,
+		signal: options.signal,
+		apiTarget: 'wikiforge'
 	});
-	if (!response.ok) throw new Error(`Erreur API catalogue (${response.status})`);
-	return response.json() as Promise<WikiForgePublicPagesResponse>;
 }
 
 /**
@@ -97,16 +79,11 @@ export async function getWikiForgePublicPage(
 	id: string | number,
 	options: PublicPagesRequestOptions = {}
 ): Promise<WikiForgePublicPageCard> {
-	const response = await (options.fetch ?? fetch)(
-		publicPagesApiUrl(`/pages/${encodeURIComponent(String(id))}`),
-		{
-			headers: { accept: 'application/json', ...cardsAuthorizationHeader() },
-			credentials: 'omit',
-			signal: options.signal
-		}
-	);
-	if (!response.ok) throw new Error(`Erreur API carte (${response.status})`);
-	return response.json() as Promise<WikiForgePublicPageCard>;
+	return apiRequest<WikiForgePublicPageCard>(`/pages/${encodeURIComponent(String(id))}`, {
+		fetch: options.fetch,
+		signal: options.signal,
+		apiTarget: 'wikiforge'
+	});
 }
 
 export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecord {

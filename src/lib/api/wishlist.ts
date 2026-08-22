@@ -1,306 +1,216 @@
-import { apiRequest, type RequestOptions } from './client';
+import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 import type {
-	CardRecord,
-	GuildWishlistShare,
 	PaginatedResponse,
-	PublicWishlist,
-	WishlistAlert,
-	WishlistEntry,
-	WishlistPriority,
+	WishlistAccess,
+	WishlistFollower,
+	WishlistGroups,
+	WishlistPageEntry,
 	WishlistQuery,
-	WishlistRegistry,
 	WishlistRegistrySummary
 } from '$lib/types';
-import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
-import { hydrateCardSocialStates } from './cards';
-import { toCardRecord, type WikiForgeCard, type WikiForgePage } from './wikiforge';
+import { apiRequest, type RequestOptions } from './client';
+import {
+	toPublicPageCardRecord,
+	type WikiForgePublicPageCard,
+	type WikiForgePublicPageRarity
+} from './pages';
 
-interface ApiWishlistEntry extends Omit<WishlistEntry, 'cardId' | 'card'> {
-	cardId: string;
-	card: WikiForgeCard;
+interface ApiWishlistSummary {
+	id: number;
+	name: string;
+	description?: string | null;
+	nbCards?: number;
+	ownerName?: string | null;
+	invitedAt?: string | null;
 }
 
-interface ApiWishlistAlert {
-	type: 'auction' | 'friend-owner';
-	cardId: string;
-	saleId?: string | null;
-	price?: number | null;
-	message: string;
+interface ApiWishlists {
+	owned?: ApiWishlistSummary[];
+	shared?: ApiWishlistSummary[];
+	pending?: ApiWishlistSummary[];
 }
 
-interface ApiWishlistRegistry extends Omit<WishlistRegistry, 'cardIds' | 'cards'> {
-	cardIds: string[];
-	cards?: WikiForgeCard[];
-	opportunityCount: number;
-	shareToken?: string | null;
+interface ApiWishlistEntry {
+	page: WikiForgePublicPageCard;
+	addedAt: string;
 }
 
-interface ApiPublicWishlist extends Omit<PublicWishlist, 'cards'> {
-	cards: Array<{
-		card: WikiForgeCard;
-		viewerOwnedCount: number;
-		viewerUserCardIds: string[];
-	}>;
+interface ApiWishlistResult {
+	nbResults: number;
+	page: number;
+	sortBy: 'ADDED_AT' | 'NAME' | 'RARITY';
+	sortDirection: 'ASC' | 'DESC';
+	results: ApiWishlistEntry[];
+	filters?: Record<string, unknown>;
 }
 
-const toEntry = (entry: ApiWishlistEntry): WishlistEntry => ({
-	...entry,
-	cardId: entry.cardId,
-	card: toCardRecord(entry.card)
+interface ApiWishlistFollower {
+	id: number;
+	name: string;
+	accepted: boolean;
+}
+
+const wishlistPageSize = 50;
+
+function toSummary(wishlist: ApiWishlistSummary, access: WishlistAccess): WishlistRegistrySummary {
+	return {
+		id: String(wishlist.id),
+		title: wishlist.name,
+		description: wishlist.description ?? '',
+		cardCount: wishlist.nbCards ?? 0,
+		ownerName: wishlist.ownerName ?? null,
+		invitedAt: wishlist.invitedAt ?? null,
+		access
+	};
+}
+
+const wikiForgeOptions = (options?: RequestOptions): RequestOptions => ({
+	...options,
+	apiTarget: 'wikiforge'
 });
 
-const toRegistry = (registry: ApiWishlistRegistry): WishlistRegistrySummary => ({
-	...registry,
-	isPublic: Boolean(registry.isPublic),
-	cardIds: registry.cardIds,
-	cards: (registry.cards ?? []).map(toCardRecord)
-});
+export async function getWishlistGroups(options?: RequestOptions): Promise<WishlistGroups> {
+	const response = await apiRequest<ApiWishlists>('/wishlists', wikiForgeOptions(options));
+	return {
+		owned: (response.owned ?? []).map((wishlist) => toSummary(wishlist, 'owned')),
+		shared: (response.shared ?? []).map((wishlist) => toSummary(wishlist, 'shared')),
+		pending: (response.pending ?? []).map((wishlist) => toSummary(wishlist, 'pending'))
+	};
+}
 
-export const getWishlist = async (
-	_userId: string,
-	{
-		page = 1,
-		pageSize = 12,
-		query,
-		priority,
-		hasAlert,
-		rarities,
-		variant = 'all',
-		sortBy = 'name',
-		sortDirection = 'ASC'
-	}: WishlistQuery = {},
+/** Owned lists are the only valid destinations when adding a card from a detail modal. */
+export async function getWishlists(
+	_userId?: string,
 	options?: RequestOptions
-): Promise<PaginatedResponse<WishlistEntry>> => {
+): Promise<WishlistRegistrySummary[]> {
+	return (await getWishlistGroups(options)).owned;
+}
+
+export async function getWishlistPage(
+	id: string,
+	{ page = 1, query, rarities = [], sortBy = 'date', sortDirection = 'DESC' }: WishlistQuery = {},
+	options?: RequestOptions
+): Promise<PaginatedResponse<WishlistPageEntry>> {
 	const parameters = new URLSearchParams({
 		page: String(Math.max(0, page - 1)),
-		size: String(Math.min(100, Math.max(1, pageSize))),
-		variant: variant === 'alternative' ? 'FULL_ART' : variant.toUpperCase(),
-		hasAlert: String(Boolean(hasAlert)),
-		sortBy,
+		sortBy: sortBy === 'date' ? 'ADDED_AT' : sortBy.toUpperCase(),
 		sortDirection
 	});
 	if (query?.trim()) parameters.set('q', query.trim());
-	if (priority) parameters.set('priority', priority);
-	rarities?.forEach((rarity) => parameters.append('rarity', cardRarityCodeByName[rarity]));
-	const response = await apiRequest<WikiForgePage<ApiWishlistEntry>>(
-		`/api/wishlist?${parameters}`,
-		options
-	);
-	const items = response.results.map(toEntry);
-	const hydratedCards = await hydrateCardSocialStates(
-		items.map((entry) => entry.card),
-		options
+	for (const rarity of rarities) {
+		parameters.append('rarity', cardRarityCodeByName[rarity] as WikiForgePublicPageRarity);
+	}
+	const response = await apiRequest<ApiWishlistResult>(
+		`/wishlists/${encodeURIComponent(id)}?${parameters}`,
+		wikiForgeOptions(options)
 	);
 	return {
-		items: items.map((entry, index) => ({ ...entry, card: hydratedCards[index] })),
+		items: response.results.map((entry) => ({
+			card: toPublicPageCardRecord(entry.page),
+			addedAt: entry.addedAt
+		})),
 		meta: {
 			page: response.page + 1,
-			pageSize: response.size,
+			pageSize: wishlistPageSize,
 			total: response.nbResults,
-			totalPages: Math.max(1, Math.ceil(response.nbResults / response.size))
+			totalPages: Math.max(1, Math.ceil(response.nbResults / wishlistPageSize))
 		}
 	};
-};
+}
 
-export const getWishlistAlerts = async (
-	_userId?: string,
-	options?: RequestOptions
-): Promise<WishlistAlert[]> =>
-	(await apiRequest<ApiWishlistAlert[]>('/api/wishlist/alerts', options)).map((alert, index) => ({
-		id: alert.saleId ?? `${alert.type}-${alert.cardId}-${index}`,
-		cardId: alert.cardId,
-		type: alert.type,
-		context: alert.message,
-		createdAt: ''
-	}));
-
-export const addWishlistEntry = async (_userId: string, cardId: string, options?: RequestOptions) =>
-	toEntry(
-		await apiRequest<ApiWishlistEntry>('/api/wishlist', {
-			...options,
-			method: 'POST',
-			body: { cardId, priority: 'medium', note: null }
-		})
-	);
-
-export const updateWishlistEntry = async (
+export async function createWishlistRegistry(
 	_userId: string,
-	cardId: string,
-	input: { priority?: WishlistPriority; note?: string | null },
+	input: { title: string; description: string },
 	options?: RequestOptions
-) =>
-	toEntry(
-		await apiRequest<ApiWishlistEntry>(`/api/wishlist/${encodeURIComponent(cardId)}`, {
-			...options,
-			method: 'PATCH',
-			body: {
-				cardId,
-				priority: input.priority ?? 'medium',
-				note: input.note ?? null
-			}
-		})
-	);
-
-export const removeWishlistEntry = (_userId: string, cardId: string, options?: RequestOptions) =>
-	apiRequest<void>(`/api/wishlist/${encodeURIComponent(cardId)}`, {
-		...options,
-		method: 'DELETE'
+): Promise<WishlistRegistrySummary> {
+	const response = await apiRequest<ApiWishlistSummary>('/wishlists', {
+		...wikiForgeOptions(options),
+		method: 'POST',
+		body: { name: input.title, description: input.description }
 	});
+	return toSummary(response, 'owned');
+}
 
-export const getWishlists = async (
-	_userId?: string,
-	options?: RequestOptions
-): Promise<WishlistRegistrySummary[]> =>
-	(await apiRequest<ApiWishlistRegistry[]>('/api/wishlists', options)).map(toRegistry);
-
-export const getWishlistRegistry = async (
+export async function updateWishlistRegistry(
 	id: string,
-	_userId?: string,
+	input: { title: string; description: string },
 	options?: RequestOptions
-): Promise<WishlistRegistry> =>
-	toRegistry(
-		await apiRequest<ApiWishlistRegistry>(`/api/wishlists/${encodeURIComponent(id)}`, options)
-	);
-
-export const getWishlistRegistryCards = async (
-	id: string,
-	options?: RequestOptions
-): Promise<CardRecord[]> => {
-	const cards = (
-		await apiRequest<WikiForgeCard[]>(`/api/wishlists/${encodeURIComponent(id)}/cards`, options)
-	).map(toCardRecord);
-	return hydrateCardSocialStates(cards, options);
-};
-
-export const createWishlistRegistry = async (
-	_userId: string,
-	input: Pick<WishlistRegistry, 'title' | 'description' | 'isPublic'>,
-	options?: RequestOptions
-) =>
-	toRegistry(
-		await apiRequest<ApiWishlistRegistry>('/api/wishlists', {
-			...options,
-			method: 'POST',
-			body: input
-		})
-	);
-
-export const updateWishlistRegistry = async (
-	id: string,
-	input: Pick<WishlistRegistry, 'title' | 'description' | 'isPublic'>,
-	options?: RequestOptions
-) =>
-	toRegistry(
-		await apiRequest<ApiWishlistRegistry>(`/api/wishlists/${encodeURIComponent(id)}`, {
-			...options,
-			method: 'PATCH',
-			body: input
-		})
-	);
-
-export const getPublicWishlists = async (
-	userId: string,
-	options?: RequestOptions
-): Promise<PublicWishlist[]> =>
-	(
-		await apiRequest<ApiPublicWishlist[]>(
-			`/api/users/${encodeURIComponent(userId)}/wishlists`,
-			options
-		)
-	).map((wishlist) => ({
-		...wishlist,
-		cards: wishlist.cards.map((entry) => ({
-			...entry,
-			card: toCardRecord(entry.card)
-		}))
-	}));
-
-export const getPublicWishlistsState = async (
-	userId: string,
-	options?: RequestOptions
-): Promise<{ items: PublicWishlist[]; unavailable: boolean }> => {
-	try {
-		return { items: await getPublicWishlists(userId, options), unavailable: false };
-	} catch {
-		return { items: [], unavailable: true };
-	}
-};
+): Promise<WishlistRegistrySummary> {
+	const response = await apiRequest<ApiWishlistSummary>(`/wishlists/${encodeURIComponent(id)}`, {
+		...wikiForgeOptions(options),
+		method: 'PATCH',
+		body: { name: input.title, description: input.description }
+	});
+	return toSummary(response, 'owned');
+}
 
 export const deleteWishlistRegistry = (id: string, _userId?: string, options?: RequestOptions) =>
-	apiRequest<void>(`/api/wishlists/${encodeURIComponent(id)}`, {
-		...options,
+	apiRequest<void>(`/wishlists/${encodeURIComponent(id)}`, {
+		...wikiForgeOptions(options),
 		method: 'DELETE'
 	});
 
-export const addWishlistRegistryCard = async (
+export const addWishlistRegistryCard = (
 	id: string,
 	_userId: string,
-	cardId: string,
+	pageId: string,
 	options?: RequestOptions
-) => {
-	await apiRequest<void>(
-		`/api/wishlists/${encodeURIComponent(id)}/cards?cardId=${encodeURIComponent(cardId)}`,
-		{ ...options, method: 'POST' }
-	);
-};
+) =>
+	apiRequest<void>(`/wishlists/${encodeURIComponent(id)}/pages/${encodeURIComponent(pageId)}`, {
+		...wikiForgeOptions(options),
+		method: 'PUT'
+	});
 
-export const removeWishlistRegistryCard = async (
+export const removeWishlistRegistryCard = (
 	id: string,
 	_userId: string,
-	cardId: string,
+	pageId: string,
 	options?: RequestOptions
-) => {
-	await apiRequest<void>(
-		`/api/wishlists/${encodeURIComponent(id)}/cards/${encodeURIComponent(cardId)}`,
-		{ ...options, method: 'DELETE' }
-	);
-};
+) =>
+	apiRequest<void>(`/wishlists/${encodeURIComponent(id)}/pages/${encodeURIComponent(pageId)}`, {
+		...wikiForgeOptions(options),
+		method: 'DELETE'
+	});
 
-export const shareWishlistRegistry = async (
-	id: string,
-	_userId?: string,
-	_target: 'link' | 'guild' = 'link',
+export const inviteWishlistFollower = (
+	wishlistId: string,
+	invitedId: string,
 	options?: RequestOptions
-) => {
-	void _target;
-	const { token } = await apiRequest<{ token: string }>(
-		`/api/wishlists/${encodeURIComponent(id)}/share`,
-		{ ...options, method: 'POST' }
+) =>
+	apiRequest<void>(
+		`/wishlists/${encodeURIComponent(wishlistId)}/shares/${encodeURIComponent(invitedId)}`,
+		{ ...wikiForgeOptions(options), method: 'POST' }
 	);
-	const base = typeof window === 'undefined' ? '' : window.location.origin;
-	return { sealUrl: `${base}/wishlists?share=${encodeURIComponent(token)}` };
-};
 
-export const getGuildWishlistShares = async (
+export async function getWishlistFollowers(
+	wishlistId: string,
 	options?: RequestOptions
-): Promise<GuildWishlistShare[]> => {
-	const guild = await apiRequest<{ id?: string }>('/api/guilds/me', options);
-	if (!guild.id) return [];
-	return apiRequest<GuildWishlistShare[]>(
-		`/api/guilds/${encodeURIComponent(guild.id)}/wishlist-shares`,
-		options
+): Promise<WishlistFollower[]> {
+	const response = await apiRequest<ApiWishlistFollower[]>(
+		`/wishlists/${encodeURIComponent(wishlistId)}/shares`,
+		wikiForgeOptions(options)
 	);
-};
+	return response.map((follower) => ({ ...follower, id: String(follower.id) }));
+}
 
-export const importWishlistRegistryFromLink = async (
-	_userId: string,
-	sealUrl: string,
+export const acceptWishlistInvitation = (wishlistId: string, options?: RequestOptions) =>
+	apiRequest<void>(`/wishlists/${encodeURIComponent(wishlistId)}/shares/accept`, {
+		...wikiForgeOptions(options),
+		method: 'POST'
+	});
+
+export const leaveWishlist = (wishlistId: string, options?: RequestOptions) =>
+	apiRequest<void>(`/wishlists/${encodeURIComponent(wishlistId)}/shares`, {
+		...wikiForgeOptions(options),
+		method: 'DELETE'
+	});
+
+export const revokeWishlistFollower = (
+	wishlistId: string,
+	revokedId: string,
 	options?: RequestOptions
-) => {
-	let token = sealUrl.trim();
-	try {
-		const url = new URL(
-			sealUrl,
-			typeof window === 'undefined' ? 'http://localhost' : window.location.origin
-		);
-		token = url.searchParams.get('share') ?? token;
-	} catch {
-		// La valeur brute peut déjà être le jeton attendu par l'API.
-	}
-	return toRegistry(
-		await apiRequest<ApiWishlistRegistry>(
-			`/api/wishlists/import?token=${encodeURIComponent(token)}`,
-			{ ...options, method: 'POST' }
-		)
+) =>
+	apiRequest<void>(
+		`/wishlists/${encodeURIComponent(wishlistId)}/shares/${encodeURIComponent(revokedId)}`,
+		{ ...wikiForgeOptions(options), method: 'DELETE' }
 	);
-};

@@ -5,7 +5,7 @@ import type { OAuth2TokenResponse } from '$lib/types';
 
 export type Fetcher = typeof fetch;
 
-export type ApiTarget = 'legacy' | 'cards';
+export type ApiTarget = 'legacy' | 'wikiforge';
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
 	body?: unknown;
@@ -28,7 +28,9 @@ export class ApiError extends Error {
 
 function apiUrl(path: string, apiTarget: ApiTarget = 'legacy'): string {
 	const baseUrl = (
-		apiTarget === 'cards' ? env.PUBLIC_CARDS_API_BASE_URL : env.PUBLIC_API_BASE_URL
+		apiTarget === 'wikiforge'
+			? (env.PUBLIC_WIKIFORGE_API_BASE_URL ?? env.PUBLIC_CARDS_API_BASE_URL)
+			: env.PUBLIC_API_BASE_URL
 	)?.replace(/\/$/, '');
 	return baseUrl ? `${baseUrl}${path}` : path;
 }
@@ -54,7 +56,7 @@ async function refreshSession(fetcher: Fetcher): Promise<boolean> {
 		if (!session?.refreshToken) return false;
 
 		try {
-			const response = await fetcher(apiUrl('/oauth2/token', 'cards'), {
+			const response = await fetcher(apiUrl('/oauth2/token', 'wikiforge'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: {
@@ -140,7 +142,7 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 	const canRefresh =
 		!didRefresh &&
 		!skipAuth &&
-		apiTarget === 'cards' &&
+		apiTarget === 'wikiforge' &&
 		isAuthenticationFailure &&
 		typeof localStorage !== 'undefined' &&
 		!path.startsWith('/api/auth/') &&

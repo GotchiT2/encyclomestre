@@ -1,231 +1,151 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { apiRequest } = vi.hoisted(() => ({ apiRequest: vi.fn() }));
+vi.mock('./client', () => ({ apiRequest: vi.fn() }));
 
-vi.mock('./client', () => ({ apiRequest }));
-
+import { apiRequest } from './client';
 import {
+	acceptWishlistInvitation,
+	addWishlistRegistryCard,
+	createWishlistRegistry,
 	deleteWishlistRegistry,
-	getWishlist,
-	getWishlistRegistryCards,
-	getPublicWishlists,
-	getPublicWishlistsState,
-	getWishlists,
-	removeWishlistEntry,
+	getWishlistFollowers,
+	getWishlistGroups,
+	getWishlistPage,
+	inviteWishlistFollower,
+	leaveWishlist,
 	removeWishlistRegistryCard,
+	revokeWishlistFollower,
 	updateWishlistRegistry
 } from './wishlist';
 
-describe('wishlist deletions', () => {
-	beforeEach(() => {
-		apiRequest.mockReset();
-		apiRequest.mockResolvedValue(undefined);
+const mockedRequest = vi.mocked(apiRequest);
+
+beforeEach(() => mockedRequest.mockReset());
+
+describe('WikiForge wishlist API', () => {
+	it('maps owned, shared and pending lists from the canonical API', async () => {
+		mockedRequest.mockResolvedValue({
+			owned: [{ id: 1, name: 'Priorités', description: '', nbCards: 3 }],
+			shared: [{ id: 2, name: 'Partagée', nbCards: 2, ownerName: 'SoneS9' }],
+			pending: [{ id: 3, name: 'Invitation', ownerName: 'OnMyGhost' }]
+		});
+
+		const groups = await getWishlistGroups();
+
+		expect(mockedRequest).toHaveBeenCalledWith('/wishlists', { apiTarget: 'wikiforge' });
+		expect(groups.owned[0]).toMatchObject({ id: '1', cardCount: 3, access: 'owned' });
+		expect(groups.shared[0]).toMatchObject({ ownerName: 'SoneS9', access: 'shared' });
+		expect(groups.pending[0]).toMatchObject({ access: 'pending' });
 	});
 
-	it('removes a card from the simple wishlist through its DELETE endpoint', async () => {
-		await removeWishlistEntry('user-1', '42');
+	it('searches and maps one paginated wishlist page', async () => {
+		mockedRequest.mockResolvedValue({
+			nbResults: 51,
+			page: 0,
+			sortBy: 'RARITY',
+			sortDirection: 'DESC',
+			results: [
+				{
+					addedAt: '2026-08-20T12:00:00Z',
+					page: {
+						id: 42,
+						title: 'Paris',
+						description: 'Capitale',
+						image: 'Paris.jpg',
+						atk: 120,
+						viewCount: 1000,
+						rarity: 'L',
+						createdAt: '2026-08-18T12:00:00Z',
+						globalCount: 3
+					}
+				}
+			]
+		});
 
-		expect(apiRequest).toHaveBeenCalledOnce();
-		expect(apiRequest).toHaveBeenCalledWith('/api/wishlist/42', { method: 'DELETE' });
+		const result = await getWishlistPage('list/1', {
+			query: 'Paris',
+			rarities: ['Légendaire', 'Rare'],
+			sortBy: 'rarity',
+			sortDirection: 'DESC'
+		});
+
+		expect(mockedRequest).toHaveBeenCalledWith(
+			'/wishlists/list%2F1?page=0&sortBy=RARITY&sortDirection=DESC&q=Paris&rarity=L&rarity=R',
+			{ apiTarget: 'wikiforge' }
+		);
+		expect(result.meta).toEqual({ page: 1, pageSize: 50, total: 51, totalPages: 2 });
+		expect(result.items[0]).toMatchObject({ card: { id: '42', title: 'Paris' } });
 	});
 
-	it('removes a card from a named wishlist without a follow-up reload', async () => {
-		await removeWishlistRegistryCard('list/1', 'user-1', '42');
+	it('creates, updates and deletes lists with the Swagger payload', async () => {
+		mockedRequest
+			.mockResolvedValueOnce({ id: 4, name: 'Nouvelle', description: 'Test', nbCards: 0 })
+			.mockResolvedValueOnce({ id: 4, name: 'Modifiée', description: '', nbCards: 0 })
+			.mockResolvedValueOnce(undefined);
 
-		expect(apiRequest).toHaveBeenCalledOnce();
-		expect(apiRequest).toHaveBeenCalledWith('/api/wishlists/list%2F1/cards/42', {
+		await createWishlistRegistry('', { title: 'Nouvelle', description: 'Test' });
+		await updateWishlistRegistry('4', { title: 'Modifiée', description: '' });
+		await deleteWishlistRegistry('4');
+
+		expect(mockedRequest).toHaveBeenNthCalledWith(1, '/wishlists', {
+			apiTarget: 'wikiforge',
+			method: 'POST',
+			body: { name: 'Nouvelle', description: 'Test' }
+		});
+		expect(mockedRequest).toHaveBeenNthCalledWith(2, '/wishlists/4', {
+			apiTarget: 'wikiforge',
+			method: 'PATCH',
+			body: { name: 'Modifiée', description: '' }
+		});
+		expect(mockedRequest).toHaveBeenNthCalledWith(3, '/wishlists/4', {
+			apiTarget: 'wikiforge',
 			method: 'DELETE'
 		});
 	});
 
-	it('deletes the selected named wishlist through its own endpoint', async () => {
-		await deleteWishlistRegistry('list/2', 'user-1');
-
-		expect(apiRequest).toHaveBeenCalledOnce();
-		expect(apiRequest).toHaveBeenCalledWith('/api/wishlists/list%2F2', { method: 'DELETE' });
-	});
-
-	it('uses the hydrated variant cards returned by the paginated wishlist', async () => {
-		apiRequest
-			.mockResolvedValueOnce({
-				results: [
-					{
-						cardId: 'variant-uuid',
-						priority: 'high',
-						note: null,
-						createdAt: '2026-07-16T08:00:00Z',
-						updatedAt: '2026-07-16T08:00:00Z',
-						card: {
-							id: 'variant-uuid',
-							baseCardId: 42,
-							variant: 'FULL_ART',
-							isFullArt: true,
-							wikipediaTitle: 'Carte légendaire',
-							imageUrl: '/card-placeholder.svg',
-							rarity: 'L'
-						}
-					}
-				],
-				page: 0,
-				nbResults: 1,
-				size: 20
-			})
-			.mockResolvedValueOnce([
-				{ cardId: 'variant-uuid', ownedCount: 0, wishlists: [], owners: [] }
-			]);
-
-		const wishlist = await getWishlist('user-1', {
-			page: 1,
-			pageSize: 20,
-			variant: 'alternative'
+	it('adds and removes pages with idempotent endpoints', async () => {
+		mockedRequest.mockResolvedValue(undefined);
+		await addWishlistRegistryCard('1', '', '42');
+		await removeWishlistRegistryCard('1', '', '42');
+		expect(mockedRequest).toHaveBeenNthCalledWith(1, '/wishlists/1/pages/42', {
+			apiTarget: 'wikiforge',
+			method: 'PUT'
 		});
-
-		expect(apiRequest).toHaveBeenCalledWith(expect.stringContaining('variant=FULL_ART'), undefined);
-		expect(wishlist.items[0]).toMatchObject({
-			cardId: 'variant-uuid',
-			card: { id: 'variant-uuid', isFullArt: true, variant: 'FULL_ART' }
+		expect(mockedRequest).toHaveBeenNthCalledWith(2, '/wishlists/1/pages/42', {
+			apiTarget: 'wikiforge',
+			method: 'DELETE'
 		});
 	});
 
-	it('hydrates named wishlists without requesting each card separately', async () => {
-		apiRequest.mockResolvedValueOnce([
-			{
-				id: 'wishlist-uuid',
-				userId: 'user-1',
-				title: 'Priorités',
-				description: '',
-				cardIds: ['variant-uuid'],
-				cards: [
-					{
-						id: 'variant-uuid',
-						baseCardId: 42,
-						variant: 'NORMAL',
-						isFullArt: false,
-						wikipediaTitle: 'Carte normale',
-						imageUrl: '/card-placeholder.svg',
-						rarity: 'L'
-					}
-				],
-				opportunityCount: 0,
-				createdAt: '',
-				updatedAt: ''
-			}
+	it('supports invitations, followers, acceptance, leaving and revocation', async () => {
+		mockedRequest
+			.mockResolvedValueOnce(undefined)
+			.mockResolvedValueOnce([{ id: 7, name: 'Ariane', accepted: false }])
+			.mockResolvedValue(undefined);
+
+		await inviteWishlistFollower('1', '7');
+		await expect(getWishlistFollowers('1')).resolves.toEqual([
+			{ id: '7', name: 'Ariane', accepted: false }
 		]);
+		await acceptWishlistInvitation('1');
+		await leaveWishlist('1');
+		await revokeWishlistFollower('1', '7');
 
-		const lists = await getWishlists('user-1');
-
-		expect(apiRequest).toHaveBeenCalledOnce();
-		expect(lists[0]).toMatchObject({
-			cardIds: ['variant-uuid'],
-			cards: [{ id: 'variant-uuid', variant: 'NORMAL' }]
+		expect(mockedRequest).toHaveBeenNthCalledWith(1, '/wishlists/1/shares/7', {
+			apiTarget: 'wikiforge',
+			method: 'POST'
 		});
-	});
-
-	it('loads every detailed card of a named wishlist in one request', async () => {
-		apiRequest
-			.mockResolvedValueOnce([
-				{
-					id: 'variant-full-art',
-					baseCardId: 42,
-					variant: 'FULL_ART',
-					isFullArt: true,
-					wikipediaTitle: 'Carte légendaire',
-					imageUrl: '/card-placeholder.svg',
-					rarity: 'L',
-					category: 'Histoire',
-					atk: 90,
-					def: 80
-				}
-			])
-			.mockResolvedValueOnce([
-				{
-					cardId: 'variant-full-art',
-					ownedCount: 1,
-					wishlists: [],
-					owners: [{ userId: 'friend-1', username: 'Ami', avatarUrl: null, ownedCount: 2 }]
-				}
-			]);
-
-		const cards = await getWishlistRegistryCards('list/1');
-
-		expect(apiRequest).toHaveBeenCalledTimes(2);
-		expect(apiRequest).toHaveBeenCalledWith('/api/wishlists/list%2F1/cards', undefined);
-		expect(cards[0]).toMatchObject({
-			id: 'variant-full-art',
-			variant: 'FULL_ART',
-			isFullArt: true,
-			title: 'Carte légendaire',
-			attack: 90,
-			defense: 80
+		expect(mockedRequest).toHaveBeenNthCalledWith(3, '/wishlists/1/shares/accept', {
+			apiTarget: 'wikiforge',
+			method: 'POST'
 		});
-		expect(cards[0].friendsWhoOwn).toEqual([
-			expect.objectContaining({ friendId: 'friend-1', ownedCount: 2 })
-		]);
-	});
-
-	it('updates visibility and hydrates public wishlist ownership', async () => {
-		apiRequest
-			.mockResolvedValueOnce({
-				id: 'wishlist-uuid',
-				userId: 'user-1',
-				title: 'Publique',
-				description: '',
-				isPublic: true,
-				cardIds: [],
-				cards: [],
-				opportunityCount: 0,
-				createdAt: '',
-				updatedAt: ''
-			})
-			.mockResolvedValueOnce([
-				{
-					id: 'wishlist-uuid',
-					userId: 'friend-1',
-					title: 'Publique',
-					description: '',
-					updatedAt: '',
-					cards: [
-						{
-							card: {
-								id: 'variant-1',
-								variant: 'NORMAL',
-								isFullArt: false,
-								wikipediaTitle: 'Carte',
-								imageUrl: '',
-								rarity: 'R'
-							},
-							viewerOwnedCount: 1,
-							viewerUserCardIds: ['user-card-1']
-						}
-					]
-				}
-			]);
-
-		await updateWishlistRegistry('wishlist-uuid', {
-			title: 'Publique',
-			description: '',
-			isPublic: true
+		expect(mockedRequest).toHaveBeenNthCalledWith(4, '/wishlists/1/shares', {
+			apiTarget: 'wikiforge',
+			method: 'DELETE'
 		});
-		const publicLists = await getPublicWishlists('friend-1');
-
-		expect(apiRequest).toHaveBeenNthCalledWith(1, '/api/wishlists/wishlist-uuid', {
-			method: 'PATCH',
-			body: { title: 'Publique', description: '', isPublic: true }
-		});
-		expect(apiRequest).toHaveBeenNthCalledWith(2, '/api/users/friend-1/wishlists', undefined);
-		expect(publicLists[0].cards[0]).toMatchObject({
-			viewerOwnedCount: 1,
-			viewerUserCardIds: ['user-card-1'],
-			card: { id: 'variant-1' }
-		});
-	});
-
-	it('keeps the public profile available when public wishlists fail', async () => {
-		apiRequest.mockRejectedValueOnce(new Error('API 500'));
-
-		await expect(getPublicWishlistsState('friend-1')).resolves.toEqual({
-			items: [],
-			unavailable: true
+		expect(mockedRequest).toHaveBeenNthCalledWith(5, '/wishlists/1/shares/7', {
+			apiTarget: 'wikiforge',
+			method: 'DELETE'
 		});
 	});
 });

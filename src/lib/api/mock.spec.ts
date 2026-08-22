@@ -155,69 +155,39 @@ describe('createMockApiResponse', () => {
 		expect(firstConversation.id).toBe(secondConversation.id);
 	});
 
-	it('persiste, filtre et pagine les entrées de wishlist', async () => {
-		createMockApiResponse({
-			path: '/wishlist',
-			method: 'POST',
-			body: { userId: 'demo-user', cardId: 'girls-generation-1' }
-		});
-		createMockApiResponse({
-			path: '/wishlist/girls-generation-1?userId=demo-user',
-			method: 'PATCH',
-			body: { priority: 'high', note: 'À conserver' }
-		});
-
-		const response = createMockApiResponse({
-			path: '/wishlist?priority=high&page=0&size=1'
-		});
-
-		expect(response.status).toBe(200);
-		expect(await response.json()).toMatchObject({
-			results: [
-				expect.objectContaining({
-					cardId: 'girls-generation-1',
-					priority: 'high',
-					card: expect.objectContaining({ variant: 'NORMAL' })
-				})
-			],
-			page: 0,
-			nbResults: 1
-		});
-	});
-
-	it('gère les registres de desiderata et leur partage', async () => {
+	it('gère les wishlists WikiForge, leurs pages et leurs invitations', async () => {
 		const created = createMockApiResponse({
 			path: '/wishlists',
 			method: 'POST',
 			body: {
-				userId: 'demo-user',
-				title: 'Cartes à échanger',
+				name: 'Cartes à échanger',
 				description: 'Doublons recherchés.'
 			}
 		});
-		const registry = (await created.json()) as { id: string; title: string };
-		expect(created.status).toBe(201);
-		expect(registry.title).toBe('Cartes à échanger');
+		const registry = (await created.json()) as { id: string; name: string };
+		expect(created.status).toBe(200);
+		expect(registry.name).toBe('Cartes à échanger');
 
 		createMockApiResponse({
-			path: `/wishlists/${registry.id}/cards?cardId=red-velvet-1&userId=demo-user`,
-			method: 'POST'
+			path: `/wishlists/${registry.id}/pages/1`,
+			method: 'PUT'
 		});
 		const cards = createMockApiResponse({
-			path: `/wishlists/${registry.id}/cards?userId=demo-user`
+			path: `/wishlists/${registry.id}?page=0&sortBy=ADDED_AT&sortDirection=DESC`
 		});
 		expect(cards.status).toBe(200);
-		expect(await cards.json()).toEqual([
-			expect.objectContaining({ id: 'red-velvet-1', wikipediaTitle: 'Red Velvet' })
-		]);
-
-		const shared = createMockApiResponse({
-			path: `/wishlists/${registry.id}/share?userId=demo-user`,
-			method: 'POST',
-			body: { target: 'guild' }
+		expect(await cards.json()).toMatchObject({
+			nbResults: 1,
+			results: [expect.objectContaining({ page: expect.objectContaining({ id: 1 }) })]
 		});
-		expect(shared.status).toBe(200);
-		expect(await shared.json()).toMatchObject({ token: registry.id });
+
+		const invited = createMockApiResponse({
+			path: `/wishlists/${registry.id}/shares/17`,
+			method: 'POST'
+		});
+		expect(invited.status).toBe(200);
+		const followers = createMockApiResponse({ path: `/wishlists/${registry.id}/shares` });
+		expect(await followers.json()).toEqual([expect.objectContaining({ id: 17, accepted: false })]);
 	});
 
 	it('filtre les ventes actives pour une carte', async () => {
@@ -263,22 +233,6 @@ describe('createMockApiResponse', () => {
 		const response = createMockApiResponse({ path: '/cards/g-i-dle-2' });
 		expect(response.status).toBe(200);
 		expect(await response.json()).toMatchObject({ id: 'g-i-dle-2' });
-	});
-
-	it('exposes only public friend wishlists with viewer copy ids', async () => {
-		const response = createMockApiResponse({ path: '/api/users/friend-0/wishlists' });
-		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual([
-			expect.objectContaining({
-				id: 'friend-0-public-wishlist',
-				cards: expect.arrayContaining([
-					expect.objectContaining({
-						viewerOwnedCount: expect.any(Number),
-						viewerUserCardIds: expect.any(Array)
-					})
-				])
-			})
-		]);
 	});
 
 	it('persists user blocks while retaining the friendship record', async () => {
