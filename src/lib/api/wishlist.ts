@@ -36,11 +36,11 @@ interface ApiWishlistEntry {
 }
 
 interface ApiWishlistResult {
-	nbResults: number;
-	page: number;
-	sortBy: 'ADDED_AT' | 'NAME' | 'RARITY';
-	sortDirection: 'ASC' | 'DESC';
-	results: ApiWishlistEntry[];
+	nbResults?: number;
+	page?: number;
+	sortBy?: 'ADDED_AT' | 'NAME' | 'RARITY';
+	sortDirection?: 'ASC' | 'DESC';
+	results?: ApiWishlistEntry[] | null;
 	filters?: Record<string, unknown>;
 }
 
@@ -100,20 +100,22 @@ export async function getWishlistPage(
 	for (const rarity of rarities) {
 		parameters.append('rarity', cardRarityCodeByName[rarity] as WikiForgePublicPageRarity);
 	}
-	const response = await apiRequest<ApiWishlistResult>(
+	const response = await apiRequest<ApiWishlistResult | null | undefined>(
 		`/wishlists/${encodeURIComponent(id)}?${parameters}`,
 		wikiForgeOptions(options)
 	);
+	const results = response?.results ?? [];
+	const total = Math.max(0, response?.nbResults ?? results.length);
 	return {
-		items: response.results.map((entry) => ({
+		items: results.map((entry) => ({
 			card: toPublicPageCardRecord(entry.page),
 			addedAt: entry.addedAt
 		})),
 		meta: {
-			page: response.page + 1,
+			page: (response?.page ?? Math.max(0, page - 1)) + 1,
 			pageSize: wishlistPageSize,
-			total: response.nbResults,
-			totalPages: Math.max(1, Math.ceil(response.nbResults / wishlistPageSize))
+			total,
+			totalPages: Math.max(1, Math.ceil(total / wishlistPageSize))
 		}
 	};
 }

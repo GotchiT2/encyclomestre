@@ -77,6 +77,21 @@ describe('WikiForge wishlist API', () => {
 		expect(result.items[0]).toMatchObject({ card: { id: '42', title: 'Paris' } });
 	});
 
+	it.each([
+		['an empty payload', undefined],
+		[
+			'a null results collection',
+			{ nbResults: 0, page: 0, sortBy: 'ADDED_AT', sortDirection: 'DESC', results: null }
+		]
+	])('maps %s to an empty wishlist page', async (_label, response) => {
+		mockedRequest.mockResolvedValue(response);
+
+		await expect(getWishlistPage('12')).resolves.toEqual({
+			items: [],
+			meta: { page: 1, pageSize: 50, total: 0, totalPages: 1 }
+		});
+	});
+
 	it('creates, updates and deletes lists with the Swagger payload', async () => {
 		mockedRequest
 			.mockResolvedValueOnce({ id: 4, name: 'Nouvelle', description: 'Test', nbCards: 0 })
