@@ -19,7 +19,7 @@ describe('apiRequest en mode mock', () => {
 		expect(fetcher).not.toHaveBeenCalled();
 	});
 
-	it('reproduit le flux OAuth2 puis /users/me sans réseau', async () => {
+	it('reproduit le flux OAuth2 puis /me sans réseau', async () => {
 		const fetcher = vi.fn();
 
 		const session = await login(

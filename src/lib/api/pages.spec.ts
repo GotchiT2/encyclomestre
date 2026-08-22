@@ -1,5 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getWikiForgePublicPage, getWikiForgePublicPages, toPublicPage } from './pages';
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('WikiForge public pages API', () => {
 	it('uses the public catalogue contract without local authentication', async () => {
@@ -44,6 +46,37 @@ describe('WikiForge public pages API', () => {
 		expect(fetcher).toHaveBeenCalledWith(
 			'https://api.wikiforge.fr/pages/42',
 			expect.objectContaining({ credentials: 'omit' })
+		);
+	});
+
+	it('forwards the current OAuth access token to the Cards API', async () => {
+		vi.stubGlobal('localStorage', {
+			length: 1,
+			clear: vi.fn(),
+			getItem: () =>
+				JSON.stringify({ accessToken: 'cards-access-token', user: { id: '1' } }),
+			key: () => null,
+			setItem: vi.fn(),
+			removeItem: vi.fn()
+		} satisfies Storage);
+		const fetcher = vi.fn(async () =>
+			Response.json({
+				nbResults: 0,
+				page: 0,
+				rarityResults: {},
+				results: [],
+				sortBy: 'RARITY',
+				sortDirection: 'ASC'
+			})
+		);
+
+		await getWikiForgePublicPages({}, { fetch: fetcher as typeof fetch });
+
+		expect(fetcher).toHaveBeenCalledWith(
+			'https://api.wikiforge.fr/pages?page=0&sortBy=rarity&sortDirection=ASC',
+			expect.objectContaining({
+				headers: expect.objectContaining({ authorization: 'Bearer cards-access-token' })
+			})
 		);
 	});
 

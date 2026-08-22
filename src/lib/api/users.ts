@@ -1,4 +1,5 @@
 import { apiRequest, type RequestOptions } from './client';
+import { toCurrentUser, type OAuthCurrentUserResponse } from './current-user';
 import {
 	toCollectionCardRecord,
 	type WikiForgeCollectionCard,
@@ -63,8 +64,10 @@ export const getUserCollectionPage = async (
 	};
 };
 
-export const getCurrentUser = (options?: RequestOptions) =>
-	apiRequest<User>('/users/me', { ...options, apiTarget: 'cards' });
+export const getCurrentUser = async (options?: RequestOptions) =>
+	toCurrentUser(
+		await apiRequest<OAuthCurrentUserResponse>('/me', { ...options, apiTarget: 'cards' })
+	);
 
 export const getUser = (id: string, options?: RequestOptions) =>
 	apiRequest<User>(`/api/users/${encodeURIComponent(id)}`, options);

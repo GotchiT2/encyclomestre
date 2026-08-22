@@ -28,10 +28,10 @@ describe('apiRequest public API transport', () => {
 	it('uses the Cards API only when the endpoint requests it', async () => {
 		const fetcher = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
 
-		await apiRequest('/users/me', { fetch: fetcher as typeof fetch, apiTarget: 'cards' });
+		await apiRequest('/me', { fetch: fetcher as typeof fetch, apiTarget: 'cards' });
 
 		expect(fetcher).toHaveBeenCalledWith(
-			'https://api.wikiforge.fr/users/me',
+			'https://api.wikiforge.fr/me',
 			expect.objectContaining({ credentials: 'include' })
 		);
 	});

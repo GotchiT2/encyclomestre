@@ -1,4 +1,5 @@
 import { env } from '$env/dynamic/public';
+import { restoreSession } from '$lib/auth/session';
 import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/rarities';
 import type { CardRecord, PaginatedResponse } from '$lib/types';
 
@@ -65,6 +66,12 @@ function publicPagesPath(query: WikiForgePublicPagesQuery): string {
 	return `/pages?${parameters}`;
 }
 
+function cardsAuthorizationHeader(): HeadersInit {
+	const accessToken =
+		typeof localStorage === 'undefined' ? undefined : restoreSession(localStorage)?.accessToken;
+	return accessToken ? { authorization: `Bearer ${accessToken}` } : {};
+}
+
 /**
  * Public catalogue source. It deliberately bypasses the authenticated local
  * WikiForge API: this is the future canonical source for global card search.
@@ -74,7 +81,7 @@ export async function getWikiForgePublicPages(
 	options: PublicPagesRequestOptions = {}
 ): Promise<WikiForgePublicPagesResponse> {
 	const response = await (options.fetch ?? fetch)(publicPagesApiUrl(publicPagesPath(query)), {
-		headers: { accept: 'application/json' },
+		headers: { accept: 'application/json', ...cardsAuthorizationHeader() },
 		credentials: 'omit',
 		signal: options.signal
 	});
@@ -93,7 +100,7 @@ export async function getWikiForgePublicPage(
 	const response = await (options.fetch ?? fetch)(
 		publicPagesApiUrl(`/pages/${encodeURIComponent(String(id))}`),
 		{
-			headers: { accept: 'application/json' },
+			headers: { accept: 'application/json', ...cardsAuthorizationHeader() },
 			credentials: 'omit',
 			signal: options.signal
 		}

@@ -140,6 +140,7 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 	const canRefresh =
 		!didRefresh &&
 		!skipAuth &&
+		apiTarget === 'cards' &&
 		isAuthenticationFailure &&
 		typeof localStorage !== 'undefined' &&
 		!path.startsWith('/api/auth/') &&

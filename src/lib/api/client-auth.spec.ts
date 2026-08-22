@@ -73,8 +73,14 @@ describe('apiRequest authentication recovery', () => {
 		});
 
 		const responses = await Promise.all([
-			apiRequest<{ ok: boolean }>('/api/dashboard', { fetch: fetcher as typeof fetch }),
-			apiRequest<{ ok: boolean }>('/api/friends', { fetch: fetcher as typeof fetch })
+			apiRequest<{ ok: boolean }>('/dashboard', {
+				fetch: fetcher as typeof fetch,
+				apiTarget: 'cards'
+			}),
+			apiRequest<{ ok: boolean }>('/friends', {
+				fetch: fetcher as typeof fetch,
+				apiTarget: 'cards'
+			})
 		]);
 
 		expect(responses).toEqual([{ ok: true }, { ok: true }]);
@@ -91,8 +97,19 @@ describe('apiRequest authentication recovery', () => {
 		);
 
 		await expect(
-			apiRequest('/api/dashboard', { fetch: fetcher as typeof fetch })
+			apiRequest('/dashboard', { fetch: fetcher as typeof fetch, apiTarget: 'cards' })
 		).rejects.toBeInstanceOf(ApiError);
 		expect(restoreSession(storage)).toBeNull();
+	});
+
+	it('conserve la session lorsqu’une route legacy rejette le jeton OAuth Cards', async () => {
+		const fetcher = vi.fn().mockResolvedValue(Response.json({ message: 'Non autorisé' }, { status: 401 }));
+
+		await expect(
+			apiRequest('/api/dashboard', { fetch: fetcher as typeof fetch })
+		).rejects.toBeInstanceOf(ApiError);
+
+		expect(fetcher).toHaveBeenCalledOnce();
+		expect(restoreSession(storage)?.accessToken).toBe('expired');
 	});
 });
