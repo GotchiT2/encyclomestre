@@ -74,6 +74,7 @@ describe('WishlistPicker', () => {
 		await expect.element(page.getByText('Carte distante')).toBeVisible();
 		await page.getByRole('button', { name: 'Carte distante' }).click();
 		expect(props.onSelect).toHaveBeenCalledWith(card);
+		await expect.element(page.getByRole('heading', { name: 'Cartes recherchées' })).toBeVisible();
 	});
 
 	it('debounces catalogue searches through the API', async () => {

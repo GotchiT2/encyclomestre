@@ -4,6 +4,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { hydrateSession } from '$lib/auth/session';
 	import AppNavigation from '$lib/components/layout/app-navigation.svelte';
+	import { Toaster } from '$lib/components/ui/sonner';
 	import { _ } from '$lib/i18n';
 	import { onMount } from 'svelte';
 
@@ -26,3 +27,5 @@
 		{@render children()}
 	</main>
 </div>
+
+<Toaster richColors />

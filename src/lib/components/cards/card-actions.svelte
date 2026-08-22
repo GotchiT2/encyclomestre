@@ -25,7 +25,7 @@
 </script>
 
 <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-	<WishlistActionMenu {wishlists} onToggle={onToggleWishlist} />
+	<WishlistActionMenu {wishlists} cardTitle={card.title} onToggle={onToggleWishlist} />
 	<Button variant="outline" disabled={!card.friendsWhoOwn.length} onclick={onTrade}
 		>{$_('cardDetail.trade')}</Button
 	>

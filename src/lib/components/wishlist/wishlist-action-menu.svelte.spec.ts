@@ -4,9 +4,15 @@ import { render } from 'vitest-browser-svelte';
 import '$lib/i18n';
 import WishlistActionMenu from './wishlist-action-menu.svelte';
 
+const { toastSuccess } = vi.hoisted(() => ({ toastSuccess: vi.fn() }));
+
+vi.mock('svelte-sonner', () => ({
+	toast: { success: toastSuccess }
+}));
+
 describe('WishlistActionMenu', () => {
 	it('lets the user choose the named wishlist receiving the card', async () => {
-		const onToggle = vi.fn();
+		const onToggle = vi.fn().mockResolvedValue(undefined);
 		render(WishlistActionMenu, {
 			wishlists: [
 				{
@@ -19,6 +25,7 @@ describe('WishlistActionMenu', () => {
 					access: 'owned'
 				}
 			],
+			cardTitle: 'Carte distante',
 			onToggle
 		});
 
@@ -28,6 +35,9 @@ describe('WishlistActionMenu', () => {
 			zIndex: '120'
 		});
 		await destination.click();
-		expect(onToggle).toHaveBeenCalledWith('wishlist-1', true);
+		await vi.waitFor(() => expect(onToggle).toHaveBeenCalledWith('wishlist-1', true));
+		expect(toastSuccess).toHaveBeenCalledWith(
+			'« Carte distante » a été ajoutée à « Cartes recherchées ».'
+		);
 	});
 });

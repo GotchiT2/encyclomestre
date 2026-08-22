@@ -35,7 +35,9 @@
 	let failed = $state(false);
 	let debounceTimer: number | undefined;
 	let requestId = 0;
-	const visibleCards = $derived(cards.filter((card) => !existingCardIds.includes(card.id)));
+	const visibleCards = $derived(
+		cards.filter((card) => !existingCardIds.includes(String(card.baseCardId ?? card.id)))
+	);
 
 	$effect(() => {
 		const parameters: CardQuery = {

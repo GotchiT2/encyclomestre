@@ -3,12 +3,15 @@
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
 	import type { WishlistRegistrySummary } from '$lib/types';
+	import { toast } from 'svelte-sonner';
 
 	let {
 		wishlists,
+		cardTitle,
 		onToggle
 	}: {
 		wishlists: WishlistRegistrySummary[];
+		cardTitle: string;
 		onToggle: (wishlistId: string, selected: boolean) => void | Promise<void>;
 	} = $props();
 
@@ -19,6 +22,11 @@
 		pendingIds = [...pendingIds, wishlist.id];
 		try {
 			await onToggle(wishlist.id, true);
+			toast.success(
+				$_('wishlist.card_added', {
+					values: { card: cardTitle, wishlist: wishlist.title }
+				})
+			);
 		} finally {
 			pendingIds = pendingIds.filter((id) => id !== wishlist.id);
 		}

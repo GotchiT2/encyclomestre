@@ -331,6 +331,7 @@
 		"description_placeholder": "Description de la wishlist",
 		"empty_state": "Cette wishlist ne contient aucune carte.",
 		"add_card_action": "Ajouter des cartes",
+		"card_added": "« {card} » a été ajoutée à « {wishlist} ».",
 		"friends_inventory_title": "Amis qui possèdent cette carte",
 		"no_friends_own": "Aucun ami ne possède cette carte",
 		"trade_match_alert": "Opportunité d’échange",

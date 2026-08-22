@@ -27,6 +27,7 @@
 	import WishlistSocialGrid from '$lib/components/wishlist/wishlist-social-grid.svelte';
 	import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 	import { _ } from '$lib/i18n';
+	import { toast } from 'svelte-sonner';
 	import type { CardQuery } from '$lib/api';
 	import type {
 		CardRarity,
@@ -55,6 +56,7 @@
 	let groupsFailed = $state(false);
 	let entriesFailed = $state(false);
 	let pickerOpen = $state(false);
+	let pickerAddedCardIds = $state<string[]>([]);
 	let accessOpen = $state(false);
 	let createOpen = $state(false);
 	let editOpen = $state(false);
@@ -167,9 +169,23 @@
 
 	async function addCard(card: CardRecord) {
 		if (!activeWishlist || !editable) return;
-		await addWishlistRegistryCard(activeWishlist.id, '', String(card.baseCardId ?? card.id));
-		pickerOpen = false;
-		await Promise.all([refreshGroups(activeWishlist.id), loadEntries()]);
+		const wishlist = activeWishlist;
+		const pageId = String(card.baseCardId ?? card.id);
+		await addWishlistRegistryCard(wishlist.id, '', pageId);
+		if (!pickerAddedCardIds.includes(pageId)) {
+			pickerAddedCardIds = [...pickerAddedCardIds, pageId];
+		}
+		toast.success(
+			$_('wishlist.card_added', {
+				values: { card: card.title, wishlist: wishlist.title }
+			})
+		);
+		await Promise.all([refreshGroups(wishlist.id), loadEntries()]);
+	}
+
+	function openPicker() {
+		pickerAddedCardIds = [];
+		pickerOpen = true;
 	}
 
 	async function removeCard(pageId: string) {
@@ -283,7 +299,7 @@
 							<Button variant="outline" onclick={() => void openAccess()}
 								>{$_('wishlist.manage_access')}</Button
 							>
-							<Button onclick={() => (pickerOpen = true)}>{$_('wishlist.add_card_action')}</Button>
+							<Button onclick={openPicker}>{$_('wishlist.add_card_action')}</Button>
 						</div>
 					{/if}
 				</header>
@@ -332,7 +348,10 @@
 
 <WishlistPicker
 	bind:open={pickerOpen}
-	existingCardIds={entries.map((entry) => entry.card.id)}
+	existingCardIds={[
+		...entries.map((entry) => String(entry.card.baseCardId ?? entry.card.id)),
+		...pickerAddedCardIds
+	]}
 	loadCards={loadCandidateCards}
 	onSelect={addCard}
 />
