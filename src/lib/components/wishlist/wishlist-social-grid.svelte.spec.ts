@@ -36,6 +36,8 @@ describe('WishlistSocialGrid', () => {
 			onOpen: vi.fn(),
 			onRemove
 		});
+		const cardWrapper = document.querySelector('[data-testid="card-tile"]')?.parentElement;
+		expect(cardWrapper).toHaveClass('wikiforge-card-size', 'relative', 'isolate');
 		await page.getByRole('button', { name: 'Retirer de la wishlist' }).click();
 		expect(onRemove).toHaveBeenCalledWith('42');
 

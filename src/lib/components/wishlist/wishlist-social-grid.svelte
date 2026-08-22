@@ -20,7 +20,7 @@
 {#if entries.length}
 	<div class="wikiforge-card-grid" data-testid="wishlist-card-grid">
 		{#each entries as entry (entry.card.id)}
-			<article class="relative">
+			<article class="wikiforge-card-size relative isolate">
 				<CardTile card={entry.card} showFriendOwners={false} onOpen={() => onOpen(entry)} />
 				{#if editable}
 					<Button
