@@ -10,8 +10,6 @@ import type {
 	ProfileSettings,
 	TradeOffer,
 	BoosterInventory,
-	WishlistEntry,
-	WishlistRegistry,
 	GuildWishlistShare,
 	Friendship,
 	Conversation,
@@ -28,6 +26,27 @@ export interface MockApiRequest {
 }
 
 const now = '2026-07-11T09:00:00.000Z';
+
+interface LegacyWishlistEntry {
+	cardId: string;
+	card: CardRecord;
+	priority: 'low' | 'medium' | 'high';
+	note: string | null;
+	createdAt: string;
+	updatedAt: string;
+}
+
+interface LegacyWishlistRegistry {
+	id: string;
+	userId: string;
+	title: string;
+	description: string;
+	isPublic: boolean;
+	cardIds: string[];
+	cards: CardRecord[];
+	createdAt: string;
+	updatedAt: string;
+}
 const auctionSoon = new Date(Date.now() + 45_000).toISOString();
 const auctionLater = new Date(Date.now() + 3_600_000).toISOString();
 const auctionPast = new Date(Date.now() - 60_000).toISOString();
@@ -50,8 +69,19 @@ const apiCard = (card: CardRecord) => ({
 	globalSupply: card.globalSupply,
 	createdAt: now
 });
+const publicPage = (card: CardRecord) => ({
+	id: card.baseCardId ?? (Number.parseInt(card.id.replace(/\D/g, ''), 10) || 0),
+	title: card.title,
+	description: card.longDescription || card.shortDescription,
+	image: card.imageUrl.split('/').at(-1) ?? '',
+	atk: card.attack,
+	viewCount: card.viewCount,
+	rarity: card.rarityInitials,
+	createdAt: card.acquiredAt ?? now,
+	globalCount: card.globalSupply
+});
 
-const apiRegistry = (registry: WishlistRegistry) => ({
+const apiRegistry = (registry: LegacyWishlistRegistry) => ({
 	...registry,
 	cards: registry.cards.map(apiCard)
 });
@@ -173,7 +203,7 @@ const saleBids: SaleBid[] = [
 		createdAt: '2026-07-13T14:08:00.000Z'
 	}
 ];
-const wishlist = new Map<string, WishlistEntry[]>([
+const wishlist = new Map<string, LegacyWishlistEntry[]>([
 	[
 		'demo-user',
 		[
@@ -196,7 +226,7 @@ const wishlist = new Map<string, WishlistEntry[]>([
 		]
 	]
 ]);
-const wishlists = new Map<string, WishlistRegistry[]>([
+const wishlists = new Map<string, LegacyWishlistRegistry[]>([
 	[
 		'demo-user',
 		[
@@ -245,6 +275,23 @@ const wishlists = new Map<string, WishlistRegistry[]>([
 		]
 	]
 ]);
+const wishlistFollowers = new Map<string, Array<{ id: number; name: string; accepted: boolean }>>([
+	['desiderata-priorities', [{ id: 2, name: 'SoneS9', accepted: true }]],
+	['desiderata-generation-2', [{ id: 3, name: 'OnMyGhost', accepted: false }]]
+]);
+let pendingWishlistState: 'pending' | 'shared' | 'removed' = 'pending';
+let sharedWishlistLeft = false;
+const pendingWishlistRegistry: LegacyWishlistRegistry = {
+	id: '301',
+	userId: 'friend-1',
+	title: 'Cartes cinéma',
+	description: 'Invitation en attente.',
+	isPublic: false,
+	cardIds: mockCards.slice(0, 2).map((card) => card.id),
+	cards: mockCards.slice(0, 2),
+	createdAt: now,
+	updatedAt: now
+};
 const blockedUserIds = new Set<string>();
 const guildWishlistShares: GuildWishlistShare[] = [];
 const conversations: Conversation[] = [
@@ -732,35 +779,107 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		);
 	}
 	if (normalizedMethod === 'GET' && pathname === '/wishlists') {
-		const userId = url.searchParams.get('userId') ?? 'demo-user';
-		return json(
-			(wishlists.get(userId) ?? []).map((registry) => ({
-				...apiRegistry(registry),
-				opportunityCount: registry.cardIds.filter((cardId) =>
-					Boolean(mockCards.find((card) => card.id === cardId)?.friendsWhoOwn.length)
-				).length
-			}))
+		const summary = (registry: LegacyWishlistRegistry, ownerName?: string) => ({
+			id: registry.id,
+			name: registry.title,
+			description: registry.description,
+			nbCards: registry.cardIds.length,
+			ownerName: ownerName ?? null,
+			invitedAt: ownerName ? now : null
+		});
+		return json({
+			owned: (wishlists.get('demo-user') ?? []).map((registry) => summary(registry)),
+			shared: [
+				...(!sharedWishlistLeft
+					? (wishlists.get('friend-0') ?? []).map((registry) => summary(registry, 'SoneS9'))
+					: []),
+				...(pendingWishlistState === 'shared'
+					? [
+							{
+								id: '301',
+								name: 'Cartes cinéma',
+								description: 'Liste partagée.',
+								nbCards: 2,
+								ownerName: 'OnMyGhost',
+								invitedAt: now
+							}
+						]
+					: [])
+			],
+			pending:
+				pendingWishlistState === 'pending'
+					? [
+							{
+								id: '301',
+								name: 'Cartes cinéma',
+								description: 'Invitation en attente.',
+								nbCards: 2,
+								ownerName: 'OnMyGhost',
+								invitedAt: now
+							}
+						]
+					: []
+		});
+	}
+	if (normalizedMethod === 'GET' && pathname === '/pages') {
+		const query = url.searchParams.get('q')?.trim().toLocaleLowerCase('fr-FR') ?? '';
+		const rarities = new Set(url.searchParams.getAll('rarity'));
+		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
+		const sortBy = (url.searchParams.get('sortBy') ?? 'rarity').toUpperCase();
+		const sortDirection = url.searchParams.get('sortDirection') === 'DESC' ? 'DESC' : 'ASC';
+		const cards = mockCards
+			.filter(
+				(card) =>
+					(!query || card.title.toLocaleLowerCase('fr-FR').includes(query)) &&
+					(!rarities.size || rarities.has(card.rarityInitials))
+			)
+			.toSorted((left, right) => {
+				const comparison =
+					sortBy === 'NAME'
+						? left.title.localeCompare(right.title, 'fr')
+						: left.rarityInitials.localeCompare(right.rarityInitials, 'fr');
+				return sortDirection === 'DESC' ? -comparison : comparison;
+			});
+		const rarityResults = Object.fromEntries(
+			['L', 'UR', 'SR', 'R', 'PC', 'C'].map((rarity) => [
+				rarity,
+				cards.filter((card) => card.rarityInitials === rarity).length
+			])
 		);
+		return json({
+			nbResults: cards.length,
+			page,
+			rarityResults,
+			results: cards.slice(page * 50, (page + 1) * 50).map(publicPage),
+			sortBy,
+			sortDirection
+		});
+	}
+	const publicPageMatch = /^\/pages\/([^/]+)$/.exec(pathname);
+	if (normalizedMethod === 'GET' && publicPageMatch) {
+		const id = Number(decodeURIComponent(publicPageMatch[1]));
+		const card = mockCards.find((entry) => entry.baseCardId === id);
+		return card ? json(publicPage(card)) : error(404, 'Carte introuvable.', 'PAGE_NOT_FOUND');
 	}
 	if (normalizedMethod === 'POST' && pathname === '/wishlists') {
 		const input = asObject(body);
-		const userId = typeof input?.userId === 'string' ? input.userId : 'demo-user';
-		const title = typeof input?.title === 'string' ? input.title.trim() : '';
+		const userId = 'demo-user';
+		const title = typeof input?.name === 'string' ? input.name.trim() : '';
 		const description = typeof input?.description === 'string' ? input.description.trim() : '';
 		if (!title) return error(400, 'Titre requis.', 'WISHLIST_TITLE_REQUIRED');
-		const registry: WishlistRegistry = {
-			id: `desiderata-${Date.now()}`,
+		const registry: LegacyWishlistRegistry = {
+			id: String(Date.now()),
 			userId,
 			title,
 			description,
-			isPublic: input?.isPublic === true,
+			isPublic: false,
 			cardIds: [],
 			cards: [],
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString()
 		};
 		wishlists.set(userId, [registry, ...(wishlists.get(userId) ?? [])]);
-		return json(apiRegistry(registry), 201);
+		return json({ id: registry.id, name: title, description, nbCards: 0 }, 200);
 	}
 	if (normalizedMethod === 'GET' && pathname === '/messages/guild-wishlists') {
 		return json(guildWishlistShares);
@@ -865,7 +984,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const token = url.searchParams.get('token') ?? '';
 		const source = [...wishlists.values()].flat().find((registry) => registry.id === token);
 		if (!source) return error(404, 'Lien de wishlist invalide.', 'WISHLIST_SEAL_NOT_FOUND');
-		const imported: WishlistRegistry = {
+		const imported: LegacyWishlistRegistry = {
 			...source,
 			id: `desiderata-${Date.now()}`,
 			userId,
@@ -878,86 +997,117 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		wishlists.set(userId, [imported, ...(wishlists.get(userId) ?? [])]);
 		return json(apiRegistry(imported), 201);
 	}
-	const wishlistRegistryMatch = /^\/wishlists\/([^/]+)(?:\/(cards|remove|share))?$/.exec(pathname);
+	const wishlistRegistryMatch = /^\/wishlists\/([^/]+)$/.exec(pathname);
 	if (wishlistRegistryMatch) {
-		const [, encodedId, action] = wishlistRegistryMatch;
-		const userId = url.searchParams.get('userId') ?? 'demo-user';
-		const registries = wishlists.get(userId) ?? [];
-		const registry = registries.find((entry) => entry.id === decodeURIComponent(encodedId));
+		const id = decodeURIComponent(wishlistRegistryMatch[1]);
+		const ownerRegistries = wishlists.get('demo-user') ?? [];
+		const registry = [...wishlists.values(), [pendingWishlistRegistry]]
+			.flat()
+			.find((entry) => entry.id === id);
 		if (!registry) return error(404, 'Wishlist introuvable.', 'WISHLIST_NOT_FOUND');
-		if (normalizedMethod === 'GET' && !action) return json(apiRegistry(registry));
-		if (normalizedMethod === 'PATCH' && !action) {
-			const input = asObject(body) ?? {};
-			if (typeof input.title === 'string' && input.title.trim())
-				registry.title = input.title.trim();
-			if (typeof input.description === 'string') registry.description = input.description;
-			if (typeof input.isPublic === 'boolean') registry.isPublic = input.isPublic;
-			registry.updatedAt = new Date().toISOString();
-			return json(apiRegistry(registry));
+		if (normalizedMethod === 'GET') {
+			const query = url.searchParams.get('q')?.trim().toLocaleLowerCase('fr-FR') ?? '';
+			const rarities = new Set(url.searchParams.getAll('rarity'));
+			const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
+			const sortBy = url.searchParams.get('sortBy') ?? 'ADDED_AT';
+			const sortDirection = url.searchParams.get('sortDirection') === 'ASC' ? 'ASC' : 'DESC';
+			const cards = registry.cards
+				.filter(
+					(card) =>
+						(!query || card.title.toLocaleLowerCase('fr-FR').includes(query)) &&
+						(!rarities.size || rarities.has(card.rarityInitials))
+				)
+				.toSorted((left, right) => {
+					const comparison =
+						sortBy === 'NAME'
+							? left.title.localeCompare(right.title, 'fr')
+							: sortBy === 'RARITY'
+								? left.rarityInitials.localeCompare(right.rarityInitials, 'fr')
+								: (left.acquiredAt ?? now).localeCompare(right.acquiredAt ?? now);
+					return sortDirection === 'DESC' ? -comparison : comparison;
+				});
+			return json({
+				nbResults: cards.length,
+				page,
+				sortBy,
+				sortDirection,
+				results: cards.slice(page * 50, (page + 1) * 50).map((card) => ({
+					page: publicPage(card),
+					addedAt: card.acquiredAt ?? now
+				})),
+				filters: {}
+			});
 		}
-		if (normalizedMethod === 'GET' && action === 'cards') return json(registry.cards.map(apiCard));
-		if (normalizedMethod === 'DELETE' && !action) {
+		if (normalizedMethod === 'PATCH') {
+			const input = asObject(body) ?? {};
+			if (typeof input.name === 'string' && input.name.trim()) registry.title = input.name.trim();
+			if (typeof input.description === 'string') registry.description = input.description;
+			return json({
+				id: registry.id,
+				name: registry.title,
+				description: registry.description,
+				nbCards: registry.cardIds.length
+			});
+		}
+		if (normalizedMethod === 'DELETE' && ownerRegistries.includes(registry)) {
 			wishlists.set(
-				userId,
-				registries.filter((entry) => entry !== registry)
+				'demo-user',
+				ownerRegistries.filter((entry) => entry !== registry)
 			);
 			return json(undefined, 204);
 		}
-		if (normalizedMethod === 'POST' && action === 'cards') {
-			const cardId = url.searchParams.get('cardId') ?? '';
-			if (!mockCards.some((card) => card.id === cardId))
-				return error(404, 'Carte introuvable.', 'CARD_NOT_FOUND');
-			if (!registry.cardIds.includes(cardId)) registry.cardIds.push(cardId);
-			const card = mockCards.find((entry) => entry.id === cardId);
-			if (card && !registry.cards.some((entry) => entry.id === cardId)) registry.cards.push(card);
-			registry.updatedAt = new Date().toISOString();
-			return json(registry);
+	}
+
+	const wishlistPageMatch = /^\/wishlists\/([^/]+)\/pages\/([^/]+)$/.exec(pathname);
+	if (wishlistPageMatch && (normalizedMethod === 'PUT' || normalizedMethod === 'DELETE')) {
+		const [, encodedWishlistId, encodedPageId] = wishlistPageMatch;
+		const registry = (wishlists.get('demo-user') ?? []).find(
+			(entry) => entry.id === decodeURIComponent(encodedWishlistId)
+		);
+		if (!registry) return error(404, 'Wishlist introuvable.', 'WISHLIST_NOT_FOUND');
+		const pageId = Number(decodeURIComponent(encodedPageId));
+		const card = mockCards.find((entry) => entry.baseCardId === pageId);
+		if (!card) return error(404, 'Carte introuvable.', 'PAGE_NOT_FOUND');
+		if (normalizedMethod === 'PUT' && !registry.cards.includes(card)) {
+			registry.cards.push(card);
+			registry.cardIds.push(card.id);
 		}
-		if (normalizedMethod === 'POST' && action === 'remove') {
-			const cardId =
-				typeof asObject(body)?.cardId === 'string' ? (asObject(body)!.cardId as string) : '';
-			registry.cardIds = registry.cardIds.filter((entry) => entry !== cardId);
-			registry.updatedAt = new Date().toISOString();
-			return json(registry);
+		if (normalizedMethod === 'DELETE') {
+			registry.cards = registry.cards.filter((entry) => entry !== card);
+			registry.cardIds = registry.cardIds.filter((entry) => entry !== card.id);
 		}
-		if (normalizedMethod === 'POST' && action === 'share') {
-			if (asObject(body)?.target === 'guild') {
-				const share: GuildWishlistShare = {
-					id: `guild-share-${Date.now()}`,
-					registryId: registry.id,
-					title: registry.title,
-					description: registry.description,
-					cardCount: registry.cardIds.length,
-					createdAt: new Date().toISOString()
-				};
-				guildWishlistShares.unshift(share);
-				const createdAt = new Date().toISOString();
-				const message: MessageRecord = {
-					id: `message-${crypto.randomUUID()}`,
-					conversationId: 'conversation-guild',
-					senderId: userId,
-					content: `Wishlist partagée : ${registry.title}`,
-					createdAt,
-					readAt: createdAt,
-					reactions: [],
-					wishlistShare: {
-						registryId: registry.id,
-						title: registry.title,
-						description: registry.description,
-						cardCount: registry.cardIds.length
-					}
-				};
-				messages.set('conversation-guild', [
-					...(messages.get('conversation-guild') ?? []),
-					message
-				]);
-				const guildConversation = conversations.find((entry) => entry.id === 'conversation-guild');
-				if (guildConversation) {
-					guildConversation.preview = message.content;
-					guildConversation.updatedAt = createdAt;
-				}
+		return json(undefined, 200);
+	}
+
+	const wishlistSharesMatch = /^\/wishlists\/([^/]+)\/shares(?:\/([^/]+))?$/.exec(pathname);
+	if (wishlistSharesMatch) {
+		const wishlistId = decodeURIComponent(wishlistSharesMatch[1]);
+		const actionId = wishlistSharesMatch[2] ? decodeURIComponent(wishlistSharesMatch[2]) : null;
+		if (normalizedMethod === 'GET' && !actionId)
+			return json(wishlistFollowers.get(wishlistId) ?? []);
+		if (normalizedMethod === 'POST' && actionId === 'accept') {
+			pendingWishlistState = 'shared';
+			return json(undefined, 200);
+		}
+		if (normalizedMethod === 'POST' && actionId && /^\d+$/.test(actionId)) {
+			const followers = wishlistFollowers.get(wishlistId) ?? [];
+			if (!followers.some((entry) => String(entry.id) === actionId)) {
+				followers.push({ id: Number(actionId), name: `Utilisateur ${actionId}`, accepted: false });
 			}
-			return json({ token: registry.id });
+			wishlistFollowers.set(wishlistId, followers);
+			return json(undefined, 200);
+		}
+		if (normalizedMethod === 'DELETE' && actionId) {
+			wishlistFollowers.set(
+				wishlistId,
+				(wishlistFollowers.get(wishlistId) ?? []).filter((entry) => String(entry.id) !== actionId)
+			);
+			return json(undefined, 200);
+		}
+		if (normalizedMethod === 'DELETE' && !actionId) {
+			if (wishlistId === '301') pendingWishlistState = 'removed';
+			else sharedWishlistLeft = true;
+			return json(undefined, 200);
 		}
 	}
 	const wishlistRegistryCardMatch = /^\/wishlists\/([^/]+)\/cards\/([^/]+)$/.exec(pathname);

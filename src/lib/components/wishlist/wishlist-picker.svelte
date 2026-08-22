@@ -1,16 +1,14 @@
 <script lang="ts">
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardSearchPanel from '$lib/components/cards/card-search-panel.svelte';
-	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
 	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
-	import { cardRarityOptions, compareCardsByRarityDesc } from '$lib/domain/cards/rarities';
-	import { matchesCardVariant } from '$lib/domain/cards/variants';
+	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { _ } from '$lib/i18n';
 	import type { CardQuery } from '$lib/api';
-	import type { CardRarity, CardRecord, CardVariant, PaginatedResponse } from '$lib/types';
+	import type { CardRarity, CardRecord, PaginatedResponse } from '$lib/types';
 
 	let {
 		open = $bindable(false),
@@ -30,36 +28,15 @@
 	let cards = $state<CardRecord[]>([]);
 	let query = $state('');
 	let selectedRarities = $state<CardRarity[]>([]);
-	let selectedTagIds = $state<string[]>([]);
 	let sortBy = $state<'rarity' | 'name'>('rarity');
-	let variant = $state<CardVariant>('all');
 	let page = $state(1);
 	let totalPages = $state(1);
 	let loading = $state(false);
 	let failed = $state(false);
 	let debounceTimer: number | undefined;
 	let requestId = 0;
-	const availableTags = $derived([
-		...new Map(
-			cards.flatMap((card) => card.collectionTags ?? []).map((tag) => [tag.id, tag])
-		).values()
-	]);
 	const visibleCards = $derived(
-		cards
-			.filter(
-				(card) =>
-					!existingCardIds.includes(card.id) &&
-					matchesCardVariant(card, variant) &&
-					(!selectedTagIds.length ||
-						selectedTagIds.every((tagId) =>
-							(card.collectionTags ?? []).some((tag) => tag.id === tagId)
-						))
-			)
-			.toSorted((left, right) =>
-				sortBy === 'name'
-					? left.title.localeCompare(right.title, 'fr')
-					: compareCardsByRarityDesc(left, right)
-			)
+		cards.filter((card) => !existingCardIds.includes(String(card.baseCardId ?? card.id)))
 	);
 
 	$effect(() => {
@@ -68,7 +45,6 @@
 			pageSize,
 			query: query.trim() || undefined,
 			rarities: selectedRarities,
-			variant,
 			sortBy,
 			sortDirection: sortBy === 'rarity' ? 'DESC' : 'ASC'
 		};
@@ -100,13 +76,6 @@
 		);
 		return () => window.clearTimeout(debounceTimer);
 	});
-
-	function toggleTag(tagId: string) {
-		selectedTagIds = selectedTagIds.includes(tagId)
-			? selectedTagIds.filter((value) => value !== tagId)
-			: [...selectedTagIds, tagId];
-		page = 1;
-	}
 
 	async function select(card: CardRecord) {
 		await onSelect(card);
@@ -140,25 +109,12 @@
 						<option value="name">{$_('collection.sortName')}</option>
 					</select>
 				</div>
-				<CardVariantSelector bind:value={variant} onChange={() => (page = 1)} class="mt-3" />
 				<div class="mt-3">
 					<RaritySelector
 						options={cardRarityOptions}
 						bind:selected={selectedRarities}
 						onChange={() => (page = 1)}
 					/>
-				</div>
-				<div class="mt-3 flex flex-wrap gap-1.5" aria-label={$_('collection.tags')}>
-					{#each availableTags as tag (tag.id)}
-						<Button
-							size="xs"
-							variant={selectedTagIds.includes(tag.id) ? 'default' : 'outline'}
-							style={selectedTagIds.includes(tag.id)
-								? `background-color:${tag.color};border-color:${tag.color};color:#080A09`
-								: `color:${tag.color};border-color:${tag.color}`}
-							onclick={() => toggleTag(tag.id)}>{tag.name}</Button
-						>
-					{/each}
 				</div>
 			</CardSearchPanel>
 			{#if loading}
@@ -170,14 +126,7 @@
 			{:else}
 				<div class="wikiforge-card-grid mt-4">
 					{#each visibleCards as card (card.id)}
-						<div class="wikiforge-card-size relative">
-							<CardTile {card} showFriendOwners={false} />
-							<Button
-								aria-label={card.title}
-								class="absolute inset-0 z-20 size-full border-0 bg-transparent text-transparent hover:bg-primary/20"
-								onclick={() => void select(card)}
-							/>
-						</div>
+						<CardTile {card} showFriendOwners={false} onOpen={select} />
 					{/each}
 				</div>
 			{/if}

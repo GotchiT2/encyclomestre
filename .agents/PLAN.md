@@ -286,6 +286,11 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Afficher le volume des résultats et leur répartition par rareté — `feat(cards): show catalogue rarity results`
 - [x] Construire les images du catalogue public avec Special:FilePath — `fix(cards): use Wikipedia file paths`
 - [x] Charger le détail public dans la modale du catalogue — `feat(cards): load public detail in catalogue modal`
+- [x] Migrer les wishlists vers les listes, partages et invitations WikiForge — `feat(wishlist): connect wikiforge wishlist workflows`
+- [x] Rétablir les actions d’ajout de cartes et contextualiser les erreurs wishlist — `fix(wishlist): restore card addition actions`
+- [x] Afficher l’état vide quand une wishlist ne contient aucune carte — `fix(wishlist): handle empty list responses`
+- [x] Aligner le dimensionnement des cartes wishlist sur la grille partagée — `fix(wishlist): size cards in registry grid`
+- [x] Confirmer les ajouts de cartes sans fermer les modales wishlist — `feat(wishlist): toast successful card additions`
 
 - [x] Stabiliser l’ouverture rapide et la scène mobile des boosters, ordonner les révélations de C à L et contenir les illustrations Full Art paysage — `fix(boosters): stabilize mobile opening and full art rendering`
 - [x] Créer et suivre les ventes liées aux exemplaires depuis le détail et la collection — `feat(market): create and track owned card listings`

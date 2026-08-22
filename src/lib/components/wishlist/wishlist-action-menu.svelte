@@ -3,25 +3,30 @@
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
 	import type { WishlistRegistrySummary } from '$lib/types';
+	import { toast } from 'svelte-sonner';
 
 	let {
-		cardId,
 		wishlists,
+		cardTitle,
 		onToggle
 	}: {
-		cardId: string;
 		wishlists: WishlistRegistrySummary[];
+		cardTitle: string;
 		onToggle: (wishlistId: string, selected: boolean) => void | Promise<void>;
 	} = $props();
 
 	let pendingIds = $state<string[]>([]);
-	const isWishlisted = $derived(wishlists.some((wishlist) => wishlist.cardIds.includes(cardId)));
 
-	async function toggle(wishlist: WishlistRegistrySummary) {
+	async function add(wishlist: WishlistRegistrySummary) {
 		if (pendingIds.includes(wishlist.id)) return;
 		pendingIds = [...pendingIds, wishlist.id];
 		try {
-			await onToggle(wishlist.id, !wishlist.cardIds.includes(cardId));
+			await onToggle(wishlist.id, true);
+			toast.success(
+				$_('wishlist.card_added', {
+					values: { card: cardTitle, wishlist: wishlist.title }
+				})
+			);
 		} finally {
 			pendingIds = pendingIds.filter((id) => id !== wishlist.id);
 		}
@@ -31,22 +36,18 @@
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger>
 		{#snippet child({ props })}
-			<Button {...props} variant={isWishlisted ? 'outline' : 'default'}>
-				{isWishlisted ? $_('cardDetail.manage_wishlists') : $_('cardDetail.add_wishlist')}
-			</Button>
+			<Button {...props}>{$_('cardDetail.add_wishlist')}</Button>
 		{/snippet}
 	</DropdownMenu.Trigger>
-	<DropdownMenu.Content preventScroll={false} align="start" class="min-w-64">
+	<DropdownMenu.Content preventScroll={false} align="start" class="min-w-64" style="z-index:120">
 		<DropdownMenu.Group>
 			{#each wishlists as wishlist (wishlist.id)}
-				<DropdownMenu.CheckboxItem
-					checked={wishlist.cardIds.includes(cardId)}
-					closeOnSelect={false}
+				<DropdownMenu.Item
 					disabled={pendingIds.includes(wishlist.id)}
-					onSelect={() => void toggle(wishlist)}
+					onSelect={() => void add(wishlist)}
 				>
 					<span class="truncate">{wishlist.title}</span>
-				</DropdownMenu.CheckboxItem>
+				</DropdownMenu.Item>
 			{:else}
 				<DropdownMenu.Item disabled>{$_('cardDetail.no_wishlist')}</DropdownMenu.Item>
 			{/each}

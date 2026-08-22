@@ -1,63 +1,39 @@
-export type WishlistPriority = 'low' | 'medium' | 'high';
+export type WishlistAccess = 'owned' | 'shared' | 'pending';
+export type WishlistSort = 'date' | 'name' | 'rarity';
 
-export interface WishlistEntry {
-	cardId: string;
-	card: import('./card').CardRecord;
-	priority: WishlistPriority;
-	note: string | null;
-	createdAt: string;
-	updatedAt: string;
+export interface WishlistRegistrySummary {
+	id: string;
+	title: string;
+	description: string;
+	cardCount: number;
+	ownerName: string | null;
+	invitedAt: string | null;
+	access: WishlistAccess;
 }
 
-export interface WishlistAlert {
-	id: string;
-	cardId: string;
-	type: 'auction' | 'friend-owner';
-	context: string;
-	createdAt: string;
+export interface WishlistGroups {
+	owned: WishlistRegistrySummary[];
+	shared: WishlistRegistrySummary[];
+	pending: WishlistRegistrySummary[];
+}
+
+export interface WishlistPageEntry {
+	card: import('./card').CardRecord;
+	addedAt: string;
 }
 
 export interface WishlistQuery {
 	page?: number;
-	pageSize?: number;
 	query?: string;
-	priority?: WishlistPriority;
-	hasAlert?: boolean;
 	rarities?: import('./card').CardRarity[];
-	variant?: import('./card').CardVariant;
-	sortBy?: 'name' | 'rarity';
+	sortBy?: WishlistSort;
 	sortDirection?: 'ASC' | 'DESC';
 }
 
-export interface WishlistRegistry {
+export interface WishlistFollower {
 	id: string;
-	userId: string;
-	title: string;
-	description: string;
-	isPublic: boolean;
-	cardIds: string[];
-	cards: import('./card').CardRecord[];
-	createdAt: string;
-	updatedAt: string;
-}
-
-export interface WishlistRegistrySummary extends WishlistRegistry {
-	opportunityCount: number;
-}
-
-export interface PublicWishlistCard {
-	card: import('./card').CardRecord;
-	viewerOwnedCount: number;
-	viewerUserCardIds: string[];
-}
-
-export interface PublicWishlist {
-	id: string;
-	userId: string;
-	title: string;
-	description: string;
-	cards: PublicWishlistCard[];
-	updatedAt: string;
+	name: string;
+	accepted: boolean;
 }
 
 export interface GuildWishlistShare {
