@@ -1,4 +1,5 @@
-import type { CardRarity } from '$lib/types';
+import type { CardRarity, CardSearchSort } from '$lib/types';
+import { defaultCardSearchSort } from '$lib/domain/cards/search';
 import {
 	getWikiForgeCollection,
 	getWikiForgeTags,
@@ -19,7 +20,14 @@ export const load: PageLoad = ({ fetch, url }) => {
 	const tagFilterIds = url.searchParams.getAll('tag');
 	const untagged = url.searchParams.get('untagged') === 'true';
 	if (untagged) tagFilterIds.push('__untagged__');
-	const sortBy = url.searchParams.get('sortBy') === 'name' ? 'name' : 'rarity';
+	const requestedSort = url.searchParams.get('sortBy');
+	const explicitSort: CardSearchSort | undefined =
+		requestedSort === 'name' || requestedSort === 'rarity' || requestedSort === 'relevance'
+			? requestedSort
+			: undefined;
+	const sortBy = defaultCardSearchSort(query, explicitSort);
+	const page = Math.max(1, Number(url.searchParams.get('page') ?? 1));
+	const cursor = url.searchParams.get('cursor') || undefined;
 	const variant = (
 		['normal', 'alternative'].includes(url.searchParams.get('variant') ?? '')
 			? url.searchParams.get('variant')
@@ -34,6 +42,8 @@ export const load: PageLoad = ({ fetch, url }) => {
 		collection: getWikiForgeCollection(
 			{
 				q: query,
+				page: page - 1,
+				cursor,
 				size: 100,
 				sortBy,
 				sortDirection: sortBy === 'name' ? 'ASC' : 'DESC',
@@ -49,6 +59,6 @@ export const load: PageLoad = ({ fetch, url }) => {
 			return { ...page, items: await hydrateCardSocialStates(page.items, { fetch }) };
 		}),
 		tags: getWikiForgeTags({ fetch }),
-		filters: { query, selectedRarities, tagFilterIds, sortBy, variant, saleState }
+		filters: { query, selectedRarities, tagFilterIds, sortBy, variant, saleState, page, cursor }
 	};
 };

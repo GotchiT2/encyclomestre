@@ -8,6 +8,7 @@
 	import RegistrySummary from '$lib/components/profile/registry-summary.svelte';
 	import { createFriendRequest, getFriends, getUserBlocks } from '$lib/api';
 	import { compareCardsByRarityDesc } from '$lib/domain/cards/rarities';
+	import { compareCardsByTextRelevance } from '$lib/domain/cards/search';
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import { getPlayerRelationship } from '$lib/domain/friends/relationship';
 	import { _ } from '$lib/i18n';
@@ -15,6 +16,7 @@
 	import type {
 		CardRarity,
 		CardRecord,
+		CardSearchSort,
 		CardVariant,
 		CollectionTag,
 		CollectionTagAssignments,
@@ -50,7 +52,7 @@
 
 	let activeTab = $state<ProfileTab>('showcase');
 	let query = $state('');
-	let sortBy = $state<'name' | 'rarity'>('rarity');
+	let sortBy = $state<CardSearchSort>('rarity');
 	let selectedRarities = $state<CardRarity[]>([]);
 	let tagFilterIds = $state<string[]>([]);
 	let variant = $state<CardVariant>('all');
@@ -103,6 +105,7 @@
 				);
 			})
 			.toSorted((first, second) => {
+				if (sortBy === 'relevance') return compareCardsByTextRelevance(first, second, query);
 				if (sortBy === 'rarity') return compareCardsByRarityDesc(first, second);
 				return first.title.localeCompare(second.title, 'fr');
 			});

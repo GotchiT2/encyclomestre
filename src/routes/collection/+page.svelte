@@ -18,6 +18,7 @@
 	import type {
 		CardRarity,
 		CardRecord,
+		CardSearchSort,
 		CardVariant,
 		ActiveSaleSummary,
 		CollectionTag,
@@ -35,7 +36,7 @@
 
 	let { data }: { data: PageData } = $props();
 	let query = $state('');
-	let sortBy = $state<'name' | 'rarity'>('rarity');
+	let sortBy = $state<CardSearchSort>('rarity');
 	let selectedRarities = $state<CardRarity[]>([]);
 	let tags = $state<CollectionTag[]>([]);
 	let assignments = $state<CollectionTagAssignments>({});
@@ -54,7 +55,7 @@
 
 	onMount(async () => {
 		query = data.filters.query;
-		sortBy = data.filters.sortBy as 'name' | 'rarity';
+		sortBy = data.filters.sortBy;
 		selectedRarities = data.filters.selectedRarities;
 		tagFilterIds = data.filters.tagFilterIds;
 		variant = data.filters.variant;
@@ -146,6 +147,7 @@
 				);
 			})
 			.toSorted((a, b) => {
+				if (sortBy === 'relevance') return 0;
 				if (sortBy === 'rarity') {
 					const rarityOrder =
 						rarities.findIndex((rarity) => rarity.value === a.rarity) -
@@ -163,6 +165,19 @@
 					(saleState === 'ACTIVE' && Boolean(card.activeSale)) ||
 					(saleState === 'AVAILABLE' && !card.activeSale)
 			);
+	}
+
+	function collectionPageTarget(nextPage: number, cursor?: string) {
+		return buildCollectionFilterTarget({
+			query,
+			sortBy,
+			selectedRarities,
+			tagFilterIds,
+			variant,
+			saleState,
+			page: nextPage,
+			cursor
+		});
 	}
 </script>
 
@@ -224,6 +239,35 @@
 					selectedCardIds = [];
 				}}
 			/>{/if}
+		{@const hasTextQuery = Boolean(query.trim())}
+		{@const canLoadNext = hasTextQuery
+			? collection.meta.page < collection.meta.totalPages
+			: Boolean(collection.meta.nextCursor)}
+		{#if collection.meta.page > 1 || canLoadNext}
+			<nav class="flex items-center justify-between border-t border-primary/20 pt-4">
+				{#if hasTextQuery}
+					<Button
+						variant="outline"
+						href={collectionPageTarget(Math.max(1, collection.meta.page - 1))}
+						disabled={collection.meta.page <= 1}>{$_('common.previous')}</Button
+					>
+				{:else}
+					<Button
+						variant="outline"
+						disabled={collection.meta.page <= 1}
+						onclick={() => history.back()}>{$_('common.previous')}</Button
+					>
+				{/if}
+				<span class="forge-label">{$_('codex.page')} {collection.meta.page}</span>
+				<Button
+					href={collectionPageTarget(
+						collection.meta.page + 1,
+						hasTextQuery ? undefined : (collection.meta.nextCursor ?? undefined)
+					)}
+					disabled={!canLoadNext}>{$_('common.next')}</Button
+				>
+			</nav>
+		{/if}
 	{:catch}<p
 			class="border border-destructive/40 bg-destructive/10 p-4 font-serif italic text-destructive"
 		>

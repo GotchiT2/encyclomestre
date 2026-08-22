@@ -99,5 +99,8 @@ describe('WishlistPicker', () => {
 				),
 			{ timeout: 800 }
 		);
+		expect(loadCards).toHaveBeenLastCalledWith(
+			expect.objectContaining({ sortBy: 'relevance', sortDirection: 'DESC' })
+		);
 	});
 });

@@ -8,6 +8,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
 	import type { CardRarity } from '$lib/types';
+	import type { CardSearchSort } from '$lib/types';
 
 	let {
 		query,
@@ -16,7 +17,7 @@
 		selectedRarities
 	}: {
 		query: string;
-		sortBy: string;
+		sortBy: CardSearchSort;
 		sortDirection: string;
 		selectedRarities: CardRarity[];
 	} = $props();
@@ -25,12 +26,16 @@
 	let searchInput = $state<HTMLInputElement | null>(null);
 	let debounceTimer: number | undefined;
 	let localQuery = $state('');
+	let localSortBy = $state<CardSearchSort>('rarity');
+	let localSortDirection = $state<'ASC' | 'DESC'>('DESC');
 	let localRarities = $state<CardRarity[]>([]);
 	let pending = $state(false);
 	let restoreSearchFocus = $state(false);
 
 	$effect(() => {
 		localQuery = query;
+		localSortBy = sortBy;
+		localSortDirection = sortDirection === 'ASC' ? 'ASC' : 'DESC';
 		localRarities = [...selectedRarities];
 	});
 
@@ -53,6 +58,10 @@
 			pending = false;
 			restoreSearchFocus = false;
 			return;
+		}
+		if (localQuery.trim()) {
+			localSortBy = 'relevance';
+			localSortDirection = 'DESC';
 		}
 		scheduleSubmit(650, true);
 	}
@@ -89,7 +98,8 @@
 			</label>
 			<label class="grid gap-2">
 				<span class="forge-label">{$_('collection.sortName')}</span>
-				<select name="sortBy" onchange={() => scheduleSubmit(80)}>
+				<select name="sortBy" bind:value={localSortBy} onchange={() => scheduleSubmit(80)}>
+					<option value="relevance">{$_('collection.sortRelevance')}</option>
 					<option value="rarity" selected={sortBy === 'rarity'}
 						>{$_('collection.sortRarity')}</option
 					>
@@ -98,7 +108,11 @@
 			</label>
 			<label class="grid gap-2">
 				<span class="forge-label">{$_('codex.sortDirection')}</span>
-				<select name="sortDirection" onchange={() => scheduleSubmit(80)}>
+				<select
+					name="sortDirection"
+					bind:value={localSortDirection}
+					onchange={() => scheduleSubmit(80)}
+				>
 					<option value="DESC" selected={sortDirection === 'DESC'}>{$_('codex.descending')}</option>
 					<option value="ASC" selected={sortDirection === 'ASC'}>{$_('codex.ascending')}</option>
 				</select>

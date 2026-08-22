@@ -140,6 +140,7 @@
 		"sortShort": "Exemplaires",
 		"sortName": "Nom",
 		"sortRarity": "Rareté",
+		"sortRelevance": "Pertinence",
 		"rarities": "Raretés",
 		"tags": "Étiquettes",
 		"tagsDescription": "Créez, renommez et supprimez les étiquettes de votre collection.",

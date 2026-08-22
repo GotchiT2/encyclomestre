@@ -1,5 +1,6 @@
 import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/rarities';
-import type { CardRecord, PaginatedResponse } from '$lib/types';
+import { cardSearchSortDirection, defaultCardSearchSort } from '$lib/domain/cards/search';
+import type { CardRecord, CardSearchSort, PaginatedResponse } from '$lib/types';
 import { apiRequest } from './client';
 
 export type WikiForgePublicPageRarity = CardRarityCode;
@@ -22,7 +23,7 @@ export interface WikiForgePublicPagesResponse {
 	page: number;
 	rarityResults: Record<WikiForgePublicPageRarity, number>;
 	results: WikiForgePublicPageCard[];
-	sortBy: 'NAME' | 'RARITY';
+	sortBy: 'NAME' | 'RARITY' | 'RELEVANCE';
 	sortDirection: 'ASC' | 'DESC';
 }
 
@@ -31,7 +32,7 @@ export interface WikiForgePublicPagesQuery {
 	page?: number;
 	rarity?: WikiForgePublicPageRarity;
 	rarities?: WikiForgePublicPageRarity[];
-	sortBy?: 'name' | 'rarity';
+	sortBy?: CardSearchSort;
 	sortDirection?: 'ASC' | 'DESC';
 }
 
@@ -47,10 +48,12 @@ export interface PublicCataloguePage extends PaginatedResponse<CardRecord> {
 const publicPagesPageSize = 50;
 
 function publicPagesPath(query: WikiForgePublicPagesQuery): string {
+	const sortBy = defaultCardSearchSort(query.q, query.sortBy);
 	const parameters = new URLSearchParams({
 		page: String(Math.max(0, query.page ?? 0)),
-		sortBy: query.sortBy ?? 'rarity',
-		sortDirection: query.sortDirection ?? 'ASC'
+		sortBy: sortBy.toUpperCase(),
+		sortDirection:
+			query.sortDirection ?? (query.q?.trim() ? cardSearchSortDirection(sortBy) : 'ASC')
 	});
 	if (query.q?.trim()) parameters.set('q', query.q.trim());
 	for (const rarity of query.rarities ?? (query.rarity ? [query.rarity] : [])) {

@@ -1,14 +1,16 @@
-import type { CardRarity, CardVariant, SaleState } from '$lib/types';
+import type { CardRarity, CardSearchSort, CardVariant, SaleState } from '$lib/types';
 
 export const untaggedFilterId = '__untagged__';
 
 export function buildCollectionFilterTarget(filters: {
 	query: string;
-	sortBy: 'name' | 'rarity';
+	sortBy: CardSearchSort;
 	selectedRarities: CardRarity[];
 	tagFilterIds: string[];
 	variant: CardVariant;
 	saleState: SaleState;
+	page?: number;
+	cursor?: string;
 }) {
 	const parameters = new URLSearchParams();
 	if (filters.query.trim()) parameters.set('q', filters.query.trim());
@@ -20,6 +22,8 @@ export function buildCollectionFilterTarget(filters: {
 	});
 	if (filters.variant !== 'all') parameters.set('variant', filters.variant);
 	if (filters.saleState !== 'ALL') parameters.set('saleState', filters.saleState);
+	if ((filters.page ?? 1) > 1) parameters.set('page', String(filters.page));
+	if (filters.cursor) parameters.set('cursor', filters.cursor);
 
 	const queryString = parameters.toString();
 	return queryString ? `/collection?${queryString}` : '/collection';

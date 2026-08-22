@@ -30,8 +30,28 @@ describe('WikiForge public pages API', () => {
 		);
 
 		expect(fetcher).toHaveBeenCalledWith(
-			'https://api.wikiforge.fr/pages?page=2&sortBy=name&sortDirection=DESC&q=Paris&rarity=L',
+			'https://api.wikiforge.fr/pages?page=2&sortBy=NAME&sortDirection=DESC&q=Paris&rarity=L',
 			expect.objectContaining({ credentials: 'include' })
+		);
+	});
+
+	it('uses relevance by default for a textual search', async () => {
+		const fetcher = vi.fn(async () =>
+			Response.json({
+				nbResults: 0,
+				page: 0,
+				rarityResults: {},
+				results: [],
+				sortBy: 'RELEVANCE',
+				sortDirection: 'DESC'
+			})
+		);
+
+		await getWikiForgePublicPages({ q: 'Rose' }, { fetch: fetcher as typeof fetch });
+
+		expect(fetcher).toHaveBeenCalledWith(
+			'https://api.wikiforge.fr/pages?page=0&sortBy=RELEVANCE&sortDirection=DESC&q=Rose',
+			expect.any(Object)
 		);
 	});
 
@@ -80,7 +100,7 @@ describe('WikiForge public pages API', () => {
 		await getWikiForgePublicPages({}, { fetch: fetcher as typeof fetch });
 
 		expect(fetcher).toHaveBeenCalledWith(
-			'https://api.wikiforge.fr/pages?page=0&sortBy=rarity&sortDirection=ASC',
+			'https://api.wikiforge.fr/pages?page=0&sortBy=RARITY&sortDirection=ASC',
 			expect.objectContaining({
 				headers: expect.objectContaining({ authorization: 'Bearer cards-access-token' })
 			})

@@ -1,6 +1,7 @@
 import { apiRequest, type RequestOptions } from './client';
 import type {
 	CardRecord,
+	CardSearchSort,
 	CardVariant,
 	CardVariantCode,
 	CollectionTag,
@@ -13,6 +14,7 @@ import type {
 	ActiveSaleSummary
 } from '$lib/types';
 import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/rarities';
+import { cardSearchSortDirection, defaultCardSearchSort } from '$lib/domain/cards/search';
 
 export type WikiForgeRarity = CardRarityCode;
 
@@ -50,7 +52,8 @@ export interface WikiForgePage<T> {
 	results: T[];
 	page: number;
 	nbResults: number;
-	size: number;
+	size?: number;
+	nextCursor?: string | null;
 	sortBy?: string;
 	sortDirection?: string;
 	filters?: Record<string, unknown>;
@@ -61,8 +64,9 @@ export interface WikiForgeQuery {
 	q?: string;
 	page?: number;
 	size?: number;
-	sortBy?: 'name' | 'rarity';
+	sortBy?: CardSearchSort;
 	sortDirection?: 'ASC' | 'DESC';
+	cursor?: string;
 	rarities?: WikiForgeRarity[];
 	tagIds?: string[];
 	untagged?: boolean;
@@ -77,13 +81,15 @@ const apiVariantByFilter: Record<CardVariant, 'ALL' | CardVariantCode> = {
 };
 
 function queryPath(endpoint: '/api/cards' | '/api/collection', query: WikiForgeQuery) {
+	const sortBy = defaultCardSearchSort(query.q, query.sortBy, 'name');
 	const parameters = new URLSearchParams({
 		page: String(Math.max(0, query.page ?? 0)),
 		size: String(Math.min(100, Math.max(1, query.size ?? 50))),
-		sortBy: query.sortBy ?? 'name',
-		sortDirection: query.sortDirection ?? 'ASC'
+		sortBy: sortBy.toUpperCase(),
+		sortDirection: query.sortDirection ?? cardSearchSortDirection(sortBy)
 	});
 	if (query.q) parameters.set('q', query.q);
+	if (query.cursor) parameters.set('cursor', query.cursor);
 	parameters.set('variant', apiVariantByFilter[query.variant ?? 'all']);
 	query.rarities?.forEach((rarity) => parameters.append('rarity', rarity));
 	query.tagIds?.forEach((tagId) => parameters.append('tag', tagId));
@@ -243,13 +249,15 @@ export function toCollectionPage(
 }
 
 function toFrontendPage<T>(source: WikiForgePage<unknown>, items: T[]): PaginatedResponse<T> {
+	const pageSize = Math.max(1, source.size ?? (source.results.length || 50));
 	return {
 		items,
 		meta: {
 			page: source.page + 1,
-			pageSize: source.size,
+			pageSize,
 			total: source.nbResults,
-			totalPages: Math.max(1, Math.ceil(source.nbResults / source.size))
+			totalPages: Math.max(1, Math.ceil(source.nbResults / pageSize)),
+			...(source.nextCursor === undefined ? {} : { nextCursor: source.nextCursor })
 		}
 	};
 }

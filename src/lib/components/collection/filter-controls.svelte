@@ -9,12 +9,17 @@
 	import * as Field from '$lib/components/ui/field';
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
-	import type { CardRarity, CardVariant, CollectionTag, SaleState } from '$lib/types';
+	import type {
+		CardRarity,
+		CardSearchSort,
+		CardVariant,
+		CollectionTag,
+		SaleState
+	} from '$lib/types';
 
-	type SortBy = 'name' | 'rarity';
 	let {
 		query = $bindable(''),
-		sortBy = $bindable<SortBy>('rarity'),
+		sortBy = $bindable<CardSearchSort>('rarity'),
 		selectedRarities = $bindable<CardRarity[]>([]),
 		tagFilterIds = $bindable<string[]>([]),
 		variant = $bindable<CardVariant>('all'),
@@ -26,7 +31,7 @@
 		onClear
 	}: {
 		query: string;
-		sortBy: SortBy;
+		sortBy: CardSearchSort;
 		selectedRarities: CardRarity[];
 		tagFilterIds: string[];
 		variant?: CardVariant;
@@ -41,6 +46,10 @@
 	function changeSaleState(value: string | string[]) {
 		if (value === 'ALL' || value === 'ACTIVE' || value === 'AVAILABLE') saleState = value;
 	}
+
+	function handleTextInput() {
+		if (query.trim()) sortBy = 'relevance';
+	}
 </script>
 
 <CardSearchPanel class="forge-panel" contentClass="p-4 sm:p-5">
@@ -50,7 +59,12 @@
 				<Field.FieldLabel for="collection-search" class="forge-label"
 					>{$_('collection.search')}</Field.FieldLabel
 				>
-				<Input id="collection-search" bind:value={query} placeholder={$_('collection.search')} />
+				<Input
+					id="collection-search"
+					bind:value={query}
+					oninput={handleTextInput}
+					placeholder={$_('collection.search')}
+				/>
 			</Field.Field>
 			<Field.Field>
 				<Field.FieldLabel for="collection-sort" class="forge-label"
@@ -62,6 +76,7 @@
 					aria-label={$_('collection.sort')}
 					class="w-full"
 				>
+					<option value="relevance">{$_('collection.sortRelevance')}</option>
 					<option value="name">{$_('collection.sortName')}</option>
 					<option value="rarity">{$_('collection.sortRarity')}</option>
 				</select>

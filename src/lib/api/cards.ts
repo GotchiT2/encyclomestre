@@ -2,10 +2,12 @@ import { apiRequest, type RequestOptions } from './client';
 import { restoreSession } from '$lib/auth/session';
 import { getWikiForgeCard, getWikiForgeCards, toCardPage, toCardRecord } from './wikiforge';
 import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
+import { cardSearchSortDirection, defaultCardSearchSort } from '$lib/domain/cards/search';
 import type {
 	CardPriceHistory,
 	CardRarity,
 	CardRecord,
+	CardSearchSort,
 	CardVariant,
 	CardWishlistReference,
 	FriendOwnerInfo
@@ -17,9 +19,10 @@ export interface CardQuery {
 	query?: string;
 	rarity?: CardRarity;
 	rarities?: CardRarity[];
-	sortBy?: 'name' | 'rarity';
+	sortBy?: CardSearchSort;
 	sortDirection?: 'ASC' | 'DESC';
 	variant?: CardVariant;
+	cursor?: string;
 }
 
 export const getCards = async (
@@ -29,12 +32,14 @@ export const getCards = async (
 		query,
 		rarity,
 		rarities,
-		sortBy = 'name',
-		sortDirection = 'ASC',
-		variant = 'all'
+		sortBy,
+		sortDirection,
+		variant = 'all',
+		cursor
 	}: CardQuery = {},
 	options?: RequestOptions
 ) => {
+	const effectiveSortBy = defaultCardSearchSort(query, sortBy, 'name');
 	const responsePage = toCardPage(
 		await getWikiForgeCards(
 			{
@@ -44,9 +49,10 @@ export const getCards = async (
 				rarities: (rarities ?? (rarity ? [rarity] : [])).map(
 					(value) => cardRarityCodeByName[value]
 				),
-				sortBy,
-				sortDirection,
-				variant
+				sortBy: effectiveSortBy,
+				sortDirection: sortDirection ?? cardSearchSortDirection(effectiveSortBy),
+				variant,
+				cursor
 			},
 			options
 		)

@@ -2,6 +2,8 @@ import type { PageLoad } from './$types';
 import { getWikiForgePublicPages, toPublicPage } from '$lib/api';
 import { cardRarityCodeByName, cardRarityOptions } from '$lib/domain/cards/rarities';
 import type { CardRarity } from '$lib/types';
+import type { CardSearchSort } from '$lib/types';
+import { defaultCardSearchSort } from '$lib/domain/cards/search';
 
 const rarities = new Set<CardRarity>(cardRarityOptions.map((rarity) => rarity.value));
 
@@ -11,7 +13,12 @@ export const load: PageLoad = ({ fetch, url }) => {
 		.getAll('rarity')
 		.filter((rarity) => rarities.has(rarity as CardRarity))
 		.slice(0, 1) as CardRarity[];
-	const sortBy = url.searchParams.get('sortBy') === 'name' ? 'name' : 'rarity';
+	const requestedSort = url.searchParams.get('sortBy');
+	const explicitSort: CardSearchSort | undefined =
+		requestedSort === 'name' || requestedSort === 'rarity' || requestedSort === 'relevance'
+			? requestedSort
+			: undefined;
+	const sortBy = defaultCardSearchSort(query, explicitSort);
 	const sortDirection = url.searchParams.get('sortDirection') === 'ASC' ? 'ASC' : 'DESC';
 	return {
 		cards: getWikiForgePublicPages(

@@ -29,4 +29,19 @@ describe('buildCollectionFilterTarget', () => {
 			'/collection?q=test&sortBy=name&rarity=Rare&tag=tag-1&untagged=true&variant=alternative&saleState=ACTIVE'
 		);
 	});
+
+	it('keeps the response page and next cursor for collection navigation', () => {
+		expect(
+			buildCollectionFilterTarget({
+				query: '',
+				sortBy: 'rarity',
+				selectedRarities: [],
+				tagFilterIds: [],
+				variant: 'all',
+				saleState: 'ALL',
+				page: 2,
+				cursor: 'cursor-value'
+			})
+		).toBe('/collection?page=2&cursor=cursor-value');
+	});
 });

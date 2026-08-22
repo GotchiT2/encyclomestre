@@ -10,9 +10,11 @@
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import XIcon from '@lucide/svelte/icons/x';
 	import { untrack } from 'svelte';
+	import { SvelteMap } from 'svelte/reactivity';
 	import type {
 		CardRarity,
 		CardRecord,
+		CardSearchSort,
 		CardVariant,
 		PaginatedResponse,
 		TradeCardSearchQuery
@@ -44,7 +46,7 @@
 
 	let query = $state('');
 	let rarities = $state<CardRarity[]>([]);
-	let sortBy = $state<'rarity' | 'name'>('rarity');
+	let sortBy = $state<CardSearchSort>('rarity');
 	let variant = $state<CardVariant>('all');
 	let page = $state(1);
 	let totalPages = $state(1);
@@ -57,6 +59,8 @@
 	let failed = $state(false);
 	let activeScope = $state('');
 	let initiallyLoadedScope = $state('');
+	let nextCursor = $state<string | null>(null);
+	const cursorByPage = new SvelteMap<number, string | undefined>([[1, undefined]]);
 	const pageSize = 12;
 	const selectedCards = $derived(
 		selectedIds
@@ -85,6 +89,9 @@
 		comparisonCounts = {};
 		hasLoaded = false;
 		failed = false;
+		nextCursor = null;
+		cursorByPage.clear();
+		cursorByPage.set(1, undefined);
 	});
 
 	$effect(() => {
@@ -102,6 +109,14 @@
 		resultCards = [];
 		hasLoaded = false;
 		failed = false;
+		nextCursor = null;
+		cursorByPage.clear();
+		cursorByPage.set(1, undefined);
+	}
+
+	function changeTextQuery() {
+		if (query.trim()) sortBy = 'relevance';
+		markFiltersChanged();
 	}
 
 	async function search(nextPage = 1) {
@@ -115,7 +130,8 @@
 				variant,
 				sortBy,
 				page: nextPage - 1,
-				pageSize
+				pageSize,
+				cursor: query.trim() ? undefined : cursorByPage.get(nextPage)
 			});
 			const variantIds = response.items.map((card) => card.catalogueId ?? card.id);
 			try {
@@ -126,6 +142,8 @@
 			page = response.meta.page;
 			totalPages = response.meta.totalPages;
 			total = response.meta.total;
+			nextCursor = response.meta.nextCursor ?? null;
+			if (nextCursor) cursorByPage.set(response.meta.page + 1, nextCursor);
 			resultCards = response.items;
 			knownCards = mergeCards(knownCards, response.items);
 			hasLoaded = true;
@@ -197,7 +215,7 @@
 			<div class="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(14rem,1fr)_auto_auto] lg:items-end">
 				<Input
 					bind:value={query}
-					oninput={markFiltersChanged}
+					oninput={changeTextQuery}
 					placeholder={$_('collection.search')}
 					class="h-9 w-full text-sm"
 				/>
@@ -207,6 +225,7 @@
 					aria-label={$_('collection.sort')}
 					class="h-9 w-full self-end border border-primary/50 bg-card px-2 py-0 font-mono text-[10px] leading-9 uppercase tracking-wider text-primary outline-none focus:border-primary lg:w-40"
 				>
+					<option value="relevance">{$_('collection.sortRelevance')}</option>
 					<option value="rarity">{$_('collection.sortRarity')}</option>
 					<option value="name">{$_('collection.sortName')}</option>
 				</select>
@@ -290,7 +309,7 @@
 			<Button
 				size="xs"
 				variant="outline"
-				disabled={page === totalPages || loading}
+				disabled={(query.trim() ? page === totalPages : !nextCursor) || loading}
 				onclick={() => void search(page + 1)}
 			>
 				{$_('codex.next')}

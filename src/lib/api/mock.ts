@@ -724,6 +724,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			page,
 			nbResults: items.length,
 			size: pageSize,
+			nextCursor: (page + 1) * pageSize < items.length ? `mock-cards-cursor-${page + 1}` : null,
 			sortBy: url.searchParams.get('sortBy') ?? 'name',
 			sortDirection: url.searchParams.get('sortDirection') ?? 'ASC',
 			filters: { rarity: rarities, variant },
@@ -756,7 +757,8 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			})),
 			page,
 			nbResults: items.length,
-			size: pageSize
+			size: pageSize,
+			nextCursor: (page + 1) * pageSize < items.length ? `mock-collection-cursor-${page + 1}` : null
 		});
 	}
 	const variantCopiesMatch = /^\/collection\/variants\/([^/]+)\/copies$/.exec(pathname);
@@ -1154,6 +1156,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			page,
 			nbResults: items.length,
 			size: pageSize,
+			nextCursor: (page + 1) * pageSize < items.length ? `mock-wishlist-cursor-${page + 1}` : null,
 			sortBy: url.searchParams.get('sortBy') ?? 'name',
 			sortDirection: url.searchParams.get('sortDirection') ?? 'ASC',
 			filters: {},

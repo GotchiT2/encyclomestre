@@ -16,6 +16,7 @@ export type CardRarity =
 export type CardRarityInitials = 'L' | 'UR' | 'SR' | 'R' | 'PC' | 'C';
 export type CardVariant = 'all' | 'normal' | 'alternative';
 export type CardVariantCode = 'NORMAL' | 'FULL_ART';
+export type CardSearchSort = 'name' | 'rarity' | 'relevance';
 
 export interface Card {
 	catalogueId?: string;

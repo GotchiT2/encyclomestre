@@ -6,6 +6,7 @@
 	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
 	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
+	import { compareCardsByTextRelevance } from '$lib/domain/cards/search';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Dialog from '$lib/components/ui/dialog';
@@ -33,18 +34,20 @@
 		).values()
 	]);
 	const filteredCards = $derived(
-		cards.filter((card) => {
-			const normalizedQuery = query.trim().toLocaleLowerCase('fr-FR');
-			const cardTags = (card.collectionTags ?? []).map((tag) => tag.id);
-			return (
-				(!normalizedQuery ||
-					card.title.toLocaleLowerCase('fr-FR').includes(normalizedQuery) ||
-					card.shortDescription.toLocaleLowerCase('fr-FR').includes(normalizedQuery)) &&
-				(!rarities.length || rarities.includes(card.rarity)) &&
-				matchesCardVariant(card, variant) &&
-				(!tagIds.length || tagIds.every((tagId) => cardTags.includes(tagId)))
-			);
-		})
+		cards
+			.filter((card) => {
+				const normalizedQuery = query.trim().toLocaleLowerCase('fr-FR');
+				const cardTags = (card.collectionTags ?? []).map((tag) => tag.id);
+				return (
+					(!normalizedQuery ||
+						card.title.toLocaleLowerCase('fr-FR').includes(normalizedQuery) ||
+						card.shortDescription.toLocaleLowerCase('fr-FR').includes(normalizedQuery)) &&
+					(!rarities.length || rarities.includes(card.rarity)) &&
+					matchesCardVariant(card, variant) &&
+					(!tagIds.length || tagIds.every((tagId) => cardTags.includes(tagId)))
+				);
+			})
+			.toSorted((left, right) => compareCardsByTextRelevance(left, right, query))
 	);
 
 	function toggle<T>(items: T[], item: T) {

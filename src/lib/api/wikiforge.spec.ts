@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { toCardPage, toCollectionCardRecord } from './wikiforge';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('./client', () => ({ apiRequest: vi.fn() }));
+
+import { apiRequest } from './client';
+import { getWikiForgeCollection, toCardPage, toCollectionCardRecord } from './wikiforge';
+
+const mockedRequest = vi.mocked(apiRequest);
+
+beforeEach(() => mockedRequest.mockReset());
 
 describe('WikiForge API adapters', () => {
 	it('préserve les identifiants catalogue et exemplaire d’une carte de collection', () => {
@@ -65,5 +73,16 @@ describe('WikiForge API adapters', () => {
 
 		expect(page.meta).toEqual({ page: 2, pageSize: 20, total: 45, totalPages: 3 });
 		expect(page.items[0]).toMatchObject({ rarity: 'Commune', rarityInitials: 'C' });
+	});
+
+	it('envoie la page suivante et le curseur renvoyé pour une collection', async () => {
+		mockedRequest.mockResolvedValue({ results: [], page: 1, nbResults: 0, nextCursor: null });
+
+		await getWikiForgeCollection({ q: 'Rose', page: 1, cursor: 'next-cursor' });
+
+		expect(mockedRequest).toHaveBeenCalledWith(
+			'/api/collection?page=1&size=50&sortBy=RELEVANCE&sortDirection=DESC&q=Rose&cursor=next-cursor&variant=ALL&saleState=ALL',
+			undefined
+		);
 	});
 });
