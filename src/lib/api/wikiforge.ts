@@ -107,29 +107,22 @@ export const getWikiForgeVariantCopies = (variantId: string, options?: RequestOp
 export const getWikiForgeCard = (id: string, options?: RequestOptions) =>
 	apiRequest<WikiForgeCard>(`/api/cards/${encodeURIComponent(id)}`, options);
 
-export interface BoosterStatus {
-	availableBoosters: number;
-	maxBoosters?: number;
-	nextBoosterAvailableAt: string | null;
-}
-
-export const getWikiForgeBoosterStatus = (options?: RequestOptions) =>
-	apiRequest<BoosterStatus>('/api/boosters/status', options);
-
-export const openWikiForgeBooster = (options?: RequestOptions) =>
-	apiRequest<{ cards: WikiForgeCollectionCard[] }>('/api/boosters/open', {
-		...options,
-		method: 'POST'
-	});
-
 export interface WikiForgeTag {
 	id: string;
 	name: string;
 	color: string;
 }
 
-export const getWikiForgeTags = (options?: RequestOptions) =>
-	apiRequest<WikiForgeTag[]>('/api/tags', options);
+interface WikiForgeTagDto {
+	id: number;
+	name: string;
+	color: string;
+}
+
+export const getWikiForgeTags = async (options?: RequestOptions): Promise<WikiForgeTag[]> =>
+	(await apiRequest<WikiForgeTagDto[]>('/tags', { ...options, apiTarget: 'wikiforge' })).map(
+		(tag) => ({ ...tag, id: String(tag.id) })
+	);
 export const createWikiForgeTag = (input: Omit<WikiForgeTag, 'id'>, options?: RequestOptions) =>
 	apiRequest<WikiForgeTag>('/api/tags', { ...options, method: 'POST', body: input });
 export const updateWikiForgeTag = (
