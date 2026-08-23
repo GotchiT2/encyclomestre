@@ -26,7 +26,7 @@ export interface WikiForgeCollectionResponse {
 	page: number;
 	sortBy: 'ACQUIRED_DATE' | 'RARITY' | 'NAME';
 	sortDirection: 'ASC' | 'DESC';
-	results: WikiForgeCollectionCardDto[];
+	results?: WikiForgeCollectionCardDto[] | null;
 	nextCursor: string | null;
 	hasNext: boolean;
 	rarityResults: Partial<Record<CardRarityCode, number>> | null;
@@ -136,7 +136,7 @@ export async function getWikiForgeCollectionPage(
 		apiTarget: 'wikiforge'
 	});
 	return {
-		items: response.results.map(toWikiForgeCollectionCard),
+		items: (response.results ?? []).map(toWikiForgeCollectionCard),
 		page: response.page,
 		total: response.nbResults,
 		hasNext: response.hasNext,

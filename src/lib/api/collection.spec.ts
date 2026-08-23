@@ -104,6 +104,26 @@ describe('WikiForge collection API', () => {
 		);
 	});
 
+	it('returns an empty page for a successful response with zero cards', async () => {
+		request.mockResolvedValue({
+			nbResults: 0,
+			page: 0,
+			sortBy: 'ACQUIRED_DATE',
+			sortDirection: 'DESC',
+			results: null,
+			nextCursor: null,
+			hasNext: false,
+			rarityResults: null,
+			q: 'introuvable'
+		});
+
+		await expect(getWikiForgeCollectionPage({ query: 'introuvable' })).resolves.toMatchObject({
+			items: [],
+			total: 0,
+			hasNext: false
+		});
+	});
+
 	it('uses the exact protection and single-tag endpoints', async () => {
 		request.mockResolvedValue(undefined);
 		await protectWikiForgeCard('81');

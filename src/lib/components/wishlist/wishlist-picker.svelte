@@ -127,6 +127,12 @@
 				</p>
 			{:else if failed}
 				<p class="mt-4 text-destructive">{$_('codex.error')}</p>
+			{:else if !visibleCards.length}
+				<p
+					class="mt-4 border border-dashed border-primary/25 p-5 text-center font-serif italic text-muted-foreground"
+				>
+					{$_('wishlist.search_empty')}
+				</p>
 			{:else}
 				<div class="wikiforge-card-grid mt-4">
 					{#each visibleCards as card (card.id)}

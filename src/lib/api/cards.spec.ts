@@ -54,6 +54,7 @@ describe('getCards', () => {
 			}),
 			undefined
 		);
+		expect(apiRequest).not.toHaveBeenCalled();
 	});
 
 	it('reuses card details already requested by client-side wishlist views', async () => {

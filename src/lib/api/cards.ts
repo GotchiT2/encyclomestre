@@ -40,7 +40,7 @@ export const getCards = async (
 	options?: RequestOptions
 ) => {
 	const effectiveSortBy = defaultCardSearchSort(query, sortBy, 'name');
-	const responsePage = toCardPage(
+	return toCardPage(
 		await getWikiForgeCards(
 			{
 				page: Math.max(0, page - 1),
@@ -57,10 +57,6 @@ export const getCards = async (
 			options
 		)
 	);
-	return {
-		...responsePage,
-		items: await hydrateCardSocialStates(responsePage.items, options)
-	};
 };
 
 const cardRequestCache = new Map<string, Promise<CardRecord>>();

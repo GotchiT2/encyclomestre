@@ -21,8 +21,8 @@ export interface WikiForgePublicPageCard {
 export interface WikiForgePublicPagesResponse {
 	nbResults: number;
 	page: number;
-	rarityResults: Record<WikiForgePublicPageRarity, number>;
-	results: WikiForgePublicPageCard[];
+	rarityResults?: Record<WikiForgePublicPageRarity, number> | null;
+	results?: WikiForgePublicPageCard[] | null;
 	sortBy: 'NAME' | 'RARITY' | 'RELEVANCE';
 	sortDirection: 'ASC' | 'DESC';
 }
@@ -46,6 +46,14 @@ export interface PublicCataloguePage extends PaginatedResponse<CardRecord> {
 }
 
 const publicPagesPageSize = 50;
+const emptyRarityResults: Record<WikiForgePublicPageRarity, number> = {
+	L: 0,
+	UR: 0,
+	SR: 0,
+	R: 0,
+	PC: 0,
+	C: 0
+};
 
 export function wikiForgeImageUrl(image?: string | null): string {
 	const imageName = image?.trim();
@@ -123,8 +131,8 @@ export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecor
 
 export function toPublicPage(source: WikiForgePublicPagesResponse): PublicCataloguePage {
 	return {
-		items: source.results.map(toPublicPageCardRecord),
-		rarityResults: source.rarityResults,
+		items: (source.results ?? []).map(toPublicPageCardRecord),
+		rarityResults: source.rarityResults ?? emptyRarityResults,
 		meta: {
 			page: source.page + 1,
 			pageSize: publicPagesPageSize,

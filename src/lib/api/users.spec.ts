@@ -102,6 +102,15 @@ describe('getUserCollection', () => {
 		expect(result.meta).toEqual({ page: 2, pageSize: 12, total: 42, totalPages: 4 });
 	});
 
+	it('maps an empty filtered collection response without throwing', async () => {
+		apiRequest.mockResolvedValueOnce({ results: null, page: 0, nbResults: 0, size: 12 });
+
+		await expect(getUserCollectionPage('user-2', { query: 'absente' })).resolves.toEqual({
+			items: [],
+			meta: { page: 1, pageSize: 12, total: 0, totalPages: 1 }
+		});
+	});
+
 	it('forwards relevance and the collection cursor for the next search page', async () => {
 		apiRequest.mockResolvedValueOnce({
 			results: [],

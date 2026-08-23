@@ -124,15 +124,10 @@
 		tagFilterIds = data.filters.tagFilterIds;
 		duplicate = data.filters.duplicate;
 		protection = data.filters.protection;
+		const dependencies = Promise.allSettled([data.tags, getWishlists()]);
 		try {
-			const [collection, apiTags, wishlistRegistries] = await Promise.all([
-				data.collection,
-				data.tags,
-				getWishlists()
-			]);
+			const collection = await data.collection;
 			applyResponse(collection, false);
-			tags = apiTags;
-			wishlists = wishlistRegistries;
 		} catch {
 			failed = true;
 		} finally {
@@ -140,6 +135,9 @@
 			previousFilterKey = filterKey;
 			ready = true;
 		}
+		const [tagsResult, wishlistsResult] = await dependencies;
+		if (tagsResult.status === 'fulfilled') tags = tagsResult.value;
+		if (wishlistsResult.status === 'fulfilled') wishlists = wishlistsResult.value;
 	});
 
 	$effect(() => {

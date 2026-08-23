@@ -49,7 +49,7 @@ export interface WikiForgeCollectionCard {
 }
 
 export interface WikiForgePage<T> {
-	results: T[];
+	results?: T[] | null;
 	page: number;
 	nbResults: number;
 	size?: number;
@@ -252,17 +252,17 @@ export function toCollectionCardRecord(item: WikiForgeCollectionCard): CardRecor
 }
 
 export function toCardPage(source: WikiForgePage<WikiForgeCard>): PaginatedResponse<CardRecord> {
-	return toFrontendPage(source, source.results.map(toCardRecord));
+	return toFrontendPage(source, (source.results ?? []).map(toCardRecord));
 }
 
 export function toCollectionPage(
 	source: WikiForgePage<WikiForgeCollectionCard>
 ): PaginatedResponse<CardRecord> {
-	return toFrontendPage(source, source.results.map(toCollectionCardRecord));
+	return toFrontendPage(source, (source.results ?? []).map(toCollectionCardRecord));
 }
 
 function toFrontendPage<T>(source: WikiForgePage<unknown>, items: T[]): PaginatedResponse<T> {
-	const pageSize = Math.max(1, source.size ?? (source.results.length || 50));
+	const pageSize = Math.max(1, source.size ?? (source.results?.length || 50));
 	return {
 		items,
 		meta: {

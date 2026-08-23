@@ -58,17 +58,16 @@ export const getUserCollectionPage = async (
 		`/api/users/${encodeURIComponent(id)}/collection?${parameters}`,
 		options
 	);
+	const results = response.results ?? [];
 	return {
-		items: response.results.map(toCollectionCardRecord),
+		items: results.map(toCollectionCardRecord),
 		meta: {
 			page: response.page + 1,
-			pageSize: response.size ?? Math.max(1, response.results.length || 50),
+			pageSize: response.size ?? Math.max(1, results.length || 50),
 			total: response.nbResults,
 			totalPages: Math.max(
 				1,
-				Math.ceil(
-					response.nbResults / Math.max(1, response.size ?? (response.results.length || 50))
-				)
+				Math.ceil(response.nbResults / Math.max(1, response.size ?? (results.length || 50)))
 			),
 			...(response.nextCursor === undefined ? {} : { nextCursor: response.nextCursor })
 		}
@@ -102,7 +101,9 @@ export const getUserCollection = async (
 			)
 		)
 	);
-	return [firstPage, ...remainingPages].flatMap((page) => page.results.map(toCollectionCardRecord));
+	return [firstPage, ...remainingPages].flatMap((page) =>
+		(page.results ?? []).map(toCollectionCardRecord)
+	);
 };
 
 export const getUserCollectionCopies = async (
@@ -168,7 +169,7 @@ export const searchUsers = async (
 		`/api/users?${parameters}`,
 		options
 	);
-	return 'results' in response ? response.results : response.items;
+	return 'items' in response ? response.items : (response.results ?? []);
 };
 
 export const getTradePartners = async (

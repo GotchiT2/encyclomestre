@@ -48,7 +48,7 @@ export const getMarketListings = async (
 	if (input.sellerId) parameters.set('sellerId', input.sellerId);
 	if (input.bidderId) parameters.set('bidderId', input.bidderId);
 	const response = await apiRequest<WikiForgePage<ApiSale>>(`/api/sales?${parameters}`, options);
-	const sales = response.results.map(toSale);
+	const sales = (response.results ?? []).map(toSale);
 	const cards = await hydrateCardSocialStates(
 		sales.flatMap((sale) => (sale.card ? [sale.card] : [])),
 		options

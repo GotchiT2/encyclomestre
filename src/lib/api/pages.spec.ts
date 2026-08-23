@@ -144,4 +144,21 @@ describe('WikiForge public pages API', () => {
 			'https://fr.wikipedia.org/wiki/Special:FilePath/Paris.jpg?width=250'
 		);
 	});
+
+	it('maps a successful zero-result payload without treating it as an error', () => {
+		expect(
+			toPublicPage({
+				nbResults: 0,
+				page: 0,
+				results: null,
+				rarityResults: null,
+				sortBy: 'RELEVANCE',
+				sortDirection: 'DESC'
+			})
+		).toEqual({
+			items: [],
+			rarityResults: { L: 0, UR: 0, SR: 0, R: 0, PC: 0, C: 0 },
+			meta: { page: 1, pageSize: 50, total: 0, totalPages: 1 }
+		});
+	});
 });
