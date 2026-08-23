@@ -298,6 +298,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Remplacer le polling de recharge des boosters par un réveil unique à échéance — `fix(boosters): avoid repeated inventory polling`
 - [x] Découpler la collection de l’ancien enrichissement social et compléter son action de relance — `fix(collection): remove obsolete social hydration`
 - [x] Distinguer les recherches de cartes vides des erreurs API — `fix(cards): handle empty search responses`
+- [x] Finaliser le chargement après une réponse de collection filtrée par tag — `fix(collection): settle tag filter loading`
 
 - [x] Stabiliser l’ouverture rapide et la scène mobile des boosters, ordonner les révélations de C à L et contenir les illustrations Full Art paysage — `fix(boosters): stabilize mobile opening and full art rendering`
 - [x] Créer et suivre les ventes liées aux exemplaires depuis le détail et la collection — `feat(market): create and track owned card listings`

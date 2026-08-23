@@ -124,6 +124,24 @@ describe('WikiForge collection API', () => {
 		});
 	});
 
+	it('normalizes omitted rarity counters from filtered responses', async () => {
+		request.mockResolvedValue({
+			nbResults: 1,
+			page: 0,
+			sortBy: 'ACQUIRED_DATE',
+			sortDirection: 'DESC',
+			results: [{ id: 1, pageId: 2, title: 'Taguée', rarity: 'C', tagIds: [7] }],
+			nextCursor: null,
+			hasNext: false,
+			q: null
+		});
+
+		await expect(getWikiForgeCollectionPage({ tagIds: ['7'] })).resolves.toMatchObject({
+			items: [expect.objectContaining({ id: '1', collectionTagIds: ['7'] })],
+			rarityResults: null
+		});
+	});
+
 	it('uses the exact protection and single-tag endpoints', async () => {
 		request.mockResolvedValue(undefined);
 		await protectWikiForgeCard('81');

@@ -147,30 +147,31 @@
 		filterTimer = window.setTimeout(async () => {
 			previousFilterKey = currentKey;
 			requestController?.abort();
-			requestController = new AbortController();
+			const controller = new AbortController();
+			requestController = controller;
 			const currentRequest = ++requestId;
 			loading = true;
 			failed = false;
 			loadMoreFailed = false;
 			selectedCardIds = [];
-			replaceState(
-				resolve(
-					buildCollectionFilterTarget({
-						query,
-						sortBy,
-						selectedRarities,
-						tagFilterIds,
-						duplicate,
-						protected: protection
-					}) as '/'
-				),
-				{}
-			);
 			try {
+				replaceState(
+					resolve(
+						buildCollectionFilterTarget({
+							query,
+							sortBy,
+							selectedRarities,
+							tagFilterIds,
+							duplicate,
+							protected: protection
+						}) as '/'
+					),
+					{}
+				);
 				const response = await getWikiForgeCollectionPage(requestQuery(), {
-					signal: requestController.signal
+					signal: controller.signal
 				});
-				if (currentRequest !== requestId) return;
+				if (controller.signal.aborted || currentRequest !== requestId) return;
 				applyResponse(response, false);
 			} catch (error) {
 				if (
@@ -180,7 +181,10 @@
 					failed = true;
 				}
 			} finally {
-				if (currentRequest === requestId) loading = false;
+				if (requestController === controller) {
+					requestController = null;
+					loading = false;
+				}
 			}
 		}, 500);
 		return () => window.clearTimeout(filterTimer);

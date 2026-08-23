@@ -29,7 +29,7 @@ export interface WikiForgeCollectionResponse {
 	results?: WikiForgeCollectionCardDto[] | null;
 	nextCursor: string | null;
 	hasNext: boolean;
-	rarityResults: Partial<Record<CardRarityCode, number>> | null;
+	rarityResults?: Partial<Record<CardRarityCode, number>> | null;
 	q: string | null;
 }
 
@@ -141,7 +141,7 @@ export async function getWikiForgeCollectionPage(
 		total: response.nbResults,
 		hasNext: response.hasNext,
 		nextCursor: response.nextCursor,
-		rarityResults: response.rarityResults
+		rarityResults: response.rarityResults ?? null
 	};
 }
 
