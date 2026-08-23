@@ -49,10 +49,6 @@ export interface Card {
 	userProtected?: boolean;
 	pendingTradeId?: string | null;
 	activeSale?: import('./sales').ActiveSaleSummary | null;
-	collectionTagIds?: string[];
-	duplicate?: boolean;
-	userProtected?: boolean;
-	pendingTradeId?: string | null;
 }
 
 export interface CardRecord extends Card {

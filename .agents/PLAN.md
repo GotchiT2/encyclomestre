@@ -288,6 +288,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Charger le détail public dans la modale du catalogue — `feat(cards): load public detail in catalogue modal`
 - [x] Prioriser la pertinence des recherches textuelles et propager les curseurs de collection — `feat(cards): use relevance and cursor pagination`
 - [x] Adopter la pagination hybride et les filtres canoniques de la collection WikiForge — `fix(collection): adopt wikiforge hybrid pagination`
+- [x] Brancher les étiquettes, la protection et leurs indicateurs sur WikiForge — `feat(collection): connect wikiforge collection actions`
 - [x] Migrer les wishlists vers les listes, partages et invitations WikiForge — `feat(wishlist): connect wikiforge wishlist workflows`
 - [x] Rétablir les actions d’ajout de cartes et contextualiser les erreurs wishlist — `fix(wishlist): restore card addition actions`
 - [x] Afficher l’état vide quand une wishlist ne contient aucune carte — `fix(wishlist): handle empty list responses`

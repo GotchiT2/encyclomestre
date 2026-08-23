@@ -11,6 +11,8 @@ const { gotoMock, getVariantCopiesMock } = vi.hoisted(() => ({
 vi.mock('$app/navigation', () => ({ goto: gotoMock }));
 
 vi.mock('$lib/api', () => ({
+	addWikiForgeCardTag: vi.fn(),
+	removeWikiForgeCardTag: vi.fn(),
 	applyWikiForgeTag: vi.fn(),
 	removeWikiForgeTag: vi.fn(),
 	createWikiForgeTag: vi.fn(),
@@ -179,6 +181,21 @@ describe('CardDetailModal', () => {
 			Number(getComputedStyle(detail).zIndex)
 		);
 		expect(tagDialog.element().contains(document.activeElement)).toBe(true);
+	});
+
+	it('lets an owner toggle the collection protection state', async () => {
+		const onToggleProtection = vi.fn();
+		render(CardDetailModal, {
+			card: { ...card, userProtected: true },
+			owned: true,
+			loadVariantCopies: false,
+			onToggleWishlist: vi.fn(),
+			onToggleProtection,
+			onClose: vi.fn()
+		});
+
+		await page.getByRole('button', { name: 'Retirer la protection' }).click();
+		expect(onToggleProtection).toHaveBeenCalledOnce();
 	});
 
 	it('opens a prefilled trade directly for one owner and a selector for several owners', async () => {

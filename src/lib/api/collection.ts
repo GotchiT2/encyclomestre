@@ -149,3 +149,29 @@ export const getCollection = (options?: RequestOptions) => getWikiForgeCollectio
 
 export const getVariantCopies = async (variantId: string, options?: RequestOptions) =>
 	(await getWikiForgeVariantCopies(variantId, options)).map(toCollectionCardRecord);
+
+export const protectWikiForgeCard = (cardId: string, options?: RequestOptions) =>
+	apiRequest<void>(`/collection/${numericId(cardId)}/protect`, {
+		...options,
+		apiTarget: 'wikiforge',
+		method: 'PUT'
+	});
+
+export const unprotectWikiForgeCard = (cardId: string, options?: RequestOptions) =>
+	apiRequest<void>(`/collection/${numericId(cardId)}/unprotect`, {
+		...options,
+		apiTarget: 'wikiforge',
+		method: 'PUT'
+	});
+
+export const addWikiForgeCardTag = (cardId: string, tagId: string, options?: RequestOptions) =>
+	apiRequest<WikiForgeCollectionCardDto>(
+		`/collection/${numericId(cardId)}/tags/${numericId(tagId)}`,
+		{ ...options, apiTarget: 'wikiforge', method: 'PUT' }
+	);
+
+export const removeWikiForgeCardTag = (cardId: string, tagId: string, options?: RequestOptions) =>
+	apiRequest<WikiForgeCollectionCardDto>(
+		`/collection/${numericId(cardId)}/tags/${numericId(tagId)}`,
+		{ ...options, apiTarget: 'wikiforge', method: 'DELETE' }
+	);

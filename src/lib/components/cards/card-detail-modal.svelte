@@ -14,6 +14,8 @@
 	import { _ } from '$lib/i18n';
 	import { getVariantCopies } from '$lib/api';
 	import XIcon from '@lucide/svelte/icons/x';
+	import LockIcon from '@lucide/svelte/icons/lock';
+	import LockOpenIcon from '@lucide/svelte/icons/lock-open';
 	import { createModalLayer } from '$lib/components/ui/dialog/modal-layer';
 	import type {
 		CardPriceHistory,
@@ -34,6 +36,7 @@
 		sales,
 		history,
 		onToggleWishlist,
+		onToggleProtection,
 		onSaleCreated = () => undefined,
 		onClose
 	}: {
@@ -46,6 +49,7 @@
 		sales?: SaleListing[];
 		history?: CardPriceHistory;
 		onToggleWishlist: (wishlistId: string, selected: boolean) => void | Promise<void>;
+		onToggleProtection?: () => void | Promise<void>;
 		onSaleCreated?: (sale: SaleListing, userCardId: string) => void;
 		onClose: () => void;
 	} = $props();
@@ -207,7 +211,15 @@
 
 						<div class="forge-panel-flat p-3" data-testid="card-detail-tab-panel">
 							{#if activeTab === 'data'}
-								{#if owned}<CardTagControls cardId={card.id} bind:tags bind:assignments />{/if}
+								{#if owned}
+									{#if onToggleProtection}
+										<Button variant="outline" class="mb-3" onclick={onToggleProtection}>
+											{#if card.userProtected}<LockOpenIcon />{$_('collection.unprotect')}
+											{:else}<LockIcon />{$_('collection.protect')}{/if}
+										</Button>
+									{/if}
+									<CardTagControls cardId={card.id} bind:tags bind:assignments />
+								{/if}
 								<div class:mt-3={owned}><CardTelemetry {card} /></div>
 								{#if card.wikipediaUrl}<Button href={card.wikipediaUrl} target="_blank" class="mt-3"
 										>{$_('codex.wikipedia')}</Button

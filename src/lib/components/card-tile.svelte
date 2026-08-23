@@ -4,6 +4,7 @@
 	import CardStateIndicators from '$lib/components/cards/card-state-indicators.svelte';
 	import { cn } from '$lib/utils';
 	import type { CardRecord, CollectionTag } from '$lib/types';
+	import LockIcon from '@lucide/svelte/icons/lock';
 
 	let {
 		card,
@@ -173,6 +174,16 @@
 			data-testid="card-active-sale"
 		>
 			{$_('collection.on_sale')}
+		</span>
+	{/if}
+	{#if card.userProtected}
+		<span
+			class="pointer-events-none absolute top-[8%] left-[7%] z-30 grid size-7 place-items-center border border-primary/70 bg-background/90 text-primary shadow-lg"
+			aria-label={$_('collection.protected_indicator')}
+			title={$_('collection.protected_indicator')}
+			data-testid="card-protected-indicator"
+		>
+			<LockIcon class="size-3.5" />
 		</span>
 	{/if}
 	{#if onOpen}

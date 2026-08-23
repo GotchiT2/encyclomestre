@@ -113,51 +113,64 @@ export const getWikiForgeVariantCopies = (variantId: string, options?: RequestOp
 export const getWikiForgeCard = (id: string, options?: RequestOptions) =>
 	apiRequest<WikiForgeCard>(`/api/cards/${encodeURIComponent(id)}`, options);
 
-export interface WikiForgeTag {
-	id: string;
-	name: string;
-	color: string;
-}
-
 interface WikiForgeTagDto {
 	id: number;
 	name: string;
 	color: string;
 }
 
-export const getWikiForgeTags = async (options?: RequestOptions): Promise<WikiForgeTag[]> =>
-	(await apiRequest<WikiForgeTagDto[]>('/tags', { ...options, apiTarget: 'wikiforge' })).map(
-		(tag) => ({ ...tag, id: String(tag.id) })
-	);
-export const createWikiForgeTag = (input: Omit<WikiForgeTag, 'id'>, options?: RequestOptions) =>
-	apiRequest<WikiForgeTag>('/api/tags', { ...options, method: 'POST', body: input });
-export const updateWikiForgeTag = (
-	id: string,
-	input: Omit<WikiForgeTag, 'id'>,
+const toCollectionTag = (tag: WikiForgeTagDto): CollectionTag => ({ ...tag, id: String(tag.id) });
+const tagOptions = (options?: RequestOptions): RequestOptions => ({
+	...options,
+	apiTarget: 'wikiforge'
+});
+const numericWikiForgeId = (value: string) => {
+	const id = Number(value);
+	if (!Number.isSafeInteger(id) || id <= 0)
+		throw new Error(`Identifiant WikiForge invalide: ${value}`);
+	return id;
+};
+
+export const getWikiForgeTags = async (options?: RequestOptions) =>
+	(await apiRequest<WikiForgeTagDto[]>('/tags', tagOptions(options))).map(toCollectionTag);
+export const createWikiForgeTag = async (
+	input: Omit<CollectionTag, 'id'>,
 	options?: RequestOptions
 ) =>
-	apiRequest<WikiForgeTag>(`/api/tags/${encodeURIComponent(id)}`, {
-		...options,
-		method: 'PUT',
+	toCollectionTag(
+		await apiRequest<WikiForgeTagDto>('/tags', {
+			...tagOptions(options),
+			method: 'POST',
+			body: input
+		})
+	);
+export const updateWikiForgeTag = (
+	id: string,
+	input: Omit<CollectionTag, 'id'>,
+	options?: RequestOptions
+) =>
+	apiRequest<WikiForgeTagDto>(`/tags/${numericWikiForgeId(id)}`, {
+		...tagOptions(options),
+		method: 'PATCH',
 		body: input
-	});
+	}).then(toCollectionTag);
 export const deleteWikiForgeTag = (id: string, options?: RequestOptions) =>
-	apiRequest<void>(`/api/tags/${encodeURIComponent(id)}`, { ...options, method: 'DELETE' });
+	apiRequest<void>(`/tags/${numericWikiForgeId(id)}`, { ...tagOptions(options), method: 'DELETE' });
 export const applyWikiForgeTag = (tagId: string, userCardIds: string[], options?: RequestOptions) =>
-	apiRequest<void>('/api/collection/tags/apply', {
-		...options,
-		method: 'POST',
-		body: { tagId, userCardIds }
+	apiRequest<unknown[]>(`/collection/tags/${numericWikiForgeId(tagId)}`, {
+		...tagOptions(options),
+		method: 'PUT',
+		body: userCardIds.map(numericWikiForgeId)
 	});
 export const removeWikiForgeTag = (
 	tagId: string,
 	userCardIds: string[],
 	options?: RequestOptions
 ) =>
-	apiRequest<void>('/api/collection/tags/remove', {
-		...options,
-		method: 'POST',
-		body: { tagId, userCardIds }
+	apiRequest<unknown[]>(`/collection/tags/${numericWikiForgeId(tagId)}`, {
+		...tagOptions(options),
+		method: 'DELETE',
+		body: userCardIds.map(numericWikiForgeId)
 	});
 
 interface DashboardResponse extends Omit<DashboardData, 'recentAcquisitions'> {

@@ -20,7 +20,9 @@
 		getWikiForgeCollectionPage,
 		getWishlists,
 		hydrateCardSocialStates,
-		nextCollectionPosition
+		nextCollectionPosition,
+		protectWikiForgeCard,
+		unprotectWikiForgeCard
 	} from '$lib/api';
 	import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 	import { _ } from '$lib/i18n';
@@ -236,6 +238,14 @@
 		wishlists = await getWishlists();
 	}
 
+	async function toggleProtection(card: CardRecord) {
+		if (card.userProtected) await unprotectWikiForgeCard(card.id);
+		else await protectWikiForgeCard(card.id);
+		const updated = { ...card, userProtected: !card.userProtected };
+		cards = cards.map((item) => (item.id === card.id ? updated : item));
+		selectedCard = updated;
+	}
+
 	function clearFilters() {
 		query = '';
 		sortBy = 'acquiredDate';
@@ -339,6 +349,7 @@
 		bind:assignments
 		onToggleWishlist={(wishlistId, selected) =>
 			void toggleWishlist(wishlistId, selectedCard!, selected)}
+		onToggleProtection={() => void toggleProtection(selectedCard!)}
 		onSaleCreated={(sale, userCardId) => {
 			const summary: ActiveSaleSummary = {
 				id: sale.id,

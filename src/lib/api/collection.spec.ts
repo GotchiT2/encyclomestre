@@ -4,10 +4,14 @@ vi.mock('./client', () => ({ apiRequest: vi.fn() }));
 
 import { apiRequest } from './client';
 import {
+	addWikiForgeCardTag,
 	collectionPath,
 	getWikiForgeCollectionPage,
 	nextCollectionPosition,
-	toWikiForgeCollectionCard
+	protectWikiForgeCard,
+	removeWikiForgeCardTag,
+	toWikiForgeCollectionCard,
+	unprotectWikiForgeCard
 } from './collection';
 
 const request = vi.mocked(apiRequest);
@@ -98,6 +102,31 @@ describe('WikiForge collection API', () => {
 		expect(result.items[0].imageUrl).toBe(
 			'https://fr.wikipedia.org/wiki/Special:FilePath/Rose.jpg?width=250'
 		);
+	});
+
+	it('uses the exact protection and single-tag endpoints', async () => {
+		request.mockResolvedValue(undefined);
+		await protectWikiForgeCard('81');
+		await unprotectWikiForgeCard('81');
+		await addWikiForgeCardTag('81', '2');
+		await removeWikiForgeCardTag('81', '2');
+
+		expect(request).toHaveBeenNthCalledWith(1, '/collection/81/protect', {
+			apiTarget: 'wikiforge',
+			method: 'PUT'
+		});
+		expect(request).toHaveBeenNthCalledWith(2, '/collection/81/unprotect', {
+			apiTarget: 'wikiforge',
+			method: 'PUT'
+		});
+		expect(request).toHaveBeenNthCalledWith(3, '/collection/81/tags/2', {
+			apiTarget: 'wikiforge',
+			method: 'PUT'
+		});
+		expect(request).toHaveBeenNthCalledWith(4, '/collection/81/tags/2', {
+			apiTarget: 'wikiforge',
+			method: 'DELETE'
+		});
 	});
 
 	it('builds the shared card mapping deterministically', () => {
