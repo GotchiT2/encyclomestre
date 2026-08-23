@@ -5,25 +5,26 @@ import '$lib/i18n';
 import FilterControls from './filter-controls.svelte';
 
 describe('FilterControls', () => {
-	it('selects relevance on text input and still allows a later manual sort', async () => {
+	it('exposes only collection sorts and explains the minimum search length', async () => {
 		render(FilterControls, {
 			query: '',
-			sortBy: 'rarity',
+			sortBy: 'acquiredDate',
 			selectedRarities: [],
 			tagFilterIds: [],
-			variant: 'all',
-			saleState: 'ALL',
+			duplicate: 'all',
+			protected: 'all',
 			tags: [],
-			untaggedOption: '__untagged__',
+			canonical: true,
 			onOpenTagEditor: vi.fn(),
 			onClear: vi.fn()
 		});
 
-		await page.getByLabelText('Rechercher une carte').fill('Rose');
 		const sort = page.getByLabelText('Trier par exemplaires');
-		await expect.element(sort).toHaveValue('relevance');
-
-		await sort.selectOptions('name');
-		await expect.element(sort).toHaveValue('name');
+		await expect.element(sort).toHaveValue('acquiredDate');
+		expect(sort.element().querySelector('option[value="relevance"]')).toBeNull();
+		await page.getByLabelText('Rechercher une carte').fill('ab');
+		await expect
+			.element(page.getByText('Saisissez au moins 3 caractères pour rechercher.'))
+			.toBeVisible();
 	});
 });

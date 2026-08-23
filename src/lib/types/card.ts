@@ -17,6 +17,8 @@ export type CardRarityInitials = 'L' | 'UR' | 'SR' | 'R' | 'PC' | 'C';
 export type CardVariant = 'all' | 'normal' | 'alternative';
 export type CardVariantCode = 'NORMAL' | 'FULL_ART';
 export type CardSearchSort = 'name' | 'rarity' | 'relevance';
+export type CollectionSort = 'acquiredDate' | 'rarity' | 'name';
+export type CollectionBooleanFilter = 'all' | 'yes' | 'no';
 
 export interface Card {
 	catalogueId?: string;
@@ -47,6 +49,10 @@ export interface Card {
 	userProtected?: boolean;
 	pendingTradeId?: string | null;
 	activeSale?: import('./sales').ActiveSaleSummary | null;
+	collectionTagIds?: string[];
+	duplicate?: boolean;
+	userProtected?: boolean;
+	pendingTradeId?: string | null;
 }
 
 export interface CardRecord extends Card {

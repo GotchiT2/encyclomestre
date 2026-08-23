@@ -15,14 +15,16 @@
 	}: {
 		values: string[];
 		tags: CollectionTag[];
-		untaggedValue: string;
+		untaggedValue?: string;
 		allowCreation?: boolean;
 		onChange?: () => void;
 		onCreate?: () => void;
 	} = $props();
 
 	const options = $derived([
-		{ id: untaggedValue, name: $_('collection.untagged'), color: '#9cb0bc' },
+		...(untaggedValue
+			? [{ id: untaggedValue, name: $_('collection.untagged'), color: '#9cb0bc' }]
+			: []),
 		...tags
 	]);
 

@@ -47,6 +47,13 @@ export interface PublicCataloguePage extends PaginatedResponse<CardRecord> {
 
 const publicPagesPageSize = 50;
 
+export function wikiForgeImageUrl(image?: string | null): string {
+	const imageName = image?.trim();
+	return imageName
+		? `https://fr.wikipedia.org/wiki/Special:FilePath/${encodeURIComponent(imageName)}?width=250`
+		: '/card-placeholder.svg';
+}
+
 function publicPagesPath(query: WikiForgePublicPagesQuery): string {
 	const sortBy = defaultCardSearchSort(query.q, query.sortBy);
 	const parameters = new URLSearchParams({
@@ -91,7 +98,6 @@ export async function getWikiForgePublicPage(
 
 export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecord {
 	const rarity = cardRarityByCode[card.rarity] ?? cardRarityByCode.C;
-	const imageName = card.image?.trim();
 	return {
 		id: String(card.id),
 		baseCardId: card.id,
@@ -103,9 +109,7 @@ export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecor
 		rarityInitials: rarity.initials,
 		rarityColor: rarity.color,
 		viewCount: card.viewCount,
-		imageUrl: imageName
-			? `https://fr.wikipedia.org/wiki/Special:FilePath/${encodeURIComponent(imageName)}?width=250`
-			: '/card-placeholder.svg',
+		imageUrl: wikiForgeImageUrl(card.image),
 		wikipediaUrl: `https://fr.wikipedia.org/?curid=${card.id}`,
 		attack: card.atk,
 		defense: 0,
