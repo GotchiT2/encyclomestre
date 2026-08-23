@@ -1,6 +1,7 @@
 import { apiRequest, type RequestOptions } from './client';
 import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/rarities';
 import type { BoosterInventory, BoosterOpenResult, CardRecord } from '$lib/types';
+import { wikiForgeImageUrl } from '$lib/api/pages';
 
 export interface BoosterCardDto {
 	id: number;
@@ -29,11 +30,6 @@ export interface OpenedBoostersDto extends BoostersDto {
 	cards: BoosterCardDto[];
 }
 
-function wikipediaImageUrl(filename?: string | null): string {
-	if (!filename) return '/card-placeholder.svg';
-	return `https://fr.wikipedia.org/wiki/Special:FilePath/${encodeURIComponent(filename)}?width=250`;
-}
-
 export function toBoosterCardRecord(card: BoosterCardDto): CardRecord {
 	const rarity = cardRarityByCode[card.rarity] ?? cardRarityByCode.C;
 	return {
@@ -48,7 +44,7 @@ export function toBoosterCardRecord(card: BoosterCardDto): CardRecord {
 		rarityInitials: rarity.initials,
 		rarityColor: rarity.color,
 		viewCount: 0,
-		imageUrl: wikipediaImageUrl(card.image),
+		imageUrl: wikiForgeImageUrl(card.image),
 		wikipediaUrl: `https://fr.wikipedia.org/?curid=${card.pageId}`,
 		attack: card.atk ?? 0,
 		defense: 0,

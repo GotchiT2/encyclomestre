@@ -58,7 +58,7 @@ const emptyRarityResults: Record<WikiForgePublicPageRarity, number> = {
 export function wikiForgeImageUrl(image?: string | null): string {
 	const imageName = image?.trim();
 	return imageName
-		? `https://fr.wikipedia.org/wiki/Special:FilePath/${encodeURIComponent(imageName)}?width=250`
+		? `https://upload.wikimedia.org/wikipedia/commons/thumb/${image}`
 		: '/card-placeholder.svg';
 }
 
