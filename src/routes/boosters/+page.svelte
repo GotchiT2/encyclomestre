@@ -9,7 +9,10 @@
 		openBooster
 	} from '$lib/api';
 	import BoosterOpeningStage from '$lib/components/boosters/booster-opening-stage.svelte';
-	import { formatBoosterDelay } from '$lib/components/boosters/booster-countdown';
+	import {
+		formatBoosterDelay,
+		getBoosterRefreshDelay
+	} from '$lib/components/boosters/booster-countdown';
 	import CardDetailModal from '$lib/components/cards/card-detail-modal.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import type {
@@ -33,11 +36,26 @@
 	let detailDependenciesLoading = $state(false);
 	let now = $state(Date.now());
 	let statusRefreshing = $state(false);
-	let nextStatusRetryAt = 0;
+	let inventoryRefreshTimer: number | undefined;
+	let pageActive = false;
 	const nextDelay = $derived(
 		inventory?.nextRechargeAt ? Math.max(0, new Date(inventory.nextRechargeAt).getTime() - now) : 0
 	);
 	const nextDelayLabel = $derived(formatBoosterDelay(nextDelay));
+
+	function scheduleInventoryRefresh(nextAvailableAt: string | null) {
+		if (inventoryRefreshTimer !== undefined) {
+			window.clearTimeout(inventoryRefreshTimer);
+			inventoryRefreshTimer = undefined;
+		}
+		if (!pageActive) return;
+		const delay = getBoosterRefreshDelay(nextAvailableAt);
+		if (delay === null) return;
+		inventoryRefreshTimer = window.setTimeout(() => {
+			inventoryRefreshTimer = undefined;
+			void refreshInventory().catch(() => undefined);
+		}, delay + 250);
+	}
 
 	async function refreshInventory() {
 		if (statusRefreshing) return;
@@ -45,24 +63,23 @@
 		try {
 			inventory = await getBoosterInventory();
 			now = Date.now();
+			scheduleInventoryRefresh(inventory.nextRechargeAt);
 		} finally {
 			statusRefreshing = false;
 		}
 	}
 
 	onMount(() => {
+		pageActive = true;
 		const timer = window.setInterval(() => {
 			now = Date.now();
-			const rechargeAt = inventory?.nextRechargeAt
-				? new Date(inventory.nextRechargeAt).getTime()
-				: 0;
-			if (rechargeAt && now >= rechargeAt && now >= nextStatusRetryAt) {
-				nextStatusRetryAt = now + 2_000;
-				void refreshInventory().catch(() => undefined);
-			}
 		}, 1_000);
 		void refreshInventory().catch(() => undefined);
-		return () => window.clearInterval(timer);
+		return () => {
+			pageActive = false;
+			window.clearInterval(timer);
+			if (inventoryRefreshTimer !== undefined) window.clearTimeout(inventoryRefreshTimer);
+		};
 	});
 
 	async function open() {
@@ -74,6 +91,7 @@
 			const opened = await openBooster();
 			result = opened.pulls.map((pull) => pull.card);
 			inventory = opened.inventory;
+			scheduleInventoryRefresh(inventory.nextRechargeAt);
 			openingId += 1;
 		} catch {
 			openingError = true;
