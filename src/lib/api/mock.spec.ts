@@ -2,6 +2,35 @@ import { describe, expect, it } from 'vitest';
 import { createMockApiResponse } from './mock';
 
 describe('createMockApiResponse', () => {
+	it('expose les contrats WikiForge des boosters et des tags', async () => {
+		const inventory = createMockApiResponse({ path: '/boosters' });
+		expect(await inventory.json()).toMatchObject({
+			available: expect.any(Number),
+			max: expect.any(Number)
+		});
+
+		const opening = createMockApiResponse({ path: '/boosters/open', method: 'POST' });
+		expect(await opening.json()).toMatchObject({
+			available: expect.any(Number),
+			max: expect.any(Number),
+			cards: expect.arrayContaining([
+				expect.objectContaining({
+					id: expect.any(Number),
+					pageId: expect.any(Number),
+					title: expect.any(String),
+					tagIds: expect.any(Array)
+				})
+			])
+		});
+
+		const tags = createMockApiResponse({ path: '/tags' });
+		expect(await tags.json()).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ id: expect.any(Number), name: expect.any(String) })
+			])
+		);
+	});
+
 	it('reads social-state card ids from a POST body', async () => {
 		const response = createMockApiResponse({
 			path: '/api/cards/social-states',

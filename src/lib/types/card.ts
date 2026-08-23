@@ -41,6 +41,10 @@ export interface Card {
 	qScore?: number;
 	acquiredAt?: string;
 	collectionTags?: import('./tag').CollectionTag[];
+	collectionTagIds?: string[];
+	duplicate?: boolean;
+	userProtected?: boolean;
+	pendingTradeId?: string | null;
 	activeSale?: import('./sales').ActiveSaleSummary | null;
 }
 

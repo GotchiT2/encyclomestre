@@ -1238,17 +1238,16 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	}
 	if (normalizedMethod === 'GET' && pathname === '/boosters/inventory')
 		return json(boosterInventory(url.searchParams.get('userId') ?? 'demo-user'));
-	if (normalizedMethod === 'GET' && pathname === '/boosters/status') {
+	if (normalizedMethod === 'GET' && pathname === '/boosters') {
 		const inventory = boosterInventory('demo-user');
 		return json({
-			availableBoosters: inventory.available,
-			maxBoosters: inventory.capacity,
-			nextBoosterAvailableAt: inventory.nextRechargeAt
+			available: inventory.available,
+			max: inventory.capacity,
+			nextAvailableAt: inventory.nextRechargeAt
 		});
 	}
 	if (normalizedMethod === 'POST' && pathname === '/boosters/open') {
-		const userId =
-			typeof asObject(body)?.userId === 'string' ? (asObject(body)!.userId as string) : 'demo-user';
+		const userId = 'demo-user';
 		const inventory = boosterInventory(userId);
 		if (!inventory.available) return error(409, 'Aucun paquet disponible.', 'BOOSTER_EMPTY');
 		const state = boosterReserve.get(userId)!;
@@ -1257,15 +1256,32 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			const card = mockCards[Math.floor(Math.random() * mockCards.length)];
 			card.ownedCount += 1;
 			return {
-				userCardId: `booster-${Date.now()}-${index}`,
-				cardId: card.id,
-				acquiredAt: new Date().toISOString(),
-				tags: [],
-				card: apiCard(card)
+				id: Date.now() + index,
+				pageId: card.baseCardId ?? (Number.parseInt(card.id.replace(/\D/g, ''), 10) || index + 1),
+				title: card.title,
+				description: card.longDescription || card.shortDescription,
+				image: `${card.title.replaceAll(' ', '_')}.jpg`,
+				rarity: card.rarityInitials,
+				atk: card.attack,
+				alt: Boolean(card.isFullArt),
+				duplicate: card.ownedCount > 1,
+				protected: false,
+				tagIds: [],
+				acquiredDate: new Date().toISOString(),
+				creationDate: now,
+				pendingTradeId: null
 			};
 		});
-		return json({ cards });
+		const updatedInventory = boosterInventory(userId);
+		return json({
+			available: updatedInventory.available,
+			max: updatedInventory.capacity,
+			nextAvailableAt: updatedInventory.nextRechargeAt,
+			cards
+		});
 	}
+	if (normalizedMethod === 'GET' && pathname === '/tags')
+		return json(mockCollectionTags.map((tag, index) => ({ ...tag, id: index + 1 })));
 	if (normalizedMethod === 'GET' && pathname === '/sales') {
 		const sellerId = url.searchParams.get('sellerId');
 		const cardId = url.searchParams.get('cardId');
