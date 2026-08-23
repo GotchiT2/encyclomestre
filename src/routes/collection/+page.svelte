@@ -19,7 +19,6 @@
 		applyWikiForgeTag,
 		getWikiForgeCollectionPage,
 		getWishlists,
-		hydrateCardSocialStates,
 		nextCollectionPosition,
 		protectWikiForgeCard,
 		unprotectWikiForgeCard
@@ -174,7 +173,6 @@
 					signal: requestController.signal
 				});
 				if (currentRequest !== requestId) return;
-				response.items = await hydrateCardSocialStates(response.items);
 				applyResponse(response, false);
 			} catch (error) {
 				if (
@@ -197,7 +195,6 @@
 		loadMoreFailed = false;
 		try {
 			const response = await getWikiForgeCollectionPage(requestQuery(position));
-			response.items = await hydrateCardSocialStates(response.items);
 			applyResponse(response, true);
 		} catch {
 			loadMoreFailed = true;

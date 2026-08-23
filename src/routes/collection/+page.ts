@@ -1,4 +1,4 @@
-import { getWikiForgeCollectionPage, getWikiForgeTags, hydrateCardSocialStates } from '$lib/api';
+import { getWikiForgeCollectionPage, getWikiForgeTags } from '$lib/api';
 import { cardRarityCodeByName, cardRarityOptions } from '$lib/domain/cards/rarities';
 import type { CardRarity, CollectionBooleanFilter, CollectionSort } from '$lib/types';
 import type { PageLoad } from './$types';
@@ -32,10 +32,7 @@ export const load: PageLoad = ({ fetch, url }) => {
 				protected: protection
 			},
 			{ fetch }
-		).then(async (response) => ({
-			...response,
-			items: await hydrateCardSocialStates(response.items, { fetch })
-		})),
+		),
 		tags: getWikiForgeTags({ fetch }),
 		filters: { query, selectedRarities, tagFilterIds, sortBy, duplicate, protection }
 	};
