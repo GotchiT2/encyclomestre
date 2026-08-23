@@ -1,23 +1,51 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
+	import TagFilterSelector from '$lib/components/collection/tag-filter-selector.svelte';
 	import { _ } from '$lib/i18n';
+	import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
 	import type { CollectionTag } from '$lib/types';
 
 	let {
 		selectedCount,
 		tags,
-		bulkTagId = $bindable(''),
+		bulkTagIds = $bindable<string[]>([]),
+		canProtect = false,
 		onSelectAll,
 		onApply,
+		onProtect,
+		onOpenTagEditor,
 		onCancel
 	}: {
 		selectedCount: number;
 		tags: CollectionTag[];
-		bulkTagId: string;
+		bulkTagIds: string[];
+		canProtect?: boolean;
 		onSelectAll: () => void;
-		onApply: () => void;
+		onApply: () => void | Promise<void>;
+		onProtect: () => void | Promise<void>;
+		onOpenTagEditor: () => void;
 		onCancel: () => void;
 	} = $props();
+	let applying = $state(false);
+	let protecting = $state(false);
+
+	async function applyTags() {
+		applying = true;
+		try {
+			await onApply();
+		} finally {
+			applying = false;
+		}
+	}
+
+	async function protectCards() {
+		protecting = true;
+		try {
+			await onProtect();
+		} finally {
+			protecting = false;
+		}
+	}
 </script>
 
 <section
@@ -28,17 +56,28 @@
 		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('collection.selectedCards', { values: { count: selectedCount } })}
 		</p>
-		<div class="flex flex-1 flex-col gap-2 sm:flex-row sm:justify-end">
-			<Button size="sm" variant="outline" onclick={onSelectAll}>{$_('collection.selectAll')}</Button
-			><select
-				bind:value={bulkTagId}
-				class="h-9 min-w-0 flex-1 border border-primary/30 bg-background px-3 font-mono text-xs uppercase tracking-wider text-foreground outline-none focus:border-primary"
-				><option value="">{$_('collection.chooseTag')}</option>{#each tags as tag (tag.id)}<option
-						value={tag.id}>{tag.name}</option
-					>{/each}</select
-			><Button size="sm" disabled={!bulkTagId || !selectedCount} onclick={onApply}
-				>{$_('collection.applyTag')}</Button
-			><Button size="sm" variant="ghost" onclick={onCancel}>{$_('common.cancel')}</Button>
+		<div class="flex flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:justify-end">
+			<Button size="sm" class="sm:h-11" variant="outline" onclick={onSelectAll}
+				>{$_('collection.selectAll')}</Button
+			>
+			<div class="min-w-0 flex-1 sm:max-w-xs" data-testid="bulk-tag-selector">
+				<TagFilterSelector bind:values={bulkTagIds} {tags} onCreate={onOpenTagEditor} />
+			</div>
+			<Button
+				size="sm"
+				class="sm:h-11"
+				disabled={!bulkTagIds.length || !selectedCount || applying}
+				onclick={applyTags}>{$_('collection.apply_selected_tags')}</Button
+			><Button
+				size="sm"
+				class="sm:h-11"
+				variant="outline"
+				disabled={!selectedCount || !canProtect || protecting}
+				onclick={protectCards}
+				><ShieldCheckIcon data-icon="inline-start" />{$_('collection.protect_selection')}</Button
+			><Button size="sm" class="sm:h-11" variant="ghost" onclick={onCancel}
+				>{$_('common.cancel')}</Button
+			>
 		</div>
 	</div>
 </section>

@@ -89,6 +89,10 @@ describe('WishlistPicker', () => {
 			onSelect: vi.fn()
 		});
 		await vi.waitFor(() => expect(loadCards).toHaveBeenCalledOnce());
+		await expect
+			.element(page.getByText('Aucune carte ne correspond à cette recherche.'))
+			.toBeVisible();
+		await expect.element(page.getByText('Le catalogue est indisponible.')).not.toBeInTheDocument();
 
 		await page.getByPlaceholder('Rechercher une carte').fill('Mars');
 		expect(loadCards).toHaveBeenCalledOnce();
@@ -99,5 +103,22 @@ describe('WishlistPicker', () => {
 				),
 			{ timeout: 800 }
 		);
+		expect(loadCards).toHaveBeenLastCalledWith(
+			expect.objectContaining({ sortBy: 'relevance', sortDirection: 'DESC' })
+		);
+	});
+
+	it('shows the API error only when loading rejects', async () => {
+		render(WishlistPicker, {
+			open: true,
+			existingCardIds: [],
+			loadCards: vi.fn().mockRejectedValue(new Error('API unavailable')),
+			onSelect: vi.fn()
+		});
+
+		await expect.element(page.getByText('Le catalogue est indisponible.')).toBeVisible();
+		await expect
+			.element(page.getByText('Aucune carte ne correspond à cette recherche.'))
+			.not.toBeInTheDocument();
 	});
 });

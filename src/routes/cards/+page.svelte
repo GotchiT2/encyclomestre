@@ -88,20 +88,22 @@
 				{/each}
 			</div>
 		{:else}
-			<EmptyState title={$_('collection.empty')} />
+			<EmptyState title={$_('codex.empty')} />
 		{/if}
-		<nav class="flex items-center justify-between border-t border-primary/20 pt-5">
-			<Button href={pageHref(Math.max(1, result.meta.page - 1))} disabled={result.meta.page === 1}
-				>{$_('codex.previous')}</Button
+		{#if result.meta.total > 0}<nav
+				class="flex items-center justify-between border-t border-primary/20 pt-5"
 			>
-			<span class="font-mono text-xs text-primary"
-				>{result.meta.page} / {result.meta.totalPages}</span
-			>
-			<Button
-				href={pageHref(Math.min(result.meta.totalPages, result.meta.page + 1))}
-				disabled={result.meta.page === result.meta.totalPages}>{$_('codex.next')}</Button
-			>
-		</nav>
+				<Button href={pageHref(Math.max(1, result.meta.page - 1))} disabled={result.meta.page === 1}
+					>{$_('codex.previous')}</Button
+				>
+				<span class="font-mono text-xs text-primary"
+					>{result.meta.page} / {result.meta.totalPages}</span
+				>
+				<Button
+					href={pageHref(Math.min(result.meta.totalPages, result.meta.page + 1))}
+					disabled={result.meta.page === result.meta.totalPages}>{$_('codex.next')}</Button
+				>
+			</nav>{/if}
 	{:catch}
 		<p class="text-destructive">{$_('codex.error')}</p>
 	{/await}

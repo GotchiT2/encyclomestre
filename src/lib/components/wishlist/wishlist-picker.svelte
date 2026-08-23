@@ -8,7 +8,7 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { _ } from '$lib/i18n';
 	import type { CardQuery } from '$lib/api';
-	import type { CardRarity, CardRecord, PaginatedResponse } from '$lib/types';
+	import type { CardRarity, CardRecord, CardSearchSort, PaginatedResponse } from '$lib/types';
 
 	let {
 		open = $bindable(false),
@@ -28,7 +28,7 @@
 	let cards = $state<CardRecord[]>([]);
 	let query = $state('');
 	let selectedRarities = $state<CardRarity[]>([]);
-	let sortBy = $state<'rarity' | 'name'>('rarity');
+	let sortBy = $state<CardSearchSort>('rarity');
 	let page = $state(1);
 	let totalPages = $state(1);
 	let loading = $state(false);
@@ -46,7 +46,7 @@
 			query: query.trim() || undefined,
 			rarities: selectedRarities,
 			sortBy,
-			sortDirection: sortBy === 'rarity' ? 'DESC' : 'ASC'
+			sortDirection: sortBy === 'name' ? 'ASC' : 'DESC'
 		};
 		if (!open) {
 			requestId += 1;
@@ -96,7 +96,10 @@
 				<div class="grid grid-cols-[minmax(0,1fr)_10rem] gap-2">
 					<Input
 						bind:value={query}
-						oninput={() => (page = 1)}
+						oninput={() => {
+							page = 1;
+							if (query.trim()) sortBy = 'relevance';
+						}}
 						placeholder={$_('wishlist.search')}
 					/>
 					<select
@@ -105,6 +108,7 @@
 						class="h-10 border-2 border-primary/40 bg-background px-2 font-mono text-[10px] uppercase tracking-wider text-primary outline-none focus:border-primary"
 						aria-label={$_('collection.sort')}
 					>
+						<option value="relevance">{$_('collection.sortRelevance')}</option>
 						<option value="rarity">{$_('collection.sortRarity')}</option>
 						<option value="name">{$_('collection.sortName')}</option>
 					</select>
@@ -123,6 +127,12 @@
 				</p>
 			{:else if failed}
 				<p class="mt-4 text-destructive">{$_('codex.error')}</p>
+			{:else if !visibleCards.length}
+				<p
+					class="mt-4 border border-dashed border-primary/25 p-5 text-center font-serif italic text-muted-foreground"
+				>
+					{$_('wishlist.search_empty')}
+				</p>
 			{:else}
 				<div class="wikiforge-card-grid mt-4">
 					{#each visibleCards as card (card.id)}

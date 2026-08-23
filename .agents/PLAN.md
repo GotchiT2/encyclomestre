@@ -286,6 +286,9 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Afficher le volume des résultats et leur répartition par rareté — `feat(cards): show catalogue rarity results`
 - [x] Construire les images du catalogue public avec Special:FilePath — `fix(cards): use Wikipedia file paths`
 - [x] Charger le détail public dans la modale du catalogue — `feat(cards): load public detail in catalogue modal`
+- [x] Prioriser la pertinence des recherches textuelles et propager les curseurs de collection — `feat(cards): use relevance and cursor pagination`
+- [x] Adopter la pagination hybride et les filtres canoniques de la collection WikiForge — `fix(collection): adopt wikiforge hybrid pagination`
+- [x] Brancher les étiquettes, la protection et leurs indicateurs sur WikiForge — `feat(collection): connect wikiforge collection actions`
 - [x] Migrer les wishlists vers les listes, partages et invitations WikiForge — `feat(wishlist): connect wikiforge wishlist workflows`
 - [x] Rétablir les actions d’ajout de cartes et contextualiser les erreurs wishlist — `fix(wishlist): restore card addition actions`
 - [x] Afficher l’état vide quand une wishlist ne contient aucune carte — `fix(wishlist): handle empty list responses`
@@ -293,6 +296,11 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Confirmer les ajouts de cartes sans fermer les modales wishlist — `feat(wishlist): toast successful card additions`
 - [x] Brancher l’inventaire et l’ouverture des boosters sur WikiForge — `feat(boosters): connect wikiforge booster workflows`
 - [x] Remplacer le polling de recharge des boosters par un réveil unique à échéance — `fix(boosters): avoid repeated inventory polling`
+- [x] Découpler la collection de l’ancien enrichissement social et compléter son action de relance — `fix(collection): remove obsolete social hydration`
+- [x] Distinguer les recherches de cartes vides des erreurs API — `fix(cards): handle empty search responses`
+- [x] Finaliser le chargement après une réponse de collection filtrée par tag — `fix(collection): settle tag filter loading`
+- [x] Séparer visuellement la protection et le nombre d’exemplaires sur les cartes — `fix(cards): separate protection and ownership indicators`
+- [x] Harmoniser le mode sélection et ajouter la protection groupée — `feat(collection): improve bulk selection actions`
 
 - [x] Stabiliser l’ouverture rapide et la scène mobile des boosters, ordonner les révélations de C à L et contenir les illustrations Full Art paysage — `fix(boosters): stabilize mobile opening and full art rendering`
 - [x] Créer et suivre les ventes liées aux exemplaires depuis le détail et la collection — `feat(market): create and track owned card listings`

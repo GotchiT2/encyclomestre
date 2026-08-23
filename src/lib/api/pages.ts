@@ -1,5 +1,6 @@
 import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/rarities';
-import type { CardRecord, PaginatedResponse } from '$lib/types';
+import { cardSearchSortDirection, defaultCardSearchSort } from '$lib/domain/cards/search';
+import type { CardRecord, CardSearchSort, PaginatedResponse } from '$lib/types';
 import { apiRequest } from './client';
 
 export type WikiForgePublicPageRarity = CardRarityCode;
@@ -20,9 +21,9 @@ export interface WikiForgePublicPageCard {
 export interface WikiForgePublicPagesResponse {
 	nbResults: number;
 	page: number;
-	rarityResults: Record<WikiForgePublicPageRarity, number>;
-	results: WikiForgePublicPageCard[];
-	sortBy: 'NAME' | 'RARITY';
+	rarityResults?: Record<WikiForgePublicPageRarity, number> | null;
+	results?: WikiForgePublicPageCard[] | null;
+	sortBy: 'NAME' | 'RARITY' | 'RELEVANCE';
 	sortDirection: 'ASC' | 'DESC';
 }
 
@@ -31,7 +32,7 @@ export interface WikiForgePublicPagesQuery {
 	page?: number;
 	rarity?: WikiForgePublicPageRarity;
 	rarities?: WikiForgePublicPageRarity[];
-	sortBy?: 'name' | 'rarity';
+	sortBy?: CardSearchSort;
 	sortDirection?: 'ASC' | 'DESC';
 }
 
@@ -45,12 +46,29 @@ export interface PublicCataloguePage extends PaginatedResponse<CardRecord> {
 }
 
 const publicPagesPageSize = 50;
+const emptyRarityResults: Record<WikiForgePublicPageRarity, number> = {
+	L: 0,
+	UR: 0,
+	SR: 0,
+	R: 0,
+	PC: 0,
+	C: 0
+};
+
+export function wikiForgeImageUrl(image?: string | null): string {
+	const imageName = image?.trim();
+	return imageName
+		? `https://fr.wikipedia.org/wiki/Special:FilePath/${encodeURIComponent(imageName)}?width=250`
+		: '/card-placeholder.svg';
+}
 
 function publicPagesPath(query: WikiForgePublicPagesQuery): string {
+	const sortBy = defaultCardSearchSort(query.q, query.sortBy);
 	const parameters = new URLSearchParams({
 		page: String(Math.max(0, query.page ?? 0)),
-		sortBy: query.sortBy ?? 'rarity',
-		sortDirection: query.sortDirection ?? 'ASC'
+		sortBy: sortBy.toUpperCase(),
+		sortDirection:
+			query.sortDirection ?? (query.q?.trim() ? cardSearchSortDirection(sortBy) : 'ASC')
 	});
 	if (query.q?.trim()) parameters.set('q', query.q.trim());
 	for (const rarity of query.rarities ?? (query.rarity ? [query.rarity] : [])) {
@@ -88,7 +106,6 @@ export async function getWikiForgePublicPage(
 
 export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecord {
 	const rarity = cardRarityByCode[card.rarity] ?? cardRarityByCode.C;
-	const imageName = card.image?.trim();
 	return {
 		id: String(card.id),
 		baseCardId: card.id,
@@ -100,9 +117,7 @@ export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecor
 		rarityInitials: rarity.initials,
 		rarityColor: rarity.color,
 		viewCount: card.viewCount,
-		imageUrl: imageName
-			? `https://fr.wikipedia.org/wiki/Special:FilePath/${encodeURIComponent(imageName)}?width=250`
-			: '/card-placeholder.svg',
+		imageUrl: wikiForgeImageUrl(card.image),
 		wikipediaUrl: `https://fr.wikipedia.org/?curid=${card.id}`,
 		attack: card.atk,
 		defense: 0,
@@ -116,8 +131,8 @@ export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecor
 
 export function toPublicPage(source: WikiForgePublicPagesResponse): PublicCataloguePage {
 	return {
-		items: source.results.map(toPublicPageCardRecord),
-		rarityResults: source.rarityResults,
+		items: (source.results ?? []).map(toPublicPageCardRecord),
+		rarityResults: source.rarityResults ?? emptyRarityResults,
 		meta: {
 			page: source.page + 1,
 			pageSize: publicPagesPageSize,

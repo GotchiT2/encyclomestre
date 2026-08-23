@@ -8,6 +8,7 @@ import {
 import type {
 	CardRarity,
 	CardRecord,
+	CardSearchSort,
 	CardVariant,
 	Friendship,
 	PaginatedResponse,
@@ -17,14 +18,16 @@ import type {
 	UserBlock
 } from '$lib/types';
 import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
+import { cardSearchSortDirection, defaultCardSearchSort } from '$lib/domain/cards/search';
 
 export interface UserCollectionPageQuery {
 	query?: string;
 	rarities?: CardRarity[];
 	variant?: CardVariant;
-	sortBy?: 'rarity' | 'name';
+	sortBy?: CardSearchSort;
 	page?: number;
 	pageSize?: number;
+	cursor?: string;
 }
 
 const apiVariantByFilter: Record<CardVariant, 'ALL' | 'NORMAL' | 'FULL_ART'> = {
@@ -38,14 +41,16 @@ export const getUserCollectionPage = async (
 	query: UserCollectionPageQuery = {},
 	options?: RequestOptions
 ): Promise<PaginatedResponse<CardRecord>> => {
+	const sortBy = defaultCardSearchSort(query.query, query.sortBy);
 	const parameters = new URLSearchParams({
 		page: String(Math.max(0, query.page ?? 0)),
 		size: String(Math.min(24, Math.max(1, query.pageSize ?? 12))),
-		sortBy: query.sortBy ?? 'rarity',
-		sortDirection: query.sortBy === 'name' ? 'ASC' : 'DESC',
+		sortBy: sortBy.toUpperCase(),
+		sortDirection: cardSearchSortDirection(sortBy),
 		variant: apiVariantByFilter[query.variant ?? 'all']
 	});
 	if (query.query?.trim()) parameters.set('q', query.query.trim());
+	if (query.cursor) parameters.set('cursor', query.cursor);
 	for (const rarity of query.rarities ?? []) {
 		parameters.append('rarity', cardRarityCodeByName[rarity]);
 	}
@@ -53,13 +58,18 @@ export const getUserCollectionPage = async (
 		`/api/users/${encodeURIComponent(id)}/collection?${parameters}`,
 		options
 	);
+	const results = response.results ?? [];
 	return {
-		items: response.results.map(toCollectionCardRecord),
+		items: results.map(toCollectionCardRecord),
 		meta: {
 			page: response.page + 1,
-			pageSize: response.size,
+			pageSize: response.size ?? Math.max(1, results.length || 50),
 			total: response.nbResults,
-			totalPages: Math.max(1, Math.ceil(response.nbResults / Math.max(1, response.size)))
+			totalPages: Math.max(
+				1,
+				Math.ceil(response.nbResults / Math.max(1, response.size ?? (results.length || 50)))
+			),
+			...(response.nextCursor === undefined ? {} : { nextCursor: response.nextCursor })
 		}
 	};
 };
@@ -91,7 +101,9 @@ export const getUserCollection = async (
 			)
 		)
 	);
-	return [firstPage, ...remainingPages].flatMap((page) => page.results.map(toCollectionCardRecord));
+	return [firstPage, ...remainingPages].flatMap((page) =>
+		(page.results ?? []).map(toCollectionCardRecord)
+	);
 };
 
 export const getUserCollectionCopies = async (
@@ -157,7 +169,7 @@ export const searchUsers = async (
 		`/api/users?${parameters}`,
 		options
 	);
-	return 'results' in response ? response.results : response.items;
+	return 'items' in response ? response.items : (response.results ?? []);
 };
 
 export const getTradePartners = async (

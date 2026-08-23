@@ -1,32 +1,37 @@
 import { describe, expect, it } from 'vitest';
-import { buildCollectionFilterTarget, untaggedFilterId } from './collection-filter-url';
+import { buildCollectionFilterTarget, effectiveCollectionQuery } from './collection-filter-url';
 
-describe('buildCollectionFilterTarget', () => {
-	it('keeps the initial collection URL stable with default filters', () => {
+describe('collection filter URL', () => {
+	it('keeps the default URL stable and never serializes pagination state', () => {
 		expect(
 			buildCollectionFilterTarget({
 				query: '',
-				sortBy: 'rarity',
+				sortBy: 'acquiredDate',
 				selectedRarities: [],
 				tagFilterIds: [],
-				variant: 'all',
-				saleState: 'ALL'
+				duplicate: 'all',
+				protected: 'all'
 			})
 		).toBe('/collection');
 	});
 
-	it('serializes only active filters', () => {
+	it('serializes only supported filters', () => {
 		expect(
 			buildCollectionFilterTarget({
 				query: '  test  ',
 				sortBy: 'name',
 				selectedRarities: ['Rare'],
-				tagFilterIds: ['tag-1', untaggedFilterId],
-				variant: 'alternative',
-				saleState: 'ACTIVE'
+				tagFilterIds: ['2', '7'],
+				duplicate: 'yes',
+				protected: 'no'
 			})
-		).toBe(
-			'/collection?q=test&sortBy=name&rarity=Rare&tag=tag-1&untagged=true&variant=alternative&saleState=ACTIVE'
-		);
+		).toBe('/collection?q=test&sortBy=name&rarity=Rare&tag=2&tag=7&duplicate=yes&protected=no');
+	});
+
+	it('treats one or two non-blank characters as no search', () => {
+		expect(effectiveCollectionQuery('')).toBeUndefined();
+		expect(effectiveCollectionQuery(' a ')).toBeUndefined();
+		expect(effectiveCollectionQuery(' ab ')).toBeUndefined();
+		expect(effectiveCollectionQuery(' abc ')).toBe('abc');
 	});
 });

@@ -724,6 +724,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			page,
 			nbResults: items.length,
 			size: pageSize,
+			nextCursor: (page + 1) * pageSize < items.length ? `mock-cards-cursor-${page + 1}` : null,
 			sortBy: url.searchParams.get('sortBy') ?? 'name',
 			sortDirection: url.searchParams.get('sortDirection') ?? 'ASC',
 			filters: { rarity: rarities, variant },
@@ -731,33 +732,83 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		});
 	}
 	if (normalizedMethod === 'GET' && pathname === '/collection') {
-		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
-		const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get('size') ?? 20)));
-		const variant = url.searchParams.get('variant') ?? 'ALL';
-		const saleState = url.searchParams.get('saleState') ?? 'ALL';
+		const cursorPage = /mock-collection-cursor-(\d+)/.exec(url.searchParams.get('cursor') ?? '');
+		const page = cursorPage
+			? Number(cursorPage[1])
+			: Math.max(0, Number(url.searchParams.get('page') ?? 0));
+		const pageSize = 50;
+		const query = url.searchParams.get('q')?.toLocaleLowerCase('fr-FR');
+		const rarities = url.searchParams.getAll('rarity');
 		const items = mockCards.filter(
 			(card) =>
 				card.ownedCount > 0 &&
-				(saleState === 'ALL' ||
-					(saleState === 'ACTIVE' && Boolean(activeSalePayload(`owned-${card.id}`))) ||
-					(saleState === 'AVAILABLE' && !activeSalePayload(`owned-${card.id}`))) &&
-				(variant === 'ALL' ||
-					(variant === 'FULL_ART' && card.isFullArt) ||
-					(variant === 'NORMAL' && !card.isFullArt))
+				(!query || card.title.toLocaleLowerCase('fr-FR').includes(query)) &&
+				(!rarities.length || rarities.includes(card.rarityInitials))
 		);
+		const pageItems = items.slice(page * pageSize, (page + 1) * pageSize);
+		const hasNext = (page + 1) * pageSize < items.length;
 		return json({
-			results: items.slice(page * pageSize, (page + 1) * pageSize).map((card) => ({
-				userCardId: `owned-${card.id}`,
-				cardId: card.id,
-				acquiredAt: card.acquiredAt ?? now,
-				tags: card.collectionTags ?? [],
-				card: apiCard(card),
-				activeSale: activeSalePayload(`owned-${card.id}`)
+			results: pageItems.map((card, index) => ({
+				id: page * pageSize + index + 1,
+				pageId: card.baseCardId ?? page * pageSize + index + 1,
+				title: card.title,
+				description: card.longDescription || card.shortDescription,
+				image: card.imageUrl.split('/').at(-1) ?? '',
+				rarity: card.rarityInitials,
+				atk: card.attack,
+				alt: Boolean(card.isFullArt),
+				duplicate: card.ownedCount > 1,
+				protected: index % 3 === 0,
+				tagIds: index % 2 === 0 ? [1] : [2],
+				acquiredDate: card.acquiredAt ?? now,
+				creationDate: now,
+				pendingTradeId: null
 			})),
 			page,
 			nbResults: items.length,
-			size: pageSize
+			sortBy: url.searchParams.get('sortBy') ?? 'ACQUIRED_DATE',
+			sortDirection: url.searchParams.get('sortBy') === 'RARITY' ? 'ASC' : 'DESC',
+			nextCursor:
+				hasNext && !query && url.searchParams.get('sortBy') !== 'NAME'
+					? `mock-collection-cursor-${page + 1}`
+					: null,
+			hasNext,
+			rarityResults: Object.fromEntries(
+				['L', 'UR', 'SR', 'R', 'PC', 'C'].map((rarity) => [
+					rarity,
+					items.filter((card) => card.rarityInitials === rarity).length
+				])
+			),
+			q: query ?? null
 		});
+	}
+	if (normalizedMethod === 'GET' && pathname === '/tags') {
+		return json(mockCollectionTags.map((tag, index) => ({ ...tag, id: index + 1 })));
+	}
+	if (normalizedMethod === 'POST' && pathname === '/tags') {
+		const input = asObject(body);
+		return json({ id: mockCollectionTags.length + 1, name: input?.name, color: input?.color });
+	}
+	const tagMatch = /^\/tags\/(\d+)$/.exec(pathname);
+	if (tagMatch && normalizedMethod === 'PATCH') {
+		const input = asObject(body);
+		return json({ id: Number(tagMatch[1]), name: input?.name, color: input?.color });
+	}
+	if (tagMatch && normalizedMethod === 'DELETE') return json(undefined, 204);
+	if (/^\/collection\/\d+\/(?:protect|unprotect)$/.test(pathname) && normalizedMethod === 'PUT') {
+		return json(undefined, 204);
+	}
+	if (
+		/^\/collection\/\d+\/tags\/\d+$/.test(pathname) &&
+		(normalizedMethod === 'PUT' || normalizedMethod === 'DELETE')
+	) {
+		return json({});
+	}
+	if (
+		/^\/collection\/tags\/\d+$/.test(pathname) &&
+		(normalizedMethod === 'PUT' || normalizedMethod === 'DELETE')
+	) {
+		return json([]);
 	}
 	const variantCopiesMatch = /^\/collection\/variants\/([^/]+)\/copies$/.exec(pathname);
 	if (normalizedMethod === 'GET' && variantCopiesMatch) {
@@ -1154,6 +1205,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			page,
 			nbResults: items.length,
 			size: pageSize,
+			nextCursor: (page + 1) * pageSize < items.length ? `mock-wishlist-cursor-${page + 1}` : null,
 			sortBy: url.searchParams.get('sortBy') ?? 'name',
 			sortDirection: url.searchParams.get('sortDirection') ?? 'ASC',
 			filters: {},

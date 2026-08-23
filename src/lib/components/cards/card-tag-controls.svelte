@@ -2,7 +2,7 @@
 	import TagEditor from '$lib/components/collection/tag-editor.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
-	import { applyWikiForgeTag, removeWikiForgeTag } from '$lib/api';
+	import { addWikiForgeCardTag, removeWikiForgeCardTag } from '$lib/api';
 	import type { CollectionTag, CollectionTagAssignments } from '$lib/types';
 
 	let {
@@ -20,7 +20,7 @@
 
 	async function addTag() {
 		if (!tagToAdd) return;
-		await applyWikiForgeTag(tagToAdd, [cardId]);
+		await addWikiForgeCardTag(cardId, tagToAdd);
 		assignments = {
 			...assignments,
 			[cardId]: [...new Set([...(assignments[cardId] ?? []), tagToAdd])]
@@ -29,7 +29,7 @@
 	}
 
 	async function removeTag(tagId: string) {
-		await removeWikiForgeTag(tagId, [cardId]);
+		await removeWikiForgeCardTag(cardId, tagId);
 		assignments = {
 			...assignments,
 			[cardId]: (assignments[cardId] ?? []).filter((id) => id !== tagId)

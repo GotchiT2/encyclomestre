@@ -24,6 +24,18 @@ const card: CardRecord = {
 };
 
 describe('CardTile', () => {
+	it('shows an accessible protection indicator for protected collection cards', async () => {
+		render(CardTile, { card: { ...card, userProtected: true, ownedCount: 2 } });
+		await expect.element(page.getByTestId('card-protected-indicator')).toBeVisible();
+		await expect
+			.element(page.getByTestId('card-protected-indicator'))
+			.toHaveAttribute('aria-label', 'Carte protégée');
+		const cluster = page.getByTestId('card-left-indicators').element();
+		expect(page.getByTestId('card-protected-indicator').element().parentElement).toBe(cluster);
+		expect(page.getByTestId('card-state-indicators').element().parentElement).toBe(cluster);
+		expect(cluster).toHaveClass('flex-col', 'gap-1');
+	});
+
 	it('opens card details through its callback without navigation', async () => {
 		const onOpen = vi.fn();
 		render(CardTile, { card, onOpen });

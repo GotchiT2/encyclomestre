@@ -4,6 +4,7 @@
 	import CardStateIndicators from '$lib/components/cards/card-state-indicators.svelte';
 	import { cn } from '$lib/utils';
 	import type { CardRecord, CollectionTag } from '$lib/types';
+	import LockIcon from '@lucide/svelte/icons/lock';
 
 	let {
 		card,
@@ -230,17 +231,30 @@
 			</div>
 		{/if}
 	{/if}
-	{#if card.ownedCount > 0 || comparisonOwnership?.count || card.wishlistMemberships?.length || (showFriendOwners && card.friendsWhoOwn.length)}
+	{#if card.userProtected || card.ownedCount > 0 || comparisonOwnership?.count || card.wishlistMemberships?.length || (showFriendOwners && card.friendsWhoOwn.length)}
 		<div
-			class="pointer-events-none absolute left-[7%] z-40"
+			class="pointer-events-none absolute left-[7%] z-40 flex flex-col items-start gap-1"
 			style={`top:calc(8% + ${stateIndicatorsOffset}px)`}
+			data-testid="card-left-indicators"
 		>
-			<CardStateIndicators
-				ownedCount={card.ownedCount}
-				{comparisonOwnership}
-				wishlists={card.wishlistMemberships}
-				owners={showFriendOwners ? card.friendsWhoOwn : []}
-			/>
+			{#if card.userProtected}
+				<span
+					class="grid size-7 place-items-center border border-primary/70 bg-background/90 text-primary shadow-lg"
+					aria-label={$_('collection.protected_indicator')}
+					title={$_('collection.protected_indicator')}
+					data-testid="card-protected-indicator"
+				>
+					<LockIcon class="size-3.5" />
+				</span>
+			{/if}
+			{#if card.ownedCount > 0 || comparisonOwnership?.count || card.wishlistMemberships?.length || (showFriendOwners && card.friendsWhoOwn.length)}
+				<CardStateIndicators
+					ownedCount={card.ownedCount}
+					{comparisonOwnership}
+					wishlists={card.wishlistMemberships}
+					owners={showFriendOwners ? card.friendsWhoOwn : []}
+				/>
+			{/if}
 		</div>
 	{/if}
 </article>

@@ -83,4 +83,47 @@ describe('TradeCardPanel', () => {
 		await new Promise((resolve) => setTimeout(resolve, 50));
 		expect(loadCards).not.toHaveBeenCalled();
 	});
+
+	it('uses relevance for text and forwards the next collection cursor', async () => {
+		const loadCards = vi
+			.fn()
+			.mockResolvedValueOnce({
+				items: cards,
+				meta: {
+					page: 1,
+					pageSize: 12,
+					total: 24,
+					totalPages: 2,
+					nextCursor: 'next-cursor'
+				}
+			})
+			.mockResolvedValueOnce({
+				items: cards,
+				meta: { page: 2, pageSize: 12, total: 24, totalPages: 2 }
+			})
+			.mockResolvedValueOnce({
+				items: cards,
+				meta: { page: 1, pageSize: 12, total: 12, totalPages: 1 }
+			});
+		render(TradeCardPanel, {
+			title: 'Votre proposition',
+			scopeKey: 'cursor-user',
+			active: true,
+			loadCards
+		});
+
+		await vi.waitFor(() => expect(loadCards).toHaveBeenCalledOnce());
+		await page.getByRole('button', { name: 'Suivant' }).click();
+		await vi.waitFor(() => expect(loadCards).toHaveBeenCalledTimes(2));
+		expect(loadCards).toHaveBeenNthCalledWith(
+			2,
+			expect.objectContaining({ page: 1, cursor: 'next-cursor' })
+		);
+
+		await page.getByPlaceholder('Rechercher une carte').fill('Rose');
+		await page.getByRole('button', { name: 'Afficher les cartes' }).click();
+		expect(loadCards).toHaveBeenLastCalledWith(
+			expect.objectContaining({ query: 'Rose', sortBy: 'relevance', cursor: undefined })
+		);
+	});
 });

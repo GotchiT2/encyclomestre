@@ -24,12 +24,13 @@ describe('CatalogueFilters', () => {
 
 		const searchInput = page.getByPlaceholder('Rechercher une carte');
 		await searchInput.fill('Mars');
+		await expect.element(page.getByLabelText('Nom')).toHaveValue('relevance');
 		expect(requestSubmit).not.toHaveBeenCalled();
 		await new Promise((resolve) => setTimeout(resolve, 700));
 		expect(requestSubmit).toHaveBeenCalledOnce();
 		await result.rerender({
 			query: 'Mars',
-			sortBy: 'rarity',
+			sortBy: 'relevance',
 			sortDirection: 'DESC',
 			selectedRarities: []
 		});
@@ -48,6 +49,26 @@ describe('CatalogueFilters', () => {
 			'LLégendaire'
 		]);
 		requestSubmit.mockRestore();
+	});
+
+	it('keeps a manual sort selected after the textual search', async () => {
+		render(CatalogueFilters, {
+			query: 'Mars',
+			sortBy: 'name',
+			sortDirection: 'ASC',
+			selectedRarities: []
+		});
+
+		const sort = page.getByLabelText('Nom');
+		await expect.element(sort).toHaveValue('name');
+		document.querySelector<HTMLFormElement>('form')?.requestSubmit();
+
+		await vi.waitFor(() =>
+			expect(gotoMock).toHaveBeenCalledWith(
+				expect.stringContaining('q=Mars&sortBy=name&sortDirection=ASC'),
+				expect.any(Object)
+			)
+		);
 	});
 
 	it('navigates without releasing focus when filters are submitted', async () => {

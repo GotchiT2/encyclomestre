@@ -44,7 +44,8 @@ export interface TradeCardSearchQuery {
 	query?: string;
 	rarities?: import('./card').CardRarity[];
 	variant?: import('./card').CardVariant;
-	sortBy?: 'rarity' | 'name';
+	sortBy?: import('./card').CardSearchSort;
 	page?: number;
 	pageSize?: number;
+	cursor?: string;
 }
