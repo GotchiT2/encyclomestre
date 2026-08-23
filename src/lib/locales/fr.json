@@ -168,6 +168,8 @@
 		"selectAll": "Tout sélectionner",
 		"chooseTag": "Choisir une étiquette",
 		"applyTag": "Appliquer l’étiquette",
+		"apply_selected_tags": "Appliquer les étiquettes",
+		"protect_selection": "Protéger la sélection",
 		"moreTags": "{count} étiquettes supplémentaires",
 		"clearFilters": "Réinitialiser les filtres",
 		"allTags": "Toutes les étiquettes",

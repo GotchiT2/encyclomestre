@@ -1,6 +1,5 @@
 <script lang="ts">
 	import CardTile from '$lib/components/card-tile.svelte';
-	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
 	import { cn } from '$lib/utils';
 	import type { CardRecord, CollectionTag, CollectionTagAssignments } from '$lib/types';
@@ -35,12 +34,13 @@
 				tags={cardTags(card.id)}
 				showFriendOwners
 				onOpen={isSelectionMode ? undefined : onOpenCard}
-			/>{#if isSelectionMode}<Button
-					variant="ghost"
+			/>{#if isSelectionMode}<button
+					type="button"
 					class={cn(
-						'absolute inset-0 z-30 size-auto rounded-none border-2 border-primary/60 bg-transparent p-0 hover:bg-primary/15',
+						'absolute inset-0 z-50 h-full w-full cursor-pointer border-2 border-primary/60 bg-transparent p-0 transition-colors hover:bg-primary/15 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[-3px]',
 						selectedCardIds.includes(card.id) && 'bg-primary/30 hover:bg-primary/35'
 					)}
+					data-testid="card-selection-overlay"
 					aria-pressed={selectedCardIds.includes(card.id)}
 					aria-label={selectedCardIds.includes(card.id)
 						? $_('collection.deselectCard')
@@ -48,10 +48,12 @@
 					onclick={() => onToggleCard(card.id)}
 					><span
 						class={cn(
-							'absolute top-3 left-3 z-40 flex size-10 items-center justify-center border-2 border-primary bg-card font-mono text-base font-black text-primary shadow-[0_0_18px_rgb(0_0_0_/_70%)]',
+							'absolute top-2 left-2 z-40 flex size-6 items-center justify-center border border-primary bg-card font-mono text-xs font-black text-primary shadow-[0_0_12px_rgb(0_0_0_/_70%)] sm:top-3 sm:left-3 sm:size-7',
 							selectedCardIds.includes(card.id) && 'bg-primary text-primary-foreground'
-						)}>{selectedCardIds.includes(card.id) ? '✓' : ''}</span
-					></Button
+						)}
+						data-testid="card-selection-checkbox"
+						aria-hidden="true">{selectedCardIds.includes(card.id) ? '✓' : ''}</span
+					></button
 				>{/if}
 		</div>{/each}
 </div>

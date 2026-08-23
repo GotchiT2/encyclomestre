@@ -60,7 +60,7 @@
 	let ready = $state(false);
 	let isSelectionMode = $state(false);
 	let selectedCardIds = $state<string[]>([]);
-	let bulkTagId = $state('');
+	let bulkTagIds = $state<string[]>([]);
 	let isTagEditorOpen = $state(false);
 	let selectedCard = $state<CardRecord | null>(null);
 	let wishlists = $state<WishlistRegistrySummary[]>([]);
@@ -68,6 +68,9 @@
 	let previousFilterKey = '';
 	let requestId = 0;
 	let requestController: AbortController | null = null;
+	const selectedUnprotectedCount = $derived(
+		cards.filter((card) => selectedCardIds.includes(card.id) && !card.userProtected).length
+	);
 
 	const filterKey = $derived(
 		JSON.stringify([
@@ -218,12 +221,28 @@
 	}
 
 	async function applyTagToSelection() {
-		if (!bulkTagId || !selectedCardIds.length) return;
-		await applyWikiForgeTag(bulkTagId, selectedCardIds);
+		if (!bulkTagIds.length || !selectedCardIds.length) return;
+		await Promise.all(bulkTagIds.map((tagId) => applyWikiForgeTag(tagId, selectedCardIds)));
 		for (const cardId of selectedCardIds) {
-			assignments[cardId] = [...new Set([...(assignments[cardId] ?? []), bulkTagId])];
+			assignments[cardId] = [...new Set([...(assignments[cardId] ?? []), ...bulkTagIds])];
 		}
 		assignments = { ...assignments };
+		selectedCardIds = [];
+	}
+
+	async function protectSelection() {
+		const ids = cards
+			.filter((card) => selectedCardIds.includes(card.id) && !card.userProtected)
+			.map((card) => card.id);
+		if (!ids.length) return;
+		await Promise.all(ids.map((id) => protectWikiForgeCard(id)));
+		const protectedIds = new Set(ids);
+		cards = cards.map((card) =>
+			protectedIds.has(card.id) ? { ...card, userProtected: true } : card
+		);
+		if (selectedCard && protectedIds.has(selectedCard.id)) {
+			selectedCard = { ...selectedCard, userProtected: true };
+		}
 		selectedCardIds = [];
 	}
 
@@ -282,7 +301,10 @@
 			aria-pressed={isSelectionMode}
 			onclick={() => {
 				isSelectionMode = !isSelectionMode;
-				if (!isSelectionMode) selectedCardIds = [];
+				if (!isSelectionMode) {
+					selectedCardIds = [];
+					bulkTagIds = [];
+				}
 			}}
 		>
 			{$_('collection.selectCards')}
@@ -327,12 +349,16 @@
 		<SelectionPanel
 			selectedCount={selectedCardIds.length}
 			{tags}
-			bind:bulkTagId
+			bind:bulkTagIds
+			canProtect={selectedUnprotectedCount > 0}
 			onSelectAll={toggleSelectAll}
-			onApply={() => void applyTagToSelection()}
+			onApply={applyTagToSelection}
+			onProtect={protectSelection}
+			onOpenTagEditor={() => (isTagEditorOpen = true)}
 			onCancel={() => {
 				isSelectionMode = false;
 				selectedCardIds = [];
+				bulkTagIds = [];
 			}}
 		/>
 	{/if}

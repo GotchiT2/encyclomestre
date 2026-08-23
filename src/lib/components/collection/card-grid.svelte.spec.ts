@@ -36,8 +36,11 @@ describe('CardGrid selection', () => {
 		});
 
 		const selection = page.getByRole('button', { name: 'Retirer cette carte de la sélection' });
-		await expect.element(selection).toHaveClass('z-30');
+		await expect.element(selection).toHaveClass('inset-0', 'h-full', 'w-full', 'z-50');
 		await expect.element(selection).toHaveAttribute('aria-pressed', 'true');
+		await expect
+			.element(page.getByTestId('card-selection-checkbox'))
+			.toHaveClass('size-6', 'sm:size-7');
 	});
 
 	it('keeps two cards per row without page overflow on compact phones', async () => {
