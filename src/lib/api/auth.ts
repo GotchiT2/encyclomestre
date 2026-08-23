@@ -19,6 +19,11 @@ function bearerAuthorization(tokens: OAuth2TokenResponse) {
 	return `${tokens.token_type || 'Bearer'} ${tokens.access_token}`;
 }
 
+function accessTokenExpiresAt(tokens: OAuth2TokenResponse) {
+	const lifetime = Number(tokens.expires_in);
+	return Number.isFinite(lifetime) && lifetime > 0 ? Date.now() + lifetime * 1_000 : undefined;
+}
+
 export const register = (input: LoginInput, options?: RequestOptions) =>
 	apiRequest<WikiForgeTokens>('/api/auth/register', {
 		...options,
@@ -44,6 +49,7 @@ export async function login(input: LoginInput, options?: RequestOptions): Promis
 	return {
 		accessToken: tokens.access_token,
 		refreshToken: tokens.refresh_token,
+		accessTokenExpiresAt: accessTokenExpiresAt(tokens),
 		user
 	};
 }

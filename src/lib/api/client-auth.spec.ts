@@ -88,6 +88,67 @@ describe('apiRequest authentication recovery', () => {
 		expect(refreshCalls).toBe(1);
 		expect(restoreSession(storage)?.accessToken).toBe('renewed');
 		expect(restoreSession(storage)?.refreshToken).toBe('rotated');
+		expect(restoreSession(storage)?.accessTokenExpiresAt).toBeGreaterThan(Date.now());
+	});
+
+	it('renouvelle le jeton avant expiration sans envoyer le jeton expirant à la ressource', async () => {
+		persistSession(storage, {
+			accessToken: 'expiring',
+			refreshToken: 'refresh',
+			accessTokenExpiresAt: Date.now() + 5_000,
+			user
+		});
+		const resourceTokens: string[] = [];
+		const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+			if (String(input).endsWith('/oauth2/token')) {
+				return Response.json({
+					access_token: 'renewed-before-expiry',
+					refresh_token: 'rotated-before-expiry',
+					token_type: 'Bearer',
+					expires_in: 3600
+				});
+			}
+			resourceTokens.push(new Headers(init?.headers).get('authorization') ?? '');
+			return Response.json({ ok: true });
+		});
+
+		await expect(
+			apiRequest('/collection', { fetch: fetcher as typeof fetch, apiTarget: 'wikiforge' })
+		).resolves.toEqual({ ok: true });
+
+		expect(fetcher).toHaveBeenCalledTimes(2);
+		expect(resourceTokens).toEqual(['Bearer renewed-before-expiry']);
+		expect(restoreSession(storage)?.refreshToken).toBe('rotated-before-expiry');
+	});
+
+	it('partage un seul renouvellement anticipé entre les requêtes simultanées', async () => {
+		persistSession(storage, {
+			accessToken: 'expiring',
+			refreshToken: 'refresh',
+			accessTokenExpiresAt: Date.now(),
+			user
+		});
+		let refreshCalls = 0;
+		const fetcher = vi.fn(async (input: string | URL | Request) => {
+			if (String(input).endsWith('/oauth2/token')) {
+				refreshCalls += 1;
+				await new Promise((resolve) => setTimeout(resolve, 0));
+				return Response.json({
+					access_token: 'shared-renewed',
+					token_type: 'Bearer',
+					expires_in: 3600
+				});
+			}
+			return Response.json({ ok: true });
+		});
+
+		await Promise.all([
+			apiRequest('/collection', { fetch: fetcher as typeof fetch, apiTarget: 'wikiforge' }),
+			apiRequest('/wishlists', { fetch: fetcher as typeof fetch, apiTarget: 'wikiforge' })
+		]);
+
+		expect(refreshCalls).toBe(1);
+		expect(restoreSession(storage)?.refreshToken).toBe('refresh');
 	});
 
 	it('supprime la session lorsque le renouvellement est refusé', async () => {

@@ -47,6 +47,16 @@ function mockDelay(): number {
 }
 
 let refreshSessionPromise: Promise<boolean> | null = null;
+const accessTokenRefreshMarginMs = 30_000;
+
+function tokenNeedsRefresh(session: ReturnType<typeof restoreSession>) {
+	return Boolean(
+		session?.accessToken &&
+		session.refreshToken &&
+		session.accessTokenExpiresAt !== undefined &&
+		session.accessTokenExpiresAt <= Date.now() + accessTokenRefreshMarginMs
+	);
+}
 
 async function refreshSession(fetcher: Fetcher): Promise<boolean> {
 	if (refreshSessionPromise) return refreshSessionPromise;
@@ -75,7 +85,11 @@ async function refreshSession(fetcher: Fetcher): Promise<boolean> {
 			persistSession(localStorage, {
 				...session,
 				accessToken: tokens.access_token,
-				refreshToken: tokens.refresh_token || session.refreshToken
+				refreshToken: tokens.refresh_token || session.refreshToken,
+				accessTokenExpiresAt:
+					Number.isFinite(Number(tokens.expires_in)) && Number(tokens.expires_in) > 0
+						? Date.now() + Number(tokens.expires_in) * 1_000
+						: undefined
 			});
 			return true;
 		} catch {
@@ -109,7 +123,16 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 		apiTarget = 'legacy',
 		...init
 	} = options;
-	const session = typeof localStorage === 'undefined' ? null : restoreSession(localStorage);
+	let session = typeof localStorage === 'undefined' ? null : restoreSession(localStorage);
+	if (
+		!didRefresh &&
+		!skipAuth &&
+		apiTarget === 'wikiforge' &&
+		tokenNeedsRefresh(session) &&
+		(await refreshSession(fetcher))
+	) {
+		session = restoreSession(localStorage);
+	}
 	const accessToken = skipAuth ? undefined : session?.accessToken;
 	const response = isMockApiEnabled()
 		? await (async () => {

@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('$env/dynamic/public', () => ({
-		env: {
-			PUBLIC_API_MOCK_ENABLED: 'false',
-			PUBLIC_API_BASE_URL: 'https://wikiforge-api.roselaqueen.fr',
-			PUBLIC_WIKIFORGE_API_BASE_URL: 'https://api.wikiforge.fr',
-			PUBLIC_CARDS_API_BASE_URL: 'https://api.wikiforge.fr'
+	env: {
+		PUBLIC_API_MOCK_ENABLED: 'false',
+		PUBLIC_API_BASE_URL: 'https://wikiforge-api.roselaqueen.fr',
+		PUBLIC_WIKIFORGE_API_BASE_URL: 'https://api.wikiforge.fr',
+		PUBLIC_CARDS_API_BASE_URL: 'https://api.wikiforge.fr'
 	}
 }));
 
@@ -85,7 +85,12 @@ describe('OAuth2 authentication', () => {
 
 		await expect(
 			login({ email: 'demo@example.test', password: 'secret' }, { fetch: fetcher as typeof fetch })
-		).resolves.toEqual({ accessToken: 'access', refreshToken: 'refresh', user });
+		).resolves.toEqual({
+			accessToken: 'access',
+			refreshToken: 'refresh',
+			accessTokenExpiresAt: expect.any(Number),
+			user
+		});
 		expect(fetcher).toHaveBeenCalledTimes(2);
 	});
 
