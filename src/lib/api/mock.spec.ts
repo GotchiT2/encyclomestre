@@ -266,12 +266,12 @@ describe('createMockApiResponse', () => {
 
 	it('persists user blocks in the WikiForge social registry', async () => {
 		const blocked = createMockApiResponse({
-			path: '/blocked-users/2',
+			path: '/blocks/2',
 			method: 'POST'
 		});
 		expect(blocked.status).toBe(204);
 
-		const blocks = createMockApiResponse({ path: '/blocked-users' });
+		const blocks = createMockApiResponse({ path: '/blocks' });
 		expect(await blocks.json()).toEqual([expect.objectContaining({ id: 2, name: 'SoneS9' })]);
 		const friends = createMockApiResponse({ path: '/friends' });
 		expect(await friends.json()).toMatchObject({ friends: [expect.objectContaining({ id: 2 })] });
@@ -283,7 +283,7 @@ describe('createMockApiResponse', () => {
 		);
 
 		const unblocked = createMockApiResponse({
-			path: '/blocked-users/2',
+			path: '/blocks/2',
 			method: 'DELETE'
 		});
 		expect(unblocked.status).toBe(204);

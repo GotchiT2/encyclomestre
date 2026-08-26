@@ -305,6 +305,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Adopter les compteurs de possession, l’accueil et les registres sociaux WikiForge — `feat(api): adopt Wikiforge welcome and social contracts`
 - [x] Utiliser directement les URL d’images retournées par WikiForge — `fix(cards): use API image URLs directly`
 - [x] Interpréter les registres sociaux WikiForge vides comme des listes vides — `fix(friends): handle empty social payloads`
+- [x] Aligner les contrats sociaux et le profil courant sur le Swagger WikiForge — `fix(api): align social and profile contracts`
 
 - [x] Stabiliser l’ouverture rapide et la scène mobile des boosters, ordonner les révélations de C à L et contenir les illustrations Full Art paysage — `fix(boosters): stabilize mobile opening and full art rendering`
 - [x] Créer et suivre les ventes liées aux exemplaires depuis le détail et la collection — `feat(market): create and track owned card listings`

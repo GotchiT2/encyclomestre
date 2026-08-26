@@ -16,6 +16,7 @@ import {
 	getUserCollectionCounts,
 	getUserCollectionPage,
 	searchUsers,
+	updateWikiForgeMe,
 	unblockUser
 } from './users';
 
@@ -27,7 +28,7 @@ describe('searchUsers', () => {
 
 		await searchUsers('marie');
 
-		expect(apiRequest).toHaveBeenCalledWith('/users/search?q=marie', { apiTarget: 'wikiforge' });
+		expect(apiRequest).toHaveBeenCalledWith('/users?q=marie', { apiTarget: 'wikiforge' });
 	});
 
 	it('does not call the API below the three-character server threshold', async () => {
@@ -196,12 +197,12 @@ describe('user blocks', () => {
 		await blockUser('2');
 		await unblockUser('2');
 
-		expect(apiRequest).toHaveBeenNthCalledWith(1, '/blocked-users', { apiTarget: 'wikiforge' });
-		expect(apiRequest).toHaveBeenNthCalledWith(2, '/blocked-users/2', {
+		expect(apiRequest).toHaveBeenNthCalledWith(1, '/blocks', { apiTarget: 'wikiforge' });
+		expect(apiRequest).toHaveBeenNthCalledWith(2, '/blocks/2', {
 			apiTarget: 'wikiforge',
 			method: 'POST'
 		});
-		expect(apiRequest).toHaveBeenNthCalledWith(3, '/blocked-users/2', {
+		expect(apiRequest).toHaveBeenNthCalledWith(3, '/blocks/2', {
 			apiTarget: 'wikiforge',
 			method: 'DELETE'
 		});
@@ -210,7 +211,7 @@ describe('user blocks', () => {
 	it('treats an empty blocked-user payload as an empty registry', async () => {
 		apiRequest.mockResolvedValueOnce({});
 		await expect(getUserBlocks()).resolves.toEqual([]);
-		expect(apiRequest).toHaveBeenCalledWith('/blocked-users', { apiTarget: 'wikiforge' });
+		expect(apiRequest).toHaveBeenCalledWith('/blocks', { apiTarget: 'wikiforge' });
 	});
 
 	it('maps the three friend lists and uses user identifiers in social mutations', async () => {
@@ -226,6 +227,32 @@ describe('user blocks', () => {
 		expect(apiRequest).toHaveBeenNthCalledWith(2, '/friends/4', {
 			apiTarget: 'wikiforge',
 			method: 'POST'
+		});
+	});
+});
+
+describe('current user settings', () => {
+	beforeEach(() => apiRequest.mockReset());
+
+	it('updates only the fields accepted by PATCH /me', async () => {
+		apiRequest.mockResolvedValueOnce({
+			id: 1,
+			name: 'Camille',
+			email: 'camille@example.test',
+			roles: ['USER'],
+			imagePageId: 12,
+			nsfw: false,
+			safeWords: ['adulte'],
+			createdAt: '2026-08-26T00:00:00Z'
+		});
+
+		await expect(
+			updateWikiForgeMe({ name: 'Camille', imagePageId: 12, nsfw: false, safeWords: ['adulte'] })
+		).resolves.toMatchObject({ username: 'Camille', imagePageId: 12, safeWords: ['adulte'] });
+		expect(apiRequest).toHaveBeenCalledWith('/me', {
+			apiTarget: 'wikiforge',
+			method: 'PATCH',
+			body: { name: 'Camille', imagePageId: 12, nsfw: false, safeWords: ['adulte'] }
 		});
 	});
 });

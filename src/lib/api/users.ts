@@ -163,7 +163,7 @@ export const searchUsers = async (
 	const text = query.trim();
 	if (text.length < 3) return [];
 	const response = await apiRequest<WikiForgeSimpleUserDto[]>(
-		`/users/search?${new URLSearchParams({ q: text })}`,
+		`/users?${new URLSearchParams({ q: text })}`,
 		{ ...options, apiTarget: 'wikiforge' }
 	);
 	return response.map(toWikiForgeUser);
@@ -182,6 +182,14 @@ export interface WikiForgeSimpleUserDto {
 	name: string;
 	imagePageId?: number | null;
 	image?: string | null;
+	createdAt?: string;
+}
+
+export interface UpdateWikiForgeMeInput {
+	name: string;
+	imagePageId?: number;
+	nsfw: boolean;
+	safeWords: string[];
 }
 
 export interface WikiForgeFriendListsDto {
@@ -225,7 +233,7 @@ function toFriendship(user: WikiForgeSimpleUserDto, status: Friendship['status']
 		id: String(user.id),
 		user: toWikiForgeUser(user),
 		status,
-		createdAt: '',
+		createdAt: user.createdAt ?? '',
 		lastActiveAt: ''
 	};
 }
@@ -278,28 +286,41 @@ export const removeFriend = (id: string, options?: RequestOptions) =>
 	});
 
 export const getUserBlocks = async (options?: RequestOptions): Promise<UserBlock[]> => {
-	const response = await apiRequest<WikiForgeBlockedUserDto[] | Record<string, never>>(
-		'/blocked-users',
-		{ ...options, apiTarget: 'wikiforge' }
-	);
+	const response = await apiRequest<WikiForgeBlockedUserDto[] | Record<string, never>>('/blocks', {
+		...options,
+		apiTarget: 'wikiforge'
+	});
 	return Array.isArray(response)
 		? response.map((block) => ({ user: toWikiForgeUser(block), createdAt: block.createdAt }))
 		: [];
 };
 
 export const blockUser = (id: string, options?: RequestOptions) =>
-	apiRequest<void>(`/blocked-users/${numericWikiForgeUserId(id)}`, {
+	apiRequest<void>(`/blocks/${numericWikiForgeUserId(id)}`, {
 		...options,
 		apiTarget: 'wikiforge',
 		method: 'POST'
 	});
 
 export const unblockUser = (id: string, options?: RequestOptions) =>
-	apiRequest<void>(`/blocked-users/${numericWikiForgeUserId(id)}`, {
+	apiRequest<void>(`/blocks/${numericWikiForgeUserId(id)}`, {
 		...options,
 		apiTarget: 'wikiforge',
 		method: 'DELETE'
 	});
+
+export const updateWikiForgeMe = async (
+	input: UpdateWikiForgeMeInput,
+	options?: RequestOptions
+): Promise<User> =>
+	toCurrentUser(
+		await apiRequest<OAuthCurrentUserResponse>('/me', {
+			...options,
+			apiTarget: 'wikiforge',
+			method: 'PATCH',
+			body: input
+		})
+	);
 
 export const updateUser = (_id: string, input: UpdateUserInput, options?: RequestOptions) =>
 	apiRequest<User>('/api/users/me', { ...options, method: 'PATCH', body: input });

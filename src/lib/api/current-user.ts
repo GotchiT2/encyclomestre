@@ -5,6 +5,10 @@ export interface OAuthCurrentUserResponse {
 	name: string;
 	email: string;
 	roles: string[];
+	imagePageId?: number | null;
+	image?: string | null;
+	nsfw?: boolean;
+	safeWords?: string[];
 	createdAt: string;
 }
 
@@ -21,6 +25,10 @@ export function toCurrentUser(profile: OAuthCurrentUserResponse): User {
 		username: profile.name,
 		displayName: profile.name,
 		email: profile.email,
+		avatarUrl: profile.image ?? null,
+		imagePageId: profile.imagePageId ?? null,
+		nsfwEnabled: Boolean(profile.nsfw),
+		safeWords: profile.safeWords ?? [],
 		role: toUserRole(profile.roles),
 		createdAt: profile.createdAt,
 		updatedAt: profile.createdAt

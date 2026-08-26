@@ -57,10 +57,11 @@
 		Boolean(blockTarget && blocks.some((block) => block.user.id === blockTarget?.id))
 	);
 
-	onMount(async () => {
+	onMount(() => {
 		userId = $currentSession?.user.id ?? 'demo-user';
-		await refreshSocialLists();
-		loading = false;
+		void refreshSocialLists().finally(() => {
+			loading = false;
+		});
 	});
 
 	async function refreshSocialLists() {

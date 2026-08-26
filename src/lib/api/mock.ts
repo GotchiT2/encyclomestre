@@ -664,13 +664,32 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			users.get('demo-user')!;
 		return json(oauthTokens(user));
 	}
-	if (normalizedMethod === 'GET' && pathname === '/me') {
+	if ((normalizedMethod === 'GET' || normalizedMethod === 'PATCH') && pathname === '/me') {
 		const user = users.get('demo-user')!;
+		const profile = profileSettings.get('demo-user')!;
+		if (normalizedMethod === 'PATCH') {
+			const input = asObject(body);
+			if (typeof input?.name === 'string') {
+				user.username = input.name;
+				user.displayName = input.name;
+			}
+			if (typeof input?.imagePageId === 'number') user.imagePageId = input.imagePageId;
+			if (typeof input?.nsfw === 'boolean') profile.nsfwEnabled = input.nsfw;
+			if (Array.isArray(input?.safeWords)) {
+				profile.censoredKeywords = input.safeWords.filter(
+					(word): word is string => typeof word === 'string'
+				);
+			}
+		}
 		return json({
 			id: user.id,
-			name: user.displayName,
+			name: user.username,
 			email: user.email,
 			roles: [user.role.toUpperCase()],
+			imagePageId: user.imagePageId ?? null,
+			image: user.avatarUrl,
+			nsfw: profile.nsfwEnabled,
+			safeWords: profile.censoredKeywords,
 			createdAt: user.createdAt
 		});
 	}
@@ -1610,7 +1629,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				}))
 		);
 	}
-	if (normalizedMethod === 'GET' && pathname === '/blocked-users') {
+	if (normalizedMethod === 'GET' && pathname === '/blocks') {
 		return json(
 			[...blockedUserIds].flatMap((id) => {
 				const user = users.get(id);
@@ -1618,7 +1637,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			})
 		);
 	}
-	const blockedUserMatch = /^\/blocked-users\/([^/]+)$/.exec(pathname);
+	const blockedUserMatch = /^\/blocks\/([^/]+)$/.exec(pathname);
 	if (blockedUserMatch) {
 		const user = userByWikiForgeId(decodeURIComponent(blockedUserMatch[1]));
 		if (!user) return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
@@ -1631,7 +1650,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			return json(undefined, 204);
 		}
 	}
-	if (normalizedMethod === 'GET' && pathname === '/users/search') {
+	if (normalizedMethod === 'GET' && pathname === '/users') {
 		const query = url.searchParams.get('q')?.trim().toLocaleLowerCase('fr-FR') ?? '';
 		return json(
 			query.length < 3

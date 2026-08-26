@@ -13,6 +13,9 @@ export interface User {
 	displayName: string;
 	email?: string;
 	avatarUrl?: string | null;
+	imagePageId?: number | null;
+	nsfwEnabled?: boolean;
+	safeWords?: string[];
 	bio?: string | null;
 	role: UserRole;
 	preferences?: UserPreferences;
