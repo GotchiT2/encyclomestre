@@ -118,7 +118,7 @@ describe('WikiForge public pages API', () => {
 					id: 42,
 					title: 'Paris',
 					description: 'Capitale française',
-					image: 'Paris.jpg',
+					image: 'https://images.wikiforge.test/Paris.jpg',
 					atk: 120,
 					length: 50,
 					viewCount: 1000,
@@ -143,9 +143,7 @@ describe('WikiForge public pages API', () => {
 			ownedCount: 2,
 			wikipediaUrl: 'https://fr.wikipedia.org/?curid=42'
 		});
-		expect(page.items[0].imageUrl).toBe(
-			'https://fr.wikipedia.org/wiki/Special:FilePath/Paris.jpg?width=250'
-		);
+		expect(page.items[0].imageUrl).toBe('https://images.wikiforge.test/Paris.jpg');
 	});
 
 	it('maps a successful zero-result payload without treating it as an error', () => {

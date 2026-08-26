@@ -63,7 +63,7 @@ describe('WikiForge collection API', () => {
 					pageId: 42,
 					title: 'Rose',
 					description: 'Une carte',
-					image: 'Rose.jpg',
+					image: 'https://images.wikiforge.test/Rose.jpg',
 					rarity: 'L',
 					atk: 90,
 					alt: true,
@@ -103,9 +103,7 @@ describe('WikiForge collection API', () => {
 			ownedCount: 4,
 			rarityCounts: { SR: 3, R: 1 }
 		});
-		expect(result.items[0].imageUrl).toBe(
-			'https://fr.wikipedia.org/wiki/Special:FilePath/Rose.jpg?width=250'
-		);
+		expect(result.items[0].imageUrl).toBe('https://images.wikiforge.test/Rose.jpg');
 	});
 
 	it('returns an empty page for a successful response with zero cards', async () => {

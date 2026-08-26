@@ -57,10 +57,7 @@ const emptyRarityResults: Record<WikiForgePublicPageRarity, number> = {
 };
 
 export function wikiForgeImageUrl(image?: string | null): string {
-	const imageName = image?.trim();
-	return imageName
-		? `https://upload.wikimedia.org/wikipedia/commons/thumb/${image}`
-		: '/card-placeholder.svg';
+	return image?.trim() || '/card-placeholder.svg';
 }
 
 function publicPagesPath(query: WikiForgePublicPagesQuery): string {

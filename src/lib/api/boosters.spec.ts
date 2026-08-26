@@ -42,7 +42,7 @@ describe('WikiForge boosters API', () => {
 						pageId: 12208062,
 						title: 'Rose Thisse-Derouette',
 						description: 'Compositrice belge',
-						image: 'Rose Thisse Derouette.jpg',
+						image: 'https://images.wikiforge.test/Rose%20Thisse%20Derouette.jpg',
 						rarity: 'SR',
 						atk: 70,
 						alt: true,
@@ -76,8 +76,7 @@ describe('WikiForge boosters API', () => {
 			catalogueId: '12208062',
 			variant: 'FULL_ART',
 			title: 'Rose Thisse-Derouette',
-			imageUrl:
-				'https://fr.wikipedia.org/wiki/Special:FilePath/Rose%20Thisse%20Derouette.jpg?width=250',
+			imageUrl: 'https://images.wikiforge.test/Rose%20Thisse%20Derouette.jpg',
 			collectionTagIds: ['4', '9'],
 			duplicate: true,
 			userProtected: true,
