@@ -264,23 +264,17 @@ describe('createMockApiResponse', () => {
 		expect(await response.json()).toMatchObject({ id: 'g-i-dle-2' });
 	});
 
-	it('persists user blocks while retaining the friendship record', async () => {
+	it('persists user blocks in the WikiForge social registry', async () => {
 		const blocked = createMockApiResponse({
-			path: '/api/users/friend-0/block',
-			method: 'PUT'
+			path: '/blocked-users/2',
+			method: 'POST'
 		});
-		expect(blocked.status).toBe(200);
+		expect(blocked.status).toBe(204);
 
-		const blocks = createMockApiResponse({ path: '/api/users/me/blocks' });
-		expect(await blocks.json()).toEqual([
-			expect.objectContaining({ user: expect.objectContaining({ id: 'friend-0' }) })
-		]);
-		const friends = createMockApiResponse({ path: '/api/friends' });
-		expect(await friends.json()).toEqual(
-			expect.arrayContaining([
-				expect.objectContaining({ user: expect.objectContaining({ id: 'friend-0' }) })
-			])
-		);
+		const blocks = createMockApiResponse({ path: '/blocked-users' });
+		expect(await blocks.json()).toEqual([expect.objectContaining({ id: 2, name: 'SoneS9' })]);
+		const friends = createMockApiResponse({ path: '/friends' });
+		expect(await friends.json()).toMatchObject({ friends: [expect.objectContaining({ id: 2 })] });
 		const messages = createMockApiResponse({ path: '/api/messages?userId=demo-user' });
 		expect(await messages.json()).not.toEqual(
 			expect.arrayContaining([
@@ -289,7 +283,7 @@ describe('createMockApiResponse', () => {
 		);
 
 		const unblocked = createMockApiResponse({
-			path: '/api/users/friend-0/block',
+			path: '/blocked-users/2',
 			method: 'DELETE'
 		});
 		expect(unblocked.status).toBe(204);

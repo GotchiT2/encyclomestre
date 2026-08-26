@@ -70,7 +70,9 @@ describe('WikiForge collection API', () => {
 					duplicate: true,
 					protected: true,
 					tagIds: [2, 7],
-					pendingTradeId: 12
+					pendingTradeId: 12,
+					ownedCount: 4,
+					rarityCounts: { SR: 3, R: 1 }
 				}
 			],
 			nextCursor: 'next',
@@ -97,7 +99,9 @@ describe('WikiForge collection API', () => {
 			duplicate: true,
 			userProtected: true,
 			collectionTagIds: ['2', '7'],
-			pendingTradeId: '12'
+			pendingTradeId: '12',
+			ownedCount: 4,
+			rarityCounts: { SR: 3, R: 1 }
 		});
 		expect(result.items[0].imageUrl).toBe(
 			'https://fr.wikipedia.org/wiki/Special:FilePath/Rose.jpg?width=250'

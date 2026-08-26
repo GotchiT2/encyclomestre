@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { currentSession } from '$lib/auth/session';
-	import { getCards, getDashboard } from '$lib/api';
+	import { getCards, getWikiForgeWelcome } from '$lib/api';
 	import GuestLanding from '$lib/components/landing/guest-landing.svelte';
 	import PlayerDashboard from '$lib/components/landing/player-dashboard.svelte';
 	import { _ } from '$lib/i18n';
@@ -15,7 +15,7 @@
 		const session = $currentSession;
 		if (!session || loadedDashboardFor === session.user.id) return;
 		loadedDashboardFor = session.user.id;
-		void getDashboard().then((result) => (dashboard = result));
+		void getWikiForgeWelcome().then((result) => (dashboard = result));
 	});
 
 	$effect(() => {

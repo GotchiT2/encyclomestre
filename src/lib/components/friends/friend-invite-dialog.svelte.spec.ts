@@ -28,8 +28,9 @@ describe('FriendInviteDialog', () => {
 		expect(loadUsers).not.toHaveBeenCalled();
 		await page.getByPlaceholder('Rechercher un utilisateur').fill('ma');
 		expect(loadUsers).not.toHaveBeenCalled();
+		await page.getByPlaceholder('Rechercher un utilisateur').fill('mar');
 		await vi.waitFor(() => expect(loadUsers).toHaveBeenCalledOnce(), { timeout: 700 });
-		expect(loadUsers).toHaveBeenCalledWith('ma');
+		expect(loadUsers).toHaveBeenCalledWith('mar');
 		await page.getByRole('button', { name: 'Envoyer l’invitation' }).click();
 		expect(onInvite).toHaveBeenCalledWith(candidate);
 	});

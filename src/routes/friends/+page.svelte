@@ -59,9 +59,13 @@
 
 	onMount(async () => {
 		userId = $currentSession?.user.id ?? 'demo-user';
-		[friendships, blocks] = await Promise.all([getFriends(userId), getUserBlocks()]);
+		await refreshSocialLists();
 		loading = false;
 	});
+
+	async function refreshSocialLists() {
+		[friendships, blocks] = await Promise.all([getFriends(userId), getUserBlocks()]);
+	}
 
 	function isBlocked(id: string) {
 		return blocks.some((block) => block.user.id === id);
@@ -76,37 +80,27 @@
 		if (!blockTarget) return;
 		if (targetIsBlocked) {
 			await unblockUser(blockTarget.id);
-			blocks = blocks.filter((block) => block.user.id !== blockTarget?.id);
+			await refreshSocialLists();
 			return;
 		}
-		const block = await blockUser(blockTarget.id);
-		blocks = [...blocks.filter((entry) => entry.user.id !== block.user.id), block];
-		const friendship = friendships.find((entry) => entry.user.id === block.user.id);
-		if (friendship) {
-			try {
-				await removeFriend(friendship.id);
-			} finally {
-				friendships = friendships.filter((entry) => entry.id !== friendship.id);
-			}
-		}
+		await blockUser(blockTarget.id);
+		// Le blocage retire aussi les relations concernées côté API : relire les deux registres.
+		await refreshSocialLists();
 	}
 
 	async function invite(candidate: User) {
-		const created = await createFriendRequest(userId, candidate.id);
-		friendships = [...friendships, created];
+		await createFriendRequest(userId, candidate.id);
+		await refreshSocialLists();
 	}
 
 	async function respond(id: string, status: 'accepted' | 'rejected') {
-		const updated = await respondToFriendRequest(id, status);
-		friendships =
-			status === 'rejected'
-				? friendships.filter((friendship) => friendship.id !== id)
-				: friendships.map((friendship) => (friendship.id === id ? updated : friendship));
+		await respondToFriendRequest(id, status);
+		await refreshSocialLists();
 	}
 
 	async function remove(id: string) {
 		await removeFriend(id);
-		friendships = friendships.filter((friendship) => friendship.id !== id);
+		await refreshSocialLists();
 	}
 </script>
 

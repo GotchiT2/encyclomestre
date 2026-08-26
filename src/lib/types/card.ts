@@ -36,6 +36,8 @@ export interface Card {
 	attack: number;
 	defense: number;
 	ownedCount: number;
+	/** Quantité possédée par rareté, fournie pour les exemplaires WikiForge. */
+	rarityCounts?: Partial<Record<CardRarityInitials, number>>;
 	globalSupply: number;
 	friendsWhoOwn: FriendOwnerInfo[];
 	wishlistMemberships?: CardWishlistReference[];

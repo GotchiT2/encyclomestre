@@ -527,7 +527,7 @@
 		"invite_search_title": "Ajouter un ami",
 		"invite_search_description": "Recherchez un utilisateur puis envoyez-lui une invitation.",
 		"invite_search_placeholder": "Rechercher un utilisateur",
-		"invite_min_chars": "Saisissez au moins deux caractères.",
+		"invite_min_chars": "Saisissez au moins trois caractères.",
 		"invite_searching": "Recherche en cours…",
 		"invite_sending": "Envoi en cours…",
 		"invite_no_result": "Aucun utilisateur ne correspond à cette recherche.",

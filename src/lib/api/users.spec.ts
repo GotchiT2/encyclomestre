@@ -6,6 +6,8 @@ vi.mock('./client', () => ({ apiRequest }));
 
 import {
 	blockUser,
+	createFriendRequest,
+	getFriends,
 	getOwnedCollectionCards,
 	getTradePartners,
 	getUserBlocks,
@@ -21,14 +23,16 @@ describe('searchUsers', () => {
 	beforeEach(() => apiRequest.mockReset());
 
 	it('forwards the debounced text query without loading the full directory', async () => {
-		apiRequest.mockResolvedValueOnce({ results: [], page: 0, nbResults: 0, size: 20 });
+		apiRequest.mockResolvedValueOnce([]);
 
 		await searchUsers('marie');
 
-		expect(apiRequest).toHaveBeenCalledWith(
-			'/api/users?excludeCurrent=true&page=0&size=20&q=marie',
-			undefined
-		);
+		expect(apiRequest).toHaveBeenCalledWith('/users/search?q=marie', { apiTarget: 'wikiforge' });
+	});
+
+	it('does not call the API below the three-character server threshold', async () => {
+		await expect(searchUsers('ab')).resolves.toEqual([]);
+		expect(apiRequest).not.toHaveBeenCalled();
 	});
 });
 
@@ -163,38 +167,54 @@ describe('getTradePartners', () => {
 	beforeEach(() => apiRequest.mockReset());
 
 	it('uses the friendship registry instead of preloading the public user directory', async () => {
-		apiRequest.mockResolvedValueOnce([
-			{ id: 'friendship-1', status: 'accepted', user: { id: 'user-2' } },
-			{ id: 'friendship-2', status: 'sent', user: { id: 'user-3' } }
-		]);
+		apiRequest.mockResolvedValueOnce({
+			friends: [{ id: 2, name: 'Alice' }],
+			received: [],
+			sent: [{ id: 3, name: 'Bob' }]
+		});
 
 		const partners = await getTradePartners('user-1');
 
 		expect(apiRequest).toHaveBeenCalledOnce();
-		expect(apiRequest).toHaveBeenCalledWith('/api/friends', undefined);
-		expect(partners).toEqual([{ id: 'user-2' }]);
+		expect(apiRequest).toHaveBeenCalledWith('/friends', { apiTarget: 'wikiforge' });
+		expect(partners).toEqual([expect.objectContaining({ id: '2', username: 'Alice' })]);
 	});
 });
 
 describe('user blocks', () => {
 	beforeEach(() => apiRequest.mockReset());
 
-	it('uses the authenticated block registry endpoints', async () => {
-		apiRequest.mockResolvedValueOnce([]).mockResolvedValueOnce({
-			user: { id: 'friend-1' },
-			createdAt: '2026-07-17T00:00:00Z'
-		});
+	it('uses the canonical social endpoints', async () => {
+		apiRequest.mockResolvedValueOnce([]).mockResolvedValue(undefined);
 
 		await getUserBlocks();
-		await blockUser('friend-1');
-		await unblockUser('friend-1');
+		await blockUser('2');
+		await unblockUser('2');
 
-		expect(apiRequest).toHaveBeenNthCalledWith(1, '/api/users/me/blocks', undefined);
-		expect(apiRequest).toHaveBeenNthCalledWith(2, '/api/users/friend-1/block', {
-			method: 'PUT'
+		expect(apiRequest).toHaveBeenNthCalledWith(1, '/blocked-users', { apiTarget: 'wikiforge' });
+		expect(apiRequest).toHaveBeenNthCalledWith(2, '/blocked-users/2', {
+			apiTarget: 'wikiforge',
+			method: 'POST'
 		});
-		expect(apiRequest).toHaveBeenNthCalledWith(3, '/api/users/friend-1/block', {
+		expect(apiRequest).toHaveBeenNthCalledWith(3, '/blocked-users/2', {
+			apiTarget: 'wikiforge',
 			method: 'DELETE'
+		});
+	});
+
+	it('maps the three friend lists and uses user identifiers in social mutations', async () => {
+		apiRequest.mockResolvedValueOnce({
+			friends: [{ id: 2, name: 'Alice' }],
+			received: [{ id: 3, name: 'Bob' }],
+			sent: [{ id: 4, name: 'Chloé' }]
+		});
+		await getFriends();
+		await createFriendRequest('ignored', '4');
+
+		expect(apiRequest).toHaveBeenNthCalledWith(1, '/friends', { apiTarget: 'wikiforge' });
+		expect(apiRequest).toHaveBeenNthCalledWith(2, '/friends/4', {
+			apiTarget: 'wikiforge',
+			method: 'POST'
 		});
 	});
 });

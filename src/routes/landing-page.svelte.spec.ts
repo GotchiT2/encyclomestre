@@ -9,7 +9,7 @@ vi.mock('$lib/api', async () => {
 		getCards: vi.fn().mockResolvedValue({
 			items: [mockCards.find((card) => card.isFullArt) ?? mockCards[0]]
 		}),
-		getDashboard: vi.fn()
+		getWikiForgeWelcome: vi.fn()
 	};
 });
 

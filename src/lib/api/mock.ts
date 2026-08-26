@@ -78,7 +78,36 @@ const publicPage = (card: CardRecord) => ({
 	viewCount: card.viewCount,
 	rarity: card.rarityInitials,
 	createdAt: card.acquiredAt ?? now,
-	globalCount: card.globalSupply
+	globalCount: card.globalSupply,
+	ownedCount: card.ownedCount
+});
+
+const wikiForgeUserId = (id: string) =>
+	id === 'demo-user' ? 1 : (Number.parseInt(id.match(/\d+$/)?.[0] ?? '0', 10) || 0) + 2;
+const userByWikiForgeId = (id: string) =>
+	[...users.values()].find((user) => String(wikiForgeUserId(user.id)) === id);
+const simpleWikiForgeUser = (user: User) => ({
+	id: wikiForgeUserId(user.id),
+	name: user.username,
+	image: null
+});
+const collectionCard = (card: CardRecord, id: number) => ({
+	id,
+	pageId: card.baseCardId ?? id,
+	title: card.title,
+	description: card.longDescription || card.shortDescription,
+	image: card.imageUrl.split('/').at(-1) ?? null,
+	rarity: card.rarityInitials,
+	atk: card.attack,
+	alt: Boolean(card.isFullArt),
+	duplicate: card.ownedCount > 1,
+	protected: Boolean(card.userProtected),
+	tagIds: card.collectionTagIds?.map(Number) ?? [],
+	acquiredDate: card.acquiredAt ?? now,
+	creationDate: now,
+	pendingTradeId: null,
+	ownedCount: card.ownedCount,
+	rarityCounts: card.ownedCount ? { [card.rarityInitials]: card.ownedCount } : {}
 });
 
 const apiRegistry = (registry: LegacyWishlistRegistry) => ({
@@ -643,6 +672,22 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			email: user.email,
 			roles: [user.role.toUpperCase()],
 			createdAt: user.createdAt
+		});
+	}
+	if (normalizedMethod === 'GET' && pathname === '/welcome') {
+		const inventory = boosterInventory('demo-user');
+		return json({
+			boostersStatus: {
+				available: inventory.available,
+				max: inventory.capacity,
+				nextAvailableAt: inventory.nextRechargeAt
+			},
+			collection: {
+				nbCards: mockCards.reduce((total, card) => total + card.ownedCount, 0),
+				recent: mockCards.slice(0, 6).map((card, index) => collectionCard(card, index + 1))
+			},
+			pendingTrades: 0,
+			pendingAuction: 0
 		});
 	}
 	if (normalizedMethod === 'POST' && pathname === '/auth/logout') return json(undefined, 204);
@@ -1565,6 +1610,43 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				}))
 		);
 	}
+	if (normalizedMethod === 'GET' && pathname === '/blocked-users') {
+		return json(
+			[...blockedUserIds].flatMap((id) => {
+				const user = users.get(id);
+				return user ? [{ ...simpleWikiForgeUser(user), createdAt: now }] : [];
+			})
+		);
+	}
+	const blockedUserMatch = /^\/blocked-users\/([^/]+)$/.exec(pathname);
+	if (blockedUserMatch) {
+		const user = userByWikiForgeId(decodeURIComponent(blockedUserMatch[1]));
+		if (!user) return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
+		if (normalizedMethod === 'POST') {
+			blockedUserIds.add(user.id);
+			return json(undefined, 204);
+		}
+		if (normalizedMethod === 'DELETE') {
+			blockedUserIds.delete(user.id);
+			return json(undefined, 204);
+		}
+	}
+	if (normalizedMethod === 'GET' && pathname === '/users/search') {
+		const query = url.searchParams.get('q')?.trim().toLocaleLowerCase('fr-FR') ?? '';
+		return json(
+			query.length < 3
+				? []
+				: [...users.values()]
+						.filter(
+							(user) =>
+								user.id !== 'demo-user' &&
+								!blockedUserIds.has(user.id) &&
+								user.username.toLocaleLowerCase('fr-FR').includes(query)
+						)
+						.slice(0, 10)
+						.map(simpleWikiForgeUser)
+		);
+	}
 	if (normalizedMethod === 'GET' && pathname === '/users/me/blocks') {
 		return json(
 			[...blockedUserIds].flatMap((id) => {
@@ -1758,7 +1840,18 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 
 	const userMatch = /^\/users\/([^/]+)(?:\/(preferences))?$/.exec(pathname);
 	if (normalizedMethod === 'GET' && pathname === '/friends') {
-		return json(friendships.get(url.searchParams.get('userId') ?? 'demo-user') ?? []);
+		const entries = friendships.get('demo-user') ?? [];
+		return json({
+			friends: entries
+				.filter((entry) => entry.status === 'accepted')
+				.map((entry) => simpleWikiForgeUser(entry.user)),
+			received: entries
+				.filter((entry) => entry.status === 'received')
+				.map((entry) => simpleWikiForgeUser(entry.user)),
+			sent: entries
+				.filter((entry) => entry.status === 'sent')
+				.map((entry) => simpleWikiForgeUser(entry.user))
+		});
 	}
 	if (normalizedMethod === 'POST' && pathname === '/friends') {
 		const input = asObject(body);
@@ -1777,8 +1870,45 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		return json(friendship, 201);
 	}
 	const friendshipMatch = /^\/friends\/([^/]+)$/.exec(pathname);
+	const friendAcceptMatch = /^\/friends\/([^/]+)\/accept$/.exec(pathname);
+	if (friendAcceptMatch && normalizedMethod === 'POST') {
+		const friend = userByWikiForgeId(decodeURIComponent(friendAcceptMatch[1]));
+		const entry =
+			friend && (friendships.get('demo-user') ?? []).find((item) => item.user.id === friend.id);
+		if (!entry || entry.status !== 'received')
+			return error(404, 'Invitation introuvable.', 'FRIENDSHIP_NOT_FOUND');
+		entry.status = 'accepted';
+		return json(undefined, 204);
+	}
 	if (friendshipMatch) {
 		const id = decodeURIComponent(friendshipMatch[1]);
+		const canonicalFriend = userByWikiForgeId(id);
+		if (canonicalFriend) {
+			const entries = friendships.get('demo-user') ?? [];
+			const existing = entries.find((entry) => entry.user.id === canonicalFriend.id);
+			if (normalizedMethod === 'POST') {
+				if (!existing) {
+					friendships.set('demo-user', [
+						...entries,
+						{
+							id: `friendship-${Date.now()}`,
+							user: canonicalFriend,
+							status: 'sent',
+							createdAt: now,
+							lastActiveAt: now
+						}
+					]);
+				}
+				return json(undefined, 204);
+			}
+			if (normalizedMethod === 'DELETE') {
+				friendships.set(
+					'demo-user',
+					entries.filter((entry) => entry.user.id !== canonicalFriend.id)
+				);
+				return json(undefined, 204);
+			}
+		}
 		for (const [userId, entries] of friendships) {
 			const friendship = entries.find((entry) => entry.id === id);
 			if (!friendship) continue;

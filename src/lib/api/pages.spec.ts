@@ -65,7 +65,8 @@ describe('WikiForge public pages API', () => {
 				viewCount: 1000,
 				rarity: 'L',
 				createdAt: '2026-08-18T12:00:00Z',
-				globalCount: 3
+				globalCount: 3,
+				ownedCount: 2
 			})
 		);
 
@@ -123,7 +124,8 @@ describe('WikiForge public pages API', () => {
 					viewCount: 1000,
 					rarity: 'L',
 					createdAt: '2026-08-18T12:00:00Z',
-					globalCount: 3
+					globalCount: 3,
+					ownedCount: 2
 				}
 			],
 			sortBy: 'RARITY',
@@ -138,6 +140,7 @@ describe('WikiForge public pages API', () => {
 			rarityInitials: 'L',
 			attack: 120,
 			globalSupply: 3,
+			ownedCount: 2,
 			wikipediaUrl: 'https://fr.wikipedia.org/?curid=42'
 		});
 		expect(page.items[0].imageUrl).toBe(

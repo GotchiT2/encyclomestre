@@ -156,20 +156,17 @@ export const getOwnedCollectionCards = async (
 
 export const searchUsers = async (
 	query: string,
-	{ page = 0, size = 20 }: { page?: number; size?: number } = {},
+	_options: { page?: number; size?: number } = {},
 	options?: RequestOptions
 ): Promise<User[]> => {
-	const parameters = new URLSearchParams({
-		excludeCurrent: 'true',
-		page: String(Math.max(0, page)),
-		size: String(Math.min(100, Math.max(1, size)))
-	});
-	if (query.trim()) parameters.set('q', query.trim());
-	const response = await apiRequest<PaginatedResponse<User> | WikiForgePage<User>>(
-		`/api/users?${parameters}`,
-		options
+	void _options;
+	const text = query.trim();
+	if (text.length < 3) return [];
+	const response = await apiRequest<WikiForgeSimpleUserDto[]>(
+		`/users/search?${new URLSearchParams({ q: text })}`,
+		{ ...options, apiTarget: 'wikiforge' }
 	);
-	return 'items' in response ? response.items : (response.results ?? []);
+	return response.map(toWikiForgeUser);
 };
 
 export const getTradePartners = async (
@@ -180,18 +177,83 @@ export const getTradePartners = async (
 		.filter((friendship) => friendship.status === 'accepted')
 		.map((friendship) => friendship.user);
 
-export const getFriends = (_userId?: string, options?: RequestOptions) =>
-	apiRequest<Friendship[]>('/api/friends', options);
+export interface WikiForgeSimpleUserDto {
+	id: number;
+	name: string;
+	imagePageId?: number | null;
+	image?: string | null;
+}
+
+export interface WikiForgeFriendListsDto {
+	friends: WikiForgeSimpleUserDto[];
+	received: WikiForgeSimpleUserDto[];
+	sent: WikiForgeSimpleUserDto[];
+}
+
+interface WikiForgeBlockedUserDto extends WikiForgeSimpleUserDto {
+	createdAt: string;
+}
+
+function wikiForgeUserImage(image?: string | null): string | null {
+	if (!image?.trim()) return null;
+	if (/^https?:\/\//.test(image)) return image;
+	return `https://fr.wikipedia.org/wiki/Special:FilePath/${encodeURIComponent(image)}?width=250`;
+}
+
+function numericWikiForgeUserId(value: string): number {
+	const id = Number(value);
+	if (!Number.isSafeInteger(id) || id <= 0) {
+		throw new Error(`Identifiant utilisateur WikiForge invalide: ${value}`);
+	}
+	return id;
+}
+
+export function toWikiForgeUser(user: WikiForgeSimpleUserDto): User {
+	return {
+		id: String(user.id),
+		username: user.name,
+		displayName: user.name,
+		avatarUrl: wikiForgeUserImage(user.image),
+		role: 'user',
+		createdAt: '',
+		updatedAt: ''
+	};
+}
+
+function toFriendship(user: WikiForgeSimpleUserDto, status: Friendship['status']): Friendship {
+	return {
+		id: String(user.id),
+		user: toWikiForgeUser(user),
+		status,
+		createdAt: '',
+		lastActiveAt: ''
+	};
+}
+
+export const getFriends = async (
+	_userId?: string,
+	options?: RequestOptions
+): Promise<Friendship[]> => {
+	const response = await apiRequest<WikiForgeFriendListsDto>('/friends', {
+		...options,
+		apiTarget: 'wikiforge'
+	});
+	return [
+		...(response.friends ?? []).map((user) => toFriendship(user, 'accepted')),
+		...(response.received ?? []).map((user) => toFriendship(user, 'received')),
+		...(response.sent ?? []).map((user) => toFriendship(user, 'sent'))
+	];
+};
 
 export const createFriendRequest = (
 	_userId: string,
 	recipientId: string,
 	options?: RequestOptions
 ) =>
-	apiRequest<Friendship>('/api/friends', {
+	apiRequest<void>(`/friends/${numericWikiForgeUserId(recipientId)}`, {
 		...options,
-		method: 'POST',
-		body: { recipientId }
+		apiTarget: 'wikiforge',
+		method: 'POST'
 	});
 
 export const respondToFriendRequest = (
@@ -199,30 +261,41 @@ export const respondToFriendRequest = (
 	status: 'accepted' | 'rejected',
 	options?: RequestOptions
 ) =>
-	apiRequest<Friendship>(`/api/friends/${encodeURIComponent(id)}`, {
-		...options,
-		method: 'PATCH',
-		body: { status }
-	});
+	apiRequest<void>(
+		`/friends/${numericWikiForgeUserId(id)}${status === 'accepted' ? '/accept' : ''}`,
+		{
+			...options,
+			apiTarget: 'wikiforge',
+			method: status === 'accepted' ? 'POST' : 'DELETE'
+		}
+	);
 
 export const removeFriend = (id: string, options?: RequestOptions) =>
-	apiRequest<void>(`/api/friends/${encodeURIComponent(id)}`, {
+	apiRequest<void>(`/friends/${numericWikiForgeUserId(id)}`, {
 		...options,
+		apiTarget: 'wikiforge',
 		method: 'DELETE'
 	});
 
-export const getUserBlocks = (options?: RequestOptions) =>
-	apiRequest<UserBlock[]>('/api/users/me/blocks', options);
+export const getUserBlocks = async (options?: RequestOptions): Promise<UserBlock[]> =>
+	(
+		await apiRequest<WikiForgeBlockedUserDto[]>('/blocked-users', {
+			...options,
+			apiTarget: 'wikiforge'
+		})
+	).map((block) => ({ user: toWikiForgeUser(block), createdAt: block.createdAt }));
 
 export const blockUser = (id: string, options?: RequestOptions) =>
-	apiRequest<UserBlock>(`/api/users/${encodeURIComponent(id)}/block`, {
+	apiRequest<void>(`/blocked-users/${numericWikiForgeUserId(id)}`, {
 		...options,
-		method: 'PUT'
+		apiTarget: 'wikiforge',
+		method: 'POST'
 	});
 
 export const unblockUser = (id: string, options?: RequestOptions) =>
-	apiRequest<void>(`/api/users/${encodeURIComponent(id)}/block`, {
+	apiRequest<void>(`/blocked-users/${numericWikiForgeUserId(id)}`, {
 		...options,
+		apiTarget: 'wikiforge',
 		method: 'DELETE'
 	});
 

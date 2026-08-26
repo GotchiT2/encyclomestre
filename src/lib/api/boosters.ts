@@ -18,6 +18,8 @@ export interface BoosterCardDto {
 	acquiredDate?: string | null;
 	creationDate?: string | null;
 	pendingTradeId?: number | null;
+	ownedCount?: number;
+	rarityCounts?: Partial<Record<CardRarityCode, number>>;
 }
 
 export interface BoostersDto {
@@ -48,7 +50,8 @@ export function toBoosterCardRecord(card: BoosterCardDto): CardRecord {
 		wikipediaUrl: `https://fr.wikipedia.org/?curid=${card.pageId}`,
 		attack: card.atk ?? 0,
 		defense: 0,
-		ownedCount: 1,
+		ownedCount: card.ownedCount ?? 1,
+		rarityCounts: card.rarityCounts,
 		globalSupply: 0,
 		friendsWhoOwn: [],
 		isFullArt: Boolean(card.alt),

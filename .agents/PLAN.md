@@ -302,6 +302,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Séparer visuellement la protection et le nombre d’exemplaires sur les cartes — `fix(cards): separate protection and ownership indicators`
 - [x] Harmoniser le mode sélection et ajouter la protection groupée — `feat(collection): improve bulk selection actions`
 - [x] Renouveler les sessions WikiForge avant l’expiration du jeton d’accès — `fix(auth): refresh wikiforge sessions before expiry`
+- [x] Adopter les compteurs de possession, l’accueil et les registres sociaux WikiForge — `feat(api): adopt Wikiforge welcome and social contracts`
 
 - [x] Stabiliser l’ouverture rapide et la scène mobile des boosters, ordonner les révélations de C à L et contenir les illustrations Full Art paysage — `fix(boosters): stabilize mobile opening and full art rendering`
 - [x] Créer et suivre les ventes liées aux exemplaires depuis le détail et la collection — `feat(market): create and track owned card listings`

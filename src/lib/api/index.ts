@@ -12,3 +12,4 @@ export * from './trades';
 export * from './users';
 export * from './wishlist';
 export * from './wikiforge';
+export * from './welcome';

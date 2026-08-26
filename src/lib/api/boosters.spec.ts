@@ -51,7 +51,9 @@ describe('WikiForge boosters API', () => {
 						tagIds: [4, 9],
 						acquiredDate: '2026-08-23T11:00:00Z',
 						creationDate: '2026-08-23T11:00:00Z',
-						pendingTradeId: 12
+						pendingTradeId: 12,
+						ownedCount: 4,
+						rarityCounts: { SR: 3, R: 1 }
 					}
 				]
 			})
@@ -79,7 +81,9 @@ describe('WikiForge boosters API', () => {
 			collectionTagIds: ['4', '9'],
 			duplicate: true,
 			userProtected: true,
-			pendingTradeId: '12'
+			pendingTradeId: '12',
+			ownedCount: 4,
+			rarityCounts: { SR: 3, R: 1 }
 		});
 	});
 });

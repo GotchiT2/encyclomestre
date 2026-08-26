@@ -26,7 +26,7 @@
 
 	$effect(() => {
 		const normalizedQuery = query.trim();
-		if (!open || normalizedQuery.length < 2) {
+		if (!open || normalizedQuery.length < 3) {
 			requestId += 1;
 			window.clearTimeout(debounceTimer);
 			candidates = [];
@@ -73,7 +73,7 @@
 		</header>
 		<div class="min-h-0 p-4">
 			<Input bind:value={query} placeholder={$_('friends.invite_search_placeholder')} autofocus />
-			{#if query.trim().length < 2}
+			{#if query.trim().length < 3}
 				<p class="mt-4 text-sm text-muted-foreground">{$_('friends.invite_min_chars')}</p>
 			{:else if loading}
 				<p class="mt-4 font-mono text-[10px] uppercase tracking-widest text-primary">

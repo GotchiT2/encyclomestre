@@ -16,6 +16,7 @@ export interface WikiForgePublicPageCard {
 	rarity: WikiForgePublicPageRarity;
 	createdAt: string;
 	globalCount: number;
+	ownedCount?: number;
 }
 
 export interface WikiForgePublicPagesResponse {
@@ -121,7 +122,7 @@ export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecor
 		wikipediaUrl: `https://fr.wikipedia.org/?curid=${card.id}`,
 		attack: card.atk,
 		defense: 0,
-		ownedCount: 0,
+		ownedCount: card.ownedCount ?? 0,
 		globalSupply: card.globalCount,
 		friendsWhoOwn: [],
 		isFullArt: false,
