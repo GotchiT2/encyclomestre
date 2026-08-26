@@ -2,6 +2,7 @@
 	import { _ } from '$lib/i18n';
 	import CardEffects from '$lib/components/cards/card-effects.svelte';
 	import CardStateIndicators from '$lib/components/cards/card-state-indicators.svelte';
+	import { nsfwFilterSettings, shouldBlurCardIllustration } from '$lib/content/nsfw-filter';
 	import { cn } from '$lib/utils';
 	import type { CardRecord, CollectionTag } from '$lib/types';
 	import LockIcon from '@lucide/svelte/icons/lock';
@@ -42,6 +43,7 @@
 	const titleLength = $derived(Math.max(1, card.title.trim().length));
 	const hasTilt = $derived(['PC', 'R', 'SR', 'UR', 'L'].includes(card.rarityInitials));
 	const hasIllustrationEffect = $derived(card.rarityInitials !== 'C');
+	const illustrationBlurred = $derived(shouldBlurCardIllustration(card, $nsfwFilterSettings));
 	let pointerX = $state(50);
 	let pointerY = $state(50);
 	let activeInteraction = $state(false);
@@ -127,12 +129,19 @@
 			<img
 				src={card.imageUrl}
 				alt=""
-				class={artImageClass}
+				class={`${artImageClass} ${illustrationBlurred ? 'blur-xl' : ''}`}
 				onload={inspectIllustration}
 				onerror={(event) => {
 					(event.currentTarget as HTMLImageElement).src = '/card-placeholder.svg';
 				}}
 			/>
+			{#if illustrationBlurred}
+				<span
+					class="absolute inset-0 grid place-items-center bg-background/55 font-mono text-[9px] uppercase tracking-widest text-primary"
+					aria-label={$_('cardState.nsfw_blurred')}
+					data-testid="card-nsfw-blur"
+				></span>
+			{/if}
 			<CardEffects rarity={card.rarityInitials} fullArt={isFullArt} active={activeInteraction} />
 		</div>
 		<img

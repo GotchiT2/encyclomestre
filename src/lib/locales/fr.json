@@ -94,7 +94,8 @@
 		"owned_by": "{user} possède {count} exemplaire(s)",
 		"wishlisted": "Présente dans {count} wishlist(s)",
 		"default_wishlist": "Wishlist principale",
-		"other_owners": "Possédée par {count} autre(s) personne(s)"
+		"other_owners": "Possédée par {count} autre(s) personne(s)",
+		"nsfw_blurred": "Illustration floutée par le filtre NSFW"
 	},
 	"codex": {
 		"eyebrow": "Catalogue de cartes",

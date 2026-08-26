@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import '$lib/i18n';
 import CardTile from './card-tile.svelte';
+import { setNsfwFilterSettings } from '$lib/content/nsfw-filter';
 import type { CardRecord } from '$lib/types';
 
 const card: CardRecord = {
@@ -24,6 +25,14 @@ const card: CardRecord = {
 };
 
 describe('CardTile', () => {
+	it('blurs the illustration when it matches a configured NSFW keyword', async () => {
+		setNsfwFilterSettings({ enabled: false, keywords: ['sensible'] });
+		render(CardTile, { card: { ...card, shortDescription: 'Notice sensible.' } });
+		await expect
+			.element(page.getByTestId('card-nsfw-blur'))
+			.toHaveAttribute('aria-label', 'Illustration floutée par le filtre NSFW');
+		setNsfwFilterSettings({});
+	});
 	it('shows an accessible protection indicator for protected collection cards', async () => {
 		render(CardTile, { card: { ...card, userProtected: true, ownedCount: 2 } });
 		await expect.element(page.getByTestId('card-protected-indicator')).toBeVisible();

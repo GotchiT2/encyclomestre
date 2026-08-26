@@ -3,50 +3,46 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { _ } from '$lib/i18n';
-	import { clearSession, currentSession } from '$lib/auth/session';
-	import {
-		deleteUser,
-		getCurrentUser,
-		getMyProfileSettings,
-		logout,
-		logoutAll,
-		updateProfileSettings,
-		updateUserPreferences
-	} from '$lib/api';
+	import { clearSession, currentSession, persistSession } from '$lib/auth/session';
+	import { deleteUser, getCurrentUser, logout, logoutAll, updateWikiForgeMe } from '$lib/api';
+	import { setNsfwFilterSettings } from '$lib/content/nsfw-filter';
 	import SettingsPreferences from '$lib/components/settings/settings-preferences.svelte';
 	import SettingsAccount from '$lib/components/settings/settings-account.svelte';
 	import CensoredKeywords from '$lib/components/settings/censored-keywords.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import type { ProfileSettings, UserPreferences } from '$lib/types';
+	import type { ProfileSettings } from '$lib/types';
 
-	let preferences = $state<UserPreferences>({
-		language: 'fr',
-		timezone: 'Europe/Paris',
-		emailNotifications: true,
-		marketingEmails: false
-	});
 	let profile = $state<ProfileSettings | null>(null);
 	let loading = $state(true);
 	let userId = $state('demo-user');
 
 	onMount(async () => {
 		userId = $currentSession?.user.id ?? 'demo-user';
-		const [user, settings] = await Promise.all([getCurrentUser(), getMyProfileSettings()]);
-		preferences = user.preferences ?? preferences;
-		profile = settings;
+		const user = await getCurrentUser();
+		profile = {
+			username: user.username,
+			avatarCardId: null,
+			accentColor: '#feb823',
+			bioTags: [],
+			showcases: [],
+			wantedCardIds: [],
+			nsfwEnabled: Boolean(user.nsfwEnabled),
+			censoredKeywords: user.safeWords ?? []
+		};
+		setNsfwFilterSettings({ enabled: profile.nsfwEnabled, keywords: profile.censoredKeywords });
 		loading = false;
 	});
 	async function save() {
 		if (!profile) return;
-		await Promise.all([
-			updateUserPreferences(userId, preferences),
-			updateProfileSettings(userId, {
-				username: profile.username,
-				nsfwEnabled: profile.nsfwEnabled,
-				censoredKeywords: profile.censoredKeywords
-			})
-		]);
+		const user = await updateWikiForgeMe({
+			name: profile.username.trim(),
+			nsfw: profile.nsfwEnabled,
+			safeWords: profile.censoredKeywords
+		});
+		setNsfwFilterSettings({ enabled: user.nsfwEnabled, keywords: user.safeWords });
+		const session = $currentSession;
+		if (session) persistSession(localStorage, { ...session, user });
 	}
 	async function logoutFromSettings() {
 		try {
@@ -83,7 +79,6 @@
 	{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('settings.loading')}
 		</p>{:else if profile}<SettingsPreferences
-			bind:preferences
 			bind:nsfwEnabled={profile.nsfwEnabled}
 		/><CensoredKeywords bind:keywords={profile.censoredKeywords} /><SettingsAccount
 			bind:username={profile.username}

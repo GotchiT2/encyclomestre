@@ -3,6 +3,8 @@
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { hydrateSession } from '$lib/auth/session';
+	import { getCurrentUser } from '$lib/api';
+	import { setNsfwFilterSettings } from '$lib/content/nsfw-filter';
 	import AppNavigation from '$lib/components/layout/app-navigation.svelte';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import { _ } from '$lib/i18n';
@@ -10,7 +12,15 @@
 
 	let { children } = $props();
 
-	onMount(() => hydrateSession(localStorage));
+	onMount(() => {
+		const session = hydrateSession(localStorage);
+		if (!session) return;
+		void getCurrentUser()
+			.then((user) =>
+				setNsfwFilterSettings({ enabled: user.nsfwEnabled, keywords: user.safeWords })
+			)
+			.catch(() => setNsfwFilterSettings({}));
+	});
 </script>
 
 <svelte:head>

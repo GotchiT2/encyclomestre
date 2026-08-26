@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import CardEffects from './card-effects.svelte';
+	import { nsfwFilterSettings, shouldBlurCardIllustration } from '$lib/content/nsfw-filter';
 	import type { CardRecord } from '$lib/types';
 	let { card }: { card: CardRecord } = $props();
 	const hasTilt = $derived(['PC', 'R', 'SR', 'UR', 'L'].includes(card.rarityInitials));
 	const hasIllustrationEffect = $derived(card.rarityInitials !== 'C');
+	const illustrationBlurred = $derived(shouldBlurCardIllustration(card, $nsfwFilterSettings));
 	let pointerX = $state(50);
 	let pointerY = $state(50);
 	let activeInteraction = $state(false);
@@ -51,7 +53,18 @@
 >
 	<div class="card-hero-art relative overflow-hidden border border-primary/20 bg-background p-2">
 		<div class="relative overflow-hidden" data-testid="card-hero-illustration">
-			<img src={card.imageUrl} alt={card.title} class="aspect-[3/4] w-full object-cover" />
+			<img
+				src={card.imageUrl}
+				alt={card.title}
+				class={`aspect-[3/4] w-full object-cover ${illustrationBlurred ? 'blur-xl' : ''}`}
+			/>
+			{#if illustrationBlurred}
+				<span
+					class="absolute inset-0 grid place-items-center bg-background/55 font-mono text-[10px] uppercase tracking-widest text-primary"
+					aria-label={$_('cardState.nsfw_blurred')}
+					data-testid="card-hero-nsfw-blur"
+				></span>
+			{/if}
 			<CardEffects
 				rarity={card.rarityInitials}
 				fullArt={Boolean(card.isFullArt)}
