@@ -185,9 +185,9 @@ export interface WikiForgeSimpleUserDto {
 }
 
 export interface WikiForgeFriendListsDto {
-	friends: WikiForgeSimpleUserDto[];
-	received: WikiForgeSimpleUserDto[];
-	sent: WikiForgeSimpleUserDto[];
+	friends?: WikiForgeSimpleUserDto[];
+	received?: WikiForgeSimpleUserDto[];
+	sent?: WikiForgeSimpleUserDto[];
 }
 
 interface WikiForgeBlockedUserDto extends WikiForgeSimpleUserDto {
@@ -277,13 +277,15 @@ export const removeFriend = (id: string, options?: RequestOptions) =>
 		method: 'DELETE'
 	});
 
-export const getUserBlocks = async (options?: RequestOptions): Promise<UserBlock[]> =>
-	(
-		await apiRequest<WikiForgeBlockedUserDto[]>('/blocked-users', {
-			...options,
-			apiTarget: 'wikiforge'
-		})
-	).map((block) => ({ user: toWikiForgeUser(block), createdAt: block.createdAt }));
+export const getUserBlocks = async (options?: RequestOptions): Promise<UserBlock[]> => {
+	const response = await apiRequest<WikiForgeBlockedUserDto[] | Record<string, never>>(
+		'/blocked-users',
+		{ ...options, apiTarget: 'wikiforge' }
+	);
+	return Array.isArray(response)
+		? response.map((block) => ({ user: toWikiForgeUser(block), createdAt: block.createdAt }))
+		: [];
+};
 
 export const blockUser = (id: string, options?: RequestOptions) =>
 	apiRequest<void>(`/blocked-users/${numericWikiForgeUserId(id)}`, {

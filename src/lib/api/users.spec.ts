@@ -34,6 +34,11 @@ describe('searchUsers', () => {
 		await expect(searchUsers('ab')).resolves.toEqual([]);
 		expect(apiRequest).not.toHaveBeenCalled();
 	});
+
+	it('treats an empty social payload as empty friend registers', async () => {
+		apiRequest.mockResolvedValueOnce({});
+		await expect(getFriends()).resolves.toEqual([]);
+	});
 });
 
 describe('getUserCollection', () => {
@@ -200,6 +205,12 @@ describe('user blocks', () => {
 			apiTarget: 'wikiforge',
 			method: 'DELETE'
 		});
+	});
+
+	it('treats an empty blocked-user payload as an empty registry', async () => {
+		apiRequest.mockResolvedValueOnce({});
+		await expect(getUserBlocks()).resolves.toEqual([]);
+		expect(apiRequest).toHaveBeenCalledWith('/blocked-users', { apiTarget: 'wikiforge' });
 	});
 
 	it('maps the three friend lists and uses user identifiers in social mutations', async () => {
