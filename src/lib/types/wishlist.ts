@@ -5,7 +5,9 @@ export interface WishlistRegistrySummary {
 	id: string;
 	title: string;
 	description: string;
-	cardCount: number;
+	cardCount: number | null;
+	imagePageId?: string | null;
+	imageUrl?: string | null;
 	ownerName: string | null;
 	invitedAt: string | null;
 	access: WishlistAccess;
@@ -33,6 +35,8 @@ export interface WishlistQuery {
 export interface WishlistFollower {
 	id: string;
 	name: string;
+	imagePageId?: string | null;
+	imageUrl?: string | null;
 	accepted: boolean;
 }
 

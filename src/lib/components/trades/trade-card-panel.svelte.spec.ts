@@ -26,7 +26,7 @@ const cards = Array.from({ length: 12 }, (_, index): CardRecord => ({
 }));
 
 describe('TradeCardPanel', () => {
-	it('loads one compact initial page, then applies filters on demand', async () => {
+	it('loads one compact initial page, then applies filters immediately without a submit button', async () => {
 		const loadCards = vi.fn(async () => ({
 			items: cards,
 			meta: { page: 1, pageSize: 12, total: 36, totalPages: 3 }
@@ -54,12 +54,8 @@ describe('TradeCardPanel', () => {
 			expect.objectContaining({ rarities: [], page: 0, pageSize: 12 })
 		);
 		await page.getByRole('button', { name: 'R Rare', exact: true }).click();
-		await page.getByRole('button', { name: 'Afficher les cartes' }).click();
 
-		await vi.waitFor(() =>
-			expect(document.querySelectorAll('[data-testid="card-tile"]')).toHaveLength(12)
-		);
-		expect(loadCards).toHaveBeenCalledTimes(2);
+		await vi.waitFor(() => expect(loadCards).toHaveBeenCalledTimes(2));
 		expect(loadCards).toHaveBeenNthCalledWith(
 			2,
 			expect.objectContaining({ rarities: ['Rare'], page: 0, pageSize: 12 })
@@ -68,7 +64,9 @@ describe('TradeCardPanel', () => {
 			?.parentElement;
 		expect(grid?.className).toContain('grid-cols-2');
 		expect(grid?.className).toContain('xl:grid-cols-5');
-		await expect.element(page.getByText('Page 1 / 3')).toBeVisible();
+		await expect
+			.element(page.getByRole('button', { name: 'Afficher les cartes' }))
+			.not.toBeInTheDocument();
 	});
 
 	it('does not preload an inactive panel', async () => {
@@ -84,7 +82,7 @@ describe('TradeCardPanel', () => {
 		expect(loadCards).not.toHaveBeenCalled();
 	});
 
-	it('uses relevance for text and forwards the next collection cursor', async () => {
+	it('uses relevance after a debounce and appends the next collection cursor', async () => {
 		const loadCards = vi
 			.fn()
 			.mockResolvedValueOnce({
@@ -113,7 +111,7 @@ describe('TradeCardPanel', () => {
 		});
 
 		await vi.waitFor(() => expect(loadCards).toHaveBeenCalledOnce());
-		await page.getByRole('button', { name: 'Suivant' }).click();
+		await page.getByRole('button', { name: 'Charger la suite' }).click();
 		await vi.waitFor(() => expect(loadCards).toHaveBeenCalledTimes(2));
 		expect(loadCards).toHaveBeenNthCalledWith(
 			2,
@@ -121,7 +119,7 @@ describe('TradeCardPanel', () => {
 		);
 
 		await page.getByPlaceholder('Rechercher une carte').fill('Rose');
-		await page.getByRole('button', { name: 'Afficher les cartes' }).click();
+		await new Promise((resolve) => setTimeout(resolve, 450));
 		expect(loadCards).toHaveBeenLastCalledWith(
 			expect.objectContaining({ query: 'Rose', sortBy: 'relevance', cursor: undefined })
 		);

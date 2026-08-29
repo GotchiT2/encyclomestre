@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { currentSession } from '$lib/auth/session';
+	import { onMount } from 'svelte';
+	import { getCurrentUserMoney } from '$lib/api/users';
+	import { currentSession, persistSession } from '$lib/auth/session';
 	import { Button } from '$lib/components/ui/button';
 	import * as Sheet from '$lib/components/ui/sheet';
 	import { _ } from '$lib/i18n';
@@ -18,6 +20,7 @@
 	import StoreIcon from '@lucide/svelte/icons/store';
 	import UserRoundIcon from '@lucide/svelte/icons/user-round';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import CoinsIcon from '@lucide/svelte/icons/coins';
 
 	const primaryNavigation = [
 		{ href: '/cards', label: 'navigation.cards', icon: BookOpenIcon },
@@ -42,6 +45,19 @@
 	function isActive(href: string) {
 		return href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href);
 	}
+
+	onMount(() => {
+		const session = $currentSession;
+		if (!session || typeof session.user.money === 'number') return;
+		void getCurrentUserMoney().then((money) => {
+			const activeSession = $currentSession;
+			if (!activeSession || activeSession.user.id !== session.user.id) return;
+			persistSession(localStorage, {
+				...activeSession,
+				user: { ...activeSession.user, money }
+			});
+		});
+	});
 </script>
 
 <header
@@ -85,6 +101,20 @@
 		</nav>
 
 		<div class="ml-auto flex items-center gap-2">
+			{#if $currentSession}
+				<output
+					class="hidden items-center gap-1 border border-primary/30 bg-card px-2 py-1 font-mono text-xs font-bold text-primary sm:flex"
+					aria-label={$_('navigation.money_balance', {
+						values: { amount: $currentSession.user.money ?? 0 }
+					})}
+					title={$_('navigation.money_balance', {
+						values: { amount: $currentSession.user.money ?? 0 }
+					})}
+				>
+					<CoinsIcon class="size-3.5" aria-hidden="true" />
+					{$currentSession.user.money ?? 0}
+				</output>
+			{/if}
 			<Button href="/boosters" size="sm" class="hidden sm:inline-flex">
 				<PackageOpenIcon data-icon="inline-start" />{$_('navigation.openBooster')}
 			</Button>
@@ -105,6 +135,14 @@
 						<Sheet.Description class="text-sm text-muted-foreground"
 							>{$_('navigation.menuDescription')}</Sheet.Description
 						>
+						{#if $currentSession}
+							<p class="mt-3 flex items-center gap-2 font-mono text-xs font-bold text-primary">
+								<CoinsIcon class="size-4" aria-hidden="true" />
+								{$_('navigation.money_balance', {
+									values: { amount: $currentSession.user.money ?? 0 }
+								})}
+							</p>
+						{/if}
 					</Sheet.Header>
 					<nav class="grid gap-1 px-4" aria-label={$_('navigation.mobileAria')}>
 						{#each [...primaryNavigation, ...secondaryNavigation] as item (item.href)}
@@ -169,6 +207,11 @@
 				><Sheet.Title class="forge-wordmark text-xl">{$_('navigation.menuTitle')}</Sheet.Title
 				></Sheet.Header
 			>
+			{#if $currentSession}
+				<p class="px-4 pb-3 font-mono text-xs font-bold text-primary">
+					{$_('navigation.money_balance', { values: { amount: $currentSession.user.money ?? 0 } })}
+				</p>
+			{/if}
 			<nav class="grid grid-cols-2 gap-2 px-4 pb-5">
 				{#each [...primaryNavigation.slice(2), ...secondaryNavigation] as item (item.href)}
 					<Sheet.Close

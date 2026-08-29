@@ -47,6 +47,8 @@ function mockDelay(): number {
 }
 
 let refreshSessionPromise: Promise<boolean> | null = null;
+let refreshGeneration = 0;
+let refreshDisabled = false;
 const accessTokenRefreshMarginMs = 30_000;
 
 function tokenNeedsRefresh(session: ReturnType<typeof restoreSession>) {
@@ -59,9 +61,11 @@ function tokenNeedsRefresh(session: ReturnType<typeof restoreSession>) {
 }
 
 async function refreshSession(fetcher: Fetcher): Promise<boolean> {
+	if (refreshDisabled) return false;
 	if (refreshSessionPromise) return refreshSessionPromise;
 
 	refreshSessionPromise = (async () => {
+		const generation = refreshGeneration;
 		const session = restoreSession(localStorage);
 		if (!session?.refreshToken) return false;
 
@@ -82,8 +86,11 @@ async function refreshSession(fetcher: Fetcher): Promise<boolean> {
 
 			const tokens = (await response.json()) as OAuth2TokenResponse;
 			if (!tokens.access_token) return false;
+			if (refreshDisabled || generation !== refreshGeneration) return false;
+			const currentSession = restoreSession(localStorage);
+			if (!currentSession || currentSession.refreshToken !== session.refreshToken) return false;
 			persistSession(localStorage, {
-				...session,
+				...currentSession,
 				accessToken: tokens.access_token,
 				refreshToken: tokens.refresh_token || session.refreshToken,
 				accessTokenExpiresAt:
@@ -102,6 +109,16 @@ async function refreshSession(fetcher: Fetcher): Promise<boolean> {
 	} finally {
 		refreshSessionPromise = null;
 	}
+}
+
+export function disableWikiForgeSessionRefresh() {
+	refreshDisabled = true;
+	refreshGeneration += 1;
+}
+
+export function enableWikiForgeSessionRefresh() {
+	refreshDisabled = false;
+	refreshGeneration += 1;
 }
 
 function redirectToLogin() {

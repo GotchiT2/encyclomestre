@@ -16,6 +16,7 @@ export interface User {
 	imagePageId?: number | null;
 	nsfwEnabled?: boolean;
 	safeWords?: string[];
+	money?: number;
 	bio?: string | null;
 	role: UserRole;
 	preferences?: UserPreferences;

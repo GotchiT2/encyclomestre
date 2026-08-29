@@ -313,3 +313,13 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Afficher les wishlists publiques et gérer le blocage des utilisateurs — `feat(social): expose public wishlists and user blocking`
 - [x] Ajouter les rails de cartes contextuels et auditer le reflow mobile — `refactor(ui): add responsive contextual card rails`
 - [x] Comparer les quantités possédées dans les sélecteurs d’échange, clarifier la mise en vente et restaurer le survol complet des cartes — `feat(cards): show cross-collection ownership`
+
+## 10. Migration vers le Swagger WikiForge enrichi (non commitée)
+
+- [x] Centraliser les identifiants, erreurs codifiées, dates UTC, images directes, `nsfw` et tailles de pages déduites.
+- [x] Étendre la collection aux wishlists, au tag exclusif `-1`, aux collections et tags d’amis et aux réponses `CardDTO` des mutations.
+- [x] Migrer la messagerie vers les conversations et messages par interlocuteur, avec curseurs, lecture implicite et événements d’échange.
+- [x] Étendre les échanges aux montants, contre-offres, cartes ajoutées/retirées, rôles courants et rafraîchissements associés.
+- [x] Ajouter les illustrations de wishlist, l’avatar `/me`, le solde d’accueil, la sécurité `logout-all` et le cas booster épuisé.
+- [x] Mettre à jour les mocks et tests ; aucun commit ni push avant confirmation.
+- [x] Publier la migration Swagger, les flux d’échange compacts et leurs validations — `feat(api): complete WikiForge Swagger migration`

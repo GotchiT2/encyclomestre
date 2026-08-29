@@ -1,32 +1,40 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import { Dialog } from 'bits-ui';
-	import {
-		getConversationMessages,
-		getConversations,
-		markConversationRead,
-		sendMessage,
-		setMessageReaction
-	} from '$lib/api';
+	import { getConversationMessages, getConversations, sendMessage } from '$lib/api';
 	import ConversationList from './conversation-list.svelte';
 	import MessageThread from './message-thread.svelte';
-	import { _ } from '$lib/i18n';
-	import { updateMessageReaction } from '$lib/messages/reactions';
 	import type { Conversation, MessageRecord } from '$lib/types';
+	import type { getFriends as GetFriends } from '$lib/api/users';
 
-	let { userId, initialConversationId = '' }: { userId: string; initialConversationId?: string } =
-		$props();
+	const defaultLoadFriends: typeof GetFriends = async (...args) =>
+		(await import('$lib/api/users')).getFriends(...args);
+
+	let {
+		userId,
+		initialUserId = '',
+		loadFriends = defaultLoadFriends
+	}: {
+		userId: string;
+		initialUserId?: string;
+		loadFriends?: typeof GetFriends;
+	} = $props();
 
 	let conversations = $state<Conversation[]>([]);
 	let selectedConversationId = $state('');
-	let loadedConversationId = $state('');
 	let thread = $state<MessageRecord[]>([]);
 	let query = $state('');
 	let draft = $state('');
 	let loading = $state(true);
 	let threadLoading = $state(false);
 	let sending = $state(false);
-	let replyToMessageId = $state<string | null>(null);
+	let loadingMoreConversations = $state(false);
+	let loadingOlderMessages = $state(false);
+	let conversationsCursor = $state<string | null>(null);
+	let messagesCursor = $state<string | null>(null);
+	let hasMoreConversations = $state(false);
+	let hasOlderMessages = $state(false);
+	let acceptedFriendIds = $state<string[]>([]);
 	let mobileViewport = $state(false);
 	let mobileThreadOpen = $state(false);
 	let requestSequence = 0;
@@ -35,22 +43,16 @@
 	const selectedConversation = $derived(
 		conversations.find((conversation) => conversation.id === selectedConversationId) ?? null
 	);
+	const canSend = $derived(
+		Boolean(selectedConversation?.userId && acceptedFriendIds.includes(selectedConversation.userId))
+	);
 
 	onMount(() => {
 		media = window.matchMedia('(max-width: 1023px)');
-		const updateViewport = () => {
-			mobileViewport = media?.matches ?? false;
-			if (
-				!mobileViewport &&
-				selectedConversationId &&
-				loadedConversationId !== selectedConversationId
-			) {
-				void loadThread(selectedConversationId);
-			}
-		};
+		const updateViewport = () => (mobileViewport = media?.matches ?? false);
 		updateViewport();
 		media.addEventListener('change', updateViewport);
-		void loadConversations();
+		void loadInitialData();
 		return () => media?.removeEventListener('change', updateViewport);
 	});
 
@@ -58,26 +60,21 @@
 		requestSequence += 1;
 	});
 
-	function requestedConversation(items: Conversation[]) {
-		if (!initialConversationId) return null;
-		const participantId = initialConversationId.replace(/^conversation-/, '');
-		return (
-			items.find((conversation) => conversation.id === initialConversationId) ??
-			items.find((conversation) => conversation.participantIds.includes(participantId)) ??
-			null
-		);
-	}
-
-	async function loadConversations() {
+	async function loadInitialData() {
 		loading = true;
 		try {
-			conversations = await getConversations(userId);
-			const requested = requestedConversation(conversations);
-			const current = conversations.find(
-				(conversation) => conversation.id === selectedConversationId
-			);
-			selectedConversationId = requested?.id ?? current?.id ?? conversations[0]?.id ?? '';
-			if (selectedConversationId && (!mobileViewport || Boolean(requested))) {
+			const [page, friendships] = await Promise.all([getConversations(), loadFriends()]);
+			conversations = page.items;
+			conversationsCursor = page.nextCursor;
+			hasMoreConversations = page.hasNext;
+			acceptedFriendIds = friendships
+				.filter((friendship) => friendship.status === 'accepted')
+				.map((friendship) => friendship.user.id);
+			const requested = initialUserId
+				? conversations.find((conversation) => conversation.userId === initialUserId)
+				: null;
+			selectedConversationId = requested?.id ?? conversations[0]?.id ?? '';
+			if (selectedConversationId && (!mobileViewport || requested)) {
 				await loadThread(selectedConversationId);
 				mobileThreadOpen = mobileViewport && Boolean(requested);
 			}
@@ -86,60 +83,77 @@
 		}
 	}
 
+	async function loadMoreConversations() {
+		if (!hasMoreConversations || loadingMoreConversations) return;
+		loadingMoreConversations = true;
+		try {
+			const page = await getConversations(conversationsCursor);
+			const known = new Set(conversations.map((conversation) => conversation.id));
+			conversations = [...conversations, ...page.items.filter((item) => !known.has(item.id))];
+			conversationsCursor = page.nextCursor;
+			hasMoreConversations = page.hasNext;
+		} finally {
+			loadingMoreConversations = false;
+		}
+	}
+
 	async function loadThread(conversationId: string) {
+		const conversation = conversations.find((item) => item.id === conversationId);
+		if (!conversation) return;
 		const sequence = ++requestSequence;
 		threadLoading = true;
 		try {
-			const messages = await getConversationMessages(conversationId);
+			if (!conversation.userId) return;
+			const page = await getConversationMessages(conversation.userId);
 			if (sequence !== requestSequence || selectedConversationId !== conversationId) return;
-			thread = messages;
-			loadedConversationId = conversationId;
-			await markConversationRead(conversationId);
-			conversations = conversations.map((conversation) =>
-				conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation
+			thread = page.items.toReversed();
+			messagesCursor = page.nextCursor;
+			hasOlderMessages = page.hasNext;
+			conversations = conversations.map((item) =>
+				item.id === conversationId ? { ...item, unreadCount: 0 } : item
 			);
 		} finally {
 			if (sequence === requestSequence) threadLoading = false;
 		}
 	}
 
+	async function loadOlderMessages() {
+		if (!selectedConversation?.userId || !hasOlderMessages || loadingOlderMessages) return;
+		loadingOlderMessages = true;
+		try {
+			const page = await getConversationMessages(selectedConversation.userId, messagesCursor);
+			const known = new Set(thread.map((message) => message.id));
+			thread = [...page.items.toReversed().filter((message) => !known.has(message.id)), ...thread];
+			messagesCursor = page.nextCursor;
+			hasOlderMessages = page.hasNext;
+		} finally {
+			loadingOlderMessages = false;
+		}
+	}
+
 	async function selectConversation(conversationId: string) {
 		selectedConversationId = conversationId;
-		replyToMessageId = null;
 		if (mobileViewport) mobileThreadOpen = true;
-		if (loadedConversationId !== conversationId) {
-			thread = [];
-			await loadThread(conversationId);
-		}
+		thread = [];
+		await loadThread(conversationId);
 	}
 
 	async function submit() {
-		if (!selectedConversationId || !draft.trim() || sending) return;
+		if (
+			!selectedConversation?.userId ||
+			!canSend ||
+			!draft.trim() ||
+			draft.length > 2_000 ||
+			sending
+		)
+			return;
 		sending = true;
 		try {
-			const message = await sendMessage(selectedConversationId, {
-				senderId: userId,
-				content: draft,
-				replyToMessageId
-			});
+			const message = await sendMessage(selectedConversation.userId, { content: draft });
 			thread = [...thread, message];
 			draft = '';
-			replyToMessageId = null;
-			conversations = await getConversations(userId);
 		} finally {
 			sending = false;
-		}
-	}
-
-	async function react(message: MessageRecord, emoji: string) {
-		const current = message.reactions.find((reaction) => reaction.emoji === emoji);
-		const active = !(current?.userIds.includes(userId) ?? false);
-		const previousThread = thread;
-		thread = updateMessageReaction(thread, message.id, emoji, userId, active);
-		try {
-			await setMessageReaction(message.id, emoji, active);
-		} catch {
-			thread = previousThread;
 		}
 	}
 </script>
@@ -154,6 +168,9 @@
 		selectedId={selectedConversationId}
 		bind:query
 		{loading}
+		hasMore={hasMoreConversations}
+		loadingMore={loadingMoreConversations}
+		onLoadMore={() => void loadMoreConversations()}
 		onSelect={(id) => void selectConversation(id)}
 	/>
 	<div class="hidden min-h-0 lg:block">
@@ -164,15 +181,13 @@
 				{userId}
 				loading={threadLoading}
 				{sending}
+				{canSend}
+				hasOlder={hasOlderMessages}
+				loadingOlder={loadingOlderMessages}
 				bind:draft
-				bind:replyToMessageId
+				onLoadOlder={() => void loadOlderMessages()}
 				onSubmit={() => void submit()}
-				onReact={(message, emoji) => void react(message, emoji)}
 			/>
-		{:else}
-			<div class="grid h-full place-items-center p-6 text-muted-foreground">
-				{$_('messages.empty')}
-			</div>
 		{/if}
 	</div>
 </div>
@@ -182,8 +197,7 @@
 		<Dialog.Portal>
 			<Dialog.Overlay class="fixed inset-0 z-[100] bg-black/80 lg:hidden" />
 			<Dialog.Content
-				preventScroll={false}
-				class="fixed inset-0 z-[101] h-dvh w-full overflow-hidden bg-card text-foreground outline-none lg:hidden"
+				class="fixed inset-0 z-[101] h-dvh w-full overflow-hidden bg-card lg:hidden"
 				data-testid="mobile-message-thread"
 			>
 				<Dialog.Title class="sr-only">{selectedConversation.title}</Dialog.Title>
@@ -193,11 +207,13 @@
 					{userId}
 					loading={threadLoading}
 					{sending}
+					{canSend}
+					hasOlder={hasOlderMessages}
+					loadingOlder={loadingOlderMessages}
 					bind:draft
-					bind:replyToMessageId
 					onClose={() => (mobileThreadOpen = false)}
+					onLoadOlder={() => void loadOlderMessages()}
 					onSubmit={() => void submit()}
-					onReact={(message, emoji) => void react(message, emoji)}
 				/>
 			</Dialog.Content>
 		</Dialog.Portal>

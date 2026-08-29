@@ -7,6 +7,7 @@ export interface CollectionFilters {
 	tagFilterIds: string[];
 	duplicate: CollectionBooleanFilter;
 	protected: CollectionBooleanFilter;
+	wishlistOwnerId?: string;
 }
 
 export function effectiveCollectionQuery(query: string): string | undefined {
@@ -23,6 +24,7 @@ export function buildCollectionFilterTarget(filters: CollectionFilters) {
 	filters.tagFilterIds.forEach((tagId) => parameters.append('tag', tagId));
 	if (filters.duplicate !== 'all') parameters.set('duplicate', filters.duplicate);
 	if (filters.protected !== 'all') parameters.set('protected', filters.protected);
+	if (filters.wishlistOwnerId) parameters.set('wishlist', filters.wishlistOwnerId);
 	const queryString = parameters.toString();
 	return queryString ? `/collection?${queryString}` : '/collection';
 }

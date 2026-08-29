@@ -30,7 +30,7 @@ describe('apiRequest en mode mock', () => {
 		expect(session).toMatchObject({
 			accessToken: 'mock-access-token-demo-user',
 			refreshToken: 'mock-refresh-token-demo-user',
-			user: { id: 'demo-user' }
+			user: { id: '1' }
 		});
 		expect(fetcher).not.toHaveBeenCalled();
 	});

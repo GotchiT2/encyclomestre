@@ -34,6 +34,12 @@
 	}
 
 	function selectionChanged() {
+		if (untaggedValue && values.includes(untaggedValue) && values.length > 1) {
+			const previousHadUntagged = values.length > 1 && values.slice(0, -1).includes(untaggedValue);
+			values = previousHadUntagged
+				? values.filter((value) => value !== untaggedValue)
+				: [untaggedValue];
+		}
 		onChange?.();
 	}
 </script>

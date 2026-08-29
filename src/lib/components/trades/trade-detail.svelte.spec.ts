@@ -36,8 +36,7 @@ const offer: TradeOffer = {
 	recipient: { id: 'current-user', username: 'test', displayName: 'Test' },
 	offeredCardIds: ['offered-user-card'],
 	requestedCardIds: ['requested-user-card'],
-	offeredCredits: 0,
-	requestedCredits: 40,
+	message: 'Une proposition précise',
 	status: 'pending',
 	createdAt: '2026-07-15T17:36:16Z',
 	updatedAt: '2026-07-15T17:36:16Z'
@@ -60,6 +59,7 @@ describe('TradeDetail', () => {
 		});
 
 		await expect.element(page.getByText('Claire Trade → Test')).toBeVisible();
+		await expect.element(page.getByText('0 pièces').first()).toBeVisible();
 		expect(document.querySelectorAll('[data-testid="card-tile"]')).toHaveLength(2);
 		await expect.element(page.getByRole('button', { name: 'Accepter' })).toBeVisible();
 		await expect.element(page.getByRole('button', { name: 'Fermer' })).toBeVisible();

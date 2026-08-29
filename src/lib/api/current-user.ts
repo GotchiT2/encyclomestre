@@ -1,4 +1,5 @@
 import type { User, UserRole } from '$lib/types';
+import { wikiForgeUtcDate } from './wikiforge-contract';
 
 export interface OAuthCurrentUserResponse {
 	id: string | number;
@@ -9,6 +10,7 @@ export interface OAuthCurrentUserResponse {
 	image?: string | null;
 	nsfw?: boolean;
 	safeWords?: string[];
+	money?: number;
 	createdAt: string;
 }
 
@@ -29,8 +31,9 @@ export function toCurrentUser(profile: OAuthCurrentUserResponse): User {
 		imagePageId: profile.imagePageId ?? null,
 		nsfwEnabled: Boolean(profile.nsfw),
 		safeWords: profile.safeWords ?? [],
+		...(typeof profile.money === 'number' ? { money: profile.money } : {}),
 		role: toUserRole(profile.roles),
-		createdAt: profile.createdAt,
-		updatedAt: profile.createdAt
+		createdAt: wikiForgeUtcDate(profile.createdAt).toISOString(),
+		updatedAt: wikiForgeUtcDate(profile.createdAt).toISOString()
 	};
 }

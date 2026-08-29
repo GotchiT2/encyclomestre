@@ -157,21 +157,35 @@ export const updateWikiForgeTag = (
 export const deleteWikiForgeTag = (id: string, options?: RequestOptions) =>
 	apiRequest<void>(`/tags/${numericWikiForgeId(id)}`, { ...tagOptions(options), method: 'DELETE' });
 export const applyWikiForgeTag = (tagId: string, userCardIds: string[], options?: RequestOptions) =>
-	apiRequest<unknown[]>(`/collection/tags/${numericWikiForgeId(tagId)}`, {
-		...tagOptions(options),
-		method: 'PUT',
-		body: userCardIds.map(numericWikiForgeId)
-	});
+	apiRequest<import('./collection').WikiForgeCollectionCardDto[]>(
+		`/collection/tags/${numericWikiForgeId(tagId)}`,
+		{
+			...tagOptions(options),
+			method: 'PUT',
+			body: userCardIds.map(numericWikiForgeId)
+		}
+	).then((cards) =>
+		Promise.all([import('./collection')]).then(([module]) =>
+			cards.map(module.toWikiForgeCollectionCard)
+		)
+	);
 export const removeWikiForgeTag = (
 	tagId: string,
 	userCardIds: string[],
 	options?: RequestOptions
 ) =>
-	apiRequest<unknown[]>(`/collection/tags/${numericWikiForgeId(tagId)}`, {
-		...tagOptions(options),
-		method: 'DELETE',
-		body: userCardIds.map(numericWikiForgeId)
-	});
+	apiRequest<import('./collection').WikiForgeCollectionCardDto[]>(
+		`/collection/tags/${numericWikiForgeId(tagId)}`,
+		{
+			...tagOptions(options),
+			method: 'DELETE',
+			body: userCardIds.map(numericWikiForgeId)
+		}
+	).then((cards) =>
+		Promise.all([import('./collection')]).then(([module]) =>
+			cards.map(module.toWikiForgeCollectionCard)
+		)
+	);
 
 interface DashboardResponse extends Omit<DashboardData, 'recentAcquisitions'> {
 	recentAcquisitions: Array<{

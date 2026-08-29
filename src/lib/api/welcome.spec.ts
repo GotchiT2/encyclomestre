@@ -18,12 +18,14 @@ describe('WikiForge welcome API', () => {
 				]
 			},
 			pendingTrades: 0,
-			pendingAuction: 0
+			pendingAuction: 0,
+			money: 350
 		});
 
 		await expect(getWikiForgeWelcome()).resolves.toMatchObject({
 			collection: { uniqueCards: 12 },
 			boosterStatus: { availableBoosters: 2 },
+			money: 350,
 			recentAcquisitions: [
 				expect.objectContaining({ id: '8', ownedCount: 3, rarityCounts: { SR: 3 } })
 			]

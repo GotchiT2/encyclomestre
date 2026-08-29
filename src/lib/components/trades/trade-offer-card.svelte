@@ -20,7 +20,7 @@
 		offer: TradeOffer;
 		cards: TradeCardDetail[];
 		currentUserId: string;
-		onRespond: (id: string, status: 'accepted' | 'rejected') => void;
+		onRespond: (id: string, status: 'accepted' | 'declined') => void;
 		onView: (offer: TradeOffer) => void;
 		onMessage: (participantId: string) => void;
 		onCounterOffer: (offer: TradeOffer) => void;
@@ -36,10 +36,11 @@
 	);
 	const offeredCards = $derived(cards.filter((entry) => entry.side === 'offered'));
 	const requestedCards = $derived(cards.filter((entry) => entry.side === 'requested'));
+	const isOpen = $derived(offer.status === 'pending' || offer.status === 'countered');
 	const statusClass = $derived(
 		offer.status === 'accepted'
 			? 'text-emerald-400'
-			: offer.status === 'rejected' || offer.status === 'cancelled'
+			: offer.status === 'declined' || offer.status === 'cancelled' || offer.status === 'expired'
 				? 'text-destructive'
 				: 'text-primary'
 	);
@@ -48,6 +49,13 @@
 		return new Date(value).toLocaleDateString('fr-FR', {
 			day: '2-digit',
 			month: 'short'
+		});
+	}
+
+	function formattedDateTime(value: string) {
+		return new Date(value).toLocaleString('fr-FR', {
+			dateStyle: 'short',
+			timeStyle: 'short'
 		});
 	}
 </script>
@@ -84,6 +92,16 @@
 			</button>
 		</div>
 	</header>
+	{#if offer.message}
+		<p class="mt-3 border-l-2 border-primary/35 pl-3 text-sm italic text-muted-foreground">
+			{offer.message}
+		</p>
+	{/if}
+	{#if isOpen && offer.expiresAt}
+		<p class="mt-2 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+			{$_('trades.expires_on', { values: { date: formattedDateTime(offer.expiresAt) } })}
+		</p>
+	{/if}
 
 	<button
 		type="button"
@@ -96,6 +114,9 @@
 				{$_('trades.user_offers', { values: { user: initiatorName } })}
 			</p>
 			<div class="mt-2 flex min-h-7 flex-wrap content-start gap-x-4 gap-y-2">
+				<strong class="font-mono text-xs text-primary">
+					{$_('trades.money_amount', { values: { amount: offer.offeredMoney ?? 0 } })}
+				</strong>
 				{#each offeredCards as entry (entry.userCardId)}
 					<span
 						class="max-w-full truncate font-mono text-[10px] font-bold sm:text-xs"
@@ -104,19 +125,11 @@
 						{entry.card.rarityInitials} · {entry.card.title}
 					</span>
 				{/each}
-				{#if offer.offeredCredits > 0}
-					<span
-						class="border border-primary/35 bg-primary/12 px-2 py-0.5 font-mono text-[10px] text-primary"
-					>
-						{offer.offeredCredits}
-						{$_('trades.credit_chip')}
-					</span>
-				{/if}
 				{#if !offeredCards.length && offer.offeredCardIds.length}
 					<span class="font-mono text-[10px] uppercase text-muted-foreground">
 						{$_('trades.cardCount', { values: { count: offer.offeredCardIds.length } })}
 					</span>
-				{:else if !offeredCards.length && offer.offeredCredits <= 0}
+				{:else if !offeredCards.length}
 					<span class="font-mono text-[10px] uppercase text-muted-foreground"
 						>{$_('trades.nothing')}</span
 					>
@@ -133,6 +146,9 @@
 				{$_('trades.in_exchange')}
 			</p>
 			<div class="mt-2 flex min-h-7 flex-wrap content-start gap-x-4 gap-y-2">
+				<strong class="font-mono text-xs text-primary">
+					{$_('trades.money_amount', { values: { amount: offer.requestedMoney ?? 0 } })}
+				</strong>
 				{#each requestedCards as entry (entry.userCardId)}
 					<span
 						class="max-w-full truncate font-mono text-[10px] font-bold sm:text-xs"
@@ -141,19 +157,11 @@
 						{entry.card.rarityInitials} · {entry.card.title}
 					</span>
 				{/each}
-				{#if offer.requestedCredits > 0}
-					<span
-						class="border border-primary/35 bg-primary/12 px-2 py-0.5 font-mono text-[10px] text-primary"
-					>
-						{offer.requestedCredits}
-						{$_('trades.credit_chip')}
-					</span>
-				{/if}
 				{#if !requestedCards.length && offer.requestedCardIds.length}
 					<span class="font-mono text-[10px] uppercase text-muted-foreground">
 						{$_('trades.cardCount', { values: { count: offer.requestedCardIds.length } })}
 					</span>
-				{:else if !requestedCards.length && offer.requestedCredits <= 0}
+				{:else if !requestedCards.length}
 					<span class="font-mono text-[10px] uppercase text-muted-foreground"
 						>{$_('trades.nothing')}</span
 					>
@@ -162,7 +170,7 @@
 		</section>
 	</button>
 
-	{#if isIncoming && offer.status === 'pending'}
+	{#if isIncoming && isOpen}
 		<footer
 			class="mt-4 grid grid-cols-1 gap-2 border-t border-primary/10 pt-3 sm:flex sm:flex-wrap"
 		>
@@ -183,7 +191,7 @@
 				size="sm"
 				variant="destructive"
 				class="w-full sm:w-auto"
-				onclick={() => onRespond(offer.id, 'rejected')}
+				onclick={() => onRespond(offer.id, 'declined')}
 			>
 				<XIcon class="size-4" />
 				{$_('trades.reject')}

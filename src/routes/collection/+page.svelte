@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { currentSession } from '$lib/auth/session';
 	import CardDetailModal from '$lib/components/cards/card-detail-modal.svelte';
 	import CardGrid from '$lib/components/collection/card-grid.svelte';
 	import CollectionResultSummary from '$lib/components/collection/collection-result-summary.svelte';
@@ -18,6 +19,7 @@
 		addWishlistRegistryCard,
 		applyWikiForgeTag,
 		getWikiForgeCollectionPage,
+		getFriends,
 		getWishlists,
 		nextCollectionPosition,
 		protectWikiForgeCard,
@@ -33,6 +35,7 @@
 		CollectionSort,
 		CollectionTag,
 		CollectionTagAssignments,
+		User,
 		WishlistRegistrySummary
 	} from '$lib/types';
 	import { onMount } from 'svelte';
@@ -45,6 +48,8 @@
 	let tagFilterIds = $state<string[]>([]);
 	let duplicate = $state<CollectionBooleanFilter>('all');
 	let protection = $state<CollectionBooleanFilter>('all');
+	let wishlistOwnerId = $state('');
+	let wishlistOwners = $state<User[]>([]);
 	let cards = $state<CardRecord[]>([]);
 	let tags = $state<CollectionTag[]>([]);
 	let assignments = $state<CollectionTagAssignments>({});
@@ -79,7 +84,8 @@
 			selectedRarities,
 			tagFilterIds,
 			duplicate,
-			protection
+			protection,
+			wishlistOwnerId
 		])
 	);
 
@@ -91,6 +97,7 @@
 			tagIds: tagFilterIds,
 			duplicate,
 			protected: protection,
+			wishlistOwnerId,
 			page: position?.page,
 			cursor: position?.cursor ?? undefined
 		};
@@ -127,6 +134,7 @@
 		tagFilterIds = data.filters.tagFilterIds;
 		duplicate = data.filters.duplicate;
 		protection = data.filters.protection;
+		wishlistOwnerId = data.filters.wishlistOwnerId;
 		const dependencies = Promise.allSettled([data.tags, getWishlists()]);
 		try {
 			const collection = await data.collection;
@@ -141,6 +149,14 @@
 		const [tagsResult, wishlistsResult] = await dependencies;
 		if (tagsResult.status === 'fulfilled') tags = tagsResult.value;
 		if (wishlistsResult.status === 'fulfilled') wishlists = wishlistsResult.value;
+		const sessionUser = $currentSession?.user;
+		const friendships = await getFriends().catch(() => []);
+		wishlistOwners = [
+			...(sessionUser ? [sessionUser] : []),
+			...friendships
+				.filter((friendship) => friendship.status === 'accepted')
+				.map((friendship) => friendship.user)
+		];
 	});
 
 	$effect(() => {
@@ -166,7 +182,8 @@
 							selectedRarities,
 							tagFilterIds,
 							duplicate,
-							protected: protection
+							protected: protection,
+							wishlistOwnerId
 						}) as '/'
 					),
 					{}
@@ -222,11 +239,12 @@
 
 	async function applyTagToSelection() {
 		if (!bulkTagIds.length || !selectedCardIds.length) return;
-		await Promise.all(bulkTagIds.map((tagId) => applyWikiForgeTag(tagId, selectedCardIds)));
-		for (const cardId of selectedCardIds) {
-			assignments[cardId] = [...new Set([...(assignments[cardId] ?? []), ...bulkTagIds])];
-		}
-		assignments = { ...assignments };
+		const responses = await Promise.all(
+			bulkTagIds.map((tagId) => applyWikiForgeTag(tagId, selectedCardIds))
+		);
+		const updatedCards = responses.flat();
+		cards = mergeCards(cards, updatedCards);
+		registerCards(updatedCards);
 		selectedCardIds = [];
 	}
 
@@ -271,6 +289,7 @@
 		tagFilterIds = [];
 		duplicate = 'all';
 		protection = 'all';
+		wishlistOwnerId = '';
 	}
 </script>
 
@@ -287,7 +306,10 @@
 		bind:tagFilterIds
 		bind:duplicate
 		bind:protected={protection}
+		bind:wishlistOwnerId
+		{wishlistOwners}
 		{tags}
+		untaggedOption="-1"
 		canonical
 		onOpenTagEditor={() => (isTagEditorOpen = true)}
 		onClear={clearFilters}

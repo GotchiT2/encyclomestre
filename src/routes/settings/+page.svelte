@@ -4,25 +4,38 @@
 	import { resolve } from '$app/paths';
 	import { _ } from '$lib/i18n';
 	import { clearSession, currentSession, persistSession } from '$lib/auth/session';
-	import { deleteUser, getCurrentUser, logout, logoutAll, updateWikiForgeMe } from '$lib/api';
+	import {
+		deleteUser,
+		getCurrentUser,
+		getWikiForgePublicPages,
+		logout,
+		logoutAll,
+		toPublicPage,
+		updateWikiForgeMe
+	} from '$lib/api';
 	import { setNsfwFilterSettings } from '$lib/content/nsfw-filter';
 	import SettingsPreferences from '$lib/components/settings/settings-preferences.svelte';
 	import SettingsAccount from '$lib/components/settings/settings-account.svelte';
 	import CensoredKeywords from '$lib/components/settings/censored-keywords.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import type { ProfileSettings } from '$lib/types';
+	import WishlistPicker from '$lib/components/wishlist/wishlist-picker.svelte';
+	import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
+	import type { CardQuery } from '$lib/api';
+	import type { CardRecord, ProfileSettings } from '$lib/types';
 
 	let profile = $state<ProfileSettings | null>(null);
 	let loading = $state(true);
 	let userId = $state('demo-user');
+	let avatarPickerOpen = $state(false);
+	let avatarImageUrl = $state<string | null>(null);
 
 	onMount(async () => {
 		userId = $currentSession?.user.id ?? 'demo-user';
 		const user = await getCurrentUser();
 		profile = {
 			username: user.username,
-			avatarCardId: null,
+			avatarCardId: user.imagePageId == null ? null : String(user.imagePageId),
 			accentColor: '#feb823',
 			bioTags: [],
 			showcases: [],
@@ -30,6 +43,7 @@
 			nsfwEnabled: Boolean(user.nsfwEnabled),
 			censoredKeywords: user.safeWords ?? []
 		};
+		avatarImageUrl = user.avatarUrl ?? null;
 		setNsfwFilterSettings({ enabled: profile.nsfwEnabled, keywords: profile.censoredKeywords });
 		loading = false;
 	});
@@ -37,12 +51,32 @@
 		if (!profile) return;
 		const user = await updateWikiForgeMe({
 			name: profile.username.trim(),
+			...(profile.avatarCardId ? { imagePageId: Number(profile.avatarCardId) } : {}),
 			nsfw: profile.nsfwEnabled,
 			safeWords: profile.censoredKeywords
 		});
 		setNsfwFilterSettings({ enabled: user.nsfwEnabled, keywords: user.safeWords });
 		const session = $currentSession;
 		if (session) persistSession(localStorage, { ...session, user });
+	}
+
+	async function loadAvatarCards(cardQuery: CardQuery) {
+		return toPublicPage(
+			await getWikiForgePublicPages({
+				page: Math.max(0, (cardQuery.page ?? 1) - 1),
+				q: cardQuery.query,
+				rarities: (cardQuery.rarities ?? []).map((rarity) => cardRarityCodeByName[rarity]),
+				sortBy: cardQuery.sortBy,
+				sortDirection: cardQuery.sortDirection
+			})
+		);
+	}
+
+	function selectAvatar(card: CardRecord) {
+		if (!profile) return;
+		profile.avatarCardId = String(card.baseCardId ?? card.id);
+		avatarImageUrl = card.imageUrl;
+		avatarPickerOpen = false;
 	}
 	async function logoutFromSettings() {
 		try {
@@ -82,9 +116,18 @@
 			bind:nsfwEnabled={profile.nsfwEnabled}
 		/><CensoredKeywords bind:keywords={profile.censoredKeywords} /><SettingsAccount
 			bind:username={profile.username}
+			avatarUrl={avatarImageUrl}
+			onChooseAvatar={() => (avatarPickerOpen = true)}
 			onLogout={logoutFromSettings}
 			onLogoutAll={logoutFromAllDevices}
 			onDelete={deleteAccount}
 		/>
 	{/if}
 </section>
+
+<WishlistPicker
+	bind:open={avatarPickerOpen}
+	existingCardIds={profile?.avatarCardId ? [profile.avatarCardId] : []}
+	loadCards={loadAvatarCards}
+	onSelect={selectAvatar}
+/>

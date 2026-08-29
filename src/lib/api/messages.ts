@@ -1,56 +1,135 @@
 import { apiRequest, type RequestOptions } from './client';
-import type { Conversation, MessageRecord } from '$lib/types';
+import { wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
+import type { Conversation, CursorPage, MessageRecord, TradeMessageEvent } from '$lib/types';
 
-const normalizeMessage = (message: MessageRecord): MessageRecord => ({
-	...message,
-	reactions: message.reactions ?? []
-});
+interface WikiForgeSimpleUserDto {
+	id: number;
+	name: string;
+	image?: string | null;
+}
 
-export const getConversations = (_userId?: string, options?: RequestOptions) =>
-	apiRequest<Conversation[]>('/api/conversations', options);
+interface WikiForgeMessageDto {
+	id: number;
+	conversationId: number;
+	fromUserId: number;
+	type: 'TEXT' | 'TRADE';
+	content?: string | null;
+	meta?: string | null;
+	creationDate: string;
+}
 
-export const getOrCreateDirectConversation = (participantId: string, options?: RequestOptions) =>
-	apiRequest<Conversation>('/api/conversations/direct', {
-		...options,
-		method: 'POST',
-		body: { participantId }
-	});
+interface WikiForgeConversationDto {
+	id: number;
+	user: WikiForgeSimpleUserDto;
+	lastMessage?: WikiForgeMessageDto | null;
+	unread?: number;
+}
 
-export const getConversationMessages = async (id: string, options?: RequestOptions) =>
-	(
-		await apiRequest<MessageRecord[]>(
-			`/api/conversations/${encodeURIComponent(id)}/messages`,
-			options
-		)
-	).map(normalizeMessage);
+interface WikiForgeCursorResult<T> {
+	results?: T[];
+	nextCursor?: string | null;
+	hasNext?: boolean;
+}
 
-export const sendMessage = (
-	id: string,
-	input: Pick<MessageRecord, 'content'> & {
-		senderId?: string;
-		replyToMessageId?: string | null;
-	},
+function parseTradeEvent(meta?: string | null): TradeMessageEvent | undefined {
+	if (!meta) return undefined;
+	try {
+		const value: unknown = JSON.parse(meta);
+		if (!value || typeof value !== 'object') return undefined;
+		const tradeId = Reflect.get(value, 'tradeId');
+		const status = Reflect.get(value, 'status');
+		if (
+			(typeof tradeId !== 'number' && typeof tradeId !== 'string') ||
+			typeof status !== 'string'
+		) {
+			return undefined;
+		}
+		return { tradeId: String(tradeId), status };
+	} catch {
+		return undefined;
+	}
+}
+
+export function toWikiForgeMessage(message: WikiForgeMessageDto): MessageRecord {
+	return {
+		id: String(message.id),
+		conversationId: String(message.conversationId),
+		senderId: String(message.fromUserId),
+		type: message.type === 'TRADE' ? 'trade' : 'text',
+		content: message.content ?? '',
+		createdAt: wikiForgeUtcDate(message.creationDate).toISOString(),
+		readAt: null,
+		reactions: [],
+		...(message.type === 'TRADE' ? { tradeEvent: parseTradeEvent(message.meta) } : {})
+	};
+}
+
+function toWikiForgeConversation(conversation: WikiForgeConversationDto): Conversation {
+	const lastMessage = conversation.lastMessage;
+	return {
+		id: String(conversation.id),
+		userId: String(conversation.user.id),
+		kind: 'direct',
+		participantIds: [String(conversation.user.id)],
+		title: conversation.user.name,
+		avatarUrl: conversation.user.image?.trim() || null,
+		preview: lastMessage?.type === 'TRADE' ? '' : (lastMessage?.content ?? ''),
+		previewType: lastMessage?.type === 'TRADE' ? 'trade' : lastMessage ? 'text' : null,
+		unreadCount: conversation.unread ?? 0,
+		updatedAt: lastMessage
+			? wikiForgeUtcDate(lastMessage.creationDate).toISOString()
+			: new Date(0).toISOString()
+	};
+}
+
+function cursorPath(path: string, cursor?: string | null): string {
+	return cursor ? `${path}?${new URLSearchParams({ cursor })}` : path;
+}
+
+export const getConversations = async (
+	cursor?: string | null,
 	options?: RequestOptions
-) =>
-	apiRequest<MessageRecord>(`/api/conversations/${encodeURIComponent(id)}/messages`, {
-		...options,
-		method: 'POST',
-		body: { content: input.content, replyToMessageId: input.replyToMessageId ?? null }
-	}).then(normalizeMessage);
-
-export const markConversationRead = (id: string, options?: RequestOptions) =>
-	apiRequest<void>(`/api/conversations/${encodeURIComponent(id)}/read`, {
-		...options,
-		method: 'PATCH'
-	});
-
-export const setMessageReaction = (
-	id: string,
-	emoji: string,
-	active: boolean,
-	options?: RequestOptions
-) =>
-	apiRequest<void>(
-		`/api/messages/${encodeURIComponent(id)}/reactions/${encodeURIComponent(emoji)}`,
-		{ ...options, method: active ? 'PUT' : 'DELETE' }
+): Promise<CursorPage<Conversation>> => {
+	const response = await apiRequest<WikiForgeCursorResult<WikiForgeConversationDto>>(
+		cursorPath('/conversations', cursor),
+		{ ...options, apiTarget: 'wikiforge' }
 	);
+	return {
+		items: (response.results ?? []).map(toWikiForgeConversation),
+		nextCursor: response.nextCursor ?? null,
+		hasNext: response.hasNext ?? false
+	};
+};
+
+export const getConversationMessages = async (
+	userId: string,
+	cursor?: string | null,
+	options?: RequestOptions
+): Promise<CursorPage<MessageRecord>> => {
+	const path = `/conversations/${wikiForgeNumericId(userId, 'utilisateur')}/messages`;
+	const response = await apiRequest<WikiForgeCursorResult<WikiForgeMessageDto>>(
+		cursorPath(path, cursor),
+		{ ...options, apiTarget: 'wikiforge' }
+	);
+	return {
+		items: (response.results ?? []).map(toWikiForgeMessage),
+		nextCursor: response.nextCursor ?? null,
+		hasNext: response.hasNext ?? false
+	};
+};
+
+export const sendMessage = async (
+	userId: string,
+	input: { content: string },
+	options?: RequestOptions
+): Promise<MessageRecord> => {
+	const content = input.content.trim();
+	if (!content || content.length > 2_000) {
+		throw new Error('Le message doit contenir entre 1 et 2 000 caractères.');
+	}
+	const response = await apiRequest<WikiForgeMessageDto>(
+		`/conversations/${wikiForgeNumericId(userId, 'utilisateur')}/messages`,
+		{ ...options, apiTarget: 'wikiforge', method: 'POST', body: { content } }
+	);
+	return toWikiForgeMessage(response);
+};

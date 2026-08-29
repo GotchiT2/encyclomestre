@@ -1,45 +1,43 @@
-export type ConversationKind = 'direct' | 'guild';
+export type MessageKind = 'text' | 'trade';
+
+export interface TradeMessageEvent {
+	tradeId: string;
+	status: string;
+}
 
 export interface Conversation {
 	id: string;
-	kind: ConversationKind;
+	userId?: string;
 	title: string;
-	participantIds: string[];
+	avatarUrl?: string | null;
 	preview: string;
+	previewType?: MessageKind | null;
 	unreadCount: number;
 	updatedAt: string;
-}
-
-export interface WishlistShareWidget {
-	registryId: string;
-	title: string;
-	description: string;
-	cardCount: number;
-}
-
-export interface TradeOfferWidget {
-	offerId: string;
-	offeredCardIds: string[];
-	requestedCardIds: string[];
-	offeredCredits: number;
-	requestedCredits: number;
-	status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
-}
-
-export interface MessageReaction {
-	emoji: string;
-	userIds: string[];
+	/** @deprecated Ancien contrat local, conservé uniquement pour les mocks historiques. */
+	kind: 'direct' | 'guild';
+	/** @deprecated */
+	participantIds: string[];
 }
 
 export interface MessageRecord {
 	id: string;
 	conversationId: string;
 	senderId: string;
+	type?: MessageKind;
 	content: string;
 	createdAt: string;
+	tradeEvent?: TradeMessageEvent;
+	/** @deprecated Fonctionnalités non exposées par WikiForge. */
 	readAt: string | null;
 	replyToMessageId?: string | null;
-	reactions: MessageReaction[];
-	wishlistShare?: WishlistShareWidget;
-	tradeOffer?: TradeOfferWidget;
+	reactions: Array<{ emoji: string; userIds: string[] }>;
+	wishlistShare?: { registryId: string; title: string; description: string; cardCount: number };
+	tradeOffer?: unknown;
+}
+
+export interface CursorPage<T> {
+	items: T[];
+	nextCursor: string | null;
+	hasNext: boolean;
 }

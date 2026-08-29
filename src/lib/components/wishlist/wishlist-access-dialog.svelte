@@ -48,6 +48,11 @@
 				<ul class="grid gap-2">
 					{#each followers as follower (follower.id)}
 						<li class="flex items-center gap-3 border border-primary/20 bg-background p-3">
+							{#if follower.imageUrl}<img
+									src={follower.imageUrl}
+									alt=""
+									class="size-10 shrink-0 object-cover"
+								/>{/if}
 							<div class="min-w-0 flex-1">
 								<p class="truncate font-serif font-bold">{follower.name}</p>
 								<p class="forge-label">

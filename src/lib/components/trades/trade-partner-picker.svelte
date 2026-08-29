@@ -8,16 +8,40 @@
 	let {
 		open = $bindable(false),
 		partners,
+		searchPartners,
 		onSelect
-	}: { open?: boolean; partners: User[]; onSelect: (partner: User) => void } = $props();
+	}: {
+		open?: boolean;
+		partners: User[];
+		searchPartners?: (query: string) => Promise<User[]>;
+		onSelect: (partner: User) => void;
+	} = $props();
 	let query = $state('');
+	let remotePartners = $state<User[]>([]);
+	let searchSequence = 0;
 	const visiblePartners = $derived(
-		partners.filter((partner) =>
+		[
+			...new Map([...partners, ...remotePartners].map((partner) => [partner.id, partner])).values()
+		].filter((partner) =>
 			`${partner.username} ${partner.displayName}`
 				.toLocaleLowerCase('fr-FR')
 				.includes(query.trim().toLocaleLowerCase('fr-FR'))
 		)
 	);
+
+	$effect(() => {
+		const text = query.trim();
+		if (!searchPartners || text.length < 3) {
+			remotePartners = [];
+			return;
+		}
+		const sequence = ++searchSequence;
+		const timer = window.setTimeout(async () => {
+			const results = await searchPartners(text);
+			if (sequence === searchSequence) remotePartners = results;
+		}, 500);
+		return () => window.clearTimeout(timer);
+	});
 </script>
 
 <Dialog.Root bind:open

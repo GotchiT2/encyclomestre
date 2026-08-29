@@ -15,7 +15,8 @@
 		CardVariant,
 		CollectionBooleanFilter,
 		CollectionSort,
-		CollectionTag
+		CollectionTag,
+		User
 	} from '$lib/types';
 
 	let {
@@ -25,6 +26,8 @@
 		tagFilterIds = $bindable<string[]>([]),
 		duplicate = $bindable<CollectionBooleanFilter>('all'),
 		protected: protection = $bindable<CollectionBooleanFilter>('all'),
+		wishlistOwnerId = $bindable(''),
+		wishlistOwners = [],
 		variant = $bindable<CardVariant>('all'),
 		tags,
 		untaggedOption,
@@ -39,6 +42,8 @@
 		tagFilterIds: string[];
 		duplicate?: CollectionBooleanFilter;
 		protected?: CollectionBooleanFilter;
+		wishlistOwnerId?: string;
+		wishlistOwners?: User[];
 		variant?: CardVariant;
 		tags: CollectionTag[];
 		untaggedOption?: string;
@@ -146,6 +151,20 @@
 				</Field.FieldSet>
 			</div>{/if}
 
+		{#if canonical && wishlistOwners.length}
+			<Field.Field>
+				<Field.FieldLabel for="collection-wishlist-owner" class="forge-label">
+					{$_('collection.wishlist_filter')}
+				</Field.FieldLabel>
+				<select id="collection-wishlist-owner" bind:value={wishlistOwnerId} class="w-full">
+					<option value="">{$_('collection.wishlist_filter_all')}</option>
+					{#each wishlistOwners as owner (owner.id)}
+						<option value={owner.id}>{owner.displayName || owner.username}</option>
+					{/each}
+				</select>
+			</Field.Field>
+		{/if}
+
 		<Field.Field>
 			<Field.FieldLabel class="forge-label">{$_('collection.tags')}</Field.FieldLabel>
 			<TagFilterSelector
@@ -161,7 +180,7 @@
 		</Field.Field>
 	</Field.FieldGroup>
 
-	{#if query || selectedRarities.length || tagFilterIds.length || (canonical ? sortBy !== 'acquiredDate' : sortBy !== 'rarity') || duplicate !== 'all' || protection !== 'all' || variant !== 'all'}
+	{#if query || selectedRarities.length || tagFilterIds.length || wishlistOwnerId || (canonical ? sortBy !== 'acquiredDate' : sortBy !== 'rarity') || duplicate !== 'all' || protection !== 'all' || variant !== 'all'}
 		<Button size="sm" variant="ghost" class="mt-4 w-fit" onclick={onClear}>
 			{$_('collection.clearFilters')}
 		</Button>

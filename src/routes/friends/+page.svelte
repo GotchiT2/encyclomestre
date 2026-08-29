@@ -18,6 +18,7 @@
 	import FriendContactCard from '$lib/components/friends/friend-contact-card.svelte';
 	import FriendInviteDialog from '$lib/components/friends/friend-invite-dialog.svelte';
 	import FriendRequestCard from '$lib/components/friends/friend-request-card.svelte';
+	import SentFriendRequestCard from '$lib/components/friends/sent-friend-request-card.svelte';
 	import UserBlockDialog from '$lib/components/friends/user-block-dialog.svelte';
 	import EmptyState from '$lib/components/layout/empty-state.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
@@ -41,6 +42,11 @@
 	const receivedRequests = $derived(
 		friendships.filter(
 			(friendship) => friendship.status === 'received' && !isBlocked(friendship.user.id)
+		)
+	);
+	const sentRequests = $derived(
+		friendships.filter(
+			(friendship) => friendship.status === 'sent' && !isBlocked(friendship.user.id)
 		)
 	);
 	const visibleFriends = $derived(
@@ -140,6 +146,24 @@
 						onDecline={() => void respond(friendship.id, 'rejected')}
 						onBlock={() => confirmBlockFor(friendship.user)}
 					/>
+				{/each}
+			</div>
+		</section>
+	{/if}
+
+	{#if !loading && sentRequests.length}
+		<section class="flex flex-col gap-2" aria-labelledby="sent-requests-title">
+			<div class="flex items-center gap-2">
+				<h2 id="sent-requests-title" class="font-serif text-xl font-black uppercase sm:text-2xl">
+					{$_('friends.sent_title')}
+				</h2>
+				<Badge variant="outline">
+					{$_('friends.sent_count', { values: { count: sentRequests.length } })}
+				</Badge>
+			</div>
+			<div class="flex flex-col gap-2">
+				{#each sentRequests as friendship (friendship.id)}
+					<SentFriendRequestCard {friendship} onCancel={() => void remove(friendship.id)} />
 				{/each}
 			</div>
 		</section>

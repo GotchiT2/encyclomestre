@@ -15,6 +15,8 @@
 		toPublicPageCardRecord
 	} from '$lib/api';
 	import { _ } from '$lib/i18n';
+	import { wikiForgeApiErrorCode } from '$lib/api/wikiforge-contract';
+	import { toast } from 'svelte-sonner';
 	import { restoreSession } from '$lib/auth/session';
 	import type { CardRecord, WishlistRegistrySummary } from '$lib/types';
 	import type { PageData } from './$types';
@@ -47,7 +49,16 @@
 
 	async function toggleWishlist(wishlistId: string, cardId: string, selected: boolean) {
 		if (!selected) return;
-		await addWishlistRegistryCard(wishlistId, '', cardId);
+		try {
+			await addWishlistRegistryCard(wishlistId, '', cardId);
+		} catch (error) {
+			if (wikiForgeApiErrorCode(error) === 'WISHLIST_FULL') {
+				toast.error($_('wishlist.full_error'));
+				return;
+			}
+			throw error;
+		}
+		toast.success($_('wishlist.card_added_generic'));
 		wishlists = await getWishlists();
 	}
 

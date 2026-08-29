@@ -8,11 +8,13 @@
 	let {
 		cardId,
 		tags = $bindable<CollectionTag[]>([]),
-		assignments = $bindable<CollectionTagAssignments>({})
+		assignments = $bindable<CollectionTagAssignments>({}),
+		onCardUpdated
 	}: {
 		cardId: string;
 		tags: CollectionTag[];
 		assignments: CollectionTagAssignments;
+		onCardUpdated?: (card: import('$lib/types').CardRecord) => void;
 	} = $props();
 	let editorOpen = $state(false);
 	let tagToAdd = $state('');
@@ -20,20 +22,22 @@
 
 	async function addTag() {
 		if (!tagToAdd) return;
-		await addWikiForgeCardTag(cardId, tagToAdd);
+		const updated = await addWikiForgeCardTag(cardId, tagToAdd);
 		assignments = {
 			...assignments,
-			[cardId]: [...new Set([...(assignments[cardId] ?? []), tagToAdd])]
+			[cardId]: updated.collectionTagIds ?? []
 		};
+		onCardUpdated?.(updated);
 		tagToAdd = '';
 	}
 
 	async function removeTag(tagId: string) {
-		await removeWikiForgeCardTag(cardId, tagId);
+		const updated = await removeWikiForgeCardTag(cardId, tagId);
 		assignments = {
 			...assignments,
-			[cardId]: (assignments[cardId] ?? []).filter((id) => id !== tagId)
+			[cardId]: updated.collectionTagIds ?? []
 		};
+		onCardUpdated?.(updated);
 	}
 </script>
 

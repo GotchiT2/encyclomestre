@@ -7,9 +7,8 @@
 	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
-	import SearchIcon from '@lucide/svelte/icons/search';
 	import XIcon from '@lucide/svelte/icons/x';
-	import { untrack } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import type {
 		CardRarity,
@@ -22,6 +21,7 @@
 
 	let {
 		title,
+		showTitle = true,
 		scopeKey,
 		active = false,
 		comparisonOwnerName,
@@ -29,10 +29,10 @@
 		initialCards = [],
 		loadCards,
 		loadComparisonCounts,
-		selectedIds = $bindable<string[]>([]),
-		credits = $bindable(0)
+		selectedIds = $bindable<string[]>([])
 	}: {
 		title: string;
+		showTitle?: boolean;
 		scopeKey: string;
 		active?: boolean;
 		comparisonOwnerName?: string;
@@ -41,7 +41,6 @@
 		loadCards: (query: TradeCardSearchQuery) => Promise<PaginatedResponse<CardRecord>>;
 		loadComparisonCounts?: (variantIds: string[]) => Promise<Record<string, number>>;
 		selectedIds?: string[];
-		credits?: number;
 	} = $props();
 
 	let query = $state('');
@@ -49,7 +48,6 @@
 	let sortBy = $state<CardSearchSort>('rarity');
 	let variant = $state<CardVariant>('all');
 	let page = $state(1);
-	let totalPages = $state(1);
 	let total = $state(0);
 	let resultCards = $state<CardRecord[]>([]);
 	let knownCards = $state<CardRecord[]>([]);
@@ -59,7 +57,9 @@
 	let failed = $state(false);
 	let activeScope = $state('');
 	let initiallyLoadedScope = $state('');
-	let nextCursor = $state<string | null>(null);
+	let hasMore = $state(false);
+	let debounceTimer: number | undefined;
+	let requestVersion = 0;
 	const cursorByPage = new SvelteMap<number, string | undefined>([[1, undefined]]);
 	const pageSize = 12;
 	const selectedCards = $derived(
@@ -82,14 +82,13 @@
 		sortBy = 'rarity';
 		variant = 'all';
 		page = 1;
-		totalPages = 1;
 		total = 0;
 		resultCards = [];
 		knownCards = [...initialCards];
 		comparisonCounts = {};
 		hasLoaded = false;
 		failed = false;
-		nextCursor = null;
+		hasMore = false;
 		cursorByPage.clear();
 		cursorByPage.set(1, undefined);
 	});
@@ -104,23 +103,37 @@
 		return [...new Map([...current, ...incoming].map((card) => [card.id, card])).values()];
 	}
 
-	function markFiltersChanged() {
-		page = 1;
+	function resetResults() {
+		requestVersion += 1;
+		// A stale request is ignored through requestVersion. Release the local loading
+		// lock as well so a new debounced query is never lost while it is in flight.
+		loading = false;
+		page = 0;
 		resultCards = [];
 		hasLoaded = false;
 		failed = false;
-		nextCursor = null;
+		hasMore = false;
 		cursorByPage.clear();
 		cursorByPage.set(1, undefined);
 	}
 
 	function changeTextQuery() {
 		if (query.trim()) sortBy = 'relevance';
-		markFiltersChanged();
+		resetResults();
+		window.clearTimeout(debounceTimer);
+		debounceTimer = window.setTimeout(() => void search(), 400);
 	}
 
-	async function search(nextPage = 1) {
+	function changeFilters() {
+		resetResults();
+		void search();
+	}
+
+	async function search(loadMore = false) {
 		if (loading) return;
+		const nextPage = loadMore ? page + 1 : 1;
+		const requestId = requestVersion + 1;
+		requestVersion = requestId;
 		loading = true;
 		failed = false;
 		try {
@@ -133,6 +146,7 @@
 				pageSize,
 				cursor: query.trim() ? undefined : cursorByPage.get(nextPage)
 			});
+			if (requestId !== requestVersion) return;
 			const variantIds = response.items.map((card) => card.catalogueId ?? card.id);
 			try {
 				comparisonCounts = loadComparisonCounts ? await loadComparisonCounts(variantIds) : {};
@@ -140,21 +154,29 @@
 				comparisonCounts = {};
 			}
 			page = response.meta.page;
-			totalPages = response.meta.totalPages;
 			total = response.meta.total;
-			nextCursor = response.meta.nextCursor ?? null;
-			if (nextCursor) cursorByPage.set(response.meta.page + 1, nextCursor);
-			resultCards = response.items;
+			if (response.meta.nextCursor) {
+				cursorByPage.set(response.meta.page + 1, response.meta.nextCursor);
+			}
+			resultCards = loadMore ? mergeCards(resultCards, response.items) : response.items;
 			knownCards = mergeCards(knownCards, response.items);
+			hasMore = query.trim()
+				? response.meta.page < response.meta.totalPages
+				: Boolean(response.meta.nextCursor);
 			hasLoaded = true;
 		} catch {
+			if (requestId !== requestVersion) return;
 			failed = true;
-			resultCards = [];
+			if (!loadMore) resultCards = [];
 			hasLoaded = true;
 		} finally {
-			loading = false;
+			if (requestId === requestVersion) loading = false;
 		}
 	}
+
+	onDestroy(() => {
+		if (typeof window !== 'undefined') window.clearTimeout(debounceTimer);
+	});
 
 	function comparisonOwnership(card: CardRecord) {
 		const count = comparisonCounts[card.catalogueId ?? card.id] ?? 0;
@@ -170,9 +192,11 @@
 	}
 </script>
 
-<section class="min-w-0 border border-primary/25 bg-background/40 p-2 sm:p-3">
-	<h2 class="font-serif text-lg font-black uppercase tracking-tight sm:text-xl">{title}</h2>
-	<div class="mt-2 border border-primary/20 bg-card p-2">
+<section class="min-w-0 bg-background/40 p-2 sm:p-3">
+	{#if showTitle}<h2 class="font-serif text-lg font-black uppercase tracking-tight sm:text-xl">
+			{title}
+		</h2>{/if}
+	<div class={`${showTitle ? 'mt-2' : ''} border border-primary/20 bg-card p-2`}>
 		<p class="font-mono text-[9px] uppercase tracking-widest text-primary">
 			{$_('trades.counterparties')}
 		</p>
@@ -188,15 +212,7 @@
 					{card.title}<XIcon data-icon="inline-end" />
 				</Button>
 			{/each}
-			{#if credits > 0}
-				<span
-					class="border border-primary/60 bg-primary/15 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-primary"
-				>
-					{credits}
-					{$_('trades.credit_chip')}
-				</span>
-			{/if}
-			{#if !selectedCards.length && !credits}
+			{#if !selectedCards.length}
 				<span class="font-serif text-sm italic text-muted-foreground">
 					{$_('trades.no_counterparty')}
 				</span>
@@ -205,14 +221,8 @@
 	</div>
 
 	<CardSearchPanel class="mt-2">
-		<form
-			class="grid gap-2"
-			onsubmit={(event) => {
-				event.preventDefault();
-				void search();
-			}}
-		>
-			<div class="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(14rem,1fr)_auto_auto] lg:items-end">
+		<div class="grid gap-2">
+			<div class="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(14rem,1fr)_auto] lg:items-end">
 				<Input
 					bind:value={query}
 					oninput={changeTextQuery}
@@ -221,7 +231,7 @@
 				/>
 				<select
 					bind:value={sortBy}
-					onchange={markFiltersChanged}
+					onchange={changeFilters}
 					aria-label={$_('collection.sort')}
 					class="h-9 w-full self-end border border-primary/50 bg-card px-2 py-0 font-mono text-[10px] leading-9 uppercase tracking-wider text-primary outline-none focus:border-primary lg:w-40"
 				>
@@ -229,29 +239,14 @@
 					<option value="rarity">{$_('collection.sortRarity')}</option>
 					<option value="name">{$_('collection.sortName')}</option>
 				</select>
-				<label class="font-mono text-[9px] uppercase tracking-widest text-primary">
-					{$_('trades.credits')}
-					<Input
-						class="mt-1 h-9 w-full text-sm lg:w-24"
-						type="number"
-						min="0"
-						bind:value={credits}
-					/>
-				</label>
 			</div>
 			<RaritySelector
 				options={cardRarityOptions}
 				bind:selected={rarities}
-				onChange={markFiltersChanged}
+				onChange={changeFilters}
 			/>
-			<div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-				<CardVariantSelector bind:value={variant} onChange={markFiltersChanged} />
-				<Button type="submit" disabled={loading} class="min-h-10 sm:min-w-40">
-					<SearchIcon data-icon="inline-start" />
-					{loading ? $_('trades.loading_cards') : $_('trades.search_cards')}
-				</Button>
-			</div>
-		</form>
+			<CardVariantSelector bind:value={variant} onChange={changeFilters} />
+		</div>
 	</CardSearchPanel>
 
 	{#if !hasLoaded && !loading}
@@ -291,29 +286,12 @@
 				</div>
 			{/each}
 		</div>
-		<div
-			class="sticky bottom-0 z-30 mt-3 flex items-center justify-between gap-2 border-t border-primary/25 bg-card/95 px-2 py-2 backdrop-blur-sm"
-		>
-			<Button
-				size="xs"
-				variant="outline"
-				disabled={page === 1 || loading}
-				onclick={() => void search(page - 1)}
-			>
-				{$_('codex.previous')}
-			</Button>
-			<span class="font-mono text-[9px] uppercase tracking-widest text-primary">
-				{$_('codex.page')}
-				{page} / {totalPages}
-			</span>
-			<Button
-				size="xs"
-				variant="outline"
-				disabled={(query.trim() ? page === totalPages : !nextCursor) || loading}
-				onclick={() => void search(page + 1)}
-			>
-				{$_('codex.next')}
-			</Button>
-		</div>
+		{#if hasMore}
+			<div class="mt-4 flex justify-center">
+				<Button size="sm" variant="outline" disabled={loading} onclick={() => void search(true)}>
+					{loading ? $_('trades.loading_cards') : $_('common.load_more')}
+				</Button>
+			</div>
+		{/if}
 	{/if}
 </section>

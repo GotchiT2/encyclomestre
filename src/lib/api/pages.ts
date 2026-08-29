@@ -2,6 +2,7 @@ import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/raritie
 import { cardSearchSortDirection, defaultCardSearchSort } from '$lib/domain/cards/search';
 import type { CardRecord, CardSearchSort, PaginatedResponse } from '$lib/types';
 import { apiRequest } from './client';
+import { wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
 
 export type WikiForgePublicPageRarity = CardRarityCode;
 
@@ -10,6 +11,7 @@ export interface WikiForgePublicPageCard {
 	title: string;
 	description?: string;
 	image?: string;
+	nsfw?: boolean;
 	atk: number;
 	length?: number;
 	viewCount: number;
@@ -46,7 +48,7 @@ export interface PublicCataloguePage extends PaginatedResponse<CardRecord> {
 	rarityResults: Record<WikiForgePublicPageRarity, number>;
 }
 
-const publicPagesPageSize = 50;
+let publicPagesPageSize: number | null = null;
 const emptyRarityResults: Record<WikiForgePublicPageRarity, number> = {
 	L: 0,
 	UR: 0,
@@ -68,7 +70,7 @@ function publicPagesPath(query: WikiForgePublicPagesQuery): string {
 		sortDirection:
 			query.sortDirection ?? (query.q?.trim() ? cardSearchSortDirection(sortBy) : 'ASC')
 	});
-	if (query.q?.trim()) parameters.set('q', query.q.trim());
+	if ((query.q?.trim().length ?? 0) >= 3) parameters.set('q', query.q!.trim());
 	for (const rarity of query.rarities ?? (query.rarity ? [query.rarity] : [])) {
 		parameters.append('rarity', rarity);
 	}
@@ -95,7 +97,7 @@ export async function getWikiForgePublicPage(
 	id: string | number,
 	options: PublicPagesRequestOptions = {}
 ): Promise<WikiForgePublicPageCard> {
-	return apiRequest<WikiForgePublicPageCard>(`/pages/${encodeURIComponent(String(id))}`, {
+	return apiRequest<WikiForgePublicPageCard>(`/pages/${wikiForgeNumericId(id, 'page')}`, {
 		fetch: options.fetch,
 		signal: options.signal,
 		apiTarget: 'wikiforge'
@@ -123,19 +125,23 @@ export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecor
 		globalSupply: card.globalCount,
 		friendsWhoOwn: [],
 		isFullArt: false,
-		acquiredAt: card.createdAt
+		acquiredAt: wikiForgeUtcDate(card.createdAt).toISOString(),
+		nsfw: Boolean(card.nsfw)
 	};
 }
 
 export function toPublicPage(source: WikiForgePublicPagesResponse): PublicCataloguePage {
+	const resultCount = source.results?.length ?? 0;
+	if (source.page === 0 && resultCount > 0) publicPagesPageSize = resultCount;
+	const pageSize = publicPagesPageSize ?? Math.max(1, resultCount || source.nbResults || 1);
 	return {
 		items: (source.results ?? []).map(toPublicPageCardRecord),
 		rarityResults: source.rarityResults ?? emptyRarityResults,
 		meta: {
 			page: source.page + 1,
-			pageSize: publicPagesPageSize,
+			pageSize,
 			total: source.nbResults,
-			totalPages: Math.max(1, Math.ceil(source.nbResults / publicPagesPageSize))
+			totalPages: Math.max(1, Math.ceil(source.nbResults / pageSize))
 		}
 	};
 }
