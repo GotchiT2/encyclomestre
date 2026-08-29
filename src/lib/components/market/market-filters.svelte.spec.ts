@@ -6,7 +6,7 @@ import '../../../app.css';
 import MarketFilters from './market-filters.svelte';
 
 describe('MarketFilters', () => {
-	it('keeps search visible and exposes card variants in the compact filter menu', async () => {
+	it('expose recherche, variante, raretés et tri dans le panneau latéral', async () => {
 		const onSearch = vi.fn();
 		const onFilterChange = vi.fn();
 		render(MarketFilters, {
@@ -19,11 +19,15 @@ describe('MarketFilters', () => {
 		});
 
 		await expect.element(page.getByPlaceholder('Rechercher une carte ou un vendeur')).toBeVisible();
-		await page.getByRole('button', { name: /Filtres/ }).click();
-		await expect.element(page.getByRole('menuitemradio', { name: 'Alternatif' })).toBeVisible();
-		await expect
-			.element(page.getByRole('menuitemradio', { name: 'Fin la plus proche' }))
-			.toBeVisible();
-		await expect.element(page.getByText('Rare', { exact: true })).toBeVisible();
+		await expect.element(page.getByText('Alternatif', { exact: true })).toBeVisible();
+
+		const sort = page.getByLabelText('Trier les ventes');
+		await expect.element(sort).toHaveValue('ending');
+		expect(sort.element().querySelector('option[value="bid_desc"]')).not.toBeNull();
+
+		// Les raretés n'affichent que leur abréviation, le nom complet passe en tooltip.
+		const rare = page.getByRole('button', { name: 'Rare', exact: true });
+		await expect.element(rare).toHaveTextContent('R');
+		await expect.element(rare).toHaveAttribute('title', 'Rare');
 	});
 });

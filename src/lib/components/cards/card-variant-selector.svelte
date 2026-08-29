@@ -37,10 +37,10 @@
 		onValueChange={change}
 		variant="outline"
 		spacing={1}
-		class="flex w-full flex-wrap"
+		class="grid w-full grid-cols-3"
 	>
 		{#each variants as variant (variant.value)}
-			<ToggleGroup.Item value={variant.value} class="min-h-10 flex-1 px-3">
+			<ToggleGroup.Item value={variant.value} class="min-h-10 min-w-0 px-1 text-[10px]">
 				{$_(variant.label)}
 			</ToggleGroup.Item>
 		{/each}

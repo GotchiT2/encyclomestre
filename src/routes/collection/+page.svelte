@@ -6,6 +6,7 @@
 	import CardGrid from '$lib/components/collection/card-grid.svelte';
 	import CollectionResultSummary from '$lib/components/collection/collection-result-summary.svelte';
 	import FilterControls from '$lib/components/collection/filter-controls.svelte';
+	import FilterShell from '$lib/components/layout/filter-shell.svelte';
 	import SelectionPanel from '$lib/components/collection/selection-panel.svelte';
 	import TagEditor from '$lib/components/collection/tag-editor.svelte';
 	import {
@@ -73,6 +74,15 @@
 	let previousFilterKey = '';
 	let requestId = 0;
 	let requestController: AbortController | null = null;
+	const activeFilterCount = $derived(
+		(query ? 1 : 0) +
+			selectedRarities.length +
+			tagFilterIds.length +
+			(sortBy !== 'acquiredDate' ? 1 : 0) +
+			(duplicate !== 'all' ? 1 : 0) +
+			(protection !== 'all' ? 1 : 0) +
+			(wishlistOwnerId ? 1 : 0)
+	);
 	const selectedUnprotectedCount = $derived(
 		cards.filter((card) => selectedCardIds.includes(card.id) && !card.userProtected).length
 	);
@@ -299,73 +309,79 @@
 		title={$_('collection.title')}
 		description={$_('collection.description')}
 	/>
-	<FilterControls
-		bind:query
-		bind:sortBy
-		bind:selectedRarities
-		bind:tagFilterIds
-		bind:duplicate
-		bind:protected={protection}
-		bind:wishlistOwnerId
-		{wishlistOwners}
-		{tags}
-		untaggedOption="-1"
-		canonical
-		onOpenTagEditor={() => (isTagEditorOpen = true)}
-		onClear={clearFilters}
-	/>
+	<div class="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
+		<FilterShell activeCount={activeFilterCount} description={$_('collection.filtersDescription')}>
+			<FilterControls
+				bind:query
+				bind:sortBy
+				bind:selectedRarities
+				bind:tagFilterIds
+				bind:duplicate
+				bind:protected={protection}
+				bind:wishlistOwnerId
+				{wishlistOwners}
+				{tags}
+				untaggedOption="-1"
+				canonical
+				onOpenTagEditor={() => (isTagEditorOpen = true)}
+				onClear={clearFilters}
+			/>
+		</FilterShell>
 
-	<div class="flex flex-wrap items-center gap-2">
-		<TagEditor bind:open={isTagEditorOpen} bind:tags bind:assignments />
-		<Button
-			size="sm"
-			variant={isSelectionMode ? 'default' : 'outline'}
-			aria-pressed={isSelectionMode}
-			onclick={() => {
-				isSelectionMode = !isSelectionMode;
-				if (!isSelectionMode) {
-					selectedCardIds = [];
-					bulkTagIds = [];
-				}
-			}}
-		>
-			{$_('collection.selectCards')}
-		</Button>
-	</div>
-
-	<CollectionResultSummary {total} loaded={cards.length} {hasNext} {rarityResults} />
-	{#if loading}
-		<p class="forge-label">{$_('collection.loading')}</p>
-	{:else if failed}
-		<div class="forge-panel-flat flex flex-wrap items-center justify-between gap-3 p-4">
-			<p class="text-destructive">{$_('collection.error')}</p>
-			<Button variant="outline" onclick={() => (previousFilterKey = '')}
-				>{$_('common.retry')}</Button
-			>
-		</div>
-	{:else if cards.length}
-		<CardGrid
-			{cards}
-			{tags}
-			{assignments}
-			{isSelectionMode}
-			{selectedCardIds}
-			onToggleCard={toggleCardSelection}
-			onOpenCard={(card) => (selectedCard = card)}
-		/>
-		{#if hasNext || loadMoreFailed}
-			<div class="flex flex-col items-center gap-2 border-t border-primary/20 pt-4">
-				{#if loadMoreFailed}<p class="text-sm text-destructive">
-						{$_('collection.load_more_error')}
-					</p>{/if}
-				<Button variant="outline" disabled={loadingMore} onclick={loadNext}>
-					{loadingMore ? $_('collection.loading_more') : $_('collection.load_more')}
+		<div class="flex min-w-0 flex-col gap-6">
+			<div class="flex flex-wrap items-center gap-2">
+				<TagEditor bind:open={isTagEditorOpen} bind:tags bind:assignments />
+				<Button
+					size="sm"
+					variant={isSelectionMode ? 'default' : 'outline'}
+					aria-pressed={isSelectionMode}
+					onclick={() => {
+						isSelectionMode = !isSelectionMode;
+						if (!isSelectionMode) {
+							selectedCardIds = [];
+							bulkTagIds = [];
+						}
+					}}
+				>
+					{$_('collection.selectCards')}
 				</Button>
 			</div>
-		{/if}
-	{:else}
-		<EmptyState title={$_('collection.empty')} />
-	{/if}
+
+			<CollectionResultSummary {total} loaded={cards.length} {hasNext} {rarityResults} />
+			{#if loading}
+				<p class="forge-label">{$_('collection.loading')}</p>
+			{:else if failed}
+				<div class="forge-panel-flat flex flex-wrap items-center justify-between gap-3 p-4">
+					<p class="text-destructive">{$_('collection.error')}</p>
+					<Button variant="outline" onclick={() => (previousFilterKey = '')}
+						>{$_('common.retry')}</Button
+					>
+				</div>
+			{:else if cards.length}
+				<CardGrid
+					{cards}
+					{tags}
+					{assignments}
+					{isSelectionMode}
+					{selectedCardIds}
+					onToggleCard={toggleCardSelection}
+					onOpenCard={(card) => (selectedCard = card)}
+				/>
+				{#if hasNext || loadMoreFailed}
+					<div class="flex flex-col items-center gap-2 border-t border-primary/20 pt-4">
+						{#if loadMoreFailed}<p class="text-sm text-destructive">
+								{$_('collection.load_more_error')}
+							</p>{/if}
+						<Button variant="outline" disabled={loadingMore} onclick={loadNext}>
+							{loadingMore ? $_('collection.loading_more') : $_('collection.load_more')}
+						</Button>
+					</div>
+				{/if}
+			{:else}
+				<EmptyState title={$_('collection.empty')} />
+			{/if}
+		</div>
+	</div>
 
 	{#if isSelectionMode}
 		<SelectionPanel

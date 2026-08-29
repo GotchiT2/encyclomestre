@@ -9,6 +9,7 @@
 	import { currentSession } from '$lib/auth/session';
 	import MarketListings from '$lib/components/market/market-listings.svelte';
 	import MarketFilters from '$lib/components/market/market-filters.svelte';
+	import FilterShell from '$lib/components/layout/filter-shell.svelte';
 	import { matchesCardVariant } from '$lib/domain/cards/variants';
 	import { sortMarketListings, type MarketSort } from '$lib/domain/market/auction-display';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
@@ -38,6 +39,13 @@
 			}),
 			sort
 		)
+	);
+
+	const activeFilterCount = $derived(
+		(query ? 1 : 0) +
+			selectedRarities.length +
+			(variant !== 'all' ? 1 : 0) +
+			(sort !== 'ending' ? 1 : 0)
 	);
 
 	onMount(async () => {
@@ -113,24 +121,31 @@
 				}}>{$_('market.history_bought')}</Button
 			>
 		</div>{/if}
-	<MarketFilters
-		bind:query
-		bind:variant
-		bind:rarities={selectedRarities}
-		bind:sort
-		onSearch={() => scheduleRefresh(450)}
-		onFilterChange={() => undefined}
-	/>
-	{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-			{$_('market.loading')}
-		</p>{:else if visibleListings.length}<MarketListings
-			listings={visibleListings}
-			{cards}
-			{favoriteIds}
-			onToggleFavorite={(id) => void toggleFavorite(id)}
-		/>{:else}<p
-			class="border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
-		>
-			{$_('market.empty')}
-		</p>{/if}
+	<div class="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
+		<FilterShell activeCount={activeFilterCount}>
+			<MarketFilters
+				bind:query
+				bind:variant
+				bind:rarities={selectedRarities}
+				bind:sort
+				onSearch={() => scheduleRefresh(450)}
+				onFilterChange={() => undefined}
+			/>
+		</FilterShell>
+
+		<div class="flex min-w-0 flex-col gap-6">
+			{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
+					{$_('market.loading')}
+				</p>{:else if visibleListings.length}<MarketListings
+					listings={visibleListings}
+					{cards}
+					{favoriteIds}
+					onToggleFavorite={(id) => void toggleFavorite(id)}
+				/>{:else}<p
+					class="border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
+				>
+					{$_('market.empty')}
+				</p>{/if}
+		</div>
+	</div>
 </section>

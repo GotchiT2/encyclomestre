@@ -3,8 +3,8 @@
 	import { resolve } from '$app/paths';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
-	import CardSearchPanel from '$lib/components/cards/card-search-panel.svelte';
 	import { cardRarityOptions } from '$lib/domain/cards/rarities';
+	import * as Field from '$lib/components/ui/field';
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
 	import type { CardRarity } from '$lib/types';
@@ -84,55 +84,72 @@
 </script>
 
 <form bind:this={form} method="GET" onsubmit={submitFilters}>
-	<CardSearchPanel class="forge-panel" contentClass="p-4 sm:p-5">
-		<div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem_12rem]">
-			<label class="grid gap-2">
-				<span class="forge-label">{$_('codex.search')}</span>
+	<Field.FieldGroup class="gap-5">
+		<div class="grid gap-3 @lg:grid-cols-2">
+			<Field.Field>
+				<Field.FieldLabel for="codex-search" class="forge-label">
+					{$_('codex.search')}
+				</Field.FieldLabel>
 				<Input
+					id="codex-search"
 					bind:ref={searchInput}
 					name="q"
 					bind:value={localQuery}
 					placeholder={$_('codex.search')}
 					oninput={handleTextInput}
 				/>
-			</label>
-			<label class="grid gap-2">
-				<span class="forge-label">{$_('collection.sortName')}</span>
-				<select name="sortBy" bind:value={localSortBy} onchange={() => scheduleSubmit(80)}>
-					<option value="relevance">{$_('collection.sortRelevance')}</option>
-					<option value="rarity" selected={sortBy === 'rarity'}
-						>{$_('collection.sortRarity')}</option
-					>
-					<option value="name" selected={sortBy === 'name'}>{$_('collection.sortName')}</option>
-				</select>
-			</label>
-			<label class="grid gap-2">
-				<span class="forge-label">{$_('codex.sortDirection')}</span>
+			</Field.Field>
+			<Field.Field>
+				<Field.FieldLabel for="codex-sort" class="forge-label">
+					{$_('filters.sortBy')}
+				</Field.FieldLabel>
 				<select
-					name="sortDirection"
-					bind:value={localSortDirection}
+					id="codex-sort"
+					name="sortBy"
+					bind:value={localSortBy}
 					onchange={() => scheduleSubmit(80)}
+					class="w-full"
 				>
-					<option value="DESC" selected={sortDirection === 'DESC'}>{$_('codex.descending')}</option>
-					<option value="ASC" selected={sortDirection === 'ASC'}>{$_('codex.ascending')}</option>
+					<option value="relevance">{$_('collection.sortRelevance')}</option>
+					<option value="rarity">{$_('collection.sortRarity')}</option>
+					<option value="name">{$_('collection.sortName')}</option>
 				</select>
-			</label>
+			</Field.Field>
 		</div>
-		<fieldset class="mt-5">
-			<legend class="forge-label mb-2">{$_('codex.rarities')}</legend>
+
+		<Field.Field>
+			<Field.FieldLabel for="codex-sort-direction" class="forge-label">
+				{$_('codex.sortDirection')}
+			</Field.FieldLabel>
+			<select
+				id="codex-sort-direction"
+				name="sortDirection"
+				bind:value={localSortDirection}
+				onchange={() => scheduleSubmit(80)}
+				class="w-full"
+			>
+				<option value="DESC">{$_('codex.descending')}</option>
+				<option value="ASC">{$_('codex.ascending')}</option>
+			</select>
+		</Field.Field>
+
+		<Field.FieldSet class="gap-2">
+			<Field.FieldLegend class="forge-label">{$_('codex.rarities')}</Field.FieldLegend>
 			<RaritySelector
 				options={cardRarityOptions}
 				bind:selected={localRarities}
 				name="rarity"
 				multiple={false}
+				compact
 				onChange={() => scheduleSubmit(80)}
 			/>
-		</fieldset>
-		<p
-			class="mt-3 min-h-4 text-[10px] font-bold tracking-wider text-[var(--energy-soft)] uppercase"
-			aria-live="polite"
-		>
-			{pending ? $_('codex.filtersUpdating') : ''}
-		</p>
-	</CardSearchPanel>
+		</Field.FieldSet>
+	</Field.FieldGroup>
+
+	<p
+		class="mt-3 min-h-4 text-[10px] font-bold tracking-wider text-[var(--energy-soft)] uppercase"
+		aria-live="polite"
+	>
+		{pending ? $_('codex.filtersUpdating') : ''}
+	</p>
 </form>

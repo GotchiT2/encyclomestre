@@ -55,6 +55,14 @@
 	--ring: #7ce4de;
 	--radius: 0rem;
 	--forge-cut: 14px;
+	--sidebar: color-mix(in srgb, #0a1928 86%, transparent);
+	--sidebar-foreground: #f7f2df;
+	--sidebar-primary: #feb823;
+	--sidebar-primary-foreground: #080f19;
+	--sidebar-accent: color-mix(in srgb, #feb823 14%, transparent);
+	--sidebar-accent-foreground: #feb823;
+	--sidebar-border: color-mix(in srgb, #feb823 22%, transparent);
+	--sidebar-ring: #7ce4de;
 }
 
 @theme inline {
@@ -80,6 +88,14 @@
 	--color-card: var(--card);
 	--color-foreground: var(--foreground);
 	--color-background: var(--background);
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
 }
 
 @layer base {
@@ -89,7 +105,9 @@
 
 	html {
 		@apply font-sans;
-		overflow-x: hidden;
+		/* `clip` plutôt que `hidden` : `hidden` ferait du body un conteneur de défilement
+		   et casserait `position: sticky` (colonne de filtres de la collection). */
+		overflow-x: clip;
 		scrollbar-gutter: stable;
 		color-scheme: dark;
 	}
@@ -97,18 +115,8 @@
 	body {
 		@apply bg-background text-foreground antialiased;
 		min-width: 320px;
-		overflow-x: hidden;
-		background-image:
-			radial-gradient(circle at 50% -12rem, rgb(25 167 170 / 24%), transparent 38rem),
-			radial-gradient(circle at 85% 32%, rgb(253 121 12 / 11%), transparent 30rem),
-			linear-gradient(
-				120deg,
-				transparent 0 46%,
-				rgb(254 184 35 / 3%) 46% 46.2%,
-				transparent 46.2% 100%
-			),
-			linear-gradient(#050a12e8, #050a12f5),
-			repeating-linear-gradient(60deg, rgb(124 228 222 / 4%) 0 1px, transparent 1px 56px);
+		overflow-x: clip;
+		background-image: linear-gradient(180deg, #071638 0%, #040e28 46%, #020816 100%);
 		background-attachment: fixed;
 	}
 
@@ -222,36 +230,47 @@ article {
 	isolation: isolate;
 }
 
-.forge-scene::before,
-.forge-scene::after {
-	position: absolute;
+/* Ciel profond fixé au viewport, rendu derrière le contenu du <main>. */
+.forge-starfield {
+	position: fixed;
+	inset: 0;
 	z-index: -1;
-	content: '';
+	overflow: hidden;
 	pointer-events: none;
-}
-
-.forge-scene::before {
-	inset: -10rem -12vw auto;
-	height: 34rem;
 	background:
-		radial-gradient(circle, rgb(25 167 170 / 23%), transparent 48%),
-		conic-gradient(
-			from 0deg at 50% 50%,
-			transparent 0 8%,
-			rgb(254 184 35 / 9%) 8.4% 9%,
-			transparent 9.4% 24%
-		);
-	filter: blur(1px);
+		radial-gradient(ellipse 120% 80% at 50% -12%, rgb(23 62 133 / 55%), transparent 68%),
+		radial-gradient(ellipse 90% 65% at 88% 108%, rgb(13 44 104 / 42%), transparent 70%),
+		linear-gradient(180deg, #071638 0%, #040e28 46%, #020816 100%);
 }
 
-.forge-scene::after {
-	top: 3rem;
-	right: -18vw;
-	width: 32rem;
-	height: 32rem;
-	border: 1px solid rgb(124 228 222 / 10%);
-	transform: rotate(45deg);
-	box-shadow: 0 0 80px rgb(25 167 170 / 8%);
+.forge-star {
+	position: absolute;
+	top: var(--star-y);
+	left: var(--star-x);
+	width: var(--star-size);
+	height: var(--star-size);
+	border-radius: 50%;
+	background: var(--primary);
+	box-shadow: 0 0 calc(var(--star-size) * 3) color-mix(in srgb, var(--primary) 65%, transparent);
+	opacity: var(--star-dim);
+	animation: forge-star-pulse var(--star-duration) ease-in-out var(--star-delay) infinite;
+}
+
+.forge-star-warm {
+	background: var(--accent);
+	box-shadow: 0 0 calc(var(--star-size) * 3.5) color-mix(in srgb, var(--accent) 65%, transparent);
+}
+
+@keyframes forge-star-pulse {
+	0%,
+	100% {
+		opacity: var(--star-dim);
+		transform: scale(0.8);
+	}
+	50% {
+		opacity: var(--star-bright);
+		transform: scale(1.2);
+	}
 }
 
 .forge-wordmark {
@@ -379,4 +398,101 @@ select:not([multiple]):focus,
 		animation-iteration-count: 1 !important;
 		transition-duration: 0.01ms !important;
 	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	/* Sans animation, les étoiles resteraient figées sur leur opacité basse. */
+	.forge-star {
+		opacity: var(--star-bright);
+		transform: none;
+	}
+}
+
+/* Bouton booster central de la barre d'onglets mobile : surélevé au-dessus de la barre. */
+.forge-tab-booster {
+	display: grid;
+	place-items: center;
+	width: 3.5rem;
+	height: 3.5rem;
+	background: linear-gradient(155deg, var(--primary), var(--accent));
+	color: var(--primary-foreground);
+	box-shadow:
+		0 0 0 4px rgb(5 10 18 / 92%),
+		0 0 24px rgb(253 121 12 / 45%);
+	clip-path: polygon(
+		12px 0,
+		calc(100% - 12px) 0,
+		100% 12px,
+		100% calc(100% - 12px),
+		calc(100% - 12px) 100%,
+		12px 100%,
+		0 calc(100% - 12px),
+		0 12px
+	);
+}
+
+.forge-sidebar-cta {
+	border: 1px solid color-mix(in srgb, var(--primary) 45%, transparent);
+	background: linear-gradient(140deg, rgb(254 184 35 / 18%), rgb(253 121 12 / 10%));
+	color: var(--primary);
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.forge-tab-booster-active {
+	box-shadow:
+		0 0 0 4px rgb(5 10 18 / 92%),
+		0 0 0 6px color-mix(in srgb, var(--energy-soft) 55%, transparent),
+		0 0 32px rgb(253 121 12 / 60%);
+}
+
+/* Bouton de filtres flottant : au-dessus de la barre d'onglets tant qu'elle est affichée. */
+.forge-filter-fab {
+	position: fixed;
+	right: 1rem;
+	bottom: calc(6rem + env(safe-area-inset-bottom));
+	z-index: 30;
+	display: grid;
+	place-items: center;
+	width: 3.25rem;
+	height: 3.25rem;
+	background: linear-gradient(155deg, var(--primary), var(--accent));
+	color: var(--primary-foreground);
+	box-shadow:
+		0 0 0 3px rgb(5 10 18 / 92%),
+		0 10px 30px rgb(0 0 0 / 45%);
+	clip-path: polygon(
+		12px 0,
+		calc(100% - 12px) 0,
+		100% 12px,
+		100% calc(100% - 12px),
+		calc(100% - 12px) 100%,
+		12px 100%,
+		0 calc(100% - 12px),
+		0 12px
+	);
+}
+
+@media (min-width: 768px) {
+	.forge-filter-fab {
+		bottom: 1.5rem;
+	}
+}
+
+.forge-filter-fab-badge {
+	position: absolute;
+	top: -0.35rem;
+	right: -0.35rem;
+	display: grid;
+	place-items: center;
+	min-width: 1.25rem;
+	height: 1.25rem;
+	padding-inline: 0.25rem;
+	border: 1px solid var(--primary);
+	background: var(--background);
+	color: var(--primary);
+	font-size: 0.625rem;
+	font-weight: 700;
+	line-height: 1;
 }

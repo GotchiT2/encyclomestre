@@ -5,12 +5,22 @@
 	import { hydrateSession } from '$lib/auth/session';
 	import { getCurrentUser } from '$lib/api';
 	import { setNsfwFilterSettings } from '$lib/content/nsfw-filter';
-	import AppNavigation from '$lib/components/layout/app-navigation.svelte';
+	import AppSidebar from '$lib/components/layout/app-sidebar.svelte';
+	import ForgeStarfield from '$lib/components/layout/forge-starfield.svelte';
+	import MobileTabBar from '$lib/components/layout/mobile-tab-bar.svelte';
+	import MobileTopBar from '$lib/components/layout/mobile-top-bar.svelte';
+	import * as Sidebar from '$lib/components/ui/sidebar';
+	import { SIDEBAR_COOKIE_NAME } from '$lib/components/ui/sidebar/constants';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import { _ } from '$lib/i18n';
 	import { onMount } from 'svelte';
 
 	let { children } = $props();
+
+	// `ssr = false` : le cookie posé par la sidebar est lisible dès l'initialisation.
+	let sidebarOpen = $state(
+		!document.cookie.split('; ').some((entry) => entry === `${SIDEBAR_COOKIE_NAME}=false`)
+	);
 
 	onMount(() => {
 		const session = hydrateSession(localStorage);
@@ -25,17 +35,22 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<meta name="theme-color" content="#050a12" />
+	<meta name="theme-color" content="#071638" />
 	<title>{$_('app.title')}</title>
 </svelte:head>
 
-<div class="min-h-screen bg-transparent">
-	<AppNavigation />
-	<main
-		class="forge-scene mx-auto min-h-screen max-w-screen-2xl px-4 pt-24 pb-20 sm:px-5 lg:px-8 lg:pb-10"
-	>
-		{@render children()}
-	</main>
-</div>
+<Sidebar.Provider bind:open={sidebarOpen}>
+	<AppSidebar />
+	<MobileTopBar />
+
+	<Sidebar.Inset class="forge-scene bg-transparent">
+		<ForgeStarfield />
+		<div class="mx-auto w-full max-w-screen-2xl px-4 pt-20 pb-28 sm:px-5 md:pt-8 md:pb-10 lg:px-8">
+			{@render children()}
+		</div>
+	</Sidebar.Inset>
+
+	<MobileTabBar />
+</Sidebar.Provider>
 
 <Toaster richColors />

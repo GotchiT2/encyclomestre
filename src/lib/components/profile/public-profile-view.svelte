@@ -2,6 +2,7 @@
 	import CardGrid from '$lib/components/collection/card-grid.svelte';
 	import ContextualCardRail from '$lib/components/cards/contextual-card-rail.svelte';
 	import FilterControls from '$lib/components/collection/filter-controls.svelte';
+	import FilterShell from '$lib/components/layout/filter-shell.svelte';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import PlayerRelationshipControl from '$lib/components/friends/player-relationship-control.svelte';
 	import ProfileGallery from '$lib/components/profile/profile-gallery.svelte';
@@ -132,6 +133,13 @@
 			inviting = false;
 		}
 	}
+	const activeFilterCount = $derived(
+		(query ? 1 : 0) +
+			selectedRarities.length +
+			tagFilterIds.length +
+			(sortBy !== 'rarity' ? 1 : 0) +
+			(variant !== 'all' ? 1 : 0)
+	);
 </script>
 
 <section
@@ -283,31 +291,36 @@
 			<RegistrySummary {summary} />
 		</div>
 	{:else}
-		<div class="flex flex-col gap-6">
-			<FilterControls
-				bind:query
-				bind:sortBy
-				bind:selectedRarities
-				bind:tagFilterIds
-				bind:variant
-				{tags}
-				{untaggedOption}
-				allowTagCreation={false}
-				onOpenTagEditor={() => undefined}
-				onClear={clearFilters}
-			/>
-			{#if visibleCards().length}<CardGrid
-					cards={visibleCards()}
+		<div class="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
+			<FilterShell activeCount={activeFilterCount}>
+				<FilterControls
+					bind:query
+					bind:sortBy
+					bind:selectedRarities
+					bind:tagFilterIds
+					bind:variant
 					{tags}
-					{assignments}
-					isSelectionMode={false}
-					selectedCardIds={[]}
-					onToggleCard={() => undefined}
-				/>{:else}<p
-					class="border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
-				>
-					{$_('friends.empty_collection')}
-				</p>{/if}
+					{untaggedOption}
+					allowTagCreation={false}
+					onOpenTagEditor={() => undefined}
+					onClear={clearFilters}
+				/>
+			</FilterShell>
+
+			<div class="flex min-w-0 flex-col gap-6">
+				{#if visibleCards().length}<CardGrid
+						cards={visibleCards()}
+						{tags}
+						{assignments}
+						isSelectionMode={false}
+						selectedCardIds={[]}
+						onToggleCard={() => undefined}
+					/>{:else}<p
+						class="border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
+					>
+						{$_('friends.empty_collection')}
+					</p>{/if}
+			</div>
 		</div>
 	{/if}
 </section>

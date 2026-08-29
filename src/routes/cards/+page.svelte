@@ -4,6 +4,7 @@
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardDetailModal from '$lib/components/cards/card-detail-modal.svelte';
 	import CatalogueFilters from '$lib/components/cards/catalogue-filters.svelte';
+	import FilterShell from '$lib/components/layout/filter-shell.svelte';
 	import CatalogueResultSummary from '$lib/components/cards/catalogue-result-summary.svelte';
 	import EmptyState from '$lib/components/layout/empty-state.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
@@ -72,6 +73,12 @@
 		data.filters.selectedRarities.forEach((rarity) => parameters.append('rarity', rarity));
 		return `/cards?${parameters}`;
 	}
+	const activeFilterCount = $derived(
+		(data.filters.query ? 1 : 0) +
+			data.filters.selectedRarities.length +
+			(data.filters.sortBy !== 'rarity' ? 1 : 0) +
+			(data.filters.sortDirection === 'ASC' ? 1 : 0)
+	);
 </script>
 
 <section class="flex flex-col gap-8">
@@ -80,44 +87,52 @@
 		title={$_('codex.title')}
 		description={$_('codex.description')}
 	/>
-	<CatalogueFilters
-		query={data.filters.query}
-		sortBy={data.filters.sortBy}
-		sortDirection={data.filters.sortDirection}
-		selectedRarities={data.filters.selectedRarities}
-	/>
-	{#await data.cards}
-		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-			{$_('codex.loading')}
-		</p>
-	{:then result}
-		<CatalogueResultSummary total={result.meta.total} rarityResults={result.rarityResults} />
-		{#if result.items.length}
-			<div class="wikiforge-card-grid">
-				{#each result.items as card (card.id)}
-					<CardTile {card} onOpen={openCard} />
-				{/each}
-			</div>
-		{:else}
-			<EmptyState title={$_('codex.empty')} />
-		{/if}
-		{#if result.meta.total > 0}<nav
-				class="flex items-center justify-between border-t border-primary/20 pt-5"
-			>
-				<Button href={pageHref(Math.max(1, result.meta.page - 1))} disabled={result.meta.page === 1}
-					>{$_('codex.previous')}</Button
-				>
-				<span class="font-mono text-xs text-primary"
-					>{result.meta.page} / {result.meta.totalPages}</span
-				>
-				<Button
-					href={pageHref(Math.min(result.meta.totalPages, result.meta.page + 1))}
-					disabled={result.meta.page === result.meta.totalPages}>{$_('codex.next')}</Button
-				>
-			</nav>{/if}
-	{:catch}
-		<p class="text-destructive">{$_('codex.error')}</p>
-	{/await}
+	<div class="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
+		<FilterShell activeCount={activeFilterCount}>
+			<CatalogueFilters
+				query={data.filters.query}
+				sortBy={data.filters.sortBy}
+				sortDirection={data.filters.sortDirection}
+				selectedRarities={data.filters.selectedRarities}
+			/>
+		</FilterShell>
+
+		<div class="flex min-w-0 flex-col gap-6">
+			{#await data.cards}
+				<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
+					{$_('codex.loading')}
+				</p>
+			{:then result}
+				<CatalogueResultSummary total={result.meta.total} rarityResults={result.rarityResults} />
+				{#if result.items.length}
+					<div class="wikiforge-card-grid">
+						{#each result.items as card (card.id)}
+							<CardTile {card} onOpen={openCard} />
+						{/each}
+					</div>
+				{:else}
+					<EmptyState title={$_('codex.empty')} />
+				{/if}
+				{#if result.meta.total > 0}<nav
+						class="flex items-center justify-between border-t border-primary/20 pt-5"
+					>
+						<Button
+							href={pageHref(Math.max(1, result.meta.page - 1))}
+							disabled={result.meta.page === 1}>{$_('codex.previous')}</Button
+						>
+						<span class="font-mono text-xs text-primary"
+							>{result.meta.page} / {result.meta.totalPages}</span
+						>
+						<Button
+							href={pageHref(Math.min(result.meta.totalPages, result.meta.page + 1))}
+							disabled={result.meta.page === result.meta.totalPages}>{$_('codex.next')}</Button
+						>
+					</nav>{/if}
+			{:catch}
+				<p class="text-destructive">{$_('codex.error')}</p>
+			{/await}
+		</div>
+	</div>
 </section>
 
 {#if selectedCard}

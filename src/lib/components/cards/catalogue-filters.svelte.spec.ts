@@ -9,7 +9,12 @@ vi.mock('$app/navigation', () => ({ goto: gotoMock }));
 import CatalogueFilters from './catalogue-filters.svelte';
 
 describe('CatalogueFilters', () => {
-	afterEach(() => gotoMock.mockReset());
+	// Sans `restoreAllMocks`, une assertion en échec laisse le spy `requestSubmit`
+	// en place et fait cascader les tests suivants.
+	afterEach(() => {
+		gotoMock.mockReset();
+		vi.restoreAllMocks();
+	});
 
 	it('applies text filters after a short debounce without a submit button', async () => {
 		const requestSubmit = vi
@@ -24,7 +29,7 @@ describe('CatalogueFilters', () => {
 
 		const searchInput = page.getByPlaceholder('Rechercher une carte');
 		await searchInput.fill('Mars');
-		await expect.element(page.getByLabelText('Nom')).toHaveValue('relevance');
+		await expect.element(page.getByLabelText('Trier par')).toHaveValue('relevance');
 		expect(requestSubmit).not.toHaveBeenCalled();
 		await new Promise((resolve) => setTimeout(resolve, 700));
 		expect(requestSubmit).toHaveBeenCalledOnce();
@@ -37,16 +42,23 @@ describe('CatalogueFilters', () => {
 		await new Promise(requestAnimationFrame);
 		expect(document.activeElement).toBe(await searchInput.element());
 		await expect.element(page.getByRole('button', { name: 'Filtrer' })).not.toBeInTheDocument();
-		const rarityButtons = Array.from(document.querySelectorAll('button[aria-pressed]')).map(
-			(button) => button.textContent?.replace(/\s+/g, '')
-		);
-		expect(rarityButtons.slice(0, 6)).toEqual([
-			'CCommune',
-			'PCPeuCommune',
-			'RRare',
-			'SRSuper-Rare',
-			'URUltra-Rare',
-			'LLégendaire'
+		// Le panneau latéral n'affiche que les abréviations : le nom complet passe en tooltip.
+		const rarityButtons = Array.from(document.querySelectorAll('button[aria-pressed]')).slice(0, 6);
+		expect(rarityButtons.map((button) => button.textContent?.replace(/\s+/g, ''))).toEqual([
+			'C',
+			'PC',
+			'R',
+			'SR',
+			'UR',
+			'L'
+		]);
+		expect(rarityButtons.map((button) => button.getAttribute('title'))).toEqual([
+			'Commune',
+			'Peu Commune',
+			'Rare',
+			'Super-Rare',
+			'Ultra-Rare',
+			'Légendaire'
 		]);
 		requestSubmit.mockRestore();
 	});
@@ -59,7 +71,7 @@ describe('CatalogueFilters', () => {
 			selectedRarities: []
 		});
 
-		const sort = page.getByLabelText('Nom');
+		const sort = page.getByLabelText('Trier par');
 		await expect.element(sort).toHaveValue('name');
 		document.querySelector<HTMLFormElement>('form')?.requestSubmit();
 

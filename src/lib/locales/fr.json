@@ -28,7 +28,12 @@
 		"forgeNetwork": "Réseau de collection",
 		"openBooster": "Ouvrir un booster",
 		"money_balance": "Solde : {amount} pièces",
-		"more": "Plus"
+		"more": "Plus",
+		"sectionExplore": "Explorer",
+		"sectionCommunity": "Communauté",
+		"sectionAccount": "Compte",
+		"toggleSidebar": "Réduire la navigation",
+		"sidebarAria": "Navigation latérale"
 	},
 	"landing": {
 		"eyebrow": "Cartes encyclopédiques · Collection 01",
@@ -199,7 +204,10 @@
 		"sale_all": "Toutes",
 		"sale_active": "En vente",
 		"sale_available": "Disponibles",
-		"error": "La collection est indisponible."
+		"error": "La collection est indisponible.",
+		"only_duplicates": "Uniquement les doublons",
+		"only_protected": "Uniquement les cartes protégées",
+		"filtersDescription": "Affinez l’affichage de votre collection."
 	},
 	"common": {
 		"all": "Tous",
@@ -214,6 +222,13 @@
 		"next": "Suivant",
 		"expandFilters": "Afficher les filtres",
 		"collapseFilters": "Masquer les filtres"
+	},
+	"filters": {
+		"title": "Filtres",
+		"description": "Affinez l’affichage des résultats.",
+		"open": "Ouvrir les filtres",
+		"activeCount": "{count} filtre(s) actif(s)",
+		"sortBy": "Trier par"
 	},
 	"profile": {
 		"title": "Mon profil",

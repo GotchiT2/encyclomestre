@@ -23,6 +23,7 @@
 	import WishlistAccessDialog from '$lib/components/wishlist/wishlist-access-dialog.svelte';
 	import WishlistHub from '$lib/components/wishlist/wishlist-hub.svelte';
 	import WishlistListControls from '$lib/components/wishlist/wishlist-list-controls.svelte';
+	import FilterShell from '$lib/components/layout/filter-shell.svelte';
 	import WishlistPicker from '$lib/components/wishlist/wishlist-picker.svelte';
 	import WishlistRegistryDrawers from '$lib/components/wishlist/wishlist-registry-drawers.svelte';
 	import WishlistSocialGrid from '$lib/components/wishlist/wishlist-social-grid.svelte';
@@ -290,6 +291,12 @@
 		else editImage = card;
 		illustrationPickerOpen = false;
 	}
+	const activeFilterCount = $derived(
+		(query ? 1 : 0) +
+			rarities.length +
+			(sortBy !== 'date' ? 1 : 0) +
+			(sortDirection === 'ASC' ? 1 : 0)
+	);
 </script>
 
 <section class="flex flex-col gap-6 pb-12 sm:gap-8">
@@ -349,43 +356,50 @@
 					{/if}
 				</header>
 
-				<WishlistListControls
-					bind:query
-					bind:rarities
-					bind:sortBy
-					bind:sortDirection
-					onChange={resetPage}
-				/>
-				<p class="forge-label">{$_('wishlist.results_count', { values: { count: total } })}</p>
-				{#if listLoading}
-					<p class="forge-label">{$_('wishlist.loading')}</p>
-				{:else if entriesFailed}
-					<div class="forge-panel-flat flex flex-wrap items-center justify-between gap-3 p-4">
-						<p class="text-destructive">{$_('wishlist.cards_load_error')}</p>
-						<Button variant="outline" onclick={() => void loadEntries()}
-							>{$_('common.retry')}</Button
-						>
+				<div class="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
+					<FilterShell activeCount={activeFilterCount}>
+						<WishlistListControls
+							bind:query
+							bind:rarities
+							bind:sortBy
+							bind:sortDirection
+							onChange={resetPage}
+						/>
+					</FilterShell>
+
+					<div class="flex min-w-0 flex-col gap-4">
+						<p class="forge-label">{$_('wishlist.results_count', { values: { count: total } })}</p>
+						{#if listLoading}
+							<p class="forge-label">{$_('wishlist.loading')}</p>
+						{:else if entriesFailed}
+							<div class="forge-panel-flat flex flex-wrap items-center justify-between gap-3 p-4">
+								<p class="text-destructive">{$_('wishlist.cards_load_error')}</p>
+								<Button variant="outline" onclick={() => void loadEntries()}
+									>{$_('common.retry')}</Button
+								>
+							</div>
+						{:else}
+							<WishlistSocialGrid
+								{entries}
+								{editable}
+								onRemove={removeCard}
+								onOpen={(entry) => (selectedCard = entry.card)}
+							/>
+							<nav
+								class="flex items-center justify-between border-t border-primary/20 pt-4"
+								aria-label={$_('wishlist.page')}
+							>
+								<Button variant="outline" disabled={page <= 1} onclick={() => (page -= 1)}
+									>{$_('common.previous')}</Button
+								>
+								<span class="forge-label">{page} / {totalPages}</span>
+								<Button variant="outline" disabled={page >= totalPages} onclick={() => (page += 1)}
+									>{$_('common.next')}</Button
+								>
+							</nav>
+						{/if}
 					</div>
-				{:else}
-					<WishlistSocialGrid
-						{entries}
-						{editable}
-						onRemove={removeCard}
-						onOpen={(entry) => (selectedCard = entry.card)}
-					/>
-					<nav
-						class="flex items-center justify-between border-t border-primary/20 pt-4"
-						aria-label={$_('wishlist.page')}
-					>
-						<Button variant="outline" disabled={page <= 1} onclick={() => (page -= 1)}
-							>{$_('common.previous')}</Button
-						>
-						<span class="forge-label">{page} / {totalPages}</span>
-						<Button variant="outline" disabled={page >= totalPages} onclick={() => (page += 1)}
-							>{$_('common.next')}</Button
-						>
-					</nav>
-				{/if}
+				</div>
 			</section>
 		{/if}
 	{/if}

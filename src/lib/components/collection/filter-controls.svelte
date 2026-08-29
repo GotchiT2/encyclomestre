@@ -1,13 +1,12 @@
 <script lang="ts">
 	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
 	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
-	import CardSearchPanel from '$lib/components/cards/card-search-panel.svelte';
 	import TagFilterSelector from '$lib/components/collection/tag-filter-selector.svelte';
-	import * as ToggleGroup from '$lib/components/ui/toggle-group';
 	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { Button } from '$lib/components/ui/button';
 	import * as Field from '$lib/components/ui/field';
 	import { Input } from '$lib/components/ui/input';
+	import { Switch } from '$lib/components/ui/switch';
 	import { _ } from '$lib/i18n';
 	import type {
 		CardRarity,
@@ -53,136 +52,126 @@
 		onClear: () => void;
 	} = $props();
 
-	function setBooleanFilter(
-		value: string | string[],
-		setter: (value: CollectionBooleanFilter) => void
-	) {
-		if (value === 'all' || value === 'yes' || value === 'no') setter(value);
-	}
+	const hasActiveFilters = $derived(
+		Boolean(query) ||
+			selectedRarities.length > 0 ||
+			tagFilterIds.length > 0 ||
+			(canonical ? sortBy !== 'acquiredDate' : sortBy !== 'rarity') ||
+			duplicate !== 'all' ||
+			protection !== 'all' ||
+			variant !== 'all' ||
+			Boolean(wishlistOwnerId)
+	);
 </script>
 
-<CardSearchPanel class="forge-panel" contentClass="p-4 sm:p-5">
-	<Field.FieldGroup class="gap-5">
-		<div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem]">
-			<Field.Field>
-				<Field.FieldLabel for="collection-search" class="forge-label">
-					{$_('collection.search')}
-				</Field.FieldLabel>
-				<Input id="collection-search" bind:value={query} placeholder={$_('collection.search')} />
-				{#if query.trim().length === 1 || query.trim().length === 2}
-					<p class="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-						{$_('collection.search_minimum')}
-					</p>
-				{/if}
-			</Field.Field>
-			<Field.Field>
-				<Field.FieldLabel for="collection-sort" class="forge-label">
-					{$_('collection.sort')}
-				</Field.FieldLabel>
-				<select
-					id="collection-sort"
-					bind:value={sortBy}
-					aria-label={$_('collection.sort')}
-					class="w-full"
-				>
-					{#if canonical}
-						<option value="acquiredDate">{$_('collection.sortAcquiredDate')}</option>
-						<option value="rarity">{$_('collection.sortRarity')}</option>
-						<option value="name">{$_('collection.sortName')}</option>
-					{:else}
-						<option value="relevance">{$_('collection.sortRelevance')}</option>
-						<option value="name">{$_('collection.sortName')}</option>
-						<option value="rarity">{$_('collection.sortRarity')}</option>
-					{/if}
-				</select>
-			</Field.Field>
-		</div>
+{#snippet booleanSwitch(
+	label: string,
+	switchLabel: string,
+	value: CollectionBooleanFilter,
+	setValue: (next: CollectionBooleanFilter) => void
+)}
+	<div
+		class="flex min-h-11 items-center justify-between gap-3 border border-primary/20 bg-background/40 px-3"
+	>
+		<span class="forge-label">{label}</span>
+		<Switch
+			checked={value === 'yes'}
+			onCheckedChange={(checked) => setValue(checked ? 'yes' : 'all')}
+			aria-label={switchLabel}
+		/>
+	</div>
+{/snippet}
 
-		<Field.FieldSet class="gap-2">
-			<Field.FieldLegend class="forge-label">{$_('collection.rarities')}</Field.FieldLegend>
-			<RaritySelector options={cardRarityOptions} bind:selected={selectedRarities} />
-		</Field.FieldSet>
-		{#if !canonical}<CardVariantSelector bind:value={variant} />{/if}
-
-		{#if canonical}<div class="grid gap-4 lg:grid-cols-2">
-				<Field.FieldSet class="gap-2">
-					<Field.FieldLegend class="forge-label"
-						>{$_('collection.duplicate_filter')}</Field.FieldLegend
-					>
-					<ToggleGroup.Root
-						type="single"
-						value={duplicate}
-						onValueChange={(value) => setBooleanFilter(value, (next) => (duplicate = next))}
-						variant="outline"
-						spacing={1}
-						class="grid grid-cols-3"
-					>
-						<ToggleGroup.Item value="all" class="min-h-11 px-2">{$_('common.all')}</ToggleGroup.Item
-						>
-						<ToggleGroup.Item value="yes" class="min-h-11 px-2"
-							>{$_('collection.duplicates')}</ToggleGroup.Item
-						>
-						<ToggleGroup.Item value="no" class="min-h-11 px-2"
-							>{$_('collection.unique_cards')}</ToggleGroup.Item
-						>
-					</ToggleGroup.Root>
-				</Field.FieldSet>
-				<Field.FieldSet class="gap-2">
-					<Field.FieldLegend class="forge-label"
-						>{$_('collection.protection_filter')}</Field.FieldLegend
-					>
-					<ToggleGroup.Root
-						type="single"
-						value={protection}
-						onValueChange={(value) => setBooleanFilter(value, (next) => (protection = next))}
-						variant="outline"
-						spacing={1}
-						class="grid grid-cols-3"
-					>
-						<ToggleGroup.Item value="all" class="min-h-11 px-2">{$_('common.all')}</ToggleGroup.Item
-						>
-						<ToggleGroup.Item value="yes" class="min-h-11 px-2"
-							>{$_('collection.protected_cards')}</ToggleGroup.Item
-						>
-						<ToggleGroup.Item value="no" class="min-h-11 px-2"
-							>{$_('collection.unprotected_cards')}</ToggleGroup.Item
-						>
-					</ToggleGroup.Root>
-				</Field.FieldSet>
-			</div>{/if}
-
-		{#if canonical && wishlistOwners.length}
-			<Field.Field>
-				<Field.FieldLabel for="collection-wishlist-owner" class="forge-label">
-					{$_('collection.wishlist_filter')}
-				</Field.FieldLabel>
-				<select id="collection-wishlist-owner" bind:value={wishlistOwnerId} class="w-full">
-					<option value="">{$_('collection.wishlist_filter_all')}</option>
-					{#each wishlistOwners as owner (owner.id)}
-						<option value={owner.id}>{owner.displayName || owner.username}</option>
-					{/each}
-				</select>
-			</Field.Field>
-		{/if}
-
+<Field.FieldGroup class="gap-5">
+	<div class="grid gap-3 @lg:grid-cols-[minmax(0,1fr)_12rem]">
 		<Field.Field>
-			<Field.FieldLabel class="forge-label">{$_('collection.tags')}</Field.FieldLabel>
-			<TagFilterSelector
-				bind:values={tagFilterIds}
-				{tags}
-				untaggedValue={untaggedOption}
-				allowCreation={allowTagCreation}
-				onCreate={onOpenTagEditor}
-			/>
-			<p class="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-				{$_('collection.tags_all_hint')}
-			</p>
+			<Field.FieldLabel for="collection-search" class="forge-label">
+				{$_('collection.search')}
+			</Field.FieldLabel>
+			<Input id="collection-search" bind:value={query} placeholder={$_('collection.search')} />
+			{#if query.trim().length === 1 || query.trim().length === 2}
+				<p class="font-mono text-[9px] tracking-wider text-muted-foreground uppercase">
+					{$_('collection.search_minimum')}
+				</p>
+			{/if}
 		</Field.Field>
-	</Field.FieldGroup>
+		<Field.Field>
+			<Field.FieldLabel for="collection-sort" class="forge-label">
+				{$_('collection.sort')}
+			</Field.FieldLabel>
+			<select
+				id="collection-sort"
+				bind:value={sortBy}
+				aria-label={$_('collection.sort')}
+				class="w-full"
+			>
+				{#if canonical}
+					<option value="acquiredDate">{$_('collection.sortAcquiredDate')}</option>
+					<option value="rarity">{$_('collection.sortRarity')}</option>
+					<option value="name">{$_('collection.sortName')}</option>
+				{:else}
+					<option value="relevance">{$_('collection.sortRelevance')}</option>
+					<option value="name">{$_('collection.sortName')}</option>
+					<option value="rarity">{$_('collection.sortRarity')}</option>
+				{/if}
+			</select>
+		</Field.Field>
+	</div>
 
-	{#if query || selectedRarities.length || tagFilterIds.length || wishlistOwnerId || (canonical ? sortBy !== 'acquiredDate' : sortBy !== 'rarity') || duplicate !== 'all' || protection !== 'all' || variant !== 'all'}
-		<Button size="sm" variant="ghost" class="mt-4 w-fit" onclick={onClear}>
-			{$_('collection.clearFilters')}
-		</Button>
+	<Field.FieldSet class="gap-2">
+		<Field.FieldLegend class="forge-label">{$_('collection.rarities')}</Field.FieldLegend>
+		<RaritySelector options={cardRarityOptions} bind:selected={selectedRarities} compact />
+	</Field.FieldSet>
+	{#if !canonical}<CardVariantSelector bind:value={variant} />{/if}
+
+	{#if canonical}
+		<div class="grid gap-2 @md:grid-cols-2">
+			{@render booleanSwitch(
+				$_('collection.duplicate_filter'),
+				$_('collection.only_duplicates'),
+				duplicate,
+				(next) => (duplicate = next)
+			)}
+			{@render booleanSwitch(
+				$_('collection.protection_filter'),
+				$_('collection.only_protected'),
+				protection,
+				(next) => (protection = next)
+			)}
+		</div>
 	{/if}
-</CardSearchPanel>
+
+	{#if canonical && wishlistOwners.length}
+		<Field.Field>
+			<Field.FieldLabel for="collection-wishlist-owner" class="forge-label">
+				{$_('collection.wishlist_filter')}
+			</Field.FieldLabel>
+			<select id="collection-wishlist-owner" bind:value={wishlistOwnerId} class="w-full">
+				<option value="">{$_('collection.wishlist_filter_all')}</option>
+				{#each wishlistOwners as owner (owner.id)}
+					<option value={owner.id}>{owner.displayName || owner.username}</option>
+				{/each}
+			</select>
+		</Field.Field>
+	{/if}
+
+	<Field.Field>
+		<Field.FieldLabel class="forge-label">{$_('collection.tags')}</Field.FieldLabel>
+		<TagFilterSelector
+			bind:values={tagFilterIds}
+			{tags}
+			untaggedValue={untaggedOption}
+			allowCreation={allowTagCreation}
+			onCreate={onOpenTagEditor}
+		/>
+		<p class="font-mono text-[9px] tracking-wider text-muted-foreground uppercase">
+			{$_('collection.tags_all_hint')}
+		</p>
+	</Field.Field>
+</Field.FieldGroup>
+
+{#if hasActiveFilters}
+	<Button size="sm" variant="ghost" class="mt-4 w-fit" onclick={onClear}>
+		{$_('collection.clearFilters')}
+	</Button>
+{/if}

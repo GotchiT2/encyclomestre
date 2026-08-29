@@ -14,7 +14,7 @@
 </script>
 
 <section
-	class="relative grid min-h-[calc(100dvh-9rem)] items-center gap-10 overflow-hidden py-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(24rem,0.8fr)] lg:gap-14"
+	class="bg-red relative grid min-h-[calc(100dvh-9rem)] items-center gap-10 overflow-hidden py-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(24rem,0.8fr)] lg:gap-14"
 >
 	<div class="relative z-10 flex flex-col gap-7">
 		<div>
