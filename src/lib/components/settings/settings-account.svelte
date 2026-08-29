@@ -6,11 +6,15 @@
 
 	let {
 		username = $bindable(''),
+		avatarUrl,
+		onChooseAvatar = () => undefined,
 		onLogout,
 		onLogoutAll,
 		onDelete
 	}: {
 		username?: string;
+		avatarUrl?: string | null;
+		onChooseAvatar?: () => void;
 		onLogout: () => void;
 		onLogoutAll: () => void;
 		onDelete: () => void;
@@ -29,6 +33,14 @@
 				class="mt-1 font-serif font-bold"
 			/></label
 		>
+		<div class="mt-4 flex items-center gap-3">
+			{#if avatarUrl}<img
+					src={avatarUrl}
+					alt=""
+					class="size-16 border border-primary/30 object-cover"
+				/>{/if}
+			<Button variant="outline" onclick={onChooseAvatar}>{$_('settings.choose_avatar')}</Button>
+		</div>
 	</section>
 	<section class="border-4 border-double border-primary/30 bg-card p-4">
 		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">

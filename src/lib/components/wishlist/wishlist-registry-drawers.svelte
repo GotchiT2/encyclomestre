@@ -10,6 +10,10 @@
 		editOpen = $bindable(false),
 		deleteOpen = $bindable(false),
 		registry,
+		createImage,
+		editImage,
+		onPickCreateImage = () => undefined,
+		onPickEditImage = () => undefined,
 		onCreate,
 		onUpdate,
 		onDelete
@@ -18,8 +22,20 @@
 		editOpen?: boolean;
 		deleteOpen?: boolean;
 		registry: WishlistRegistrySummary | null;
-		onCreate: (title: string, description: string) => void | Promise<void>;
-		onUpdate: (title: string, description: string) => void | Promise<void>;
+		createImage?: { title: string; imageUrl: string; pageId: string } | null;
+		editImage?: { title: string; imageUrl: string; pageId: string } | null;
+		onPickCreateImage?: () => void;
+		onPickEditImage?: () => void;
+		onCreate: (
+			title: string,
+			description: string,
+			imagePageId: string | null
+		) => void | Promise<void>;
+		onUpdate: (
+			title: string,
+			description: string,
+			imagePageId: string | null
+		) => void | Promise<void>;
 		onDelete: () => void | Promise<void>;
 	} = $props();
 
@@ -30,7 +46,7 @@
 
 	async function create() {
 		if (!title.trim()) return;
-		await onCreate(title.trim(), description.trim());
+		await onCreate(title.trim(), description.trim(), createImage?.pageId ?? null);
 		title = '';
 		description = '';
 		createOpen = false;
@@ -38,7 +54,11 @@
 
 	async function update() {
 		if (!editTitle.trim()) return;
-		await onUpdate(editTitle.trim(), editDescription.trim());
+		await onUpdate(
+			editTitle.trim(),
+			editDescription.trim(),
+			editImage?.pageId ?? registry?.imagePageId ?? null
+		);
 		editOpen = false;
 	}
 
@@ -59,6 +79,11 @@
 				maxlength={256}
 				placeholder={$_('wishlist.description_placeholder')}
 			/>
+			<Button variant="outline" onclick={onPickCreateImage}>
+				{createImage
+					? $_('wishlist.illustration_selected', { values: { card: createImage.title } })
+					: $_('wishlist.choose_illustration')}
+			</Button>
 			<div class="flex gap-2">
 				<Button variant="outline" class="flex-1" onclick={() => (createOpen = false)}
 					>{$_('common.cancel')}</Button
@@ -78,6 +103,18 @@
 				maxlength={64}
 				placeholder={$_('wishlist.create_placeholder')}
 			/>
+			{#if editImage?.imageUrl || registry?.imageUrl}
+				<img
+					src={editImage?.imageUrl ?? registry?.imageUrl ?? ''}
+					alt=""
+					class="h-24 w-full object-cover"
+				/>
+			{/if}
+			<Button variant="outline" onclick={onPickEditImage}>
+				{editImage
+					? $_('wishlist.illustration_selected', { values: { card: editImage.title } })
+					: $_('wishlist.choose_illustration')}
+			</Button>
 			<Input
 				bind:value={editDescription}
 				maxlength={256}

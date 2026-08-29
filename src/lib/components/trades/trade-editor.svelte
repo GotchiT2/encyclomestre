@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import CoinsIcon from '@lucide/svelte/icons/coins';
 	import type {
 		CardRecord,
 		CreateTradeOfferInput,
@@ -11,51 +13,58 @@
 	import TradeCardPanel from './trade-card-panel.svelte';
 	import TradeModal from './trade-modal.svelte';
 
+	type TradeSide = 'offered' | 'requested';
+
 	let {
 		open = $bindable(false),
 		currentUserId,
+		availableMoney = 0,
 		partner,
 		initialOwnedCards = [],
 		initialPartnerCards = [],
 		loadOwnedCards,
 		loadPartnerCards,
-		loadPartnerOwnershipCounts,
-		loadViewerOwnershipCounts,
 		draft = $bindable<Partial<CreateTradeOfferInput>>({}),
 		onSubmit
 	}: {
 		open?: boolean;
 		currentUserId: string;
+		availableMoney?: number;
 		partner: User | null;
 		initialOwnedCards?: CardRecord[];
 		initialPartnerCards?: CardRecord[];
 		loadOwnedCards: (query: TradeCardSearchQuery) => Promise<PaginatedResponse<CardRecord>>;
 		loadPartnerCards: (query: TradeCardSearchQuery) => Promise<PaginatedResponse<CardRecord>>;
-		loadPartnerOwnershipCounts: (variantIds: string[]) => Promise<Record<string, number>>;
-		loadViewerOwnershipCounts: (variantIds: string[]) => Promise<Record<string, number>>;
 		draft?: Partial<CreateTradeOfferInput>;
 		onSubmit: (input: CreateTradeOfferInput) => void;
 	} = $props();
 	let offeredIds = $state<string[]>([]);
 	let requestedIds = $state<string[]>([]);
-	let offeredCredits = $state(0);
-	let requestedCredits = $state(0);
+	let message = $state('');
+	let offeredMoney = $state(0);
+	let requestedMoney = $state(0);
 	let error = $state('');
-	let activePanel = $state<'you' | 'partner'>('you');
+	let activeSide = $state<TradeSide>('offered');
+	let termsExpanded = $state(false);
+	const offeredMoneyTooHigh = $derived(offeredMoney > availableMoney);
+	const partnerName = $derived(partner?.displayName || partner?.username || '');
 	$effect(() => {
 		if (open) {
 			offeredIds = draft.offeredCardIds ?? [];
 			requestedIds = draft.requestedCardIds ?? [];
-			offeredCredits = draft.offeredCredits ?? 0;
-			requestedCredits = draft.requestedCredits ?? 0;
+			message = draft.message ?? '';
+			offeredMoney = draft.offeredMoney ?? 0;
+			requestedMoney = draft.requestedMoney ?? 0;
 			error = '';
 		}
 	});
 	function submit() {
 		if (
 			!partner ||
-			(!offeredIds.length && !offeredCredits) ||
-			(!requestedIds.length && !requestedCredits)
+			offeredIds.length > 20 ||
+			requestedIds.length > 20 ||
+			offeredMoneyTooHigh ||
+			(!offeredIds.length && !requestedIds.length && offeredMoney === 0 && requestedMoney === 0)
 		) {
 			error = $_('trades.editor_validation');
 			return;
@@ -65,64 +74,121 @@
 			recipientId: partner.id,
 			offeredCardIds: offeredIds,
 			requestedCardIds: requestedIds,
-			offeredCredits,
-			requestedCredits
+			offeredMoney: Math.max(0, Math.trunc(offeredMoney)),
+			requestedMoney: Math.max(0, Math.trunc(requestedMoney)),
+			message
 		});
 		open = false;
 	}
 </script>
 
-<TradeModal bind:open title={$_('trades.editor_title')}>
-	<div class="flex min-h-0 flex-1 flex-col">
-		<div class="min-h-0 flex-1 overflow-y-auto p-2 sm:p-4">
-			<nav class="flex border-b border-primary/25" aria-label={$_('trades.editor_tabs')}>
-				<Button
-					variant={activePanel === 'you' ? 'default' : 'ghost'}
-					class="min-w-0 flex-1 px-2 text-xs sm:text-sm"
-					onclick={() => (activePanel = 'you')}>{$_('trades.my_cards')}</Button
-				><Button
-					variant={activePanel === 'partner' ? 'default' : 'ghost'}
-					class="min-w-0 flex-1 truncate px-2 text-xs sm:text-sm"
-					onclick={() => (activePanel = 'partner')}
-					>{partner?.displayName || partner?.username}</Button
-				>
-			</nav>
-			<div class="mt-3">
-				<div class:hidden={activePanel !== 'you'}>
-					<TradeCardPanel
-						title={$_('trades.your_panel')}
-						scopeKey={currentUserId}
-						active={activePanel === 'you'}
-						initialCards={initialOwnedCards}
-						loadCards={loadOwnedCards}
-						loadComparisonCounts={loadPartnerOwnershipCounts}
-						comparisonOwnerName={partner?.displayName || partner?.username}
-						bind:selectedIds={offeredIds}
-						bind:credits={offeredCredits}
-					/>
+<TradeModal bind:open title={$_('trades.exchange_with', { values: { user: partnerName } })}>
+	<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+		<div
+			class="shrink-0 border-b border-primary/20 bg-background/55 px-3 py-2 text-center font-mono text-[10px] uppercase tracking-wider text-muted-foreground sm:px-4"
+		>
+			{$_('trades.selection_summary', {
+				values: { offered: offeredIds.length, partner: partnerName, requested: requestedIds.length }
+			})}
+		</div>
+		<nav
+			class="grid shrink-0 grid-cols-2 border-b border-primary/25"
+			aria-label={$_('trades.editor_tabs')}
+		>
+			<Button
+				variant={activeSide === 'offered' ? 'default' : 'ghost'}
+				class="min-w-0 rounded-none py-4 text-xs sm:text-sm"
+				aria-selected={activeSide === 'offered'}
+				onclick={() => (activeSide = 'offered')}>{$_('trades.my_cards')}</Button
+			><Button
+				variant={activeSide === 'requested' ? 'default' : 'ghost'}
+				class="min-w-0 truncate rounded-none py-4 text-xs sm:text-sm"
+				aria-selected={activeSide === 'requested'}
+				onclick={() => (activeSide = 'requested')}
+				>{$_('trades.partner_cards', { values: { user: partnerName } })}</Button
+			>
+		</nav>
+		<div class="shrink-0 border-b border-primary/20 bg-card/75 px-3 py-2 sm:px-4">
+			<Button
+				variant="ghost"
+				size="sm"
+				class="h-8 px-2 text-xs"
+				onclick={() => (termsExpanded = !termsExpanded)}
+			>
+				<CoinsIcon />
+				{termsExpanded
+					? $_('trades.hide_terms')
+					: $_('trades.add_terms', {
+							values: { offered: offeredMoney, requested: requestedMoney }
+						})}
+			</Button>
+			{#if termsExpanded}
+				<div class="mt-3 grid gap-3 border-t border-primary/15 pt-3 sm:grid-cols-2">
+					<label class="font-mono text-[9px] uppercase tracking-widest text-primary">
+						{$_('trades.offered_money')}
+						<Input
+							class="mt-1"
+							type="number"
+							min="0"
+							max={availableMoney}
+							step="1"
+							bind:value={offeredMoney}
+						/>
+						<span class="mt-1 block text-[9px] text-muted-foreground">
+							{$_('trades.available_money', { values: { amount: availableMoney } })}
+						</span>
+						{#if offeredMoneyTooHigh}<span class="mt-1 block text-[9px] text-destructive">
+								{$_('trades.insufficient_money')}
+							</span>{/if}
+					</label>
+					<label class="font-mono text-[9px] uppercase tracking-widest text-primary">
+						{$_('trades.requested_money')}
+						<Input class="mt-1" type="number" min="0" step="1" bind:value={requestedMoney} />
+					</label>
+					<label class="sm:col-span-2 font-mono text-[9px] uppercase tracking-widest text-primary">
+						{$_('trades.message')}
+						<Input
+							class="mt-1 h-10 w-full text-sm normal-case tracking-normal"
+							bind:value={message}
+							maxlength={512}
+							placeholder={$_('trades.message_placeholder')}
+						/>
+					</label>
 				</div>
-				<div class:hidden={activePanel !== 'partner'}>
-					<TradeCardPanel
-						title={$_('trades.partner_panel')}
-						scopeKey={partner?.id ?? 'no-partner'}
-						active={activePanel === 'partner'}
-						initialCards={initialPartnerCards}
-						loadCards={loadPartnerCards}
-						loadComparisonCounts={loadViewerOwnershipCounts}
-						comparisonOwnerIsViewer
-						bind:selectedIds={requestedIds}
-						bind:credits={requestedCredits}
-					/>
-				</div>
+			{/if}
+		</div>
+		<div class="min-h-0 flex-1 overflow-y-auto p-2 sm:p-3" data-testid="trade-editor-card-selector">
+			<div class:hidden={activeSide !== 'offered'}>
+				<TradeCardPanel
+					title={$_('trades.your_panel')}
+					showTitle={false}
+					scopeKey={currentUserId}
+					active={activeSide === 'offered'}
+					initialCards={initialOwnedCards}
+					loadCards={loadOwnedCards}
+					bind:selectedIds={offeredIds}
+				/>
 			</div>
-			{#if error}<p
-					class="mt-4 border border-destructive/50 bg-destructive/10 p-3 font-serif italic text-destructive"
-				>
-					{error}
-				</p>{/if}
+			<div class:hidden={activeSide !== 'requested'}>
+				<TradeCardPanel
+					title={$_('trades.partner_panel')}
+					showTitle={false}
+					scopeKey={partner?.id ?? 'no-partner'}
+					active={activeSide === 'requested'}
+					initialCards={initialPartnerCards}
+					loadCards={loadPartnerCards}
+					bind:selectedIds={requestedIds}
+				/>
+			</div>
 		</div>
-		<div class="flex shrink-0 justify-end border-t border-primary/25 bg-card px-3 py-3 sm:px-4">
-			<Button class="w-full sm:w-auto" onclick={submit}>{$_('trades.send_offer')}</Button>
-		</div>
+		{#if error}<p
+				class="shrink-0 border-t border-destructive/40 bg-destructive/10 px-3 py-2 font-serif text-sm italic text-destructive sm:px-4"
+			>
+				{error}
+			</p>{/if}
+		<footer class="grid shrink-0 grid-cols-2 gap-2 border-t border-primary/25 bg-card p-3 sm:p-4">
+			<Button variant="outline" onclick={() => (open = false)}>{$_('common.cancel')}</Button>
+			<Button onclick={submit}>{$_('trades.send_offer')}</Button>
+		</footer>
 	</div>
 </TradeModal>

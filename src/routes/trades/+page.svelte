@@ -6,21 +6,23 @@
 	import { SvelteMap } from 'svelte/reactivity';
 	import { page } from '$app/state';
 	import { _ } from '$lib/i18n';
-	import { currentSession } from '$lib/auth/session';
+	import { currentSession, persistSession } from '$lib/auth/session';
 	import {
+		acceptTradeOfferWithRetry,
 		cancelTradeOffer,
+		counterTradeOffer,
 		createTradeOffer,
-		getReceivedTradeOffers,
-		getSentTradeOffers,
-		getOrCreateDirectConversation,
-		getTradeHistory,
+		getFriendCollectionPage,
+		getConversations,
+		getCurrentUserMoney,
+		getTradeOffer,
+		getTradeOffers,
 		getTradePartners,
-		getOwnedCollectionCards,
-		getUserCollectionCopies,
-		getUserCollectionCounts,
-		getUserCollectionPage,
-		respondToTradeOffer
+		getWikiForgeCollectionPage,
+		respondToTradeOffer,
+		searchUsers
 	} from '$lib/api';
+	import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 	import TradeDetail from '$lib/components/trades/trade-detail.svelte';
 	import TradeEditor from '$lib/components/trades/trade-editor.svelte';
 	import TradePartnerPicker from '$lib/components/trades/trade-partner-picker.svelte';
@@ -41,7 +43,9 @@
 	let partnerCards = $state<CardRecord[]>([]);
 	let partners = $state<User[]>([]);
 	let loading = $state(true);
+	let loadFailed = $state(false);
 	let currentUserId = $state('demo-user');
+	const currentUserMoney = $derived($currentSession?.user.money ?? 0);
 	let editorOpen = $state(false);
 	let partnerPickerOpen = $state(false);
 	let selectedPartner = $state<User | null>(null);
@@ -49,16 +53,16 @@
 	let selectedOffer = $state<TradeOffer | null>(null);
 	let selectedOfferedCards = $state<CardRecord[]>([]);
 	let selectedRequestedCards = $state<CardRecord[]>([]);
+	let selectedRemovedCardIds = $state<string[]>([]);
 	let editorDraft = $state<Partial<CreateTradeOfferInput>>({});
+	let counteringOfferId = $state<string | null>(null);
 	let partnersRequest: Promise<User[]> | null = null;
-	type TradeTab = 'received' | 'sent' | 'history';
-	const tradeRequests = new SvelteMap<TradeTab, Promise<TradeOffer[]>>();
 	const tradeCardsByOffer = new SvelteMap<string, TradeCardDetail[]>();
 
 	onMount(async () => {
 		currentUserId = $currentSession?.user.id ?? 'demo-user';
 		try {
-			await loadTradeTab('received');
+			await loadTrades();
 
 			const partnerId = page.url.searchParams.get('partner');
 			const cardIds = (
@@ -76,27 +80,35 @@
 				const requestedPartner = tradePartners.find((partner) => partner.id === partnerId);
 				if (requestedPartner) await selectPartner(requestedPartner, cardIds, offeredCardIds);
 			}
+		} catch {
+			loadFailed = true;
 		} finally {
 			loading = false;
 		}
 	});
 
-	async function loadTradeTab(tab: TradeTab) {
-		const cached = tradeRequests.get(tab);
-		if (cached) return cached;
-		const request = (
-			tab === 'received'
-				? getReceivedTradeOffers()
-				: tab === 'sent'
-					? getSentTradeOffers()
-					: getTradeHistory()
-		).then((result) => {
-			offers = [...new Map([...offers, ...result].map((offer) => [offer.id, offer])).values()];
+	async function loadTrades() {
+		try {
+			const result = await getTradeOffers();
+			offers = result;
 			result.forEach((offer) => tradeCardsByOffer.set(offer.id, offer.cards ?? []));
+			loadFailed = false;
 			return result;
-		});
-		tradeRequests.set(tab, request);
-		return request;
+		} catch (error) {
+			loadFailed = true;
+			throw error;
+		}
+	}
+
+	async function retryTrades() {
+		loading = true;
+		try {
+			await loadTrades();
+		} catch {
+			// The visible error state remains active until a later successful retry.
+		} finally {
+			loading = false;
+		}
 	}
 
 	async function loadPartners() {
@@ -114,20 +126,18 @@
 		offeredUserCardIds: string[] = []
 	) {
 		selectedPartner = partner;
+		counteringOfferId = null;
 		ownedCards = [];
 		partnerCards = [];
 		if (requestedCatalogueIds.length || offeredUserCardIds.length) {
-			const [resolvedOwnedCards, resolvedPartnerCards] = await Promise.all([
-				getOwnedCollectionCards(offeredUserCardIds),
-				getUserCollectionCopies(partner.id, requestedCatalogueIds)
+			const [ownPage, partnerPage] = await Promise.all([
+				getWikiForgeCollectionPage(),
+				getFriendCollectionPage(partner.id).catch(() => ({ items: [] as CardRecord[] }))
 			]);
-			ownedCards = resolvedOwnedCards;
-			partnerCards = requestedCatalogueIds.flatMap((variantId) => {
-				const copy = resolvedPartnerCards.find(
-					(card) => (card.catalogueId ?? card.id) === variantId
-				);
-				return copy ? [copy] : [];
-			});
+			ownedCards = ownPage.items.filter((card) => offeredUserCardIds.includes(card.id));
+			partnerCards = partnerPage.items.filter((card) =>
+				requestedCatalogueIds.includes(String(card.catalogueId ?? card.baseCardId ?? card.id))
+			);
 			editorDraft = {
 				recipientId: partner.id,
 				offeredCardIds: ownedCards.map((card) => card.id),
@@ -142,28 +152,57 @@
 		partnerPickerOpen = true;
 	}
 
-	function loadOwnedTradeCards(query: Parameters<typeof getUserCollectionPage>[1]) {
-		return getUserCollectionPage(currentUserId, query);
+	async function loadOwnedTradeCards(query: import('$lib/types').TradeCardSearchQuery) {
+		const result = await getWikiForgeCollectionPage({
+			query: query?.query,
+			sortBy:
+				query?.sortBy === 'rarity' ? 'rarity' : query?.sortBy === 'name' ? 'name' : 'acquiredDate',
+			rarities: query?.rarities?.map((rarity) => cardRarityCodeByName[rarity]),
+			page: query?.cursor ? undefined : query?.page,
+			cursor: query?.cursor
+		});
+		const pageNumber = result.page + 1;
+		return {
+			items: result.items,
+			meta: {
+				page: pageNumber,
+				pageSize: query?.pageSize ?? Math.max(1, result.items.length),
+				total: result.total < 0 ? result.items.length : result.total,
+				totalPages:
+					result.total < 0
+						? pageNumber + (result.hasNext ? 1 : 0)
+						: Math.max(1, Math.ceil(result.total / Math.max(1, query?.pageSize ?? 12))),
+				nextCursor: result.nextCursor ?? undefined
+			}
+		};
 	}
 
-	function loadPartnerTradeCards(query: Parameters<typeof getUserCollectionPage>[1]) {
+	async function loadPartnerTradeCards(query: import('$lib/types').TradeCardSearchQuery) {
 		if (!selectedPartner) {
 			return Promise.resolve({
 				items: [],
 				meta: { page: 1, pageSize: query?.pageSize ?? 12, total: 0, totalPages: 1 }
 			});
 		}
-		return getUserCollectionPage(selectedPartner.id, query);
-	}
-
-	function loadPartnerOwnershipCounts(variantIds: string[]) {
-		return selectedPartner
-			? getUserCollectionCounts(selectedPartner.id, variantIds)
-			: Promise.resolve({});
-	}
-
-	function loadViewerOwnershipCounts(variantIds: string[]) {
-		return getUserCollectionCounts(currentUserId, variantIds);
+		const result = await getFriendCollectionPage(selectedPartner.id, {
+			query: query.query,
+			sortBy:
+				query.sortBy === 'rarity' ? 'rarity' : query.sortBy === 'name' ? 'name' : 'acquiredDate',
+			rarities: query.rarities?.map((rarity) => cardRarityCodeByName[rarity]),
+			page: query.cursor ? undefined : query.page,
+			cursor: query.cursor
+		});
+		const pageNumber = result.page + 1;
+		return {
+			items: result.items,
+			meta: {
+				page: pageNumber,
+				pageSize: Math.max(1, result.items.length),
+				total: result.total < 0 ? result.items.length : result.total,
+				totalPages: result.hasNext ? pageNumber + 1 : pageNumber,
+				nextCursor: result.nextCursor ?? undefined
+			}
+		};
 	}
 
 	function participantAsUser(participant: TradeParticipant): User {
@@ -175,17 +214,39 @@
 		};
 	}
 
-	async function respond(id: string, status: 'accepted' | 'rejected') {
-		const updated = await respondToTradeOffer(id, status);
+	async function respond(id: string, status: 'accepted' | 'declined') {
+		const updated =
+			status === 'accepted'
+				? await acceptTradeOfferWithRetry(id)
+				: await respondToTradeOffer(id, status);
 		tradeCardsByOffer.set(id, updated.cards ?? tradeCardsByOffer.get(id) ?? []);
 		offers = offers.map((offer) => (offer.id === id ? updated : offer));
 		if (selectedOffer?.id === id) selectedOffer = updated;
+		if (status === 'accepted') {
+			const [, , money] = await Promise.all([
+				loadTrades(),
+				getWikiForgeCollectionPage(),
+				getCurrentUserMoney()
+			]);
+			const session = $currentSession;
+			if (session) {
+				persistSession(localStorage, {
+					...session,
+					user: { ...session.user, money }
+				});
+			}
+		}
 	}
 
 	async function submitOffer(input: CreateTradeOfferInput) {
-		const created = await createTradeOffer(input);
+		const created = counteringOfferId
+			? await counterTradeOffer(counteringOfferId, input)
+			: await createTradeOffer(input);
 		tradeCardsByOffer.set(created.id, created.cards ?? []);
-		offers = [created, ...offers];
+		if (counteringOfferId) await loadTrades();
+		else offers = [created, ...offers];
+		await Promise.all([getWikiForgeCollectionPage(), getConversations()]);
+		counteringOfferId = null;
 	}
 
 	async function cancel(id: string) {
@@ -196,38 +257,54 @@
 	}
 
 	async function openCounterOffer(offer: TradeOffer) {
+		counteringOfferId = offer.id;
 		const counterpart = offer.initiatorId === currentUserId ? offer.recipient : offer.initiator;
 		selectedPartner =
 			partners.find((partner) => partner.id === counterpart.id) ?? participantAsUser(counterpart);
 		const cards = tradeCardsByOffer.get(offer.id) ?? offer.cards ?? [];
-		ownedCards = cards.filter((entry) => entry.side === 'requested').map((entry) => entry.card);
-		partnerCards = cards.filter((entry) => entry.side === 'offered').map((entry) => entry.card);
+		ownedCards = cards
+			.filter((entry) => entry.side === 'requested' && entry.status === 'added')
+			.map((entry) => entry.card);
+		partnerCards = cards
+			.filter((entry) => entry.side === 'offered' && entry.status === 'added')
+			.map((entry) => entry.card);
 		editorDraft = {
 			recipientId: selectedPartner.id,
 			offeredCardIds: offer.requestedCardIds,
 			requestedCardIds: offer.offeredCardIds,
-			offeredCredits: offer.requestedCredits,
-			requestedCredits: offer.offeredCredits
+			message: offer.message,
+			offeredMoney: offer.requestedMoney ?? 0,
+			requestedMoney: offer.offeredMoney ?? 0
 		};
 		detailOpen = false;
 		editorOpen = true;
 	}
 
 	async function openTradeDetail(offer: TradeOffer) {
-		const tradeCards = tradeCardsByOffer.get(offer.id) ?? offer.cards ?? [];
+		let currentOffer = offer;
+		try {
+			currentOffer = await getTradeOffer(offer.id);
+			tradeCardsByOffer.set(offer.id, currentOffer.cards ?? []);
+			offers = offers.map((entry) => (entry.id === offer.id ? currentOffer : entry));
+		} catch {
+			// The list payload remains usable if the dedicated detail request is temporarily unavailable.
+		}
+		const tradeCards = tradeCardsByOffer.get(offer.id) ?? currentOffer.cards ?? [];
 		selectedOfferedCards = tradeCards
 			.filter((entry) => entry.side === 'offered')
 			.map((entry) => entry.card);
 		selectedRequestedCards = tradeCards
 			.filter((entry) => entry.side === 'requested')
 			.map((entry) => entry.card);
-		selectedOffer = offer;
+		selectedRemovedCardIds = tradeCards
+			.filter((entry) => entry.status === 'removed')
+			.map((entry) => entry.card.id);
+		selectedOffer = currentOffer;
 		detailOpen = true;
 	}
 
 	async function openMessage(participantId: string) {
-		const conversation = await getOrCreateDirectConversation(participantId);
-		await goto(`${resolve('/messages')}?conversation=${encodeURIComponent(conversation.id)}`);
+		await goto(`${resolve('/messages')}?user=${encodeURIComponent(participantId)}`);
 	}
 </script>
 
@@ -241,6 +318,7 @@
 			<Button
 				onclick={() => {
 					editorDraft = {};
+					counteringOfferId = null;
 					selectedPartner = null;
 					ownedCards = [];
 					partnerCards = [];
@@ -251,11 +329,16 @@
 	</PageHeader>
 	{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('trades.loading')}
-		</p>{:else}<TradeLedger
+		</p>{:else if loadFailed}<div class="border border-destructive/40 bg-destructive/10 p-5">
+			<p class="text-sm text-destructive">{$_('trades.load_error')}</p>
+			<Button class="mt-3" variant="outline" onclick={() => void retryTrades()}>
+				{$_('common.retry')}
+			</Button>
+		</div>{:else}<TradeLedger
 			{offers}
 			cardsByOffer={tradeCardsByOffer}
 			{currentUserId}
-			onTabChange={(tab) => void loadTradeTab(tab)}
+			onTabChange={() => undefined}
 			onRespond={respond}
 			onCounterOffer={openCounterOffer}
 			onView={(offer) => void openTradeDetail(offer)}
@@ -266,18 +349,18 @@
 <TradePartnerPicker
 	bind:open={partnerPickerOpen}
 	{partners}
+	searchPartners={(query) => searchUsers(query)}
 	onSelect={(partner) => void selectPartner(partner)}
 />
 <TradeEditor
 	bind:open={editorOpen}
 	{currentUserId}
+	availableMoney={currentUserMoney}
 	partner={selectedPartner}
 	initialOwnedCards={ownedCards}
 	initialPartnerCards={partnerCards}
 	loadOwnedCards={loadOwnedTradeCards}
 	loadPartnerCards={loadPartnerTradeCards}
-	{loadPartnerOwnershipCounts}
-	{loadViewerOwnershipCounts}
 	bind:draft={editorDraft}
 	onSubmit={submitOffer}
 />
@@ -286,6 +369,7 @@
 	offer={selectedOffer}
 	offeredCards={selectedOfferedCards}
 	requestedCards={selectedRequestedCards}
+	removedCardIds={selectedRemovedCardIds}
 	{currentUserId}
 	onCounterOffer={openCounterOffer}
 	onRespond={respond}

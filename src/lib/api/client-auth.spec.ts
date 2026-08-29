@@ -9,8 +9,13 @@ vi.mock('$env/dynamic/public', () => ({
 	}
 }));
 
-import { persistSession, restoreSession } from '$lib/auth/session';
-import { ApiError, apiRequest } from './client';
+import { clearSession, persistSession, restoreSession } from '$lib/auth/session';
+import {
+	ApiError,
+	apiRequest,
+	disableWikiForgeSessionRefresh,
+	enableWikiForgeSessionRefresh
+} from './client';
 
 function createStorage() {
 	const values = new Map<string, string>();
@@ -39,6 +44,7 @@ describe('apiRequest authentication recovery', () => {
 	let storage: Storage;
 
 	beforeEach(() => {
+		enableWikiForgeSessionRefresh();
 		storage = createStorage();
 		persistSession(storage, { accessToken: 'expired', refreshToken: 'refresh', user });
 		vi.stubGlobal('localStorage', storage);
@@ -175,5 +181,38 @@ describe('apiRequest authentication recovery', () => {
 
 		expect(fetcher).toHaveBeenCalledOnce();
 		expect(restoreSession(storage)?.accessToken).toBe('expired');
+	});
+
+	it('ne réécrit pas la session lorsqu’un refresh se termine après logout-all', async () => {
+		persistSession(storage, {
+			accessToken: 'expiring',
+			refreshToken: 'refresh',
+			accessTokenExpiresAt: Date.now(),
+			user
+		});
+		let releaseRefresh!: () => void;
+		const refreshGate = new Promise<void>((resolve) => (releaseRefresh = resolve));
+		const fetcher = vi.fn(async (input: string | URL | Request) => {
+			if (String(input).endsWith('/oauth2/token')) {
+				await refreshGate;
+				return Response.json({
+					access_token: 'must-not-survive',
+					refresh_token: 'must-not-survive-either',
+					expires_in: 3600
+				});
+			}
+			return Response.json({ message: 'Session terminée' }, { status: 401 });
+		});
+
+		const request = apiRequest('/collection', {
+			fetch: fetcher as typeof fetch,
+			apiTarget: 'wikiforge'
+		});
+		await vi.waitFor(() => expect(fetcher).toHaveBeenCalledOnce());
+		disableWikiForgeSessionRefresh();
+		clearSession(storage);
+		releaseRefresh();
+		await expect(request).rejects.toBeInstanceOf(ApiError);
+		expect(restoreSession(storage)).toBeNull();
 	});
 });

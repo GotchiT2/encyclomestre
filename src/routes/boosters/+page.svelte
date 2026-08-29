@@ -8,6 +8,7 @@
 		getWishlists,
 		openBooster
 	} from '$lib/api';
+	import { wikiForgeApiErrorCode } from '$lib/api/wikiforge-contract';
 	import BoosterOpeningStage from '$lib/components/boosters/booster-opening-stage.svelte';
 	import {
 		formatBoosterDelay,
@@ -93,8 +94,13 @@
 			inventory = opened.inventory;
 			scheduleInventoryRefresh(inventory.nextRechargeAt);
 			openingId += 1;
-		} catch {
-			openingError = true;
+		} catch (error) {
+			if (wikiForgeApiErrorCode(error) === 'NO_BOOSTER_AVAILABLE') {
+				await refreshInventory().catch(() => undefined);
+				result = null;
+			} else {
+				openingError = true;
+			}
 		} finally {
 			opening = false;
 		}

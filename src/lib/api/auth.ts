@@ -1,4 +1,9 @@
-import { apiRequest, type RequestOptions } from './client';
+import {
+	apiRequest,
+	disableWikiForgeSessionRefresh,
+	enableWikiForgeSessionRefresh,
+	type RequestOptions
+} from './client';
 import { toCurrentUser, type OAuthCurrentUserResponse } from './current-user';
 import { restoreSession } from '$lib/auth/session';
 import type { AuthSession, LoginInput, OAuth2TokenResponse, User } from '$lib/types';
@@ -32,6 +37,7 @@ export const register = (input: LoginInput, options?: RequestOptions) =>
 	});
 
 export async function login(input: LoginInput, options?: RequestOptions): Promise<AuthSession> {
+	enableWikiForgeSessionRefresh();
 	const tokens = await apiRequest<OAuth2TokenResponse>('/oauth2/token', {
 		...options,
 		method: 'POST',
@@ -67,8 +73,14 @@ export const logout = (options?: RequestOptions) => {
 	});
 };
 
-export const logoutAll = (options?: RequestOptions) =>
-	apiRequest<void>('/auth/logout-all', { ...options, method: 'POST', apiTarget: 'wikiforge' });
+export const logoutAll = (options?: RequestOptions) => {
+	disableWikiForgeSessionRefresh();
+	return apiRequest<void>('/auth/logout-all', {
+		...options,
+		method: 'POST',
+		apiTarget: 'wikiforge'
+	});
+};
 
 export const forgotPassword = (email: string, options?: RequestOptions) =>
 	apiRequest<void>('/api/auth/forgot-password', {

@@ -6,10 +6,7 @@
 	import { _ } from '$lib/i18n';
 
 	const userId = $derived($currentSession?.user.id ?? 'demo-user');
-	const initialConversationId = $derived(
-		page.url.searchParams.get('conversation') ??
-			(page.url.searchParams.get('user') ? `conversation-${page.url.searchParams.get('user')}` : '')
-	);
+	const initialUserId = $derived(page.url.searchParams.get('user') ?? '');
 </script>
 
 <section class="flex flex-col gap-6 pb-12">
@@ -18,5 +15,5 @@
 		title={$_('messages.title')}
 		description={$_('messages.description')}
 	/>
-	<MessageInbox {userId} {initialConversationId} />
+	<MessageInbox {userId} {initialUserId} />
 </section>

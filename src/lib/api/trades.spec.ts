@@ -4,135 +4,173 @@ const { apiRequest } = vi.hoisted(() => ({ apiRequest: vi.fn() }));
 
 vi.mock('./client', () => ({ apiRequest }));
 
-import { getTradeCards, getTradeOffers } from './trades';
+import {
+	cancelTradeOffer,
+	counterTradeOffer,
+	createTradeOffer,
+	getTradeCards,
+	getTradeOffer,
+	getTradeOffers,
+	respondToTradeOffer
+} from './trades';
 
-const apiOffer = (id: string, status: string) => ({
+const apiCard = (id: number, pageId: number, title: string) => ({
 	id,
-	initiatorId: 'user-1',
-	recipientId: 'user-2',
-	initiator: {
-		id: 'user-1',
-		username: 'claire.trade',
-		displayName: 'Claire Trade'
-	},
-	recipient: {
-		id: 'user-2',
-		username: 'test',
-		displayName: 'Test'
-	},
-	status,
-	offeredUserCardIds: [`offered-${id}`],
-	requestedUserCardIds: [`requested-${id}`],
-	cards: [
-		{
-			userCardId: `offered-${id}`,
-			side: 'offered',
-			card: {
-				id: `variant-${id}`,
-				variant: 'NORMAL',
-				isFullArt: false,
-				wikipediaTitle: `Carte ${id}`,
-				imageUrl: '/card-placeholder.svg',
-				rarity: 'R'
-			}
-		}
-	],
-	offeredCredits: 10,
-	requestedCredits: 5,
-	createdAt: '2026-07-16T12:00:00Z'
+	pageId,
+	title,
+	description: `${title} description`,
+	image: `https://images.wikiforge.fr/${pageId}.jpg`,
+	rarity: 'R' as const,
+	atk: 42,
+	alt: false,
+	duplicate: false,
+	protected: false,
+	tagIds: []
 });
 
-describe('trade ledger', () => {
-	beforeEach(() => {
-		apiRequest.mockReset();
-		apiRequest.mockImplementation((path: string) => {
-			if (path === '/api/trades/received')
-				return Promise.resolve([apiOffer('received', 'pending')]);
-			if (path === '/api/trades/sended') return Promise.resolve([apiOffer('sent', 'pending')]);
-			if (path === '/api/trades/history') return Promise.resolve([apiOffer('history', 'accepted')]);
-			throw new Error(`Unexpected API path: ${path}`);
+const apiOffer = (id: number, status: 'PENDING' | 'ACCEPTED' = 'PENDING') => ({
+	id,
+	status,
+	message: 'Une proposition précise',
+	expiresAt: '2026-09-01T12:00:00Z',
+	creationDate: '2026-08-27T10:00:00Z',
+	modificationDate: '2026-08-27T11:00:00Z',
+	initiator: { id: 11, name: 'Claire Trade', image: 'https://images.wikiforge.fr/claire.jpg' },
+	recipient: { id: 22, name: 'Test' },
+	offered: [{ card: apiCard(101, 1001, 'Carte proposée'), status: 'ADDED' as const }],
+	requested: [{ card: apiCard(202, 2002, 'Carte retirée'), status: 'REMOVED' as const }],
+	offeredMoney: 120,
+	requestedMoney: 40,
+	originalOfferedMoney: 100,
+	originalRequestedMoney: 50
+});
+
+describe('WikiForge trades API', () => {
+	beforeEach(() => apiRequest.mockReset());
+
+	it('loads the three ledger groups with one authenticated WikiForge request', async () => {
+		apiRequest.mockResolvedValue({
+			received: [apiOffer(1)],
+			sent: [apiOffer(2)],
+			done: [apiOffer(3, 'ACCEPTED')]
+		});
+
+		const offers = await getTradeOffers();
+
+		expect(apiRequest).toHaveBeenCalledOnce();
+		expect(apiRequest).toHaveBeenCalledWith('/trades?done=20', { apiTarget: 'wikiforge' });
+		expect(offers).toEqual([
+			expect.objectContaining({
+				id: '1',
+				initiatorId: '11',
+				message: 'Une proposition précise',
+				offeredCardIds: ['101'],
+				requestedCardIds: [],
+				offeredMoney: 120,
+				requestedMoney: 40,
+				cards: [
+					expect.objectContaining({
+						userCardId: '101',
+						status: 'added',
+						card: expect.objectContaining({
+							id: '101',
+							catalogueId: '1001',
+							imageUrl: 'https://images.wikiforge.fr/1001.jpg'
+						})
+					}),
+					expect.objectContaining({ userCardId: '202', status: 'removed' })
+				]
+			}),
+			expect.objectContaining({ id: '2', status: 'pending' }),
+			expect.objectContaining({ id: '3', status: 'accepted' })
+		]);
+	});
+
+	it('loads a dedicated detail and reuses its embedded cards', async () => {
+		apiRequest.mockResolvedValue(apiOffer(7));
+
+		const detail = await getTradeOffer('7');
+		const cards = await getTradeCards('7');
+
+		expect(apiRequest).toHaveBeenNthCalledWith(1, '/trades/7', { apiTarget: 'wikiforge' });
+		expect(apiRequest).toHaveBeenNthCalledWith(2, '/trades/7', { apiTarget: 'wikiforge' });
+		expect(detail.id).toBe('7');
+		expect(cards.map((card) => card.userCardId)).toEqual(['101', '202']);
+	});
+
+	it('creates a trade with numeric identifiers and the Swagger body', async () => {
+		apiRequest.mockResolvedValue(apiOffer(8));
+
+		await createTradeOffer({
+			initiatorId: '11',
+			recipientId: '22',
+			message: '  Proposition  ',
+			offeredCardIds: ['101'],
+			requestedCardIds: ['202'],
+			offeredMoney: 10,
+			requestedMoney: 20
+		});
+
+		expect(apiRequest).toHaveBeenCalledWith('/trades', {
+			apiTarget: 'wikiforge',
+			method: 'POST',
+			body: {
+				recipientId: 22,
+				message: 'Proposition',
+				offeredCardIds: [101],
+				requestedCardIds: [202],
+				offeredMoney: 10,
+				requestedMoney: 20
+			}
 		});
 	});
 
-	it('loads and maps the received, sent and history endpoints', async () => {
-		const offers = await getTradeOffers('ignored-session-user');
+	it('uses the dedicated accept, decline, cancel and counter endpoints', async () => {
+		apiRequest.mockResolvedValue(apiOffer(9));
+		const input = {
+			initiatorId: '11',
+			recipientId: '22',
+			message: 'Contre-proposition',
+			offeredCardIds: ['202'],
+			requestedCardIds: ['101'],
+			offeredMoney: 30,
+			requestedMoney: 5
+		};
 
-		expect(apiRequest).toHaveBeenCalledTimes(3);
-		expect(apiRequest).toHaveBeenCalledWith('/api/trades/received', undefined);
-		expect(apiRequest).toHaveBeenCalledWith('/api/trades/sended', undefined);
-		expect(apiRequest).toHaveBeenCalledWith('/api/trades/history', undefined);
-		expect(apiRequest).not.toHaveBeenCalledWith('/api/trades', expect.anything());
-		expect(offers).toEqual([
-			expect.objectContaining({
-				id: 'received',
-				offeredCardIds: ['offered-received'],
-				cards: [
-					expect.objectContaining({
-						userCardId: 'offered-received',
-						card: expect.objectContaining({
-							id: 'offered-received',
-							catalogueId: 'variant-received'
-						})
-					})
-				],
-				initiator: expect.objectContaining({ displayName: 'Claire Trade' })
-			}),
-			expect.objectContaining({ id: 'sent', requestedCardIds: ['requested-sent'] }),
-			expect.objectContaining({ id: 'history', status: 'accepted' })
-		]);
+		await respondToTradeOffer('9', 'accepted');
+		await respondToTradeOffer('9', 'declined');
+		await cancelTradeOffer('9');
+		await counterTradeOffer('9', input);
+
+		expect(apiRequest).toHaveBeenNthCalledWith(1, '/trades/9/accept', {
+			apiTarget: 'wikiforge',
+			method: 'POST'
+		});
+		expect(apiRequest).toHaveBeenNthCalledWith(2, '/trades/9/decline', {
+			apiTarget: 'wikiforge',
+			method: 'POST'
+		});
+		expect(apiRequest).toHaveBeenNthCalledWith(3, '/trades/9/cancel', {
+			apiTarget: 'wikiforge',
+			method: 'POST'
+		});
+		expect(apiRequest).toHaveBeenNthCalledWith(4, '/trades/9/counter', {
+			apiTarget: 'wikiforge',
+			method: 'POST',
+			body: {
+				message: 'Contre-proposition',
+				offeredCardIds: [202],
+				requestedCardIds: [101],
+				offeredMoney: 30,
+				requestedMoney: 5
+			}
+		});
 	});
 
-	it('loads both sides with one request and preserves each user-card identity', async () => {
-		apiRequest.mockReset();
-		apiRequest.mockResolvedValueOnce([
-			{
-				userCardId: 'offered-copy-uuid',
-				side: 'offered',
-				card: {
-					id: 'offered-variant-uuid',
-					variant: 'NORMAL',
-					isFullArt: false,
-					wikipediaTitle: 'Carte proposée',
-					imageUrl: '/card-placeholder.svg',
-					rarity: 'R'
-				}
-			},
-			{
-				userCardId: 'requested-copy-uuid',
-				side: 'requested',
-				card: {
-					id: 'requested-variant-uuid',
-					variant: 'FULL_ART',
-					isFullArt: true,
-					wikipediaTitle: 'Carte demandée',
-					imageUrl: '/card-placeholder.svg',
-					rarity: 'L'
-				}
-			}
-		]);
-
-		const cards = await getTradeCards('trade/1');
-
-		expect(apiRequest).toHaveBeenCalledOnce();
-		expect(apiRequest).toHaveBeenCalledWith('/api/trades/trade%2F1/cards', undefined);
-		expect(cards).toEqual([
-			expect.objectContaining({
-				userCardId: 'offered-copy-uuid',
-				side: 'offered',
-				card: expect.objectContaining({
-					id: 'offered-copy-uuid',
-					catalogueId: 'offered-variant-uuid'
-				})
-			}),
-			expect.objectContaining({
-				userCardId: 'requested-copy-uuid',
-				side: 'requested',
-				card: expect.objectContaining({
-					id: 'requested-copy-uuid',
-					catalogueId: 'requested-variant-uuid',
-					isFullArt: true
-				})
-			})
-		]);
+	it('rejects non-numeric identifiers before sending a request', async () => {
+		await expect(getTradeOffer('trade/1')).rejects.toThrow(
+			'Identifiant échange WikiForge invalide'
+		);
+		expect(apiRequest).not.toHaveBeenCalled();
 	});
 });

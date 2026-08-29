@@ -33,7 +33,7 @@
 				label={$_('dashboard.trades')}
 				value={String(dashboard?.pendingTrades ?? 0).padStart(2, '0')}
 			/>
-			<HudStat label={$_('dashboard.rank')} value={dashboard?.rank ?? '—'} />
+			<HudStat label={$_('dashboard.money')} value={String(dashboard?.money ?? 0)} />
 		</div>
 	</header>
 
@@ -74,7 +74,7 @@
 		</ForgePanel>
 	</div>
 
-	<div class="grid gap-4 md:grid-cols-2">
+	<div class="grid gap-4">
 		<ForgePanel class="flex items-center justify-between gap-4 p-5"
 			><div>
 				<p class="forge-label">{$_('dashboard.tradeSignal')}</p>
@@ -83,19 +83,6 @@
 				</p>
 			</div>
 			<Button href="/trades" variant="outline"><HandshakeIcon />{$_('dashboard.openTrades')}</Button
-			></ForgePanel
-		>
-		<ForgePanel class="flex items-center justify-between gap-4 p-5"
-			><div>
-				<p class="forge-label">{$_('dashboard.marketSignal')}</p>
-				<p class="mt-2 font-serif text-xl font-bold">
-					{$_('dashboard.marketTitle', {
-						values: { count: dashboard?.activeMarketListings ?? 0 }
-					})}
-				</p>
-			</div>
-			<Button href="/market" variant="outline"
-				>{$_('dashboard.openMarket')}<ArrowUpRightIcon /></Button
 			></ForgePanel
 		>
 	</div>

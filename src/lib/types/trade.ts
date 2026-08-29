@@ -1,4 +1,5 @@
-export type TradeOfferStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled';
+export type TradeOfferStatus =
+	'pending' | 'countered' | 'accepted' | 'declined' | 'cancelled' | 'expired';
 
 export interface TradeParticipant {
 	id: string;
@@ -15,10 +16,14 @@ export interface TradeOffer {
 	recipient: TradeParticipant;
 	offeredCardIds: string[];
 	requestedCardIds: string[];
+	offeredMoney?: number;
+	requestedMoney?: number;
+	originalOfferedMoney?: number;
+	originalRequestedMoney?: number;
 	cards?: TradeCardDetail[];
-	offeredCredits: number;
-	requestedCredits: number;
+	message?: string;
 	status: TradeOfferStatus;
+	expiresAt?: string | null;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -28,6 +33,7 @@ export type TradeCardSide = 'offered' | 'requested';
 export interface TradeCardDetail {
 	userCardId: string;
 	side: TradeCardSide;
+	status: 'unchanged' | 'added' | 'removed';
 	card: import('./card').CardRecord;
 }
 
@@ -36,8 +42,9 @@ export interface CreateTradeOfferInput {
 	recipientId: string;
 	offeredCardIds: string[];
 	requestedCardIds: string[];
-	offeredCredits?: number;
-	requestedCredits?: number;
+	offeredMoney?: number;
+	requestedMoney?: number;
+	message?: string;
 }
 
 export interface TradeCardSearchQuery {

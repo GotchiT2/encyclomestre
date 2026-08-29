@@ -218,7 +218,12 @@
 											{:else}<LockIcon />{$_('collection.protect')}{/if}
 										</Button>
 									{/if}
-									<CardTagControls cardId={card.id} bind:tags bind:assignments />
+									<CardTagControls
+										cardId={card.id}
+										bind:tags
+										bind:assignments
+										onCardUpdated={(updated) => (card = updated)}
+									/>
 								{/if}
 								<div class:mt-3={owned}><CardTelemetry {card} /></div>
 								{#if card.wikipediaUrl}<Button href={card.wikipediaUrl} target="_blank" class="mt-3"

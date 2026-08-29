@@ -7,6 +7,8 @@ vi.mock('./client', () => ({ apiRequest }));
 import {
 	blockUser,
 	createFriendRequest,
+	getFriendCollectionPage,
+	getFriendTags,
 	getFriends,
 	getOwnedCollectionCards,
 	getTradePartners,
@@ -220,8 +222,18 @@ describe('user blocks', () => {
 			received: [{ id: 3, name: 'Bob' }],
 			sent: [{ id: 4, name: 'Chloé' }]
 		});
-		await getFriends();
+		const friendships = await getFriends();
 		await createFriendRequest('ignored', '4');
+
+		expect(friendships).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					id: '4',
+					status: 'sent',
+					user: expect.objectContaining({ id: '4', username: 'Chloé' })
+				})
+			])
+		);
 
 		expect(apiRequest).toHaveBeenNthCalledWith(1, '/friends', { apiTarget: 'wikiforge' });
 		expect(apiRequest).toHaveBeenNthCalledWith(2, '/friends/4', {
@@ -253,6 +265,38 @@ describe('current user settings', () => {
 			apiTarget: 'wikiforge',
 			method: 'PATCH',
 			body: { name: 'Camille', imagePageId: 12, nsfw: false, safeWords: ['adulte'] }
+		});
+	});
+});
+
+describe('friend collection', () => {
+	beforeEach(() => apiRequest.mockReset());
+
+	it('uses the canonical read-only friend collection and tag endpoints', async () => {
+		apiRequest
+			.mockResolvedValueOnce({
+				nbResults: 1,
+				page: 0,
+				results: [{ id: 81, pageId: 42, title: 'Rose', rarity: 'R' }],
+				nextCursor: null,
+				hasNext: false,
+				rarityResults: null
+			})
+			.mockResolvedValueOnce([{ id: 3, name: 'Échange', color: '#abc' }]);
+
+		await expect(getFriendCollectionPage('7', { wishlistOwnerId: '1' })).resolves.toMatchObject({
+			items: [expect.objectContaining({ id: '81', catalogueId: '42' })]
+		});
+		await expect(getFriendTags('7')).resolves.toEqual([
+			{ id: '3', name: 'Échange', color: '#abc' }
+		]);
+		expect(apiRequest).toHaveBeenNthCalledWith(
+			1,
+			'/friends/7/collection?sortBy=ACQUIRED_DATE&wishlist=1',
+			{ apiTarget: 'wikiforge' }
+		);
+		expect(apiRequest).toHaveBeenNthCalledWith(2, '/friends/7/tags', {
+			apiTarget: 'wikiforge'
 		});
 	});
 });

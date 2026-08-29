@@ -16,6 +16,7 @@
 		toPublicPage,
 		updateWishlistRegistry
 	} from '$lib/api';
+	import { wikiForgeApiErrorCode } from '$lib/api/wikiforge-contract';
 	import CardDetailModal from '$lib/components/cards/card-detail-modal.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -56,6 +57,10 @@
 	let groupsFailed = $state(false);
 	let entriesFailed = $state(false);
 	let pickerOpen = $state(false);
+	let illustrationPickerOpen = $state(false);
+	let illustrationMode = $state<'create' | 'edit'>('create');
+	let createImage = $state<CardRecord | null>(null);
+	let editImage = $state<CardRecord | null>(null);
 	let pickerAddedCardIds = $state<string[]>([]);
 	let accessOpen = $state(false);
 	let createOpen = $state(false);
@@ -147,14 +152,20 @@
 		}
 	}
 
-	async function create(title: string, description: string) {
-		const created = await createWishlistRegistry('', { title, description });
+	async function create(title: string, description: string, imagePageId: string | null) {
+		const created = await createWishlistRegistry('', { title, description, imagePageId });
+		createImage = null;
 		await refreshGroups(created.id);
 	}
 
-	async function update(title: string, description: string) {
+	async function update(title: string, description: string, imagePageId: string | null) {
 		if (!editingWishlist) return;
-		const updated = await updateWishlistRegistry(editingWishlist.id, { title, description });
+		const updated = await updateWishlistRegistry(editingWishlist.id, {
+			title,
+			description,
+			imagePageId
+		});
+		editImage = null;
 		editingWishlist = null;
 		await refreshGroups(updated.id);
 	}
@@ -171,7 +182,15 @@
 		if (!activeWishlist || !editable) return;
 		const wishlist = activeWishlist;
 		const pageId = String(card.baseCardId ?? card.id);
-		await addWishlistRegistryCard(wishlist.id, '', pageId);
+		try {
+			await addWishlistRegistryCard(wishlist.id, '', pageId);
+		} catch (error) {
+			if (wikiForgeApiErrorCode(error) === 'WISHLIST_FULL') {
+				toast.error($_('wishlist.full_error'));
+				return;
+			}
+			throw error;
+		}
 		if (!pickerAddedCardIds.includes(pageId)) {
 			pickerAddedCardIds = [...pickerAddedCardIds, pageId];
 		}
@@ -198,8 +217,14 @@
 	}
 
 	async function accept(wishlist: WishlistRegistrySummary) {
-		await acceptWishlistInvitation(wishlist.id);
-		await refreshGroups(wishlist.id);
+		try {
+			await acceptWishlistInvitation(wishlist.id);
+			await refreshGroups(wishlist.id);
+		} catch (error) {
+			if (wikiForgeApiErrorCode(error) !== 'NOT_FOUND') throw error;
+			toast.error($_('wishlist.invitation_expired'));
+			await refreshGroups();
+		}
 	}
 
 	async function leave(wishlist: WishlistRegistrySummary) {
@@ -239,12 +264,31 @@
 
 	async function addCardFromDetail(wishlistId: string, selected: boolean) {
 		if (!selected || !selectedCard) return;
-		await addWishlistRegistryCard(
-			wishlistId,
-			'',
-			String(selectedCard.baseCardId ?? selectedCard.id)
-		);
+		try {
+			await addWishlistRegistryCard(
+				wishlistId,
+				'',
+				String(selectedCard.baseCardId ?? selectedCard.id)
+			);
+		} catch (error) {
+			if (wikiForgeApiErrorCode(error) === 'WISHLIST_FULL') {
+				toast.error($_('wishlist.full_error'));
+				return;
+			}
+			throw error;
+		}
 		await refreshGroups(activeWishlist?.id);
+	}
+
+	function openIllustrationPicker(mode: 'create' | 'edit') {
+		illustrationMode = mode;
+		illustrationPickerOpen = true;
+	}
+
+	function selectIllustration(card: CardRecord) {
+		if (illustrationMode === 'create') createImage = card;
+		else editImage = card;
+		illustrationPickerOpen = false;
 	}
 </script>
 
@@ -269,6 +313,7 @@
 			onCreate={() => (createOpen = true)}
 			onEdit={(wishlist) => {
 				editingWishlist = wishlist;
+				editImage = null;
 				editOpen = true;
 			}}
 			onDelete={(wishlist) => {
@@ -360,9 +405,31 @@
 	bind:editOpen
 	bind:deleteOpen
 	registry={editingWishlist ?? deletingWishlist}
+	createImage={createImage
+		? {
+				title: createImage.title,
+				imageUrl: createImage.imageUrl,
+				pageId: String(createImage.baseCardId ?? createImage.id)
+			}
+		: null}
+	editImage={editImage
+		? {
+				title: editImage.title,
+				imageUrl: editImage.imageUrl,
+				pageId: String(editImage.baseCardId ?? editImage.id)
+			}
+		: null}
+	onPickCreateImage={() => openIllustrationPicker('create')}
+	onPickEditImage={() => openIllustrationPicker('edit')}
 	onCreate={create}
 	onUpdate={update}
 	onDelete={removeWishlist}
+/>
+<WishlistPicker
+	bind:open={illustrationPickerOpen}
+	existingCardIds={[]}
+	loadCards={loadCandidateCards}
+	onSelect={selectIllustration}
 />
 <WishlistAccessDialog bind:open={accessOpen} {followers} onInvite={invite} onRevoke={revoke} />
 {#if selectedCard}

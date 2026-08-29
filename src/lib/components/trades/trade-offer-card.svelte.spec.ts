@@ -34,11 +34,13 @@ const cards: TradeCardDetail[] = [
 	{
 		userCardId: 'offered-user-card',
 		side: 'offered',
+		status: 'added',
 		card: card('offered-user-card', 'Carte proposée', 'R', '#b59bf6')
 	},
 	{
 		userCardId: 'requested-user-card',
 		side: 'requested',
+		status: 'added',
 		card: card('requested-user-card', 'Carte demandée', 'L', '#f4d35e')
 	}
 ];
@@ -55,8 +57,7 @@ const offer: TradeOffer = {
 	recipient: { id: 'current-user', username: 'test', displayName: 'Test' },
 	offeredCardIds: ['offered-user-card'],
 	requestedCardIds: ['requested-user-card'],
-	offeredCredits: 0,
-	requestedCredits: 40,
+	message: 'Une proposition précise',
 	status: 'pending',
 	createdAt: '2026-07-15T17:36:16Z',
 	updatedAt: '2026-07-15T17:36:16Z'
@@ -80,6 +81,7 @@ describe('TradeOfferCard', () => {
 
 		await expect.element(page.getByText('De Claire Trade')).toBeVisible();
 		await expect.element(page.getByText('@claire.trade')).toBeVisible();
+		await expect.element(page.getByText('0 pièces').first()).toBeVisible();
 		await expect.element(page.getByText('R · Carte proposée')).toBeVisible();
 		await expect.element(page.getByText('L · Carte demandée')).toBeVisible();
 		await page.getByRole('button', { name: 'Envoyer un message à Claire Trade' }).click();

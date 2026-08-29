@@ -20,6 +20,7 @@ import MessageInbox from './message-inbox.svelte';
 const conversations: Conversation[] = [
 	{
 		id: 'conversation-1',
+		userId: 'user-2',
 		kind: 'direct',
 		title: 'Alice Martin',
 		participantIds: ['user-1', 'user-2'],
@@ -29,6 +30,7 @@ const conversations: Conversation[] = [
 	},
 	{
 		id: 'conversation-2',
+		userId: 'user-3',
 		kind: 'direct',
 		title: 'Bruno Leroy',
 		participantIds: ['user-1', 'user-3'],
@@ -52,8 +54,12 @@ const messages: MessageRecord[] = [
 
 describe('MessageInbox', () => {
 	beforeEach(() => {
-		api.getConversations.mockReset().mockResolvedValue(conversations);
-		api.getConversationMessages.mockReset().mockResolvedValue(messages);
+		api.getConversations
+			.mockReset()
+			.mockResolvedValue({ items: conversations, nextCursor: null, hasNext: false });
+		api.getConversationMessages
+			.mockReset()
+			.mockResolvedValue({ items: messages, nextCursor: null, hasNext: false });
 		api.markConversationRead.mockReset().mockResolvedValue(undefined);
 		api.sendMessage.mockReset();
 		api.setMessageReaction.mockReset();
@@ -63,7 +69,10 @@ describe('MessageInbox', () => {
 
 	it('loads the mobile conversation only after the user selects it', async () => {
 		await page.viewport(390, 844);
-		render(MessageInbox, { userId: 'user-1' });
+		render(MessageInbox, {
+			userId: 'user-1',
+			loadFriends: vi.fn().mockResolvedValue([{ status: 'accepted', user: { id: 'user-2' } }])
+		});
 
 		const alice = page.getByRole('button', { name: /Alice Martin/ });
 		await expect.element(alice).toBeVisible();
@@ -77,7 +86,7 @@ describe('MessageInbox', () => {
 			)
 			.toBeVisible();
 		expect(api.getConversationMessages).toHaveBeenCalledOnce();
-		expect(api.getConversationMessages).toHaveBeenCalledWith('conversation-1');
+		expect(api.getConversationMessages).toHaveBeenCalledWith('user-2');
 		await expect.element(page.getByRole('button', { name: 'Envoyer' })).toBeVisible();
 
 		const rect = await page.getByTestId('mobile-message-thread').element().getBoundingClientRect();
@@ -91,12 +100,15 @@ describe('MessageInbox', () => {
 
 	it('shows the conversation list and selected thread side by side on desktop', async () => {
 		await page.viewport(1280, 900);
-		render(MessageInbox, { userId: 'user-1' });
+		render(MessageInbox, {
+			userId: 'user-1',
+			loadFriends: vi.fn().mockResolvedValue([{ status: 'accepted', user: { id: 'user-2' } }])
+		});
 
 		await expect
 			.element(page.getByTestId('message-thread').getByText('Bonjour, cette carte est disponible.'))
 			.toBeVisible();
-		expect(api.getConversationMessages).toHaveBeenCalledWith('conversation-1');
+		expect(api.getConversationMessages).toHaveBeenCalledWith('user-2');
 
 		const listRect = await page.getByTestId('conversation-list').element().getBoundingClientRect();
 		const threadRect = await page.getByTestId('message-thread').element().getBoundingClientRect();

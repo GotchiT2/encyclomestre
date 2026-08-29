@@ -19,7 +19,7 @@ describe('WishlistRegistryDrawers', () => {
 		await page.getByPlaceholder('Description de la wishlist').fill('Description');
 		await page.getByRole('button', { name: 'Enregistrer' }).click();
 
-		expect(onCreate).toHaveBeenCalledWith('Liste API', 'Description');
+		expect(onCreate).toHaveBeenCalledWith('Liste API', 'Description', null);
 		expect(page.getByRole('switch').query()).toBeNull();
 	});
 });

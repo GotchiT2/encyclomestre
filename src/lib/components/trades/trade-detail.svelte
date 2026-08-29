@@ -11,6 +11,7 @@
 		offer,
 		offeredCards,
 		requestedCards,
+		removedCardIds = [],
 		currentUserId,
 		onCounterOffer,
 		onRespond,
@@ -20,14 +21,16 @@
 		offer: TradeOffer | null;
 		offeredCards: CardRecord[];
 		requestedCards: CardRecord[];
+		removedCardIds?: string[];
 		currentUserId: string;
 		onCounterOffer: (offer: TradeOffer) => void;
-		onRespond: (id: string, status: 'accepted' | 'rejected') => void;
+		onRespond: (id: string, status: 'accepted' | 'declined') => void;
 		onCancel: (id: string) => void;
 	} = $props();
 
 	const isIncoming = $derived(offer?.recipientId === currentUserId);
 	const isOutgoing = $derived(offer?.initiatorId === currentUserId);
+	const isOpen = $derived(offer?.status === 'pending' || offer?.status === 'countered');
 	const initiatorName = $derived(
 		offer ? offer.initiator.displayName.trim() || offer.initiator.username || offer.initiatorId : ''
 	);
@@ -35,10 +38,32 @@
 		offer ? offer.recipient.displayName.trim() || offer.recipient.username || offer.recipientId : ''
 	);
 	const missingOfferedCards = $derived(
-		Math.max(0, (offer?.offeredCardIds.length ?? 0) - offeredCards.length)
+		Math.max(
+			0,
+			(offer?.offeredCardIds.length ?? 0) -
+				offeredCards.filter((card) => !removedCardIds.includes(card.id)).length
+		)
 	);
 	const missingRequestedCards = $derived(
-		Math.max(0, (offer?.requestedCardIds.length ?? 0) - requestedCards.length)
+		Math.max(
+			0,
+			(offer?.requestedCardIds.length ?? 0) -
+				requestedCards.filter((card) => !removedCardIds.includes(card.id)).length
+		)
+	);
+	const formattedExpiration = $derived(
+		offer?.expiresAt
+			? new Date(offer.expiresAt).toLocaleString('fr-FR', {
+					dateStyle: 'short',
+					timeStyle: 'short'
+				})
+			: ''
+	);
+	const offeredMoneyDifference = $derived(
+		(offer?.offeredMoney ?? 0) - (offer?.originalOfferedMoney ?? offer?.offeredMoney ?? 0)
+	);
+	const requestedMoneyDifference = $derived(
+		(offer?.requestedMoney ?? 0) - (offer?.originalRequestedMoney ?? offer?.requestedMoney ?? 0)
 	);
 </script>
 
@@ -57,6 +82,21 @@
 					{initiatorName} <span class="text-primary">→</span>
 					{recipientName}
 				</p>
+				<div
+					class="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[9px] uppercase tracking-wider"
+				>
+					<span class="text-primary">{$_(`trades.status.${offer.status}`)}</span>
+					{#if isOpen && formattedExpiration}
+						<span class="text-muted-foreground">
+							{$_('trades.expires_on', { values: { date: formattedExpiration } })}
+						</span>
+					{/if}
+				</div>
+				{#if offer.message}
+					<p class="mt-2 border-l-2 border-primary/35 pl-3 text-sm italic text-muted-foreground">
+						{offer.message}
+					</p>
+				{/if}
 			{/if}
 		</header>
 		{#if offer}
@@ -67,15 +107,35 @@
 				<div class="flex flex-col gap-5">
 					<section>
 						<h2 class="font-serif text-xl font-black uppercase">{$_('trades.offered')}</h2>
+						<p class="mt-2 forge-label">
+							{$_('trades.money_amount', { values: { amount: offer.offeredMoney ?? 0 } })}
+						</p>
+						{#if offeredMoneyDifference !== 0}<p
+								class="mt-1 font-mono text-[9px] text-muted-foreground"
+							>
+								{$_('trades.money_difference', {
+									values: {
+										amount: `${offeredMoneyDifference > 0 ? '+' : ''}${offeredMoneyDifference}`
+									}
+								})}
+							</p>{/if}
 						<ContextualCardRail
 							class="mt-3"
+							compact
 							items={offeredCards}
 							label={$_('trades.offered')}
 							itemKey={(card) => card.id}
-							desktopGridClass="lg:grid-cols-3 xl:grid-cols-4"
+							desktopGridClass="lg:grid-cols-4 xl:grid-cols-6"
 						>
 							{#snippet children(card)}
-								<CardTile {card} showFriendOwners={false} />
+								<div class:opacity-45={removedCardIds.includes(card.id)}>
+									{#if removedCardIds.includes(card.id)}<p
+											class="mb-1 forge-label text-destructive"
+										>
+											{$_('trades.card_removed')}
+										</p>{/if}
+									<CardTile {card} showFriendOwners={false} />
+								</div>
 							{/snippet}
 						</ContextualCardRail>
 						{#if missingOfferedCards}
@@ -85,26 +145,38 @@
 								{$_('trades.cards_unavailable', { values: { count: missingOfferedCards } })}
 							</p>
 						{/if}
-						{#if offer.offeredCredits > 0}
-							<span
-								class="mt-3 inline-block border border-primary/60 bg-primary/15 px-2 py-1 font-mono text-[10px] uppercase text-primary"
-							>
-								{offer.offeredCredits}
-								{$_('trades.credit_chip')}
-							</span>
-						{/if}
 					</section>
 					<section>
 						<h2 class="font-serif text-xl font-black uppercase">{$_('trades.requested')}</h2>
+						<p class="mt-2 forge-label">
+							{$_('trades.money_amount', { values: { amount: offer.requestedMoney ?? 0 } })}
+						</p>
+						{#if requestedMoneyDifference !== 0}<p
+								class="mt-1 font-mono text-[9px] text-muted-foreground"
+							>
+								{$_('trades.money_difference', {
+									values: {
+										amount: `${requestedMoneyDifference > 0 ? '+' : ''}${requestedMoneyDifference}`
+									}
+								})}
+							</p>{/if}
 						<ContextualCardRail
 							class="mt-3"
+							compact
 							items={requestedCards}
 							label={$_('trades.requested')}
 							itemKey={(card) => card.id}
-							desktopGridClass="lg:grid-cols-3 xl:grid-cols-4"
+							desktopGridClass="lg:grid-cols-4 xl:grid-cols-6"
 						>
 							{#snippet children(card)}
-								<CardTile {card} showFriendOwners={false} />
+								<div class:opacity-45={removedCardIds.includes(card.id)}>
+									{#if removedCardIds.includes(card.id)}<p
+											class="mb-1 forge-label text-destructive"
+										>
+											{$_('trades.card_removed')}
+										</p>{/if}
+									<CardTile {card} showFriendOwners={false} />
+								</div>
 							{/snippet}
 						</ContextualCardRail>
 						{#if missingRequestedCards}
@@ -114,14 +186,6 @@
 								{$_('trades.cards_unavailable', { values: { count: missingRequestedCards } })}
 							</p>
 						{/if}
-						{#if offer.requestedCredits > 0}
-							<span
-								class="mt-3 inline-block border border-primary/60 bg-primary/15 px-2 py-1 font-mono text-[10px] uppercase text-primary"
-							>
-								{offer.requestedCredits}
-								{$_('trades.credit_chip')}
-							</span>
-						{/if}
 					</section>
 				</div>
 			</div>
@@ -129,7 +193,7 @@
 				class="z-10 grid shrink-0 grid-cols-1 gap-2 border-t border-primary/20 bg-card p-3 shadow-[0_-12px_30px_rgb(0_0_0_/_35%)] sm:flex sm:flex-wrap sm:p-4"
 				data-testid="trade-detail-actions"
 			>
-				{#if isIncoming && offer.status === 'pending'}
+				{#if isIncoming && isOpen}
 					<Button class="w-full sm:w-auto" onclick={() => onRespond(offer.id, 'accepted')}
 						>{$_('trades.accept')}</Button
 					>
@@ -139,10 +203,10 @@
 					<Button
 						class="w-full sm:w-auto"
 						variant="destructive"
-						onclick={() => onRespond(offer.id, 'rejected')}>{$_('trades.reject')}</Button
+						onclick={() => onRespond(offer.id, 'declined')}>{$_('trades.reject')}</Button
 					>
 				{/if}
-				{#if isOutgoing && offer.status === 'pending'}
+				{#if isOutgoing && isOpen}
 					<Button class="w-full sm:w-auto" variant="destructive" onclick={() => onCancel(offer.id)}
 						>{$_('trades.cancel')}</Button
 					>

@@ -1,134 +1,225 @@
 import { apiRequest, type RequestOptions } from './client';
-import { toCardRecord, type WikiForgeCard } from './wikiforge';
+import { toWikiForgeCollectionCard, type WikiForgeCollectionCardDto } from './collection';
 import type {
 	CreateTradeOfferInput,
 	TradeCardDetail,
 	TradeCardSide,
 	TradeOffer,
+	TradeOfferStatus,
 	TradeParticipant
 } from '$lib/types';
+import { wikiForgeApiErrorCode, wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
 
-interface ApiTradeParticipant {
-	id: string;
-	username: string;
-	displayName: string;
-	avatarUrl?: string | null;
+interface WikiForgeTradeParticipantDto {
+	id: number;
+	name: string;
+	image?: string | null;
 }
 
-interface ApiTradeOffer {
-	id: string;
-	initiatorId: string;
-	recipientId: string;
-	initiator?: ApiTradeParticipant;
-	recipient?: ApiTradeParticipant;
-	status: TradeOffer['status'];
-	offeredUserCardIds: string[];
-	requestedUserCardIds: string[];
-	cards?: ApiTradeCardDetail[];
-	offeredCredits: number;
-	requestedCredits: number;
-	createdAt: string;
+interface WikiForgeTradeCardDto {
+	card: WikiForgeCollectionCardDto;
+	status?: 'ADDED' | 'REMOVED' | null;
 }
 
-interface ApiTradeCardDetail {
-	userCardId: string;
-	side: TradeCardSide;
-	card: WikiForgeCard;
+interface WikiForgeTradeDto {
+	id: number;
+	status: 'PENDING' | 'COUNTERED' | 'ACCEPTED' | 'DECLINED' | 'CANCELLED' | 'EXPIRED';
+	message?: string | null;
+	expiresAt?: string | null;
+	creationDate: string;
+	modificationDate: string;
+	initiator: WikiForgeTradeParticipantDto;
+	recipient: WikiForgeTradeParticipantDto;
+	offered?: WikiForgeTradeCardDto[] | null;
+	requested?: WikiForgeTradeCardDto[] | null;
+	offeredMoney?: number;
+	requestedMoney?: number;
+	originalOfferedMoney?: number;
+	originalRequestedMoney?: number;
 }
 
-const fallbackParticipant = (id: string): TradeParticipant => ({
-	id,
-	username: id,
-	displayName: id
-});
+interface WikiForgeTradesDto {
+	received?: WikiForgeTradeDto[] | null;
+	sent?: WikiForgeTradeDto[] | null;
+	done?: WikiForgeTradeDto[] | null;
+}
 
-const toTradeCardDetail = (entry: ApiTradeCardDetail): TradeCardDetail => {
-	const card = toCardRecord(entry.card);
-	return {
-		userCardId: entry.userCardId,
-		side: entry.side,
-		card: { ...card, id: entry.userCardId, catalogueId: card.id }
-	};
+export interface TradeRegistry {
+	received: TradeOffer[];
+	sent: TradeOffer[];
+	done: TradeOffer[];
+}
+
+const statusByApi: Record<WikiForgeTradeDto['status'], TradeOfferStatus> = {
+	PENDING: 'pending',
+	COUNTERED: 'countered',
+	ACCEPTED: 'accepted',
+	DECLINED: 'declined',
+	CANCELLED: 'cancelled',
+	EXPIRED: 'expired'
 };
 
-const toTradeOffer = (offer: ApiTradeOffer): TradeOffer => ({
-	id: offer.id,
-	initiatorId: offer.initiatorId,
-	recipientId: offer.recipientId,
-	initiator: offer.initiator ?? fallbackParticipant(offer.initiatorId),
-	recipient: offer.recipient ?? fallbackParticipant(offer.recipientId),
-	offeredCardIds: offer.offeredUserCardIds,
-	requestedCardIds: offer.requestedUserCardIds,
-	cards: (offer.cards ?? []).map(toTradeCardDetail),
-	offeredCredits: offer.offeredCredits,
-	requestedCredits: offer.requestedCredits,
-	status: offer.status,
-	createdAt: offer.createdAt,
-	updatedAt: offer.createdAt
+function toParticipant(user: WikiForgeTradeParticipantDto): TradeParticipant {
+	return {
+		id: String(user.id),
+		username: user.name,
+		displayName: user.name,
+		avatarUrl: user.image?.trim() || null
+	};
+}
+
+function toTradeCardDetail(entry: WikiForgeTradeCardDto, side: TradeCardSide): TradeCardDetail {
+	return {
+		userCardId: String(entry.card.id),
+		side,
+		status:
+			entry.status === 'REMOVED' ? 'removed' : entry.status === 'ADDED' ? 'added' : 'unchanged',
+		card: toWikiForgeCollectionCard(entry.card)
+	};
+}
+
+function toTradeOffer(offer: WikiForgeTradeDto): TradeOffer {
+	const offered = (offer.offered ?? []).map((entry) => toTradeCardDetail(entry, 'offered'));
+	const requested = (offer.requested ?? []).map((entry) => toTradeCardDetail(entry, 'requested'));
+	return {
+		id: String(offer.id),
+		initiatorId: String(offer.initiator.id),
+		recipientId: String(offer.recipient.id),
+		initiator: toParticipant(offer.initiator),
+		recipient: toParticipant(offer.recipient),
+		offeredCardIds: offered
+			.filter((entry) => entry.status !== 'removed')
+			.map((entry) => entry.userCardId),
+		requestedCardIds: requested
+			.filter((entry) => entry.status !== 'removed')
+			.map((entry) => entry.userCardId),
+		offeredMoney: offer.offeredMoney ?? 0,
+		requestedMoney: offer.requestedMoney ?? 0,
+		originalOfferedMoney: offer.originalOfferedMoney ?? offer.offeredMoney ?? 0,
+		originalRequestedMoney: offer.originalRequestedMoney ?? offer.requestedMoney ?? 0,
+		cards: [...offered, ...requested],
+		message: offer.message?.trim() || undefined,
+		status: statusByApi[offer.status],
+		expiresAt: offer.expiresAt ? wikiForgeUtcDate(offer.expiresAt).toISOString() : null,
+		createdAt: wikiForgeUtcDate(offer.creationDate).toISOString(),
+		updatedAt: wikiForgeUtcDate(offer.modificationDate).toISOString()
+	};
+}
+
+const wikiForgeOptions = (options?: RequestOptions): RequestOptions => ({
+	...options,
+	apiTarget: 'wikiforge'
 });
 
-const getTradeOfferGroup = async (path: string, options?: RequestOptions) =>
-	(await apiRequest<ApiTradeOffer[]>(path, options)).map(toTradeOffer);
+export async function getTradeRegistry(
+	done = 20,
+	options?: RequestOptions
+): Promise<TradeRegistry> {
+	const safeDone = Math.max(0, Math.trunc(done));
+	const response = await apiRequest<WikiForgeTradesDto>(`/trades?done=${safeDone}`, {
+		...options,
+		apiTarget: 'wikiforge'
+	});
+	return {
+		received: (response.received ?? []).map(toTradeOffer),
+		sent: (response.sent ?? []).map(toTradeOffer),
+		done: (response.done ?? []).map(toTradeOffer)
+	};
+}
 
 export const getReceivedTradeOffers = async (options?: RequestOptions) =>
-	getTradeOfferGroup('/api/trades/received', options);
+	(await getTradeRegistry(20, options)).received;
 
 export const getSentTradeOffers = async (options?: RequestOptions) =>
-	getTradeOfferGroup('/api/trades/sended', options);
+	(await getTradeRegistry(20, options)).sent;
 
 export const getTradeHistory = async (options?: RequestOptions) =>
-	getTradeOfferGroup('/api/trades/history', options);
+	(await getTradeRegistry(20, options)).done;
+
+export const getTradeOffers = async (_userId?: string, options?: RequestOptions) => {
+	const registry = await getTradeRegistry(20, options);
+	return [...registry.received, ...registry.sent, ...registry.done];
+};
+
+export const getTradeOffer = async (id: string, options?: RequestOptions) =>
+	toTradeOffer(
+		await apiRequest<WikiForgeTradeDto>(
+			`/trades/${wikiForgeNumericId(id, 'échange')}`,
+			wikiForgeOptions(options)
+		)
+	);
 
 export const getTradeCards = async (
 	id: string,
 	options?: RequestOptions
-): Promise<TradeCardDetail[]> =>
-	(
-		await apiRequest<ApiTradeCardDetail[]>(`/api/trades/${encodeURIComponent(id)}/cards`, options)
-	).map(toTradeCardDetail);
+): Promise<TradeCardDetail[]> => (await getTradeOffer(id, options)).cards ?? [];
 
-export const getTradeOffers = async (_userId?: string, options?: RequestOptions) => {
-	const [received, sent, history] = await Promise.all([
-		getReceivedTradeOffers(options),
-		getSentTradeOffers(options),
-		getTradeHistory(options)
-	]);
-	return [...received, ...sent, ...history];
-};
+function tradeBody(input: CreateTradeOfferInput, includeRecipient: boolean) {
+	return {
+		...(includeRecipient
+			? { recipientId: wikiForgeNumericId(input.recipientId, 'utilisateur') }
+			: {}),
+		message: input.message?.trim() || '',
+		offeredCardIds: input.offeredCardIds.slice(0, 20).map((id) => wikiForgeNumericId(id, 'carte')),
+		requestedCardIds: input.requestedCardIds
+			.slice(0, 20)
+			.map((id) => wikiForgeNumericId(id, 'carte')),
+		offeredMoney: Math.max(0, Math.trunc(input.offeredMoney ?? 0)),
+		requestedMoney: Math.max(0, Math.trunc(input.requestedMoney ?? 0))
+	};
+}
+
+async function tradeMutation(
+	path: string,
+	options?: RequestOptions,
+	body?: unknown
+): Promise<TradeOffer> {
+	const response = await apiRequest<WikiForgeTradeDto | undefined>(path, {
+		...options,
+		apiTarget: 'wikiforge',
+		method: 'POST',
+		...(body === undefined ? {} : { body })
+	});
+	if (response) return toTradeOffer(response);
+	if (path === '/trades') {
+		throw new Error('La création de l’échange n’a renvoyé aucun détail.');
+	}
+	const id = path.split('/')[2];
+	return getTradeOffer(id, options);
+}
 
 export const createTradeOffer = async (input: CreateTradeOfferInput, options?: RequestOptions) =>
-	toTradeOffer(
-		await apiRequest<ApiTradeOffer>('/api/trades', {
-			...options,
-			method: 'POST',
-			body: {
-				recipientId: input.recipientId,
-				offeredUserCardIds: input.offeredCardIds,
-				requestedUserCardIds: input.requestedCardIds,
-				offeredCredits: input.offeredCredits ?? 0,
-				requestedCredits: input.requestedCredits ?? 0
-			}
-		})
-	);
+	tradeMutation('/trades', options, tradeBody(input, true));
 
 export const respondToTradeOffer = async (
 	id: string,
-	status: Extract<TradeOffer['status'], 'accepted' | 'rejected'>,
+	status: 'accepted' | 'declined',
 	options?: RequestOptions
 ) =>
-	toTradeOffer(
-		await apiRequest<ApiTradeOffer>(`/api/trades/${encodeURIComponent(id)}`, {
-			...options,
-			method: 'PATCH',
-			body: { status }
-		})
+	tradeMutation(
+		`/trades/${wikiForgeNumericId(id, 'échange')}/${status === 'accepted' ? 'accept' : 'decline'}`,
+		options
 	);
 
 export const cancelTradeOffer = async (id: string, options?: RequestOptions) =>
-	toTradeOffer(
-		await apiRequest<ApiTradeOffer>(`/api/trades/${encodeURIComponent(id)}`, {
-			...options,
-			method: 'PATCH',
-			body: { status: 'cancelled' }
-		})
+	tradeMutation(`/trades/${wikiForgeNumericId(id, 'échange')}/cancel`, options);
+
+export const counterTradeOffer = async (
+	id: string,
+	input: CreateTradeOfferInput,
+	options?: RequestOptions
+) =>
+	tradeMutation(
+		`/trades/${wikiForgeNumericId(id, 'échange')}/counter`,
+		options,
+		tradeBody(input, false)
 	);
+
+export async function acceptTradeOfferWithRetry(id: string, options?: RequestOptions) {
+	try {
+		return await respondToTradeOffer(id, 'accepted', options);
+	} catch (error) {
+		if (wikiForgeApiErrorCode(error) !== 'TRADE_CONFLICT') throw error;
+		return respondToTradeOffer(id, 'accepted', options);
+	}
+}

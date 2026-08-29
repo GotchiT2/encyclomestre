@@ -15,7 +15,8 @@
 		itemKey,
 		children,
 		class: className,
-		desktopGridClass = 'lg:grid-cols-4'
+		desktopGridClass = 'lg:grid-cols-4',
+		compact = false
 	}: {
 		items: T[];
 		label: string;
@@ -23,6 +24,7 @@
 		children: Snippet<[T, number]>;
 		class?: string;
 		desktopGridClass?: string;
+		compact?: boolean;
 	} = $props();
 
 	let mobile = $state(false);
@@ -69,7 +71,12 @@
 		<div class={cn('-ml-3 flex touch-pan-y lg:ml-0 lg:grid lg:gap-3', desktopGridClass)}>
 			{#each items as item, index (itemKey(item, index))}
 				<div
-					class="min-w-0 basis-[72%] shrink-0 grow-0 pl-3 min-[390px]:basis-[64%] sm:basis-[46%] lg:basis-auto lg:pl-0"
+					class={cn(
+						'min-w-0 shrink-0 grow-0 pl-3 lg:basis-auto lg:pl-0',
+						compact
+							? 'basis-[48%] min-[390px]:basis-[42%] sm:basis-[30%]'
+							: 'basis-[72%] min-[390px]:basis-[64%] sm:basis-[46%]'
+					)}
 				>
 					{@render children(item, index)}
 				</div>

@@ -87,10 +87,11 @@ export function setNsfwFilterSettings(settings: Partial<NsfwFilterSettings>) {
 }
 
 export function shouldBlurCardIllustration(
-	card: Pick<CardRecord, 'title' | 'shortDescription' | 'longDescription'>,
+	card: Pick<CardRecord, 'title' | 'shortDescription' | 'longDescription' | 'nsfw'>,
 	settings: NsfwFilterSettings
 ): boolean {
 	if (settings.enabled) return false;
+	if (card.nsfw) return true;
 	const content = normalize(`${card.title} ${card.shortDescription} ${card.longDescription}`);
 	return [...defaultNsfwKeywords, ...settings.keywords].some((keyword) =>
 		content.includes(normalize(keyword))

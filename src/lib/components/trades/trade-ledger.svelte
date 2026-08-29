@@ -18,7 +18,7 @@
 		cardsByOffer: ReadonlyMap<string, TradeCardDetail[]>;
 		currentUserId: string;
 		onTabChange: (tab: LedgerTab) => void;
-		onRespond: (id: string, status: 'accepted' | 'rejected') => void;
+		onRespond: (id: string, status: 'accepted' | 'declined') => void;
 		onView: (offer: TradeOffer) => void;
 		onMessage: (participantId: string) => void;
 		onCounterOffer: (offer: TradeOffer) => void;
@@ -27,11 +27,10 @@
 	let activeTab = $state<LedgerTab>('received');
 	const visibleOffers = $derived(
 		offers.filter((offer) => {
-			if (activeTab === 'received')
-				return offer.recipientId === currentUserId && offer.status === 'pending';
-			if (activeTab === 'sent')
-				return offer.initiatorId === currentUserId && offer.status === 'pending';
-			return offer.status !== 'pending';
+			const open = offer.status === 'pending' || offer.status === 'countered';
+			if (activeTab === 'received') return offer.recipientId === currentUserId && open;
+			if (activeTab === 'sent') return offer.initiatorId === currentUserId && open;
+			return !open;
 		})
 	);
 </script>

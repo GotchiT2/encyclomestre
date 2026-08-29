@@ -50,6 +50,7 @@ export interface Card {
 	duplicate?: boolean;
 	userProtected?: boolean;
 	pendingTradeId?: string | null;
+	nsfw?: boolean;
 	activeSale?: import('./sales').ActiveSaleSummary | null;
 }
 

@@ -84,16 +84,21 @@ describe('createMockApiResponse', () => {
 	});
 
 	it('expose les trois registres et crée une offre en attente', async () => {
-		const received = createMockApiResponse({ path: '/api/trades/received' });
-		expect((await received.json()) as { recipientId: string }[]).toEqual(
+		const registry = createMockApiResponse({ path: '/trades?done=20' });
+		const payload = (await registry.json()) as {
+			received: { id: number; status: string; offered: unknown[] }[];
+			sent: { id: number }[];
+			done: { status: string }[];
+		};
+		expect(payload.received).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({
-					recipientId: 'demo-user',
-					initiator: expect.objectContaining({ displayName: expect.any(String) }),
-					cards: expect.arrayContaining([
+					id: 1,
+					status: 'PENDING',
+					offered: expect.arrayContaining([
 						expect.objectContaining({
-							side: 'offered',
-							card: expect.objectContaining({ wikipediaTitle: expect.any(String) })
+							status: 'ADDED',
+							card: expect.objectContaining({ title: expect.any(String) })
 						})
 					])
 				})
@@ -109,53 +114,44 @@ describe('createMockApiResponse', () => {
 				expect.objectContaining({ userCardId: 'owned-friend-0-girls-generation-1' })
 			])
 		);
-		const sent = createMockApiResponse({ path: '/api/trades/sended' });
-		expect((await sent.json()) as { initiatorId: string }[]).toEqual(
-			expect.arrayContaining([expect.objectContaining({ initiatorId: 'demo-user' })])
+		expect(payload.sent.length).toBeGreaterThan(0);
+		expect(payload.done).toEqual(
+			expect.arrayContaining([expect.objectContaining({ status: 'ACCEPTED' })])
 		);
-		const history = createMockApiResponse({ path: '/api/trades/history' });
-		expect((await history.json()) as { status: string }[]).toEqual(
-			expect.arrayContaining([expect.objectContaining({ status: 'accepted' })])
-		);
-		const detailedCards = createMockApiResponse({ path: '/api/trades/trade-001/cards' });
-		expect(await detailedCards.json()).toEqual([
-			expect.objectContaining({
-				userCardId: 'owned-friend-0-girls-generation-1',
-				side: 'offered',
-				card: expect.objectContaining({ wikipediaTitle: "Girls' Generation" })
-			}),
-			expect.objectContaining({
-				userCardId: 'owned-demo-user-2ne1-1',
-				side: 'requested',
-				card: expect.objectContaining({ wikipediaTitle: '2NE1' })
-			})
-		]);
+		const detail = createMockApiResponse({ path: '/trades/1' });
+		expect(await detail.json()).toMatchObject({
+			id: 1,
+			offered: [
+				expect.objectContaining({ card: expect.objectContaining({ title: "Girls' Generation" }) })
+			],
+			requested: [expect.objectContaining({ card: expect.objectContaining({ title: '2NE1' }) })]
+		});
 
 		const created = createMockApiResponse({
-			path: '/api/trades',
+			path: '/trades',
 			method: 'POST',
 			body: {
-				recipientId: 'friend-2',
-				offeredUserCardIds: ['girls-generation-1'],
-				requestedUserCardIds: ['twice-groupe-1']
+				recipientId: 4,
+				offeredCardIds: [101],
+				requestedCardIds: [202],
+				message: 'Proposition'
 			}
 		});
 		expect(created.status).toBe(200);
 		expect(await created.json()).toMatchObject({
-			initiatorId: 'demo-user',
-			offeredUserCardIds: ['girls-generation-1'],
-			status: 'pending'
+			initiator: expect.objectContaining({ id: 1 }),
+			message: 'Proposition',
+			status: 'PENDING'
 		});
 	});
 
 	it('accepte ou refuse uniquement une offre en attente', async () => {
 		const response = createMockApiResponse({
-			path: '/api/trades/trade-001',
-			method: 'PATCH',
-			body: { status: 'accepted' }
+			path: '/trades/1/accept',
+			method: 'POST'
 		});
 		expect(response.status).toBe(200);
-		expect(await response.json()).toMatchObject({ id: 'trade-001', status: 'accepted' });
+		expect(await response.json()).toMatchObject({ id: 1, status: 'ACCEPTED' });
 	});
 
 	it('retourne les partenaires d’échange sans l’utilisateur courant', async () => {

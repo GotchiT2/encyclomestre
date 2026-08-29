@@ -132,7 +132,7 @@ describe('WikiForge public pages API', () => {
 			sortDirection: 'ASC'
 		});
 
-		expect(page.meta).toEqual({ page: 1, pageSize: 50, total: 51, totalPages: 2 });
+		expect(page.meta).toEqual({ page: 1, pageSize: 1, total: 51, totalPages: 51 });
 		expect(page.rarityResults).toEqual({ L: 1, UR: 0, SR: 0, R: 0, PC: 0, C: 50 });
 		expect(page.items[0]).toMatchObject({
 			id: '42',
@@ -159,7 +159,7 @@ describe('WikiForge public pages API', () => {
 		).toEqual({
 			items: [],
 			rarityResults: { L: 0, UR: 0, SR: 0, R: 0, PC: 0, C: 0 },
-			meta: { page: 1, pageSize: 50, total: 0, totalPages: 1 }
+			meta: { page: 1, pageSize: 1, total: 0, totalPages: 1 }
 		});
 	});
 });

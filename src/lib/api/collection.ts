@@ -3,6 +3,7 @@ import type { CardRecord, CollectionBooleanFilter, CollectionSort } from '$lib/t
 import { apiRequest, type RequestOptions } from './client';
 import { wikiForgeImageUrl } from './pages';
 import { getWikiForgeVariantCopies, toCollectionCardRecord } from './wikiforge';
+import { wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
 
 export interface WikiForgeCollectionCardDto {
 	id: number;
@@ -10,6 +11,7 @@ export interface WikiForgeCollectionCardDto {
 	title: string;
 	description?: string;
 	image?: string;
+	nsfw?: boolean;
 	rarity: CardRarityCode;
 	atk?: number;
 	alt?: boolean;
@@ -44,6 +46,7 @@ export interface CollectionQuery {
 	protected?: CollectionBooleanFilter;
 	page?: number;
 	cursor?: string;
+	wishlistOwnerId?: string;
 }
 
 export interface CollectionPageResult {
@@ -66,19 +69,15 @@ const sortCode: Record<CollectionSort, WikiForgeCollectionResponse['sortBy']> = 
 	name: 'NAME'
 };
 
-function numericId(value: string): number {
-	const id = Number(value);
-	if (!Number.isSafeInteger(id) || id <= 0)
-		throw new Error(`Identifiant WikiForge invalide: ${value}`);
-	return id;
-}
-
-export function collectionPath(query: CollectionQuery = {}): string {
+export function collectionPath(query: CollectionQuery = {}, endpoint = '/collection'): string {
 	const parameters = new URLSearchParams({ sortBy: sortCode[query.sortBy ?? 'acquiredDate'] });
 	const text = query.query?.trim() ?? '';
 	if (text.length >= 3) parameters.set('q', text);
 	query.rarities?.forEach((rarity) => parameters.append('rarity', rarity));
-	query.tagIds?.forEach((tagId) => parameters.append('tags', String(numericId(tagId))));
+	const tagIds = query.tagIds?.includes('-1') ? ['-1'] : (query.tagIds ?? []);
+	tagIds.forEach((tagId) =>
+		parameters.append('tags', tagId === '-1' ? '-1' : String(wikiForgeNumericId(tagId, 'tag')))
+	);
 	if (query.duplicate && query.duplicate !== 'all') {
 		parameters.set('duplicate', String(query.duplicate === 'yes'));
 	}
@@ -87,7 +86,10 @@ export function collectionPath(query: CollectionQuery = {}): string {
 	}
 	if (query.cursor) parameters.set('cursor', query.cursor);
 	else if ((query.page ?? 0) > 0) parameters.set('page', String(query.page));
-	return `/collection?${parameters}`;
+	if (query.wishlistOwnerId) {
+		parameters.set('wishlist', String(wikiForgeNumericId(query.wishlistOwnerId, 'wishlist')));
+	}
+	return `${endpoint}?${parameters}`;
 }
 
 export function nextCollectionPosition(
@@ -122,11 +124,12 @@ export function toWikiForgeCollectionCard(card: WikiForgeCollectionCardDto): Car
 		globalSupply: 0,
 		friendsWhoOwn: [],
 		isFullArt: Boolean(card.alt),
-		acquiredAt: card.acquiredDate,
+		acquiredAt: card.acquiredDate ? wikiForgeUtcDate(card.acquiredDate).toISOString() : undefined,
 		collectionTagIds: (card.tagIds ?? []).map(String),
 		duplicate: Boolean(card.duplicate),
 		userProtected: Boolean(card.protected),
-		pendingTradeId: card.pendingTradeId == null ? null : String(card.pendingTradeId)
+		pendingTradeId: card.pendingTradeId == null ? null : String(card.pendingTradeId),
+		nsfw: Boolean(card.nsfw)
 	};
 }
 
@@ -154,14 +157,14 @@ export const getVariantCopies = async (variantId: string, options?: RequestOptio
 	(await getWikiForgeVariantCopies(variantId, options)).map(toCollectionCardRecord);
 
 export const protectWikiForgeCard = (cardId: string, options?: RequestOptions) =>
-	apiRequest<void>(`/collection/${numericId(cardId)}/protect`, {
+	apiRequest<void>(`/collection/${wikiForgeNumericId(cardId, 'carte')}/protect`, {
 		...options,
 		apiTarget: 'wikiforge',
 		method: 'PUT'
 	});
 
 export const unprotectWikiForgeCard = (cardId: string, options?: RequestOptions) =>
-	apiRequest<void>(`/collection/${numericId(cardId)}/unprotect`, {
+	apiRequest<void>(`/collection/${wikiForgeNumericId(cardId, 'carte')}/unprotect`, {
 		...options,
 		apiTarget: 'wikiforge',
 		method: 'PUT'
@@ -169,12 +172,12 @@ export const unprotectWikiForgeCard = (cardId: string, options?: RequestOptions)
 
 export const addWikiForgeCardTag = (cardId: string, tagId: string, options?: RequestOptions) =>
 	apiRequest<WikiForgeCollectionCardDto>(
-		`/collection/${numericId(cardId)}/tags/${numericId(tagId)}`,
+		`/collection/${wikiForgeNumericId(cardId, 'carte')}/tags/${wikiForgeNumericId(tagId, 'tag')}`,
 		{ ...options, apiTarget: 'wikiforge', method: 'PUT' }
-	);
+	).then(toWikiForgeCollectionCard);
 
 export const removeWikiForgeCardTag = (cardId: string, tagId: string, options?: RequestOptions) =>
 	apiRequest<WikiForgeCollectionCardDto>(
-		`/collection/${numericId(cardId)}/tags/${numericId(tagId)}`,
+		`/collection/${wikiForgeNumericId(cardId, 'carte')}/tags/${wikiForgeNumericId(tagId, 'tag')}`,
 		{ ...options, apiTarget: 'wikiforge', method: 'DELETE' }
-	);
+	).then(toWikiForgeCollectionCard);

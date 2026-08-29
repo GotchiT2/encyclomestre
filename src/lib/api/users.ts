@@ -19,6 +19,14 @@ import type {
 } from '$lib/types';
 import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 import { cardSearchSortDirection, defaultCardSearchSort } from '$lib/domain/cards/search';
+import {
+	collectionPath,
+	toWikiForgeCollectionCard,
+	type CollectionPageResult,
+	type CollectionQuery,
+	type WikiForgeCollectionResponse
+} from './collection';
+import { wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
 
 export interface UserCollectionPageQuery {
 	query?: string;
@@ -78,6 +86,9 @@ export const getCurrentUser = async (options?: RequestOptions) =>
 	toCurrentUser(
 		await apiRequest<OAuthCurrentUserResponse>('/me', { ...options, apiTarget: 'wikiforge' })
 	);
+
+export const getCurrentUserMoney = (options?: RequestOptions) =>
+	apiRequest<number>('/me/money', { ...options, apiTarget: 'wikiforge' });
 
 export const getUser = (id: string, options?: RequestOptions) =>
 	apiRequest<User>(`/api/users/${encodeURIComponent(id)}`, options);
@@ -208,14 +219,6 @@ function wikiForgeUserImage(image?: string | null): string | null {
 	return `https://fr.wikipedia.org/wiki/Special:FilePath/${encodeURIComponent(image)}?width=250`;
 }
 
-function numericWikiForgeUserId(value: string): number {
-	const id = Number(value);
-	if (!Number.isSafeInteger(id) || id <= 0) {
-		throw new Error(`Identifiant utilisateur WikiForge invalide: ${value}`);
-	}
-	return id;
-}
-
 export function toWikiForgeUser(user: WikiForgeSimpleUserDto): User {
 	return {
 		id: String(user.id),
@@ -223,8 +226,8 @@ export function toWikiForgeUser(user: WikiForgeSimpleUserDto): User {
 		displayName: user.name,
 		avatarUrl: wikiForgeUserImage(user.image),
 		role: 'user',
-		createdAt: '',
-		updatedAt: ''
+		createdAt: user.createdAt ? wikiForgeUtcDate(user.createdAt).toISOString() : '',
+		updatedAt: user.createdAt ? wikiForgeUtcDate(user.createdAt).toISOString() : ''
 	};
 }
 
@@ -233,7 +236,7 @@ function toFriendship(user: WikiForgeSimpleUserDto, status: Friendship['status']
 		id: String(user.id),
 		user: toWikiForgeUser(user),
 		status,
-		createdAt: user.createdAt ?? '',
+		createdAt: user.createdAt ? wikiForgeUtcDate(user.createdAt).toISOString() : '',
 		lastActiveAt: ''
 	};
 }
@@ -258,7 +261,7 @@ export const createFriendRequest = (
 	recipientId: string,
 	options?: RequestOptions
 ) =>
-	apiRequest<void>(`/friends/${numericWikiForgeUserId(recipientId)}`, {
+	apiRequest<void>(`/friends/${wikiForgeNumericId(recipientId, 'utilisateur')}`, {
 		...options,
 		apiTarget: 'wikiforge',
 		method: 'POST'
@@ -270,7 +273,7 @@ export const respondToFriendRequest = (
 	options?: RequestOptions
 ) =>
 	apiRequest<void>(
-		`/friends/${numericWikiForgeUserId(id)}${status === 'accepted' ? '/accept' : ''}`,
+		`/friends/${wikiForgeNumericId(id, 'utilisateur')}${status === 'accepted' ? '/accept' : ''}`,
 		{
 			...options,
 			apiTarget: 'wikiforge',
@@ -279,7 +282,7 @@ export const respondToFriendRequest = (
 	);
 
 export const removeFriend = (id: string, options?: RequestOptions) =>
-	apiRequest<void>(`/friends/${numericWikiForgeUserId(id)}`, {
+	apiRequest<void>(`/friends/${wikiForgeNumericId(id, 'utilisateur')}`, {
 		...options,
 		apiTarget: 'wikiforge',
 		method: 'DELETE'
@@ -291,19 +294,22 @@ export const getUserBlocks = async (options?: RequestOptions): Promise<UserBlock
 		apiTarget: 'wikiforge'
 	});
 	return Array.isArray(response)
-		? response.map((block) => ({ user: toWikiForgeUser(block), createdAt: block.createdAt }))
+		? response.map((block) => ({
+				user: toWikiForgeUser(block),
+				createdAt: wikiForgeUtcDate(block.createdAt).toISOString()
+			}))
 		: [];
 };
 
 export const blockUser = (id: string, options?: RequestOptions) =>
-	apiRequest<void>(`/blocks/${numericWikiForgeUserId(id)}`, {
+	apiRequest<void>(`/blocks/${wikiForgeNumericId(id, 'utilisateur')}`, {
 		...options,
 		apiTarget: 'wikiforge',
 		method: 'POST'
 	});
 
 export const unblockUser = (id: string, options?: RequestOptions) =>
-	apiRequest<void>(`/blocks/${numericWikiForgeUserId(id)}`, {
+	apiRequest<void>(`/blocks/${wikiForgeNumericId(id, 'utilisateur')}`, {
 		...options,
 		apiTarget: 'wikiforge',
 		method: 'DELETE'
@@ -338,3 +344,40 @@ export const updateUserPreferences = (
 		method: 'PATCH',
 		body: input
 	});
+
+export async function getFriendCollectionPage(
+	friendId: string,
+	query: CollectionQuery = {},
+	options?: RequestOptions
+): Promise<CollectionPageResult> {
+	const endpoint = `/friends/${wikiForgeNumericId(friendId, 'ami')}/collection`;
+	const response = await apiRequest<WikiForgeCollectionResponse>(collectionPath(query, endpoint), {
+		...options,
+		apiTarget: 'wikiforge'
+	});
+	return {
+		items: (response.results ?? []).map(toWikiForgeCollectionCard),
+		page: response.page,
+		total: response.nbResults,
+		hasNext: response.hasNext,
+		nextCursor: response.nextCursor,
+		rarityResults: response.rarityResults ?? null
+	};
+}
+
+export async function getFriendTags(
+	friendId: string,
+	options?: RequestOptions
+): Promise<import('$lib/types').CollectionTag[]> {
+	const response = await apiRequest<WikiForgeTagDto[]>(
+		`/friends/${wikiForgeNumericId(friendId, 'ami')}/tags`,
+		{ ...options, apiTarget: 'wikiforge' }
+	);
+	return response.map((tag) => ({ id: String(tag.id), name: tag.name, color: tag.color }));
+}
+
+interface WikiForgeTagDto {
+	id: number;
+	name: string;
+	color: string;
+}

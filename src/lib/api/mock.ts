@@ -46,6 +46,8 @@ interface LegacyWishlistRegistry {
 	cards: CardRecord[];
 	createdAt: string;
 	updatedAt: string;
+	imagePageId?: number | null;
+	imageUrl?: string | null;
 }
 const auctionSoon = new Date(Date.now() + 45_000).toISOString();
 const auctionLater = new Date(Date.now() + 3_600_000).toISOString();
@@ -404,43 +406,38 @@ const mockTradeParticipant = (id: string) => {
 };
 const tradeOffers: TradeOffer[] = [
 	{
-		id: 'trade-001',
+		id: '1',
 		initiatorId: 'friend-0',
 		recipientId: 'demo-user',
 		initiator: mockTradeParticipant('friend-0'),
 		recipient: mockTradeParticipant('demo-user'),
 		offeredCardIds: ['owned-friend-0-girls-generation-1'],
 		requestedCardIds: ['owned-demo-user-2ne1-1'],
-		offeredCredits: 15,
-		requestedCredits: 0,
+		message: 'Une proposition pour compléter nos collections.',
 		status: 'pending',
 		createdAt: '2026-07-10T08:00:00.000Z',
 		updatedAt: '2026-07-10T08:00:00.000Z'
 	},
 	{
-		id: 'trade-002',
+		id: '2',
 		initiatorId: 'demo-user',
 		recipientId: 'friend-1',
 		initiator: mockTradeParticipant('demo-user'),
 		recipient: mockTradeParticipant('friend-1'),
 		offeredCardIds: ['owned-demo-user-girls-generation-1'],
 		requestedCardIds: ['owned-friend-1-2ne1-1'],
-		offeredCredits: 0,
-		requestedCredits: 25,
 		status: 'accepted',
 		createdAt: '2026-07-01T08:00:00.000Z',
 		updatedAt: '2026-07-02T09:30:00.000Z'
 	},
 	{
-		id: 'trade-003',
+		id: '3',
 		initiatorId: 'demo-user',
 		recipientId: 'friend-2',
 		initiator: mockTradeParticipant('demo-user'),
 		recipient: mockTradeParticipant('friend-2'),
 		offeredCardIds: ['owned-demo-user-girls-generation-1'],
 		requestedCardIds: ['owned-friend-2-twice-groupe-1'],
-		offeredCredits: 5,
-		requestedCredits: 0,
 		status: 'pending',
 		createdAt: '2026-07-15T14:00:00.000Z',
 		updatedAt: '2026-07-15T14:00:00.000Z'
@@ -452,21 +449,29 @@ const apiTradeCards = (offer: TradeOffer) =>
 		...offer.requestedCardIds.map((userCardId) => ({ userCardId, side: 'requested' as const }))
 	].flatMap((entry) => {
 		const card = mockCards.find((candidate) => entry.userCardId.endsWith(`-${candidate.id}`));
-		return card ? [{ ...entry, card: apiCard(card) }] : [];
+		const copyId =
+			Math.abs(
+				[...entry.userCardId].reduce((value, character) => value * 31 + character.charCodeAt(0), 7)
+			) % 1_000_000;
+		return card ? [{ card: collectionCard(card, copyId || 1), status: 'ADDED' }] : [];
 	});
+const apiTradeStatus = (status: TradeOffer['status']) => status.toUpperCase();
 const apiTradeOffer = (offer: TradeOffer) => ({
-	id: offer.id,
-	initiatorId: offer.initiatorId,
-	recipientId: offer.recipientId,
-	initiator: offer.initiator,
-	recipient: offer.recipient,
-	status: offer.status,
-	offeredUserCardIds: offer.offeredCardIds,
-	requestedUserCardIds: offer.requestedCardIds,
-	cards: apiTradeCards(offer),
-	offeredCredits: offer.offeredCredits,
-	requestedCredits: offer.requestedCredits,
-	createdAt: offer.createdAt
+	id: Number(offer.id),
+	initiator: simpleWikiForgeUser(users.get(offer.initiatorId)!),
+	recipient: simpleWikiForgeUser(users.get(offer.recipientId)!),
+	status: apiTradeStatus(offer.status),
+	message: offer.message ?? '',
+	expiresAt:
+		offer.expiresAt ?? new Date(Date.parse(offer.createdAt) + 7 * 86_400_000).toISOString(),
+	creationDate: offer.createdAt,
+	modificationDate: offer.updatedAt,
+	offered: apiTradeCards({ ...offer, requestedCardIds: [] }),
+	requested: apiTradeCards({ ...offer, offeredCardIds: [] }),
+	offeredMoney: offer.offeredMoney ?? 0,
+	requestedMoney: offer.requestedMoney ?? 0,
+	originalOfferedMoney: offer.originalOfferedMoney ?? offer.offeredMoney ?? 0,
+	originalRequestedMoney: offer.originalRequestedMoney ?? offer.requestedMoney ?? 0
 });
 const profileSettings = new Map<string, ProfileSettings>([
 	[
@@ -552,6 +557,13 @@ friendships.set('demo-user', [
 		id: 'friendship-002',
 		user: { ...users.get('friend-1')! },
 		status: 'received',
+		createdAt: now,
+		lastActiveAt: now
+	},
+	{
+		id: 'friendship-003',
+		user: { ...users.get('friend-2')! },
+		status: 'sent',
 		createdAt: now,
 		lastActiveAt: now
 	}
@@ -673,7 +685,12 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				user.username = input.name;
 				user.displayName = input.name;
 			}
-			if (typeof input?.imagePageId === 'number') user.imagePageId = input.imagePageId;
+			if (typeof input?.imagePageId === 'number') {
+				user.imagePageId = input.imagePageId;
+				user.avatarUrl =
+					mockCards.find((card) => card.baseCardId === input.imagePageId)?.imageUrl ??
+					user.avatarUrl;
+			}
 			if (typeof input?.nsfw === 'boolean') profile.nsfwEnabled = input.nsfw;
 			if (Array.isArray(input?.safeWords)) {
 				profile.censoredKeywords = input.safeWords.filter(
@@ -682,7 +699,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			}
 		}
 		return json({
-			id: user.id,
+			id: wikiForgeUserId(user.id),
 			name: user.username,
 			email: user.email,
 			roles: [user.role.toUpperCase()],
@@ -690,8 +707,12 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			image: user.avatarUrl,
 			nsfw: profile.nsfwEnabled,
 			safeWords: profile.censoredKeywords,
+			money: user.money ?? 350,
 			createdAt: user.createdAt
 		});
+	}
+	if (normalizedMethod === 'GET' && pathname === '/me/money') {
+		return json(users.get('demo-user')?.money ?? 350);
 	}
 	if (normalizedMethod === 'GET' && pathname === '/welcome') {
 		const inventory = boosterInventory('demo-user');
@@ -706,7 +727,8 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				recent: mockCards.slice(0, 6).map((card, index) => collectionCard(card, index + 1))
 			},
 			pendingTrades: 0,
-			pendingAuction: 0
+			pendingAuction: 0,
+			money: users.get('demo-user')?.money ?? 350
 		});
 	}
 	if (normalizedMethod === 'POST' && pathname === '/auth/logout') return json(undefined, 204);
@@ -795,6 +817,24 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			q: query ?? null
 		});
 	}
+	const friendCollectionMatch = /^\/friends\/(\d+)\/collection$/.exec(pathname);
+	if (normalizedMethod === 'GET' && friendCollectionMatch) {
+		if (!userByWikiForgeId(friendCollectionMatch[1])) {
+			return error(404, 'Ami introuvable.', 'NOT_FOUND');
+		}
+		return createMockApiResponse({
+			path: path.replace(/^\/friends\/\d+\/collection/, '/collection'),
+			method,
+			body
+		});
+	}
+	const friendTagsMatch = /^\/friends\/(\d+)\/tags$/.exec(pathname);
+	if (normalizedMethod === 'GET' && friendTagsMatch) {
+		if (!userByWikiForgeId(friendTagsMatch[1])) {
+			return error(404, 'Ami introuvable.', 'NOT_FOUND');
+		}
+		return json(mockCollectionTags.map((tag, index) => ({ ...tag, id: index + 1 })));
+	}
 	if (normalizedMethod === 'GET' && pathname === '/collection') {
 		const cursorPage = /mock-collection-cursor-(\d+)/.exec(url.searchParams.get('cursor') ?? '');
 		const page = cursorPage
@@ -803,27 +843,47 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const pageSize = 50;
 		const query = url.searchParams.get('q')?.toLocaleLowerCase('fr-FR');
 		const rarities = url.searchParams.getAll('rarity');
-		const items = mockCards.filter(
-			(card) =>
-				card.ownedCount > 0 &&
-				(!query || card.title.toLocaleLowerCase('fr-FR').includes(query)) &&
-				(!rarities.length || rarities.includes(card.rarityInitials))
+		const tagIds = url.searchParams.getAll('tags');
+		const duplicate = url.searchParams.get('duplicate');
+		const protection = url.searchParams.get('protected');
+		const wishlistOwner = url.searchParams.get('wishlist');
+		const wishlistUser = wishlistOwner ? userByWikiForgeId(wishlistOwner) : undefined;
+		const wishedCardIds = new Set(
+			wishlistUser
+				? (wishlists.get(wishlistUser.id) ?? []).flatMap((registry) => registry.cardIds)
+				: []
 		);
+		const items = mockCards
+			.map((card, index) => ({ card, index, tagIds: index % 3 === 0 ? [] : [index % 2 ? 2 : 1] }))
+			.filter(
+				({ card, index, tagIds: cardTagIds }) =>
+					card.ownedCount > 0 &&
+					(!query || card.title.toLocaleLowerCase('fr-FR').includes(query)) &&
+					(!rarities.length || rarities.includes(card.rarityInitials)) &&
+					(!tagIds.length ||
+						(tagIds.includes('-1')
+							? cardTagIds.length === 0
+							: tagIds.every((tagId) => cardTagIds.includes(Number(tagId))))) &&
+					(duplicate === null || String(card.ownedCount > 1) === duplicate) &&
+					(protection === null || String(index % 3 === 0) === protection) &&
+					(!wishlistOwner || wishedCardIds.has(card.id))
+			);
 		const pageItems = items.slice(page * pageSize, (page + 1) * pageSize);
 		const hasNext = (page + 1) * pageSize < items.length;
 		return json({
-			results: pageItems.map((card, index) => ({
-				id: page * pageSize + index + 1,
-				pageId: card.baseCardId ?? page * pageSize + index + 1,
+			results: pageItems.map(({ card, index, tagIds: cardTagIds }) => ({
+				id: index + 1,
+				pageId: card.baseCardId ?? index + 1,
 				title: card.title,
 				description: card.longDescription || card.shortDescription,
 				image: card.imageUrl,
+				nsfw: card.nsfw,
 				rarity: card.rarityInitials,
 				atk: card.attack,
 				alt: Boolean(card.isFullArt),
 				duplicate: card.ownedCount > 1,
 				protected: index % 3 === 0,
-				tagIds: index % 2 === 0 ? [1] : [2],
+				tagIds: cardTagIds,
 				acquiredDate: card.acquiredAt ?? now,
 				creationDate: now,
 				pendingTradeId: null
@@ -840,7 +900,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			rarityResults: Object.fromEntries(
 				['L', 'UR', 'SR', 'R', 'PC', 'C'].map((rarity) => [
 					rarity,
-					items.filter((card) => card.rarityInitials === rarity).length
+					items.filter(({ card }) => card.rarityInitials === rarity).length
 				])
 			),
 			q: query ?? null
@@ -862,17 +922,27 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	if (/^\/collection\/\d+\/(?:protect|unprotect)$/.test(pathname) && normalizedMethod === 'PUT') {
 		return json(undefined, 204);
 	}
-	if (
-		/^\/collection\/\d+\/tags\/\d+$/.test(pathname) &&
-		(normalizedMethod === 'PUT' || normalizedMethod === 'DELETE')
-	) {
-		return json({});
+	const collectionCardTagMatch = /^\/collection\/(\d+)\/tags\/\d+$/.exec(pathname);
+	if (collectionCardTagMatch && (normalizedMethod === 'PUT' || normalizedMethod === 'DELETE')) {
+		const cardIndex = Number(collectionCardTagMatch[1]) - 1;
+		const card = mockCards[cardIndex];
+		return card
+			? json(collectionCard(card, cardIndex + 1))
+			: error(404, 'Carte introuvable.', 'NOT_FOUND');
 	}
 	if (
 		/^\/collection\/tags\/\d+$/.test(pathname) &&
 		(normalizedMethod === 'PUT' || normalizedMethod === 'DELETE')
 	) {
-		return json([]);
+		const ids = Array.isArray(body)
+			? body.filter((id): id is number => typeof id === 'number')
+			: [];
+		return json(
+			ids.flatMap((id) => {
+				const card = mockCards[id - 1];
+				return card ? [collectionCard(card, id)] : [];
+			})
+		);
 	}
 	const variantCopiesMatch = /^\/collection\/variants\/([^/]+)\/copies$/.exec(pathname);
 	if (normalizedMethod === 'GET' && variantCopiesMatch) {
@@ -900,7 +970,9 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			description: registry.description,
 			nbCards: registry.cardIds.length,
 			ownerName: ownerName ?? null,
-			invitedAt: ownerName ? now : null
+			invitedAt: ownerName ? now : null,
+			imagePageId: registry.imagePageId ?? registry.cards[0]?.baseCardId ?? null,
+			image: registry.imageUrl ?? registry.cards[0]?.imageUrl ?? null
 		});
 		return json({
 			owned: (wishlists.get('demo-user') ?? []).map((registry) => summary(registry)),
@@ -928,7 +1000,6 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 								id: '301',
 								name: 'Cartes cinéma',
 								description: 'Invitation en attente.',
-								nbCards: 2,
 								ownerName: 'OnMyGhost',
 								invitedAt: now
 							}
@@ -991,13 +1062,133 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			cardIds: [],
 			cards: [],
 			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString()
+			updatedAt: new Date().toISOString(),
+			imagePageId: typeof input?.imagePageId === 'number' ? input.imagePageId : null,
+			imageUrl:
+				typeof input?.imagePageId === 'number'
+					? (mockCards.find((card) => card.baseCardId === input.imagePageId)?.imageUrl ?? null)
+					: null
 		};
 		wishlists.set(userId, [registry, ...(wishlists.get(userId) ?? [])]);
-		return json({ id: registry.id, name: title, description, nbCards: 0 }, 200);
+		return json(
+			{
+				id: registry.id,
+				name: title,
+				description,
+				nbCards: 0,
+				imagePageId: registry.imagePageId,
+				image: registry.imageUrl
+			},
+			200
+		);
 	}
 	if (normalizedMethod === 'GET' && pathname === '/messages/guild-wishlists') {
 		return json(guildWishlistShares);
+	}
+	if (normalizedMethod === 'GET' && pathname === '/conversations') {
+		const direct = conversations.filter((conversation) => conversation.kind === 'direct');
+		return json({
+			results: direct.flatMap((conversation, index) => {
+				const participantId = conversation.participantIds.find((id) => id !== 'demo-user');
+				const participant = participantId ? users.get(participantId) : undefined;
+				if (!participant || blockedUserIds.has(participant.id)) return [];
+				const lastMessage = (messages.get(conversation.id) ?? []).at(-1);
+				return [
+					{
+						id: index + 1,
+						user: simpleWikiForgeUser(participant),
+						lastMessage: lastMessage
+							? {
+									id: Number.parseInt(lastMessage.id.replace(/\D/g, ''), 10) || 1,
+									conversationId: index + 1,
+									fromUserId: wikiForgeUserId(lastMessage.senderId),
+									type: lastMessage.tradeOffer ? 'TRADE' : 'TEXT',
+									content: lastMessage.tradeOffer ? null : lastMessage.content,
+									meta: lastMessage.tradeOffer
+										? JSON.stringify({
+												tradeId: Reflect.get(lastMessage.tradeOffer, 'offerId'),
+												status: Reflect.get(lastMessage.tradeOffer, 'status')
+											})
+										: null,
+									creationDate: lastMessage.createdAt
+								}
+							: null,
+						unread: conversation.unreadCount
+					}
+				];
+			}),
+			nextCursor: null,
+			hasNext: false
+		});
+	}
+	const canonicalMessagesMatch = /^\/conversations\/(\d+)\/messages$/.exec(pathname);
+	if (canonicalMessagesMatch) {
+		const participant = userByWikiForgeId(canonicalMessagesMatch[1]);
+		const conversation = participant
+			? conversations.find(
+					(entry) => entry.kind === 'direct' && entry.participantIds.includes(participant.id)
+				)
+			: undefined;
+		if (normalizedMethod === 'GET') {
+			if (!conversation) return json({ results: [], nextCursor: null, hasNext: false });
+			conversation.unreadCount = 0;
+			const records = (messages.get(conversation.id) ?? []).toReversed();
+			return json({
+				results: records.map((message, index) => ({
+					id: index + 1,
+					conversationId: Number.parseInt(conversation.id.replace(/\D/g, ''), 10) || 1,
+					fromUserId: wikiForgeUserId(message.senderId),
+					type: message.tradeOffer ? 'TRADE' : 'TEXT',
+					content: message.tradeOffer ? null : message.content,
+					meta: message.tradeOffer
+						? JSON.stringify({
+								tradeId: Reflect.get(message.tradeOffer, 'offerId'),
+								status: Reflect.get(message.tradeOffer, 'status')
+							})
+						: null,
+					creationDate: message.createdAt
+				})),
+				nextCursor: null,
+				hasNext: false
+			});
+		}
+		if (normalizedMethod === 'POST' && participant) {
+			const content = asObject(body)?.content;
+			if (typeof content !== 'string' || !content.trim() || content.trim().length > 2_000) {
+				return error(400, 'Message invalide.', 'INVALID_PARAMETER');
+			}
+			const target = conversation ?? {
+				id: `conversation-${participant.id}`,
+				kind: 'direct' as const,
+				userId: participant.id,
+				title: participant.displayName || participant.username,
+				participantIds: ['demo-user', participant.id],
+				preview: '',
+				unreadCount: 0,
+				updatedAt: now
+			};
+			if (!conversation) conversations.unshift(target);
+			const createdAt = new Date().toISOString();
+			const message: MessageRecord = {
+				id: `message-${Date.now()}`,
+				conversationId: target.id,
+				senderId: 'demo-user',
+				type: 'text',
+				content: content.trim(),
+				createdAt,
+				readAt: createdAt,
+				reactions: []
+			};
+			messages.set(target.id, [...(messages.get(target.id) ?? []), message]);
+			return json({
+				id: Date.now(),
+				conversationId: Number.parseInt(target.id.replace(/\D/g, ''), 10) || 1,
+				fromUserId: 1,
+				type: 'TEXT',
+				content: message.content,
+				creationDate: createdAt
+			});
+		}
 	}
 	if (normalizedMethod === 'GET' && pathname === '/messages') {
 		const userId = url.searchParams.get('userId') ?? 'demo-user';
@@ -1157,11 +1348,20 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			const input = asObject(body) ?? {};
 			if (typeof input.name === 'string' && input.name.trim()) registry.title = input.name.trim();
 			if (typeof input.description === 'string') registry.description = input.description;
+			if (typeof input.imagePageId === 'number' || input.imagePageId === null) {
+				registry.imagePageId = typeof input.imagePageId === 'number' ? input.imagePageId : null;
+				registry.imageUrl =
+					typeof input.imagePageId === 'number'
+						? (mockCards.find((card) => card.baseCardId === input.imagePageId)?.imageUrl ?? null)
+						: null;
+			}
 			return json({
 				id: registry.id,
 				name: registry.title,
 				description: registry.description,
-				nbCards: registry.cardIds.length
+				nbCards: registry.cardIds.length,
+				imagePageId: registry.imagePageId ?? null,
+				image: registry.imageUrl ?? null
 			});
 		}
 		if (normalizedMethod === 'DELETE' && ownerRegistries.includes(registry)) {
@@ -1516,48 +1716,45 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		});
 	}
 	const tradePathname = pathname.replace(/^\/api(?=\/trades(?:\/|$))/, '');
-	if (normalizedMethod === 'GET' && tradePathname === '/trades/received') {
-		return json(
-			tradeOffers
+	if (normalizedMethod === 'GET' && tradePathname === '/trades') {
+		return json({
+			received: tradeOffers
 				.filter(
 					(offer) =>
 						offer.recipientId === 'demo-user' &&
 						offer.status === 'pending' &&
 						!blockedUserIds.has(offer.initiatorId)
 				)
-				.map(apiTradeOffer)
-		);
-	}
-	if (normalizedMethod === 'GET' && tradePathname === '/trades/sended') {
-		return json(
-			tradeOffers
+				.map(apiTradeOffer),
+			sent: tradeOffers
 				.filter((offer) => offer.initiatorId === 'demo-user' && offer.status === 'pending')
-				.map(apiTradeOffer)
-		);
-	}
-	if (normalizedMethod === 'GET' && tradePathname === '/trades/history') {
-		return json(
-			tradeOffers
+				.map(apiTradeOffer),
+			done: tradeOffers
 				.filter(
 					(offer) =>
 						offer.status !== 'pending' &&
 						(offer.initiatorId === 'demo-user' || offer.recipientId === 'demo-user')
 				)
 				.map(apiTradeOffer)
-		);
+		});
 	}
 	if (normalizedMethod === 'POST' && tradePathname === '/trades') {
 		const input = asObject(body);
-		if (typeof input?.recipientId === 'string' && blockedUserIds.has(input.recipientId))
+		const recipient =
+			typeof input?.recipientId === 'number'
+				? userByWikiForgeId(String(input.recipientId))
+				: undefined;
+		if (recipient && blockedUserIds.has(recipient.id))
 			return error(403, 'Cet utilisateur est bloqué.', 'USER_BLOCKED');
 		if (
 			!input ||
-			typeof input.recipientId !== 'string' ||
-			!Array.isArray(input.offeredUserCardIds) ||
-			!Array.isArray(input.requestedUserCardIds) ||
-			(!input.offeredUserCardIds.length &&
-				!input.requestedUserCardIds.length &&
-				!(input.offeredCredits || input.requestedCredits))
+			!recipient ||
+			!Array.isArray(input.offeredCardIds) ||
+			!Array.isArray(input.requestedCardIds) ||
+			(!input.offeredCardIds.length &&
+				!input.requestedCardIds.length &&
+				!(typeof input.offeredMoney === 'number' && input.offeredMoney > 0) &&
+				!(typeof input.requestedMoney === 'number' && input.requestedMoney > 0))
 		)
 			return error(
 				422,
@@ -1566,15 +1763,18 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			);
 		const createdAt = new Date().toISOString();
 		const offer: TradeOffer = {
-			id: `trade-${crypto.randomUUID()}`,
+			id: String(Math.max(0, ...tradeOffers.map((entry) => Number(entry.id))) + 1),
 			initiatorId: 'demo-user',
-			recipientId: input.recipientId,
+			recipientId: recipient.id,
 			initiator: mockTradeParticipant('demo-user'),
-			recipient: mockTradeParticipant(input.recipientId),
-			offeredCardIds: input.offeredUserCardIds as string[],
-			requestedCardIds: input.requestedUserCardIds as string[],
-			offeredCredits: Math.max(0, Number(input.offeredCredits) || 0),
-			requestedCredits: Math.max(0, Number(input.requestedCredits) || 0),
+			recipient: mockTradeParticipant(recipient.id),
+			offeredCardIds: (input.offeredCardIds as number[]).map(String),
+			requestedCardIds: (input.requestedCardIds as number[]).map(String),
+			offeredMoney: typeof input.offeredMoney === 'number' ? input.offeredMoney : 0,
+			requestedMoney: typeof input.requestedMoney === 'number' ? input.requestedMoney : 0,
+			originalOfferedMoney: typeof input.offeredMoney === 'number' ? input.offeredMoney : 0,
+			originalRequestedMoney: typeof input.requestedMoney === 'number' ? input.requestedMoney : 0,
+			message: typeof input.message === 'string' ? input.message : '',
 			status: 'pending',
 			createdAt,
 			updatedAt: createdAt
@@ -1582,27 +1782,34 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		tradeOffers.unshift(offer);
 		return json(apiTradeOffer(offer));
 	}
-	const tradeCardsMatch = /^\/trades\/([^/]+)\/cards$/.exec(tradePathname);
-	if (tradeCardsMatch && normalizedMethod === 'GET') {
-		const offer = tradeOffers.find((entry) => entry.id === decodeURIComponent(tradeCardsMatch[1]));
-		if (!offer) return error(404, 'Offre introuvable.', 'TRADE_NOT_FOUND');
-		return json(apiTradeCards(offer));
-	}
 	const tradeMatch = /^\/trades\/([^/]+)$/.exec(tradePathname);
-	if (tradeMatch && normalizedMethod === 'PATCH') {
+	if (tradeMatch && normalizedMethod === 'GET') {
 		const offer = tradeOffers.find((entry) => entry.id === decodeURIComponent(tradeMatch[1]));
 		if (!offer) return error(404, 'Offre introuvable.', 'TRADE_NOT_FOUND');
-		const status = asObject(body)?.status;
-		if (
-			offer.status !== 'pending' ||
-			(status !== 'accepted' && status !== 'rejected' && status !== 'cancelled')
-		)
+		return json(apiTradeOffer(offer));
+	}
+	const tradeActionMatch = /^\/trades\/([^/]+)\/(accept|decline|cancel|counter)$/.exec(
+		tradePathname
+	);
+	if (tradeActionMatch && normalizedMethod === 'POST') {
+		const offer = tradeOffers.find((entry) => entry.id === decodeURIComponent(tradeActionMatch[1]));
+		if (!offer) return error(404, 'Offre introuvable.', 'TRADE_NOT_FOUND');
+		if (offer.status !== 'pending') {
 			return error(
 				422,
 				'Cette réponse ne peut pas être appliquée à l’offre.',
 				'TRADE_INVALID_STATUS'
 			);
-		offer.status = status;
+		}
+		const action = tradeActionMatch[2];
+		offer.status =
+			action === 'accept'
+				? 'accepted'
+				: action === 'decline'
+					? 'declined'
+					: action === 'counter'
+						? 'countered'
+						: 'cancelled';
 		offer.updatedAt = new Date().toISOString();
 		return json(apiTradeOffer(offer));
 	}

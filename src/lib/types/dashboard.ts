@@ -7,8 +7,9 @@ export interface DashboardData {
 		completionRate: number;
 	};
 	pendingTrades: number;
-	activeMarketListings: number;
-	rank: string;
+	activeMarketListings?: number;
+	rank?: string;
+	money: number;
 	boosterStatus: {
 		availableBoosters: number;
 		nextBoosterAvailableAt: string | null;

@@ -62,7 +62,7 @@ describe('WikiForge wishlist API', () => {
 			]
 		});
 
-		const result = await getWishlistPage('list/1', {
+		const result = await getWishlistPage('1', {
 			query: 'Paris',
 			rarities: ['Légendaire', 'Rare'],
 			sortBy: 'rarity',
@@ -70,10 +70,10 @@ describe('WikiForge wishlist API', () => {
 		});
 
 		expect(mockedRequest).toHaveBeenCalledWith(
-			'/wishlists/list%2F1?page=0&sortBy=RARITY&sortDirection=DESC&q=Paris&rarity=L&rarity=R',
+			'/wishlists/1?page=0&sortBy=RARITY&sortDirection=DESC&q=Paris&rarity=L&rarity=R',
 			{ apiTarget: 'wikiforge' }
 		);
-		expect(result.meta).toEqual({ page: 1, pageSize: 50, total: 51, totalPages: 2 });
+		expect(result.meta).toEqual({ page: 1, pageSize: 1, total: 51, totalPages: 51 });
 		expect(result.items[0]).toMatchObject({ card: { id: '42', title: 'Paris' } });
 	});
 
@@ -88,7 +88,7 @@ describe('WikiForge wishlist API', () => {
 
 		await expect(getWishlistPage('12')).resolves.toEqual({
 			items: [],
-			meta: { page: 1, pageSize: 50, total: 0, totalPages: 1 }
+			meta: { page: 1, pageSize: 1, total: 0, totalPages: 1 }
 		});
 	});
 
@@ -110,7 +110,7 @@ describe('WikiForge wishlist API', () => {
 		expect(mockedRequest).toHaveBeenNthCalledWith(2, '/wishlists/4', {
 			apiTarget: 'wikiforge',
 			method: 'PATCH',
-			body: { name: 'Modifiée', description: '' }
+			body: { name: 'Modifiée', description: '', imagePageId: null }
 		});
 		expect(mockedRequest).toHaveBeenNthCalledWith(3, '/wishlists/4', {
 			apiTarget: 'wikiforge',
@@ -140,7 +140,7 @@ describe('WikiForge wishlist API', () => {
 
 		await inviteWishlistFollower('1', '7');
 		await expect(getWishlistFollowers('1')).resolves.toEqual([
-			{ id: '7', name: 'Ariane', accepted: false }
+			{ id: '7', name: 'Ariane', accepted: false, imagePageId: null, imageUrl: null }
 		]);
 		await acceptWishlistInvitation('1');
 		await leaveWishlist('1');

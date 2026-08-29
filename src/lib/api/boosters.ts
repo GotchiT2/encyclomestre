@@ -2,6 +2,7 @@ import { apiRequest, type RequestOptions } from './client';
 import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/rarities';
 import type { BoosterInventory, BoosterOpenResult, CardRecord } from '$lib/types';
 import { wikiForgeImageUrl } from '$lib/api/pages';
+import { wikiForgeUtcDate } from './wikiforge-contract';
 
 export interface BoosterCardDto {
 	id: number;
@@ -9,6 +10,7 @@ export interface BoosterCardDto {
 	title: string;
 	description?: string | null;
 	image?: string | null;
+	nsfw?: boolean;
 	rarity: CardRarityCode;
 	atk?: number | null;
 	alt?: boolean;
@@ -55,11 +57,12 @@ export function toBoosterCardRecord(card: BoosterCardDto): CardRecord {
 		globalSupply: 0,
 		friendsWhoOwn: [],
 		isFullArt: Boolean(card.alt),
-		acquiredAt: card.acquiredDate ?? undefined,
+		acquiredAt: card.acquiredDate ? wikiForgeUtcDate(card.acquiredDate).toISOString() : undefined,
 		collectionTagIds: (card.tagIds ?? []).map(String),
 		duplicate: Boolean(card.duplicate),
 		userProtected: Boolean(card.protected),
-		pendingTradeId: card.pendingTradeId == null ? null : String(card.pendingTradeId)
+		pendingTradeId: card.pendingTradeId == null ? null : String(card.pendingTradeId),
+		nsfw: Boolean(card.nsfw)
 	};
 }
 

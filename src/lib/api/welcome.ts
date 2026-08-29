@@ -14,6 +14,7 @@ export interface WikiForgeWelcomeResponse {
 	};
 	pendingTrades: number;
 	pendingAuction: number;
+	money?: number;
 }
 
 /** The authenticated home payload supplied by WikiForge. */
@@ -29,8 +30,7 @@ export async function getWikiForgeWelcome(options?: RequestOptions): Promise<Das
 			completionRate: 0
 		},
 		pendingTrades: response.pendingTrades,
-		activeMarketListings: response.pendingAuction,
-		rank: '—',
+		money: response.money ?? 0,
 		boosterStatus: {
 			availableBoosters: response.boostersStatus.available,
 			nextBoosterAvailableAt: response.boostersStatus.nextAvailableAt

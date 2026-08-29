@@ -32,9 +32,13 @@ const user: User = {
 	username: 'Test',
 	displayName: 'Test',
 	email: 'demo@example.test',
+	avatarUrl: null,
+	imagePageId: null,
+	nsfwEnabled: false,
+	safeWords: [],
 	role: 'user',
-	createdAt: '2026-08-20T14:11:51.007077',
-	updatedAt: '2026-08-20T14:11:51.007077'
+	createdAt: '2026-08-20T14:11:51.007Z',
+	updatedAt: '2026-08-20T14:11:51.007Z'
 };
 
 const oauthProfile = {

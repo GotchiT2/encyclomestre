@@ -37,6 +37,9 @@ describe('WikiForge collection API', () => {
 		expect(collectionPath({ query: 'ab', page: 2 })).toBe(
 			'/collection?sortBy=ACQUIRED_DATE&page=2'
 		);
+		expect(collectionPath({ tagIds: ['2', '-1', '7'], wishlistOwnerId: '12' })).toBe(
+			'/collection?sortBy=ACQUIRED_DATE&tags=-1&wishlist=12'
+		);
 	});
 
 	it('follows hasNext, cursor and page as the only continuation rule', () => {
@@ -145,7 +148,11 @@ describe('WikiForge collection API', () => {
 	});
 
 	it('uses the exact protection and single-tag endpoints', async () => {
-		request.mockResolvedValue(undefined);
+		request
+			.mockResolvedValueOnce(undefined)
+			.mockResolvedValueOnce(undefined)
+			.mockResolvedValueOnce({ id: 81, pageId: 42, title: 'Rose', rarity: 'R', tagIds: [2] })
+			.mockResolvedValueOnce({ id: 81, pageId: 42, title: 'Rose', rarity: 'R', tagIds: [] });
 		await protectWikiForgeCard('81');
 		await unprotectWikiForgeCard('81');
 		await addWikiForgeCardTag('81', '2');

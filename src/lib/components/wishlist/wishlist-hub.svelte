@@ -41,13 +41,18 @@
 			class="h-auto w-full justify-start p-0 text-left"
 			onclick={() => onSelect(wishlist)}
 		>
+			{#if wishlist.imageUrl}
+				<img src={wishlist.imageUrl} alt="" class="mr-3 size-12 shrink-0 object-cover" />
+			{/if}
 			<span class="min-w-0">
 				<span class="block truncate font-serif text-sm font-black uppercase tracking-tight">
 					{wishlist.title}
 				</span>
-				<span class="mt-1 block font-mono text-[9px] uppercase tracking-widest text-primary">
-					{$_('wishlist.total', { values: { count: wishlist.cardCount } })}
-				</span>
+				{#if wishlist.cardCount !== null}<span
+						class="mt-1 block font-mono text-[9px] uppercase tracking-widest text-primary"
+					>
+						{$_('wishlist.total', { values: { count: wishlist.cardCount } })}
+					</span>{/if}
 				{#if wishlist.ownerName}
 					<span
 						class="mt-1 block truncate font-mono text-[9px] uppercase tracking-widest text-muted-foreground"
@@ -124,6 +129,19 @@
 								<p class="text-xs text-muted-foreground">
 									{$_('wishlist.owner_name', { values: { owner: wishlist.ownerName ?? '—' } })}
 								</p>
+								{#if wishlist.invitedAt}
+									<p
+										class="mt-1 font-mono text-[9px] uppercase tracking-wider text-muted-foreground"
+									>
+										{$_('wishlist.invitation_expires', {
+											values: {
+												date: new Date(
+													new Date(wishlist.invitedAt).getTime() + 3 * 86_400_000
+												).toLocaleString('fr-FR')
+											}
+										})}
+									</p>
+								{/if}
 							</div>
 							<Button
 								size="icon-sm"

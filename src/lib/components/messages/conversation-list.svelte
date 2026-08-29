@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Input } from '$lib/components/ui/input';
+	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
 	import { cn } from '$lib/utils';
 	import type { Conversation } from '$lib/types';
@@ -9,14 +10,20 @@
 		selectedId,
 		query = $bindable(''),
 		loading = false,
+		hasMore = false,
+		loadingMore = false,
 		class: className,
+		onLoadMore,
 		onSelect
 	}: {
 		conversations: Conversation[];
 		selectedId: string;
 		query?: string;
 		loading?: boolean;
+		hasMore?: boolean;
+		loadingMore?: boolean;
 		class?: string;
+		onLoadMore?: () => void;
 		onSelect: (id: string) => void;
 	} = $props();
 
@@ -74,7 +81,15 @@
 					<span
 						class="relative grid size-12 place-items-center rounded-full border border-primary/30 bg-secondary font-mono text-xs font-bold text-[var(--energy-soft)]"
 					>
-						{initials(conversation.title)}
+						{#if conversation.avatarUrl}
+							<img
+								src={conversation.avatarUrl}
+								alt=""
+								class="size-full rounded-full object-cover"
+							/>
+						{:else}
+							{initials(conversation.title)}
+						{/if}
 						{#if conversation.unreadCount}
 							<span
 								class="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-primary font-mono text-[9px] text-primary-foreground"
@@ -86,7 +101,9 @@
 					<span class="min-w-0">
 						<strong class="block truncate text-sm text-foreground">{conversation.title}</strong>
 						<span class="mt-1 block truncate text-xs text-muted-foreground"
-							>{conversation.preview}</span
+							>{conversation.previewType === 'trade'
+								? $_('messages.trade_preview')
+								: conversation.preview}</span
 						>
 					</span>
 					<time class="self-start pt-1 font-mono text-[9px] text-muted-foreground">
@@ -94,6 +111,13 @@
 					</time>
 				</button>
 			{/each}
+			{#if hasMore}
+				<div class="p-3">
+					<Button variant="outline" class="w-full" disabled={loadingMore} onclick={onLoadMore}>
+						{loadingMore ? $_('messages.loading') : $_('common.load_more')}
+					</Button>
+				</div>
+			{/if}
 		</nav>
 	{:else}
 		<p class="p-4 text-sm text-muted-foreground">{$_('messages.empty')}</p>
