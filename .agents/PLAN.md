@@ -323,3 +323,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Ajouter les illustrations de wishlist, l’avatar `/me`, le solde d’accueil, la sécurité `logout-all` et le cas booster épuisé.
 - [x] Mettre à jour les mocks et tests ; aucun commit ni push avant confirmation.
 - [x] Publier la migration Swagger, les flux d’échange compacts et leurs validations — `feat(api): complete WikiForge Swagger migration`
+
+## 11. Ajustements visuels et interactions
+
+- [x] Aligner le guide d’interface sur les couleurs et polices actuelles — `docs(ui): align WikiForge design guidelines`
