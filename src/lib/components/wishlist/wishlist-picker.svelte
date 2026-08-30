@@ -15,13 +15,15 @@
 		existingCardIds,
 		loadCards,
 		onSelect,
-		title = $_('wishlist.add_card')
+		title = $_('wishlist.add_card'),
+		catalogueLabel = $_('wishlist.catalogue')
 	}: {
 		open?: boolean;
 		existingCardIds: string[];
 		loadCards: (query: CardQuery) => Promise<PaginatedResponse<CardRecord>>;
 		onSelect: (card: CardRecord) => void | Promise<void>;
 		title?: string;
+		catalogueLabel?: string;
 	} = $props();
 
 	const pageSize = 12;
@@ -86,7 +88,7 @@
 	<Dialog.Content class="h-[min(92dvh,58rem)] max-w-6xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0">
 		<div class="flex min-h-12 items-center gap-3 border-b border-primary/20 px-4 py-2 pr-14">
 			<p class="shrink-0 font-mono text-[9px] uppercase tracking-widest text-primary">
-				{$_('wishlist.catalogue')}
+				{catalogueLabel}
 			</p>
 			<span class="h-4 w-px bg-primary/25" aria-hidden="true"></span>
 			<Dialog.Title class="truncate text-lg leading-tight sm:text-xl">{title}</Dialog.Title>

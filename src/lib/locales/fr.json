@@ -284,7 +284,9 @@
 		"delete_confirm_body": "Cette action est irréversible dans le mode mock.",
 		"censorship": "Mots à censurer",
 		"censorship_hint": "Les cartes contenant ces mots seront masquées selon vos préférences.",
-		"keyword_placeholder": "Ajouter un mot à censurer…"
+		"keyword_placeholder": "Ajouter un mot à censurer…",
+		"choose_avatar": "Selectionner un avatar",
+		"avatar_collection": "Votre collection"
 	},
 	"boosters": {
 		"eyebrow": "Boosters disponibles",

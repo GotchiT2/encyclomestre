@@ -77,6 +77,23 @@ describe('WishlistPicker', () => {
 		await expect.element(page.getByRole('heading', { name: 'Cartes recherchées' })).toBeVisible();
 	});
 
+	it('can identify a personal collection picker without changing its card workflow', async () => {
+		render(WishlistPicker, {
+			open: true,
+			existingCardIds: [],
+			loadCards: vi.fn().mockResolvedValue({
+				items: [card],
+				meta: { page: 1, pageSize: 12, total: 1, totalPages: 1 }
+			}),
+			onSelect: vi.fn(),
+			title: 'Choisir un avatar',
+			catalogueLabel: 'Votre collection'
+		});
+
+		await expect.element(page.getByText('Votre collection')).toBeVisible();
+		await expect.element(page.getByRole('heading', { name: 'Choisir un avatar' })).toBeVisible();
+	});
+
 	it('debounces catalogue searches through the API', async () => {
 		const loadCards = vi.fn().mockResolvedValue({
 			items: [],

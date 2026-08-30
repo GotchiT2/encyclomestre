@@ -327,3 +327,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 ## 11. Ajustements visuels et interactions
 
 - [x] Aligner le guide d’interface sur les couleurs et polices actuelles — `docs(ui): align WikiForge design guidelines`
+- [x] Choisir l’avatar depuis la collection personnelle — `feat(settings): choose avatar from personal collection`

@@ -7,10 +7,9 @@
 	import {
 		deleteUser,
 		getCurrentUser,
-		getWikiForgePublicPages,
+		getWikiForgeCollectionPage,
 		logout,
 		logoutAll,
-		toPublicPage,
 		updateWikiForgeMe
 	} from '$lib/api';
 	import { setNsfwFilterSettings } from '$lib/content/nsfw-filter';
@@ -61,15 +60,29 @@
 	}
 
 	async function loadAvatarCards(cardQuery: CardQuery) {
-		return toPublicPage(
-			await getWikiForgePublicPages({
-				page: Math.max(0, (cardQuery.page ?? 1) - 1),
-				q: cardQuery.query,
-				rarities: (cardQuery.rarities ?? []).map((rarity) => cardRarityCodeByName[rarity]),
-				sortBy: cardQuery.sortBy,
-				sortDirection: cardQuery.sortDirection
-			})
-		);
+		const result = await getWikiForgeCollectionPage({
+			page: Math.max(0, (cardQuery.page ?? 1) - 1),
+			query: cardQuery.query,
+			rarities: (cardQuery.rarities ?? []).map((rarity) => cardRarityCodeByName[rarity]),
+			sortBy:
+				cardQuery.sortBy === 'rarity'
+					? 'rarity'
+					: cardQuery.sortBy === 'name'
+						? 'name'
+						: 'acquiredDate'
+		});
+		const page = result.page + 1;
+		const pageSize = Math.max(1, result.items.length);
+		const total = Math.max(0, result.total);
+		return {
+			items: result.items,
+			meta: {
+				page,
+				pageSize,
+				total,
+				totalPages: total > 0 ? Math.max(page, Math.ceil(total / pageSize)) : 1
+			}
+		};
 	}
 
 	function selectAvatar(card: CardRecord) {
@@ -130,4 +143,6 @@
 	existingCardIds={profile?.avatarCardId ? [profile.avatarCardId] : []}
 	loadCards={loadAvatarCards}
 	onSelect={selectAvatar}
+	catalogueLabel={$_('settings.avatar_collection')}
+	title={$_('settings.choose_avatar')}
 />
