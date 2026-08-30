@@ -29,11 +29,11 @@
 
 <Dialog.Root bind:open>
 	<Dialog.Content class="max-w-lg">
-		<Dialog.Header>
+		<Dialog.Header class="px-4 pt-4 pr-12 pb-2">
 			<Dialog.Title>{$_('wishlist.manage_access')}</Dialog.Title>
 			<Dialog.Description>{$_('wishlist.invite_id_hint')}</Dialog.Description>
 		</Dialog.Header>
-		<div class="grid gap-4 p-4">
+		<div class="grid gap-4 px-4 pt-2 pb-4">
 			<div class="flex gap-2">
 				<Input
 					bind:value={invitedId}

@@ -71,8 +71,10 @@
 
 <Dialog.Root bind:open={createOpen}>
 	<Dialog.Content class="max-w-md">
-		<Dialog.Header><Dialog.Title>{$_('wishlist.create_btn')}</Dialog.Title></Dialog.Header>
-		<div class="grid gap-3 p-4">
+		<Dialog.Header class="px-4 pt-4 pr-12 pb-2"
+			><Dialog.Title>{$_('wishlist.create_btn')}</Dialog.Title></Dialog.Header
+		>
+		<div class="grid gap-3 px-4 pt-2 pb-4">
 			<Input bind:value={title} maxlength={64} placeholder={$_('wishlist.create_placeholder')} />
 			<Input
 				bind:value={description}

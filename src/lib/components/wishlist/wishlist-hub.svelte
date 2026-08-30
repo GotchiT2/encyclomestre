@@ -32,17 +32,26 @@
 
 {#snippet registryCard(wishlist: WishlistRegistrySummary)}
 	<article
-		class="min-w-56 snap-start border p-3 {wishlist.id === activeId
+		class="group relative min-w-56 snap-start overflow-hidden border p-3 transition-colors {wishlist.id ===
+		activeId
 			? 'border-primary bg-primary/10'
-			: 'border-primary/20 bg-background'}"
+			: 'border-primary/20 bg-background hover:bg-primary/8'}"
 	>
-		<Button
-			variant="ghost"
-			class="h-auto w-full justify-start p-0 text-left"
+		<button
+			type="button"
+			class="absolute inset-0 z-0 cursor-pointer focus-visible:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[-3px]"
+			aria-label={wishlist.title}
 			onclick={() => onSelect(wishlist)}
-		>
+		></button>
+		<div class="pointer-events-none relative z-10 flex min-h-14 items-start text-left">
 			{#if wishlist.imageUrl}
-				<img src={wishlist.imageUrl} alt="" class="mr-3 size-12 shrink-0 object-cover" />
+				<img
+					src={wishlist.imageUrl}
+					alt=""
+					class="mr-3 size-14 shrink-0 border border-primary/30 object-cover"
+					loading="lazy"
+					referrerpolicy="no-referrer"
+				/>
 			{/if}
 			<span class="min-w-0">
 				<span class="block truncate text-sm font-black uppercase tracking-tight">
@@ -61,8 +70,8 @@
 					</span>
 				{/if}
 			</span>
-		</Button>
-		<div class="mt-3 flex gap-2">
+		</div>
+		<div class="relative z-10 mt-3 flex gap-2">
 			{#if wishlist.access === 'owned'}
 				<Button
 					size="icon-sm"

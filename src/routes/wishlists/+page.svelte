@@ -336,6 +336,14 @@
 			<section class="grid gap-4 border-t border-primary/25 pt-5">
 				<header class="flex flex-wrap items-end justify-between gap-3">
 					<div>
+						{#if activeWishlist.imageUrl}
+							<img
+								src={activeWishlist.imageUrl}
+								alt=""
+								class="mb-3 h-24 w-full max-w-sm border border-primary/30 object-cover sm:h-28"
+								referrerpolicy="no-referrer"
+							/>
+						{/if}
 						<p class="forge-label">
 							{activeWishlist.access === 'owned'
 								? $_('wishlist.owned_list')

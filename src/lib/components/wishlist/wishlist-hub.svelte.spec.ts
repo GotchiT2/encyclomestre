@@ -43,12 +43,13 @@ const groups: WishlistGroups = {
 
 describe('WishlistHub', () => {
 	it('separates owned, shared and pending lists with their permitted actions', async () => {
+		const onSelect = vi.fn();
 		const onAccept = vi.fn();
 		const onLeave = vi.fn();
 		render(WishlistHub, {
 			groups,
 			activeId: '1',
-			onSelect: vi.fn(),
+			onSelect,
 			onCreate: vi.fn(),
 			onEdit: vi.fn(),
 			onDelete: vi.fn(),
@@ -59,9 +60,33 @@ describe('WishlistHub', () => {
 
 		await expect.element(page.getByText('Partagées avec moi')).toBeVisible();
 		await expect.element(page.getByText('Invitations en attente')).toBeVisible();
+		await page.getByRole('button', { name: 'Ma liste' }).click();
+		expect(onSelect).toHaveBeenCalledWith(groups.owned[0]);
 		await page.getByRole('button', { name: 'Accepter l’invitation' }).click();
 		expect(onAccept).toHaveBeenCalledWith(groups.pending[0]);
 		await page.getByRole('button', { name: 'Quitter' }).click();
 		expect(onLeave).toHaveBeenCalledWith(groups.shared[0]);
+	});
+
+	it('renders the illustration supplied for a wishlist', async () => {
+		const illustratedGroups: WishlistGroups = {
+			...groups,
+			owned: [{ ...groups.owned[0], imageUrl: 'https://images.example.test/wishlist.jpg' }]
+		};
+		render(WishlistHub, {
+			groups: illustratedGroups,
+			activeId: '1',
+			onSelect: vi.fn(),
+			onCreate: vi.fn(),
+			onEdit: vi.fn(),
+			onDelete: vi.fn(),
+			onAccept: vi.fn(),
+			onDecline: vi.fn(),
+			onLeave: vi.fn()
+		});
+
+		expect(
+			document.querySelector('img[src="https://images.example.test/wishlist.jpg"]')
+		).not.toBeNull();
 	});
 });

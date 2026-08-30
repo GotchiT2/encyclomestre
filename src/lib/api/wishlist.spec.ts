@@ -25,7 +25,7 @@ beforeEach(() => mockedRequest.mockReset());
 describe('WikiForge wishlist API', () => {
 	it('maps owned, shared and pending lists from the canonical API', async () => {
 		mockedRequest.mockResolvedValue({
-			owned: [{ id: 1, name: 'Priorités', description: '', nbCards: 3 }],
+			owned: [{ id: 1, name: 'Priorités', description: '', nbCards: 3, image: 'Priorités.jpg' }],
 			shared: [{ id: 2, name: 'Partagée', nbCards: 2, ownerName: 'SoneS9' }],
 			pending: [{ id: 3, name: 'Invitation', ownerName: 'OnMyGhost' }]
 		});
@@ -33,7 +33,12 @@ describe('WikiForge wishlist API', () => {
 		const groups = await getWishlistGroups();
 
 		expect(mockedRequest).toHaveBeenCalledWith('/wishlists', { apiTarget: 'wikiforge' });
-		expect(groups.owned[0]).toMatchObject({ id: '1', cardCount: 3, access: 'owned' });
+		expect(groups.owned[0]).toMatchObject({
+			id: '1',
+			cardCount: 3,
+			access: 'owned',
+			imageUrl: 'https://fr.wikipedia.org/wiki/Special:FilePath/Priorit%C3%A9s.jpg?width=250'
+		});
 		expect(groups.shared[0]).toMatchObject({ ownerName: 'SoneS9', access: 'shared' });
 		expect(groups.pending[0]).toMatchObject({ access: 'pending' });
 	});

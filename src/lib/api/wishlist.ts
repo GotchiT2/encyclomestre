@@ -57,6 +57,11 @@ interface ApiWishlistFollower {
 
 const wishlistPageSizes = new Map<string, number>();
 
+function wishlistImageUrl(image?: string | null): string | null {
+	if (!image?.trim()) return null;
+	return `https://fr.wikipedia.org/wiki/Special:FilePath/${encodeURIComponent(image)}?width=250`;
+}
+
 function toSummary(wishlist: ApiWishlistSummary, access: WishlistAccess): WishlistRegistrySummary {
 	return {
 		id: String(wishlist.id),
@@ -64,7 +69,7 @@ function toSummary(wishlist: ApiWishlistSummary, access: WishlistAccess): Wishli
 		description: wishlist.description ?? '',
 		cardCount: wishlist.nbCards ?? null,
 		imagePageId: wishlist.imagePageId == null ? null : String(wishlist.imagePageId),
-		imageUrl: wishlist.image?.trim() || null,
+		imageUrl: wishlistImageUrl(wishlist.image),
 		ownerName: wishlist.ownerName ?? null,
 		invitedAt: wishlist.invitedAt ? wikiForgeUtcDate(wishlist.invitedAt).toISOString() : null,
 		access
@@ -226,7 +231,7 @@ export async function getWishlistFollowers(
 		id: String(follower.id),
 		name: follower.name,
 		imagePageId: follower.imagePageId == null ? null : String(follower.imagePageId),
-		imageUrl: follower.image?.trim() || null,
+		imageUrl: wishlistImageUrl(follower.image),
 		accepted: follower.accepted
 	}));
 }

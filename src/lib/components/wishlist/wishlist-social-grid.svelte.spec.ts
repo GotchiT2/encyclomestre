@@ -30,16 +30,19 @@ const entry: WishlistPageEntry = {
 describe('WishlistSocialGrid', () => {
 	it('allows removal only for an owned wishlist', async () => {
 		const onRemove = vi.fn();
+		const onOpen = vi.fn();
 		const view = render(WishlistSocialGrid, {
 			entries: [entry],
 			editable: true,
-			onOpen: vi.fn(),
+			onOpen,
 			onRemove
 		});
 		const cardWrapper = document.querySelector('[data-testid="card-tile"]')?.parentElement;
 		expect(cardWrapper).toHaveClass('wikiforge-card-size', 'relative', 'isolate');
 		await page.getByRole('button', { name: 'Retirer de la wishlist' }).click();
 		expect(onRemove).toHaveBeenCalledWith('42');
+		await page.getByRole('button', { name: 'Paris' }).click();
+		expect(onOpen).toHaveBeenCalledWith(entry);
 
 		await view.rerender({ entries: [entry], editable: false, onOpen: vi.fn(), onRemove });
 		expect(page.getByRole('button', { name: 'Retirer de la wishlist' }).query()).toBeNull();
