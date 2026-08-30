@@ -5,6 +5,7 @@
 	import { _ } from '$lib/i18n';
 	import LogInIcon from '@lucide/svelte/icons/log-in';
 	import UserRoundIcon from '@lucide/svelte/icons/user-round';
+	import PlayerMoney from './player-money.svelte';
 </script>
 
 <!-- La barre d'onglets couvre les destinations principales : ce bandeau ne porte que
@@ -19,6 +20,7 @@
 	<a href={resolve('/')} class="min-w-0 flex-1" aria-label={$_('navigation.home')}>
 		<span class="forge-wordmark block truncate text-lg leading-none">{$_('navigation.brand')}</span>
 	</a>
+	<PlayerMoney />
 	<a
 		href={$currentSession ? resolve('/profile') : resolve('/login')}
 		class="grid size-10 shrink-0 place-items-center border border-primary/35 text-primary"
