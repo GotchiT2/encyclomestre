@@ -69,12 +69,13 @@ describe('TradeOfferCard', () => {
 	it('shows both sides and the direct-message action on mobile', async () => {
 		await page.viewport(390, 844);
 		const onMessage = vi.fn();
+		const onView = vi.fn();
 		render(TradeOfferCard, {
 			offer,
 			cards,
 			currentUserId: 'current-user',
 			onRespond: vi.fn(),
-			onView: vi.fn(),
+			onView,
 			onMessage,
 			onCounterOffer: vi.fn()
 		});
@@ -86,6 +87,7 @@ describe('TradeOfferCard', () => {
 		await expect.element(page.getByText('L · Carte demandée')).toBeVisible();
 		await page.getByRole('button', { name: 'Envoyer un message à Claire Trade' }).click();
 		expect(onMessage).toHaveBeenCalledWith('user-claire');
+		expect(onView).not.toHaveBeenCalled();
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
 	});
 

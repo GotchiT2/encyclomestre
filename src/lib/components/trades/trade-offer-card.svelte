@@ -61,9 +61,15 @@
 </script>
 
 <article
-	class="min-w-0 border border-primary/20 bg-card/85 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition-colors hover:border-primary/45 sm:p-4"
+	class="group relative min-w-0 border border-primary/20 bg-card/85 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition-colors hover:border-primary/45 sm:p-4"
 >
-	<header class="flex min-w-0 items-start justify-between gap-3">
+	<button
+		type="button"
+		class="absolute inset-0 z-0 cursor-pointer transition-colors hover:bg-primary/5 focus-visible:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[-3px]"
+		aria-label={$_('trades.open_details')}
+		onclick={() => onView(offer)}
+	></button>
+	<header class="pointer-events-none relative z-10 flex min-w-0 items-start justify-between gap-3">
 		<div class="min-w-0">
 			<div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
 				<h2 class="break-words text-base font-bold text-foreground sm:text-lg">
@@ -83,7 +89,7 @@
 			</time>
 			<button
 				type="button"
-				class="grid size-11 place-items-center text-muted-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+				class="pointer-events-auto grid size-11 place-items-center text-muted-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
 				aria-label={$_('trades.message_user', { values: { user: counterpartName } })}
 				title={$_('trades.message_user', { values: { user: counterpartName } })}
 				onclick={() => onMessage(counterpart.id)}
@@ -93,21 +99,22 @@
 		</div>
 	</header>
 	{#if offer.message}
-		<p class="mt-3 border-l-2 border-primary/35 pl-3 text-sm italic text-muted-foreground">
+		<p
+			class="pointer-events-none relative z-10 mt-3 border-l-2 border-primary/35 pl-3 text-sm italic text-muted-foreground"
+		>
 			{offer.message}
 		</p>
 	{/if}
 	{#if isOpen && offer.expiresAt}
-		<p class="mt-2 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+		<p
+			class="pointer-events-none relative z-10 mt-2 font-mono text-[9px] uppercase tracking-wider text-muted-foreground"
+		>
 			{$_('trades.expires_on', { values: { date: formattedDateTime(offer.expiresAt) } })}
 		</p>
 	{/if}
 
-	<button
-		type="button"
-		class="mt-3 grid w-full min-w-0 cursor-pointer items-stretch gap-3 text-left focus-visible:outline-2 focus-visible:outline-primary lg:grid-cols-[minmax(0,1fr)_2rem_minmax(0,1fr)] lg:gap-4"
-		onclick={() => onView(offer)}
-		aria-label={$_('trades.open_details')}
+	<div
+		class="pointer-events-none relative z-10 mt-3 grid w-full min-w-0 items-stretch gap-3 text-left lg:grid-cols-[minmax(0,1fr)_2rem_minmax(0,1fr)] lg:gap-4"
 	>
 		<section class="min-w-0">
 			<p class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
@@ -168,11 +175,11 @@
 				{/if}
 			</div>
 		</section>
-	</button>
+	</div>
 
 	{#if isIncoming && isOpen}
 		<footer
-			class="mt-4 grid grid-cols-1 gap-2 border-t border-primary/10 pt-3 sm:flex sm:flex-wrap"
+			class="relative z-10 mt-4 grid grid-cols-1 gap-2 border-t border-primary/10 pt-3 sm:flex sm:flex-wrap"
 		>
 			<Button size="sm" class="w-full sm:w-auto" onclick={() => onRespond(offer.id, 'accepted')}>
 				<CheckIcon class="size-4" />
