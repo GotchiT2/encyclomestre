@@ -73,6 +73,18 @@
 		data.filters.selectedRarities.forEach((rarity) => parameters.append('rarity', rarity));
 		return `/cards?${parameters}`;
 	}
+	// Les filtres sont rendus hors du bloc {#await} : on y reporte les compteurs de la réponse.
+	let rarityCounts = $state<Record<string, number | undefined>>({});
+	$effect(() => {
+		let stale = false;
+		void data.cards.then((result) => {
+			if (!stale) rarityCounts = result.rarityResults;
+		});
+		return () => {
+			stale = true;
+		};
+	});
+
 	const activeFilterCount = $derived(
 		(data.filters.query ? 1 : 0) +
 			data.filters.selectedRarities.length +
@@ -94,6 +106,7 @@
 				sortBy={data.filters.sortBy}
 				sortDirection={data.filters.sortDirection}
 				selectedRarities={data.filters.selectedRarities}
+				{rarityCounts}
 			/>
 		</FilterShell>
 
@@ -103,7 +116,7 @@
 					{$_('codex.loading')}
 				</p>
 			{:then result}
-				<CatalogueResultSummary total={result.meta.total} rarityResults={result.rarityResults} />
+				<CatalogueResultSummary total={result.meta.total} />
 				{#if result.items.length}
 					<div class="wikiforge-card-grid">
 						{#each result.items as card (card.id)}

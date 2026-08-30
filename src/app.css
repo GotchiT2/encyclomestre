@@ -198,16 +198,7 @@ article {
 		inset 0 1px rgb(255 255 255 / 4%),
 		inset 0 0 30px rgb(25 167 170 / 5%),
 		0 18px 55px rgb(0 0 0 / 26%);
-	clip-path: polygon(
-		var(--forge-cut) 0,
-		calc(100% - var(--forge-cut)) 0,
-		100% var(--forge-cut),
-		100% calc(100% - var(--forge-cut)),
-		calc(100% - var(--forge-cut)) 100%,
-		var(--forge-cut) 100%,
-		0 calc(100% - var(--forge-cut)),
-		0 var(--forge-cut)
-	);
+	
 }
 
 @utility forge-panel-flat {

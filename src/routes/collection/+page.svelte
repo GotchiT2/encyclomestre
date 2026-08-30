@@ -322,6 +322,7 @@
 				{wishlistOwners}
 				{tags}
 				untaggedOption="-1"
+				rarityCounts={rarityResults}
 				canonical
 				onOpenTagEditor={() => (isTagEditorOpen = true)}
 				onClear={clearFilters}
@@ -347,7 +348,7 @@
 				</Button>
 			</div>
 
-			<CollectionResultSummary {total} loaded={cards.length} {hasNext} {rarityResults} />
+			<CollectionResultSummary {total} loaded={cards.length} {hasNext} />
 			{#if loading}
 				<p class="forge-label">{$_('collection.loading')}</p>
 			{:else if failed}

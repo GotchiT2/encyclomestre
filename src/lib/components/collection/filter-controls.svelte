@@ -32,6 +32,7 @@
 		untaggedOption,
 		allowTagCreation = true,
 		canonical = false,
+		rarityCounts,
 		onOpenTagEditor,
 		onClear
 	}: {
@@ -48,6 +49,8 @@
 		untaggedOption?: string;
 		allowTagCreation?: boolean;
 		canonical?: boolean;
+		/** Nombre de résultats par rareté, affiché sur les pastilles. */
+		rarityCounts?: Record<string, number | undefined>;
 		onOpenTagEditor: () => void;
 		onClear: () => void;
 	} = $props();
@@ -120,7 +123,12 @@
 
 	<Field.FieldSet class="gap-2">
 		<Field.FieldLegend class="forge-label">{$_('collection.rarities')}</Field.FieldLegend>
-		<RaritySelector options={cardRarityOptions} bind:selected={selectedRarities} compact />
+		<RaritySelector
+			options={cardRarityOptions}
+			bind:selected={selectedRarities}
+			counts={rarityCounts}
+			compact
+		/>
 	</Field.FieldSet>
 	{#if !canonical}<CardVariantSelector bind:value={variant} />{/if}
 

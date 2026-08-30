@@ -49,7 +49,7 @@
 	let activeInteraction = $state(false);
 	let landscapeFullArt = $state(false);
 	const titleFontStyle = $derived(
-		`--card-title-mobile:${Math.min(0.78, Math.max(0.3, 13.5 / titleLength)).toFixed(3)}rem;--card-title-desktop:${Math.min(.8, Math.max(0.45, 23 / titleLength)).toFixed(3)}rem`
+		`--card-title-mobile:${Math.min(0.78, Math.max(0.3, 13.5 / titleLength)).toFixed(3)}rem;--card-title-desktop:${Math.min(1, Math.max(0.45, 23 / titleLength)).toFixed(3)}rem`
 	);
 
 	function handleOpen() {

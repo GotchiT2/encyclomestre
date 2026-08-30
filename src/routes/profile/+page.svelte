@@ -1,372 +1,245 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { _ } from '$lib/i18n';
-	import { currentSession } from '$lib/auth/session';
+	import CollectionVitrine from '$lib/components/profile/collection-vitrine.svelte';
 	import {
-		getCard,
-		getCards,
-		getMyProfileSettings,
-		getSales,
-		updateProfileSettings
-	} from '$lib/api';
-	import CardTile from '$lib/components/card-tile.svelte';
-	import CardPicker from '$lib/components/profile/card-picker.svelte';
-	import ProfileGallery from '$lib/components/profile/profile-gallery.svelte';
-	import WishlistPicker from '$lib/components/wishlist/wishlist-picker.svelte';
+		countShowcasedCards,
+		previewAuctions,
+		previewBuyNow,
+		previewProfile,
+		previewShowcases,
+		VITRINE_CARD_LIMIT,
+		type PreviewSale,
+		type PreviewShowcase
+	} from '$lib/components/profile/profile-preview-data';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { Input } from '$lib/components/ui/input';
-	import PlusIcon from '@lucide/svelte/icons/plus';
-	import type {
-		CardRecord,
-		ProfileGallery as Gallery,
-		ProfileSettings,
-		SaleListing
-	} from '$lib/types';
-	import type { PageData } from './$types';
+	import { _ } from '$lib/i18n';
+	import GavelIcon from '@lucide/svelte/icons/gavel';
+	import ShieldIcon from '@lucide/svelte/icons/shield';
+	import TimerIcon from '@lucide/svelte/icons/timer';
 
-	let { data }: { data: PageData } = $props();
-	let settings = $state<ProfileSettings>({
-		username: '',
-		avatarCardId: null,
-		accentColor: '#feb823',
-		bioTags: [],
-		showcases: [],
-		wantedCardIds: [],
-		nsfwEnabled: false,
-		censoredKeywords: []
-	});
-	let ownedCards = $state<CardRecord[]>([]);
-	let allCards = $state<CardRecord[]>([]);
-	let sales = $state<SaleListing[]>([]);
-	let loading = $state(true);
-	let identityOpen = $state(false);
-	let pickerOpen = $state(false);
-	let pickerTitle = $state('');
-	let pickerCards = $state<CardRecord[]>([]);
-	let pickerAction = $state<(card: CardRecord) => void>(() => {});
-	let wantedPickerOpen = $state(false);
-	let galleryTitle = $state('');
-	let editingGalleryId = $state<string | null>(null);
-	let galleryEditorOpen = $state(false);
-	let newBioTag = $state('');
+	// Écran de présentation : seules les vitrines sont manipulables, et uniquement
+	// en mémoire. Rien n'est relié à l'API pour l'instant.
+	const amount = new Intl.NumberFormat('fr-FR').format;
 
-	onMount(async () => {
-		const collection = await data.collection;
-		ownedCards = collection.items;
-		const userId = $currentSession?.user.id ?? 'demo-user';
-		const [profile, userSales] = await Promise.all([getMyProfileSettings(), getSales(userId)]);
-		settings = {
-			...profile,
-			username: profile.username || $currentSession?.user.username || ''
-		};
-		sales = userSales;
-		allCards = userSales.flatMap((sale) => (sale.card ? [sale.card] : []));
-		const knownIds = new Set(allCards.map((card) => card.id));
-		const referencedIds = [...new Set(settings.wantedCardIds)];
-		const missingCards = await Promise.all(
-			referencedIds
-				.filter((cardId) => !knownIds.has(cardId))
-				.map((cardId) => getCard(cardId).catch(() => null))
-		);
-		allCards = [...allCards, ...missingCards.filter((card): card is CardRecord => card !== null)];
-		loading = false;
-	});
+	let activeTab = $state<'showcase' | 'sales'>('showcase');
+	let showcases = $state<PreviewShowcase[]>(
+		previewShowcases.map((showcase) => ({ ...showcase, cards: [...showcase.cards] }))
+	);
+	let dragged = $state<{ showcaseId: string; cardId: string } | null>(null);
 
-	async function persist(next: ProfileSettings) {
-		settings = next;
-		const userId = $currentSession?.user.id ?? 'demo-user';
-		settings = await updateProfileSettings(userId, next);
-	}
+	const shownCount = $derived(countShowcasedCards(showcases));
+	const maxPerRow = $derived(Math.max(...showcases.map((showcase) => showcase.perRow)));
 
-	function cardReferenceId(card: CardRecord) {
-		return card.catalogueId ?? card.id;
-	}
-
-	function openPicker(title: string, cards: CardRecord[], action: (card: CardRecord) => void) {
-		pickerTitle = title;
-		pickerCards = cards;
-		pickerAction = action;
-		pickerOpen = true;
-	}
-
-	function galleryCards(gallery: Gallery) {
-		return gallery.cardIds
-			.map((id) => ownedCards.find((card) => cardReferenceId(card) === id))
-			.filter(Boolean) as CardRecord[];
-	}
-
-	function addGallery() {
-		const gallery: Gallery = {
-			id: crypto.randomUUID(),
-			title: $_('profile.new_gallery'),
-			cardIds: []
-		};
-		persist({ ...settings, showcases: [...settings.showcases, gallery] });
-	}
-
-	function saveGalleryTitle() {
-		if (!editingGalleryId || !galleryTitle.trim()) return;
-		persist({
-			...settings,
-			showcases: settings.showcases.map((gallery) =>
-				gallery.id === editingGalleryId ? { ...gallery, title: galleryTitle.trim() } : gallery
-			)
+	function moveCard(showcaseId: string, cardId: string, delta: -1 | 1) {
+		showcases = showcases.map((showcase) => {
+			if (showcase.id !== showcaseId) return showcase;
+			const from = showcase.cards.findIndex((card) => card.id === cardId);
+			const to = from + delta;
+			if (from < 0 || to < 0 || to >= showcase.cards.length) return showcase;
+			const cards = [...showcase.cards];
+			[cards[from], cards[to]] = [cards[to], cards[from]];
+			return { ...showcase, cards };
 		});
-		editingGalleryId = null;
 	}
 
-	function addBioTag() {
-		const tag = newBioTag.trim().replace(/^#/, '');
-		if (!tag || settings.bioTags.includes(tag)) return;
-		persist({ ...settings, bioTags: [...settings.bioTags, tag] });
-		newBioTag = '';
+	function removeCard(showcaseId: string, cardId: string) {
+		showcases = showcases.map((showcase) =>
+			showcase.id === showcaseId
+				? { ...showcase, cards: showcase.cards.filter((card) => card.id !== cardId) }
+				: showcase
+		);
+	}
+
+	/** Dépose la carte glissée à `index` dans la vitrine cible, entre vitrines comprises. */
+	function dropInto(targetId: string, index: number) {
+		const source = dragged;
+		dragged = null;
+		if (!source) return;
+		const card = showcases
+			.find((showcase) => showcase.id === source.showcaseId)
+			?.cards.find((entry) => entry.id === source.cardId);
+		if (!card) return;
+
+		showcases = showcases.map((showcase) => {
+			if (showcase.id !== source.showcaseId && showcase.id !== targetId) return showcase;
+			let cards = [...showcase.cards];
+			if (showcase.id === source.showcaseId) {
+				cards = cards.filter((entry) => entry.id !== source.cardId);
+			}
+			if (showcase.id === targetId) {
+				cards.splice(Math.min(index, cards.length), 0, card);
+			}
+			return { ...showcase, cards };
+		});
 	}
 </script>
 
-{#if loading}
-	<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-		{$_('collection.loading')}
+<svelte:head><title>{$_('profile.title')}</title></svelte:head>
+
+{#snippet saleTile(sale: PreviewSale, auction: boolean)}
+	<article class="forge-panel-flat flex w-44 shrink-0 snap-start flex-col gap-2 p-2 sm:w-48">
+		<img
+			src={sale.imageUrl}
+			alt={sale.title}
+			loading="lazy"
+			class="aspect-[63/88] w-full object-cover"
+		/>
+		<p class="truncate text-sm font-bold" title={sale.title}>{sale.title}</p>
+		<p class="forge-label text-primary">
+			{$_('profile.coins', { values: { amount: amount(sale.price) } })}
+		</p>
+		{#if auction}
+			<p class="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+				<GavelIcon class="size-3.5 shrink-0" />
+				{$_('profile.bids_count', { values: { count: sale.bids ?? 0 } })}
+			</p>
+			<p class="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+				<TimerIcon class="size-3.5 shrink-0" />
+				{$_('profile.ends_in', { values: { delay: sale.endsIn ?? '—' } })}
+			</p>
+		{:else}
+			<Button size="sm" disabled class="mt-auto">{$_('profile.buy_action')}</Button>
+		{/if}
+	</article>
+{/snippet}
+
+<section class="flex flex-col gap-6 pb-12 sm:gap-8">
+	<PageHeader eyebrow={$_('profile.title')} title={previewProfile.username} />
+
+	<p class="forge-panel-flat px-4 py-3 text-sm text-muted-foreground">
+		{$_('profile.preview_notice')}
 	</p>
-{:else}
-	<section
-		class="flex flex-col gap-6 pb-12 sm:gap-8"
-		style={`--profile-accent:${settings.accentColor}`}
-	>
-		<header class="forge-panel p-4 sm:p-6">
-			<div class="flex items-center gap-4">
-				<button
-					class="grid size-18 shrink-0 place-items-center border border-primary/40 bg-background p-1 text-2xl font-black text-primary"
-					aria-label={$_('profile.avatar_title')}
-					onclick={() =>
-						openPicker($_('profile.avatar_title'), ownedCards, (card) =>
-							persist({ ...settings, avatarCardId: cardReferenceId(card) })
-						)}
-				>
-					{#if settings.avatarCardId && ownedCards.find((card) => cardReferenceId(card) === settings.avatarCardId)}
-						<img
-							class="size-full object-cover"
-							src={ownedCards.find((card) => cardReferenceId(card) === settings.avatarCardId)
-								?.imageUrl}
-							alt={settings.username}
-						/>
-					{:else}{settings.username.slice(0, 1).toLocaleUpperCase('fr-FR')}{/if}
-				</button>
-				<div class="min-w-0 flex-1">
-					<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-						{$_('profile.title')}
-					</p>
-					<h1 class="truncate font-serif text-3xl font-bold tracking-tight sm:text-5xl">
-						{settings.username}
-					</h1>
-					<div class="mt-2 flex flex-wrap gap-1">
-						{#each settings.bioTags as tag (tag)}<span
-								class="border border-primary/30 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-primary"
-								>#{tag}</span
-							>{/each}
-					</div>
-				</div>
-				<Button variant="outline" size="sm" onclick={() => (identityOpen = true)}
-					>{$_('profile.edit_identity')}</Button
-				>
-			</div>
-		</header>
 
-		<section class="flex flex-col gap-3">
-			<div
-				class="flex flex-wrap items-center justify-between gap-3 border-b border-dashed border-primary/30 pb-3"
-			>
-				<h2 class="text-2xl font-black uppercase tracking-tight">
-					{$_('profile.showcase_title')}
-				</h2>
-				<Button size="sm" variant="outline" onclick={addGallery}
-					><PlusIcon />{$_('profile.add_gallery')}</Button
-				>
-			</div>
-			{#if settings.showcases.length}
-				{#each settings.showcases as gallery (gallery.id)}
-					<ProfileGallery
-						{gallery}
-						cards={galleryCards(gallery)}
-						onAddCard={() =>
-							openPicker(
-								gallery.title,
-								ownedCards.filter((card) => !gallery.cardIds.includes(cardReferenceId(card))),
-								(card) =>
-									persist({
-										...settings,
-										showcases: settings.showcases.map((entry) =>
-											entry.id === gallery.id
-												? {
-														...entry,
-														cardIds: [...entry.cardIds, cardReferenceId(card)].slice(0, 6)
-													}
-												: entry
-										)
-									})
-							)}
-						onRemoveCard={(cardId) =>
-							persist({
-								...settings,
-								showcases: settings.showcases.map((entry) =>
-									entry.id === gallery.id
-										? { ...entry, cardIds: entry.cardIds.filter((id) => id !== cardId) }
-										: entry
-								)
-							})}
-						onEditTitle={() => {
-							editingGalleryId = gallery.id;
-							galleryTitle = gallery.title;
-							galleryEditorOpen = true;
-						}}
-						onRemove={() =>
-							persist({
-								...settings,
-								showcases: settings.showcases.filter((entry) => entry.id !== gallery.id)
-							})}
-					/>
-				{/each}
-			{:else}<p class="border border-primary/20 bg-card p-5 italic text-muted-foreground">
-					{$_('profile.showcase_empty')}
-				</p>{/if}
-		</section>
+	<!-- Photo de profil, guilde, compteurs et mots-clés -->
+	<header class="forge-panel flex flex-col gap-5 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
+		<img
+			src={previewProfile.avatarUrl}
+			alt={previewProfile.username}
+			class="aspect-[63/88] w-28 shrink-0 border border-primary/40 object-cover sm:w-32"
+		/>
 
-		<section class="flex flex-col gap-3">
-			<h2
-				class="border-b border-dashed border-primary/30 pb-3 text-2xl font-black uppercase tracking-tight"
-			>
-				{$_('profile.wanted_title')}
-			</h2>
-			<ProfileGallery
-				gallery={{
-					id: 'wanted',
-					title: $_('profile.wanted_title'),
-					cardIds: settings.wantedCardIds
-				}}
-				cards={settings.wantedCardIds
-					.map((id) => allCards.find((card) => card.id === id))
-					.filter(Boolean) as CardRecord[]}
-				editable={false}
-				showTitle={false}
-				allowCardAdd={true}
-				onAddCard={() => (wantedPickerOpen = true)}
-				onRemoveCard={(cardId) =>
-					persist({
-						...settings,
-						wantedCardIds: settings.wantedCardIds.filter((id) => id !== cardId)
-					})}
-			/>
-		</section>
-
-		<section class="flex flex-col gap-3">
-			<h2
-				class="border-b border-dashed border-primary/30 pb-3 text-2xl font-black uppercase tracking-tight"
-			>
-				{$_('profile.sales_title')}
-			</h2>
-			<div class="flex snap-x gap-3 overflow-x-auto pb-2">
-				{#each sales as sale (sale.id)}
-					{@const card = allCards.find((entry) => entry.id === sale.cardId)}
-					{#if card}<div class="w-40 shrink-0 snap-start sm:w-44">
-							<CardTile {card} showFriendOwners={false} />
-							<p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-primary">
-								{sale.price}
-								{sale.currency} · {sale.type}
-							</p>
-						</div>{/if}
-				{/each}
-			</div>
-		</section>
-	</section>
-{/if}
-
-<CardPicker
-	bind:open={pickerOpen}
-	cards={pickerCards}
-	title={pickerTitle}
-	onSelect={(card) => pickerAction(card)}
-/>
-
-<WishlistPicker
-	bind:open={wantedPickerOpen}
-	existingCardIds={settings.wantedCardIds}
-	loadCards={getCards}
-	title={$_('profile.wanted_title')}
-	onSelect={async (card) => {
-		await persist({
-			...settings,
-			wantedCardIds: [...settings.wantedCardIds, card.id].slice(0, 6)
-		});
-		allCards = [...new Map([...allCards, card].map((entry) => [entry.id, entry])).values()];
-		wantedPickerOpen = false;
-	}}
-/>
-
-<Dialog.Root bind:open={identityOpen}>
-	<Dialog.Content class="max-w-lg p-5">
-		<Dialog.Title class="text-2xl font-black uppercase tracking-tight"
-			>{$_('profile.edit_identity')}</Dialog.Title
-		>
-		<div class="mt-5 space-y-4">
-			<label class="block font-mono text-[10px] uppercase tracking-widest text-primary"
-				>{$_('profile.username')}<Input
-					bind:value={settings.username}
-					class="mt-1 font-bold"
-				/></label
-			>
-			<label class="block font-mono text-[10px] uppercase tracking-widest text-primary"
-				>{$_('profile.accent')}<input
-					class="mt-1 h-10 w-full border border-primary/50 bg-secondary p-1"
-					type="color"
-					bind:value={settings.accentColor}
-				/></label
-			>
-			<div>
-				<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-					{$_('profile.bio_tags')}
+		<div class="flex min-w-0 flex-1 flex-col gap-4">
+			<div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+				<p class="flex items-center gap-2 text-sm">
+					<ShieldIcon class="size-4 shrink-0 text-primary" />
+					<span class="forge-label">{$_('profile.guild_label')}</span>
+					<span class="font-bold">{previewProfile.guild.name}</span>
 				</p>
-				<div class="mt-2 flex gap-2">
-					<Input
-						bind:value={newBioTag}
-						onkeydown={(event) => event.key === 'Enter' && addBioTag()}
-					/><Button size="sm" onclick={addBioTag}><PlusIcon /></Button>
+				<p class="text-xs text-muted-foreground">
+					{previewProfile.guild.role} · {$_('profile.guild_members', {
+						values: { count: previewProfile.guild.members }
+					})}
+				</p>
+			</div>
+
+			<dl class="grid grid-cols-2 gap-2 sm:max-w-md sm:grid-cols-3">
+				{#each [[$_('profile.cards_owned'), previewProfile.cardCount], [$_('profile.unique_cards'), previewProfile.uniqueCount], [$_('profile.member_since'), previewProfile.joinedOn]] as entry (entry[0])}
+					<div class="border border-primary/25 bg-background/40 px-3 py-2">
+						<dt class="forge-label">{entry[0]}</dt>
+						<dd class="mt-1 font-heading text-xl tracking-wider">
+							{typeof entry[1] === 'number' ? amount(entry[1]) : entry[1]}
+						</dd>
+					</div>
+				{/each}
+			</dl>
+
+			<div>
+				<p class="forge-label">{$_('profile.tags_title')}</p>
+				<ul class="mt-2 flex flex-wrap gap-1.5">
+					{#each previewProfile.tags as tag (tag)}
+						<li
+							class="border border-primary/30 bg-background/40 px-2 py-0.5 text-[11px] font-bold tracking-wider text-primary uppercase"
+						>
+							#{tag}
+						</li>
+					{/each}
+				</ul>
+			</div>
+		</div>
+	</header>
+
+	<div
+		class="grid grid-cols-2 border border-primary/30 bg-card p-1"
+		role="tablist"
+		aria-label={$_('profile.tabs_aria')}
+	>
+		{#each [['showcase', $_('profile.tab_showcase')], ['sales', $_('profile.tab_sales')]] as tab (tab[0])}
+			<button
+				class="h-10 text-[10px] font-bold tracking-widest uppercase {activeTab === tab[0]
+					? 'bg-primary text-primary-foreground'
+					: 'text-primary'}"
+				role="tab"
+				id={`profile-tab-${tab[0]}`}
+				aria-selected={activeTab === tab[0]}
+				aria-controls={`profile-panel-${tab[0]}`}
+				onclick={() => (activeTab = tab[0] as typeof activeTab)}
+			>
+				{tab[1]}
+			</button>
+		{/each}
+	</div>
+
+	{#if activeTab === 'showcase'}
+		<div
+			class="flex flex-col gap-4"
+			id="profile-panel-showcase"
+			role="tabpanel"
+			aria-labelledby="profile-tab-showcase"
+		>
+			<div class="flex flex-wrap items-baseline justify-between gap-2">
+				<p class="text-sm text-muted-foreground">{$_('profile.showcase_hint')}</p>
+				<p class="forge-label" aria-live="polite">
+					{$_('profile.showcase_capacity', {
+						values: { count: shownCount, limit: VITRINE_CARD_LIMIT }
+					})}
+				</p>
+			</div>
+			{#each showcases as showcase (showcase.id)}
+				<CollectionVitrine
+					title={showcase.title}
+					cards={showcase.cards}
+					perRow={showcase.perRow}
+					{maxPerRow}
+					onMove={(cardId, delta) => moveCard(showcase.id, cardId, delta)}
+					onRemove={(cardId) => removeCard(showcase.id, cardId)}
+					onDragStart={(cardId) => (dragged = { showcaseId: showcase.id, cardId })}
+					onDragEnd={() => (dragged = null)}
+					onDropAt={(index) => dropInto(showcase.id, index)}
+				/>
+			{/each}
+		</div>
+	{:else}
+		<div
+			class="flex flex-col gap-8"
+			id="profile-panel-sales"
+			role="tabpanel"
+			aria-labelledby="profile-tab-sales"
+		>
+			<!-- Enchères en cours -->
+			<div class="flex flex-col gap-3">
+				<div class="border-b border-dashed border-primary/30 pb-3">
+					<h2 class="text-2xl font-black uppercase">{$_('profile.auctions_title')}</h2>
+					<p class="mt-1 text-sm text-muted-foreground">{$_('profile.auctions_hint')}</p>
 				</div>
-				<div class="mt-2 flex flex-wrap gap-1">
-					{#each settings.bioTags as tag (tag)}<Button
-							variant="outline"
-							size="xs"
-							onclick={() =>
-								persist({
-									...settings,
-									bioTags: settings.bioTags.filter((entry) => entry !== tag)
-								})}>#{tag} ×</Button
-						>{/each}
+				<div class="flex snap-x gap-3 overflow-x-auto pb-2">
+					{#each previewAuctions as sale (sale.id)}
+						{@render saleTile(sale, true)}
+					{/each}
 				</div>
 			</div>
-			<Button
-				class="w-full"
-				onclick={() => {
-					persist(settings);
-					identityOpen = false;
-				}}>{$_('common.save')}</Button
-			>
-		</div>
-	</Dialog.Content>
-</Dialog.Root>
 
-<Dialog.Root bind:open={galleryEditorOpen}>
-	<Dialog.Content class="max-w-lg p-5">
-		<Dialog.Title class="text-xl font-black uppercase">{$_('profile.edit_gallery')}</Dialog.Title>
-		<Input bind:value={galleryTitle} class="mt-4 " />
-		<div class="mt-4 flex justify-end gap-2">
-			<Button variant="outline" onclick={() => (galleryEditorOpen = false)}
-				>{$_('common.cancel')}</Button
-			><Button
-				onclick={() => {
-					saveGalleryTitle();
-					galleryEditorOpen = false;
-				}}>{$_('common.save')}</Button
-			>
+			<!-- Achat immédiat -->
+			<div class="flex flex-col gap-3">
+				<div class="border-b border-dashed border-primary/30 pb-3">
+					<h2 class="text-2xl font-black uppercase">{$_('profile.buy_now_title')}</h2>
+					<p class="mt-1 text-sm text-muted-foreground">{$_('profile.buy_now_hint')}</p>
+				</div>
+				<div class="flex snap-x gap-3 overflow-x-auto pb-2">
+					{#each previewBuyNow as sale (sale.id)}
+						{@render saleTile(sale, false)}
+					{/each}
+				</div>
+			</div>
 		</div>
-	</Dialog.Content>
-</Dialog.Root>
+	{/if}
+</section>

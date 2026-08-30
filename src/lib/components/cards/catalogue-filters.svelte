@@ -14,12 +14,15 @@
 		query,
 		sortBy,
 		sortDirection,
-		selectedRarities
+		selectedRarities,
+		rarityCounts
 	}: {
 		query: string;
 		sortBy: CardSearchSort;
 		sortDirection: string;
 		selectedRarities: CardRarity[];
+		/** Nombre de résultats par rareté, affiché sur les pastilles. */
+		rarityCounts?: Record<string, number | undefined>;
 	} = $props();
 
 	let form: HTMLFormElement;
@@ -140,6 +143,7 @@
 				bind:selected={localRarities}
 				name="rarity"
 				multiple={false}
+				counts={rarityCounts}
 				compact
 				onChange={() => scheduleSubmit(80)}
 			/>
