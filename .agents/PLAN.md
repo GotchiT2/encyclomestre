@@ -330,3 +330,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Choisir l’avatar depuis la collection personnelle — `feat(settings): choose avatar from personal collection`
 - [x] Précharger les cadres de cartes et rendre le solde global visible — `feat(layout): preload card assets and surface player balance`
 - [x] Afficher les illustrations et fiabiliser les interactions des wishlists — `feat(wishlist): polish registry illustrations and interactions`
+- [x] Aligner les grilles sur les pages de 48 cartes — `fix(cards): align grids to 48-card pages`

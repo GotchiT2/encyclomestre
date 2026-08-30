@@ -246,7 +246,7 @@
 							items={wantedCards}
 							label={$_('profile.wanted_title')}
 							itemKey={(card) => card.id}
-							desktopGridClass="lg:grid-cols-4 xl:grid-cols-5"
+							desktopGridClass="lg:grid-cols-4 xl:grid-cols-6"
 						>
 							{#snippet children(card)}
 								<CardTile {card} showFriendOwners={false} />

@@ -63,7 +63,7 @@ describe('TradeCardPanel', () => {
 		const grid = document.querySelector<HTMLElement>('[data-testid="card-tile"]')?.parentElement
 			?.parentElement;
 		expect(grid?.className).toContain('grid-cols-2');
-		expect(grid?.className).toContain('xl:grid-cols-5');
+		expect(grid?.className).toContain('xl:grid-cols-6');
 		await expect
 			.element(page.getByRole('button', { name: 'Afficher les cartes' }))
 			.not.toBeInTheDocument();

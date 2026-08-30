@@ -24,7 +24,7 @@
 </script>
 
 <div
-	class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,15rem),1fr))] gap-3 lg:grid-cols-[repeat(auto-fill,minmax(15rem,1fr))]"
+	class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
 	data-testid="market-listings"
 >
 	{#each listings as listing (listing.id)}

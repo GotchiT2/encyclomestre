@@ -273,7 +273,7 @@
 		<p class="mt-3 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
 			{$_('trades.filtered_card_count', { values: { count: total } })}
 		</p>
-		<div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+		<div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
 			{#each resultCards.filter((card) => !selectedIds.includes(card.id)) as card (card.id)}
 				<div class="relative min-w-0">
 					<CardTile
