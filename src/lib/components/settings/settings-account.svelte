@@ -28,10 +28,7 @@
 			{$_('settings.identity')}
 		</p>
 		<label class="mt-3 block font-mono text-[10px] uppercase tracking-widest text-primary"
-			>{$_('settings.username')}<Input
-				bind:value={username}
-				class="mt-1 font-serif font-bold"
-			/></label
+			>{$_('settings.username')}<Input bind:value={username} class="mt-1 font-bold" /></label
 		>
 		<div class="mt-4 flex items-center gap-3">
 			{#if avatarUrl}<img
@@ -46,7 +43,7 @@
 		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('settings.session')}
 		</p>
-		<p class="mt-2 font-serif italic text-muted-foreground">
+		<p class="mt-2 italic text-muted-foreground">
 			{$_('settings.logout_all_hint')}
 		</p>
 		<div class="mt-3 flex flex-wrap gap-2">
@@ -58,7 +55,7 @@
 		<p class="font-mono text-[10px] uppercase tracking-widest text-destructive">
 			{$_('settings.danger')}
 		</p>
-		<p class="mt-2 font-serif italic text-muted-foreground">{$_('settings.delete_hint')}</p>
+		<p class="mt-2 italic text-muted-foreground">{$_('settings.delete_hint')}</p>
 		<Button variant="destructive" class="mt-3" onclick={() => (confirmOpen = true)}
 			>{$_('settings.delete_account')}</Button
 		>
@@ -69,10 +66,10 @@
 	><Dialog.Portal
 		><Dialog.Overlay class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm" /><Dialog.Content
 			class="fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 border-4 border-double border-destructive/50 bg-card p-5 shadow-2xl"
-			><Dialog.Title class="font-serif text-2xl font-black uppercase"
+			><Dialog.Title class="text-2xl font-black uppercase"
 				>{$_('settings.delete_confirm_title')}</Dialog.Title
 			>
-			<p class="mt-3 font-serif italic text-muted-foreground">
+			<p class="mt-3 italic text-muted-foreground">
 				{$_('settings.delete_confirm_body')}
 			</p>
 			<div class="mt-5 flex justify-end gap-2">

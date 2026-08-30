@@ -51,7 +51,7 @@
 			<p class="font-mono text-[8px] uppercase tracking-widest text-primary">
 				{$_('messages.direct_channel')}
 			</p>
-			<h2 class="truncate font-serif text-lg font-bold">{conversation.title}</h2>
+			<h2 class="truncate text-lg font-bold">{conversation.title}</h2>
 		</div>
 	</header>
 

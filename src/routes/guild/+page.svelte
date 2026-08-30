@@ -39,7 +39,7 @@
 		<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
 			<ForgePanel class="p-6">
 				<p class="forge-label">{$_('guild.objective')}</p>
-				<h2 class="mt-3 font-serif text-3xl font-bold">{objective.title}</h2>
+				<h2 class="mt-3 text-3xl font-bold">{objective.title}</h2>
 				<p class="mt-3 text-sm leading-relaxed text-muted-foreground">
 					{$_('guild.objective_description')}
 				</p>
@@ -55,11 +55,11 @@
 				<Button href="/messages" variant="outline" class="mt-5">{$_('guild.open_channel')}</Button>
 			</ForgePanel>
 			<ForgePanel as="div" class="p-4">
-				<h2 class="font-serif text-xl font-bold">{$_('guild.members')}</h2>
+				<h2 class="text-xl font-bold">{$_('guild.members')}</h2>
 				<ul class="mt-4 divide-y divide-primary/15">
 					{#each members as member (member.userId)}
 						<li class="flex items-center justify-between gap-3 py-3">
-							<a href={resolve('/users/[id]', { id: member.userId })} class="font-serif font-bold"
+							<a href={resolve('/users/[id]', { id: member.userId })} class="font-bold"
 								>@{member.username}</a
 							>
 							<span class="forge-label text-[9px]">{member.role}</span>

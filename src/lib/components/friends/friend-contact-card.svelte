@@ -35,7 +35,7 @@
 				class="size-10 shrink-0 border border-primary/40 bg-background object-cover"
 			/>
 			<div class="min-w-0">
-				<h2 class="truncate font-serif text-lg font-black uppercase sm:text-xl">
+				<h2 class="truncate text-lg font-black uppercase sm:text-xl">
 					@{friendship.user.username}
 				</h2>
 				<p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-primary">

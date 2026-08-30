@@ -193,7 +193,7 @@
 </script>
 
 <section class="min-w-0 bg-background/40 p-2 sm:p-3">
-	{#if showTitle}<h2 class="font-serif text-lg font-black uppercase tracking-tight sm:text-xl">
+	{#if showTitle}<h2 class="text-lg font-black uppercase tracking-tight sm:text-xl">
 			{title}
 		</h2>{/if}
 	<div class={`${showTitle ? 'mt-2' : ''} border border-primary/20 bg-card p-2`}>
@@ -213,7 +213,7 @@
 				</Button>
 			{/each}
 			{#if !selectedCards.length}
-				<span class="font-serif text-sm italic text-muted-foreground">
+				<span class="text-sm italic text-muted-foreground">
 					{$_('trades.no_counterparty')}
 				</span>
 			{/if}
@@ -251,7 +251,7 @@
 
 	{#if !hasLoaded && !loading}
 		<p
-			class="mt-3 border border-dashed border-primary/25 p-5 text-center font-serif italic text-muted-foreground"
+			class="mt-3 border border-dashed border-primary/25 p-5 text-center italic text-muted-foreground"
 		>
 			{$_('trades.filter_cards_prompt')}
 		</p>
@@ -265,7 +265,7 @@
 		</p>
 	{:else if !resultCards.length}
 		<p
-			class="mt-3 border border-dashed border-primary/25 p-5 text-center font-serif italic text-muted-foreground"
+			class="mt-3 border border-dashed border-primary/25 p-5 text-center italic text-muted-foreground"
 		>
 			{$_('trades.no_filtered_cards')}
 		</p>

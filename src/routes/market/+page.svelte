@@ -142,7 +142,7 @@
 					{favoriteIds}
 					onToggleFavorite={(id) => void toggleFavorite(id)}
 				/>{:else}<p
-					class="border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
+					class="border border-dashed border-primary/30 bg-card p-5 italic text-muted-foreground"
 				>
 					{$_('market.empty')}
 				</p>{/if}

@@ -128,10 +128,7 @@
 	{#if !loading && receivedRequests.length}
 		<section class="flex flex-col gap-2" aria-labelledby="received-requests-title">
 			<div class="flex items-center gap-2">
-				<h2
-					id="received-requests-title"
-					class="font-serif text-xl font-black uppercase sm:text-2xl"
-				>
+				<h2 id="received-requests-title" class="text-xl font-black uppercase sm:text-2xl">
 					{$_('friends.received_title')}
 				</h2>
 				<Badge variant="secondary">
@@ -154,7 +151,7 @@
 	{#if !loading && sentRequests.length}
 		<section class="flex flex-col gap-2" aria-labelledby="sent-requests-title">
 			<div class="flex items-center gap-2">
-				<h2 id="sent-requests-title" class="font-serif text-xl font-black uppercase sm:text-2xl">
+				<h2 id="sent-requests-title" class="text-xl font-black uppercase sm:text-2xl">
 					{$_('friends.sent_title')}
 				</h2>
 				<Badge variant="outline">

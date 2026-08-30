@@ -10,7 +10,7 @@
 >
 	<h2
 		id="registry-summary-title"
-		class="font-serif text-xl font-black uppercase tracking-tight text-foreground"
+		class="text-xl font-black uppercase tracking-tight text-foreground"
 	>
 		{$_('profile.registrySummary')}
 	</h2>

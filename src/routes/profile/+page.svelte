@@ -136,7 +136,7 @@
 		<header class="forge-panel p-4 sm:p-6">
 			<div class="flex items-center gap-4">
 				<button
-					class="grid size-18 shrink-0 place-items-center border border-primary/40 bg-black p-1 text-2xl font-serif font-black text-primary"
+					class="grid size-18 shrink-0 place-items-center border border-primary/40 bg-background p-1 text-2xl font-black text-primary"
 					aria-label={$_('profile.avatar_title')}
 					onclick={() =>
 						openPicker($_('profile.avatar_title'), ownedCards, (card) =>
@@ -176,7 +176,7 @@
 			<div
 				class="flex flex-wrap items-center justify-between gap-3 border-b border-dashed border-primary/30 pb-3"
 			>
-				<h2 class="font-serif text-2xl font-black uppercase tracking-tight">
+				<h2 class="text-2xl font-black uppercase tracking-tight">
 					{$_('profile.showcase_title')}
 				</h2>
 				<Button size="sm" variant="outline" onclick={addGallery}
@@ -226,16 +226,14 @@
 							})}
 					/>
 				{/each}
-			{:else}<p
-					class="border border-primary/20 bg-card p-5 font-serif italic text-muted-foreground"
-				>
+			{:else}<p class="border border-primary/20 bg-card p-5 italic text-muted-foreground">
 					{$_('profile.showcase_empty')}
 				</p>{/if}
 		</section>
 
 		<section class="flex flex-col gap-3">
 			<h2
-				class="border-b border-dashed border-primary/30 pb-3 font-serif text-2xl font-black uppercase tracking-tight"
+				class="border-b border-dashed border-primary/30 pb-3 text-2xl font-black uppercase tracking-tight"
 			>
 				{$_('profile.wanted_title')}
 			</h2>
@@ -262,7 +260,7 @@
 
 		<section class="flex flex-col gap-3">
 			<h2
-				class="border-b border-dashed border-primary/30 pb-3 font-serif text-2xl font-black uppercase tracking-tight"
+				class="border-b border-dashed border-primary/30 pb-3 text-2xl font-black uppercase tracking-tight"
 			>
 				{$_('profile.sales_title')}
 			</h2>
@@ -306,14 +304,14 @@
 
 <Dialog.Root bind:open={identityOpen}>
 	<Dialog.Content class="max-w-lg p-5">
-		<Dialog.Title class="font-serif text-2xl font-black uppercase tracking-tight"
+		<Dialog.Title class="text-2xl font-black uppercase tracking-tight"
 			>{$_('profile.edit_identity')}</Dialog.Title
 		>
 		<div class="mt-5 space-y-4">
 			<label class="block font-mono text-[10px] uppercase tracking-widest text-primary"
 				>{$_('profile.username')}<Input
 					bind:value={settings.username}
-					class="mt-1 font-serif font-bold"
+					class="mt-1 font-bold"
 				/></label
 			>
 			<label class="block font-mono text-[10px] uppercase tracking-widest text-primary"
@@ -358,10 +356,8 @@
 
 <Dialog.Root bind:open={galleryEditorOpen}>
 	<Dialog.Content class="max-w-lg p-5">
-		<Dialog.Title class="font-serif text-xl font-black uppercase"
-			>{$_('profile.edit_gallery')}</Dialog.Title
-		>
-		<Input bind:value={galleryTitle} class="mt-4 font-serif" />
+		<Dialog.Title class="text-xl font-black uppercase">{$_('profile.edit_gallery')}</Dialog.Title>
+		<Input bind:value={galleryTitle} class="mt-4 " />
 		<div class="mt-4 flex justify-end gap-2">
 			<Button variant="outline" onclick={() => (galleryEditorOpen = false)}
 				>{$_('common.cancel')}</Button

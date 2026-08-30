@@ -31,7 +31,7 @@
 </script>
 
 <section
-	class="card-hero-host border border-primary/30 bg-black p-4"
+	class="card-hero-host border border-primary/30 bg-background p-4"
 	data-tilt-active={hasTilt && activeInteraction}
 	data-effect-active={hasIllustrationEffect && activeInteraction}
 	role="group"

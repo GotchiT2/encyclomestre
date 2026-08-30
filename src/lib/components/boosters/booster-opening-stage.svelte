@@ -306,7 +306,7 @@
 							? $_('boosters.opening_error')
 							: $_('boosters.chamberReady')}
 				</p>
-				<h2 class="mt-3 font-serif text-3xl font-bold sm:text-4xl">{$_('boosters.stageTitle')}</h2>
+				<h2 class="mt-3 text-3xl font-bold sm:text-4xl">{$_('boosters.stageTitle')}</h2>
 				<button
 					class="forge-energy-orbit mt-4 flex w-56 cursor-pointer flex-col items-center border-0 bg-transparent p-4 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45 sm:w-72"
 					disabled={!available || opening}

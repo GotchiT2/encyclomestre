@@ -68,7 +68,7 @@
 				<div class="flex items-start justify-between gap-3">
 					<div>
 						<h1 class="font-serif text-4xl font-black uppercase tracking-tight">{card.title}</h1>
-						<p class="mt-2 font-serif italic text-muted-foreground">
+						<p class="mt-2 italic text-muted-foreground">
 							{$_('market.sold_by')} @{sale.sellerName}
 						</p>
 					</div>
@@ -108,9 +108,9 @@
 						{sale.currency}
 					</p>
 					{#if sale.buyerName}
-						<p class="mt-3 font-serif text-sm">{$_('market.buyer')} @{sale.buyerName}</p>
+						<p class="mt-3 text-sm">{$_('market.buyer')} @{sale.buyerName}</p>
 					{:else if canBid && bids.length}
-						<p class="mt-3 font-serif text-sm">
+						<p class="mt-3 text-sm">
 							{$_('market.leading_bidder')}
 							{bids[0]?.bidderName}
 						</p>
@@ -119,7 +119,7 @@
 				</section>
 				{#if canBid}<section class="mt-4 border border-primary/30 bg-card p-4">
 						<div class="flex justify-between gap-3">
-							<p class="font-serif text-sm">{$_('market.wallet')} <strong>33 714</strong></p>
+							<p class="text-sm">{$_('market.wallet')} <strong>33 714</strong></p>
 							<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 								{$_('market.minimum_bid')}
 								{minimumBid}
@@ -149,12 +149,12 @@
 			</div>
 		</div>
 		<section>
-			<h2 class="font-serif text-xl font-black uppercase">
+			<h2 class="text-xl font-black uppercase">
 				{$_('market.bid_history', { values: { count: bids.length } })}
 			</h2>
 			<div class="mt-3 divide-y divide-primary/15 border border-primary/30 bg-card">
 				{#each bids as bid (bid.id)}<div class="flex items-center justify-between gap-4 p-3">
-						<span class="font-serif font-bold">{bid.bidderName}</span><span
+						<span class="font-bold">{bid.bidderName}</span><span
 							class="font-mono text-xs text-primary">{bid.amount} {sale.currency}</span
 						>
 					</div>{/each}
@@ -169,7 +169,7 @@
 			/>
 		{/if}
 	</section>
-{:catch}<p class="border border-destructive/40 p-4 font-serif text-destructive">
+{:catch}<p class="border border-destructive/40 p-4 text-destructive">
 		{$_('market.empty')}
 	</p>
 {/await}

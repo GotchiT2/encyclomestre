@@ -1,5 +1,8 @@
 <script lang="ts">
 	import '$lib/i18n';
+	import '@fontsource-variable/inter/wght.css';
+	import '@fontsource-variable/source-sans-3/wght.css';
+	import '@fontsource-variable/source-sans-3/wght-italic.css';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { hydrateSession } from '$lib/auth/session';

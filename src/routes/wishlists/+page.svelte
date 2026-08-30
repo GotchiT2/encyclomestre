@@ -341,7 +341,7 @@
 								? $_('wishlist.owned_list')
 								: $_('wishlist.shared_list')}
 						</p>
-						<h2 class="font-serif text-3xl font-black uppercase">{activeWishlist.title}</h2>
+						<h2 class="text-3xl font-black uppercase">{activeWishlist.title}</h2>
 						{#if activeWishlist.description}<p class="mt-2 italic text-muted-foreground">
 								{activeWishlist.description}
 							</p>{/if}

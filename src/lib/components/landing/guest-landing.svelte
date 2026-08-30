@@ -67,7 +67,7 @@
 	{#each ['landing.loopDiscover', 'landing.loopCollect', 'landing.loopTrade'] as key, index (key)}
 		<ForgePanel class="min-h-40 p-5">
 			<p class="font-heading text-4xl text-primary/35">0{index + 1}</p>
-			<h2 class="mt-4 font-serif text-xl font-bold">{$_(`${key}Title`)}</h2>
+			<h2 class="mt-4 text-xl font-bold">{$_(`${key}Title`)}</h2>
 			<p class="mt-2 text-sm leading-relaxed text-muted-foreground">{$_(`${key}Body`)}</p>
 		</ForgePanel>
 	{/each}

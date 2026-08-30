@@ -157,7 +157,7 @@
 					/>
 				{:else}
 					<div
-						class="flex size-16 items-center justify-center border-2 border-primary/40 bg-card font-serif text-3xl font-black text-primary"
+						class="flex size-16 items-center justify-center border-2 border-primary/40 bg-card text-3xl font-black text-primary"
 					>
 						{user.username.slice(0, 1).toUpperCase()}
 					</div>
@@ -171,7 +171,7 @@
 					>
 						@{settings.username || user.username}
 					</h1>
-					{#if user.bio}<p class="mt-2 font-serif italic text-muted-foreground">{user.bio}</p>{/if}
+					{#if user.bio}<p class="mt-2 italic text-muted-foreground">{user.bio}</p>{/if}
 				</div>
 			</div>
 			<PlayerRelationshipControl
@@ -217,7 +217,7 @@
 		<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
 			<div class="flex flex-col gap-6">
 				<section>
-					<h2 class="font-serif text-2xl font-black uppercase tracking-tight text-foreground">
+					<h2 class="text-2xl font-black uppercase tracking-tight text-foreground">
 						{$_('profile.showcase_title')}
 					</h2>
 					<div class="mt-4 flex flex-col gap-4">
@@ -230,7 +230,7 @@
 							/>
 						{/each}
 						{#if !settings.showcases.length}<p
-								class="border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
+								class="border border-dashed border-primary/30 bg-card p-5 italic text-muted-foreground"
 							>
 								{$_('profile.showcase_empty')}
 							</p>{/if}
@@ -238,7 +238,7 @@
 				</section>
 
 				<section>
-					<h2 class="font-serif text-2xl font-black uppercase tracking-tight text-foreground">
+					<h2 class="text-2xl font-black uppercase tracking-tight text-foreground">
 						{$_('profile.wanted_title')}
 					</h2>
 					{#if wantedCards.length}<ContextualCardRail
@@ -252,14 +252,14 @@
 								<CardTile {card} showFriendOwners={false} />
 							{/snippet}
 						</ContextualCardRail>{:else}<p
-							class="mt-4 border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
+							class="mt-4 border border-dashed border-primary/30 bg-card p-5 italic text-muted-foreground"
 						>
 							{$_('friends.empty_wanted')}
 						</p>{/if}
 				</section>
 
 				<section>
-					<h2 class="font-serif text-2xl font-black uppercase tracking-tight text-foreground">
+					<h2 class="text-2xl font-black uppercase tracking-tight text-foreground">
 						{$_('profile.sales_title')}
 					</h2>
 					{#if sales.length}<ContextualCardRail
@@ -282,7 +282,7 @@
 									</article>{/if}
 							{/snippet}
 						</ContextualCardRail>{:else}<p
-							class="mt-4 border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
+							class="mt-4 border border-dashed border-primary/30 bg-card p-5 italic text-muted-foreground"
 						>
 							{$_('friends.empty_sales')}
 						</p>{/if}
@@ -316,7 +316,7 @@
 						selectedCardIds={[]}
 						onToggleCard={() => undefined}
 					/>{:else}<p
-						class="border border-dashed border-primary/30 bg-card p-5 font-serif italic text-muted-foreground"
+						class="border border-dashed border-primary/30 bg-card p-5 italic text-muted-foreground"
 					>
 						{$_('friends.empty_collection')}
 					</p>{/if}

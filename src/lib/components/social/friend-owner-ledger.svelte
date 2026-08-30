@@ -15,7 +15,7 @@
 						>@{friend.username}</a
 					><span class="text-primary">×{friend.ownedCount}</span>
 				</li>{/each}
-		</ul>{:else}<p class="mt-3 font-serif italic text-muted-foreground">
+		</ul>{:else}<p class="mt-3 italic text-muted-foreground">
 			{$_('codex.noFriends')}
 		</p>{/if}
 </div>

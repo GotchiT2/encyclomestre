@@ -49,7 +49,7 @@
 			class:text-foreground={active}
 			class:text-muted-foreground={!active}
 			class:scale-[1.02]={active}
-			style={`--rarity-color:${option.color};border-color:${active ? option.color : `color-mix(in srgb, ${option.color} 35%, transparent)`};background:${active ? `color-mix(in srgb, ${option.color} 26%, #07111c)` : 'rgb(5 10 18 / 62%)'};box-shadow:${active ? `inset 0 0 20px color-mix(in srgb, ${option.color} 18%, transparent), 0 0 0 1px ${option.color}` : 'none'}`}
+			style={`--rarity-color:${option.color};border-color:${active ? option.color : `color-mix(in srgb, ${option.color} 35%, transparent)`};background:${active ? `color-mix(in srgb, ${option.color} 26%, #0a1836)` : 'rgb(6 16 41 / 68%)'};box-shadow:${active ? `inset 0 0 20px color-mix(in srgb, ${option.color} 18%, transparent), 0 0 0 1px ${option.color}` : 'none'}`}
 			aria-pressed={active}
 			aria-label={compact ? option.value : undefined}
 			title={compact ? option.value : undefined}

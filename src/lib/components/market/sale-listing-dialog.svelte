@@ -66,10 +66,10 @@
 <Dialog.Root bind:open>
 	<Dialog.Content class="max-w-2xl" data-testid="sale-listing-dialog">
 		<Dialog.Header class="border-b border-primary/20 p-5 pr-14">
-			<Dialog.Title class="font-serif text-2xl font-bold text-foreground">
+			<Dialog.Title class="text-2xl font-bold text-foreground">
 				{$_('market.create_sale_title')}
 			</Dialog.Title>
-			<Dialog.Description class="mt-1 font-serif text-sm italic text-muted-foreground">
+			<Dialog.Description class="mt-1 text-sm italic text-muted-foreground">
 				{$_('market.create_sale_description')}
 			</Dialog.Description>
 		</Dialog.Header>
@@ -93,7 +93,7 @@
 								label={$_('cardState.owned_by_viewer', { values: { count: copies.length } })}
 								class="pointer-events-none absolute top-2 right-2"
 							/>
-							<span class="block truncate font-serif text-sm font-bold">{copy.title}</span>
+							<span class="block truncate text-sm font-bold">{copy.title}</span>
 							<span class="mt-1 block font-mono text-[10px] uppercase tracking-widest text-primary">
 								{copy.activeSale
 									? $_('collection.on_sale')

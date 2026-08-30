@@ -41,7 +41,7 @@
 		<ForgePanel class="relative min-h-[28rem] min-w-0 overflow-hidden p-6">
 			<div class="relative z-10 w-full max-w-sm">
 				<p class="forge-label">{$_('dashboard.boosterReady')}</p>
-				<h2 class="mt-3 font-serif text-3xl font-bold">{$_('dashboard.boosterTitle')}</h2>
+				<h2 class="mt-3 text-3xl font-bold">{$_('dashboard.boosterTitle')}</h2>
 				<p class="mt-3 text-sm leading-relaxed text-muted-foreground">
 					{$_('dashboard.boosterBody')}
 				</p>
@@ -60,7 +60,7 @@
 			<div class="flex items-end justify-between gap-4">
 				<div>
 					<p class="forge-label">{$_('dashboard.recentEyebrow')}</p>
-					<h2 class="mt-2 font-serif text-2xl font-bold">{$_('dashboard.recentCards')}</h2>
+					<h2 class="mt-2 text-2xl font-bold">{$_('dashboard.recentCards')}</h2>
 				</div>
 				<Button href="/collection" variant="ghost" size="sm"
 					>{$_('dashboard.viewCollection')}<ArrowUpRightIcon /></Button
@@ -78,7 +78,7 @@
 		<ForgePanel class="flex items-center justify-between gap-4 p-5"
 			><div>
 				<p class="forge-label">{$_('dashboard.tradeSignal')}</p>
-				<p class="mt-2 font-serif text-xl font-bold">
+				<p class="mt-2 text-xl font-bold">
 					{$_('dashboard.tradeTitle', { values: { count: dashboard?.pendingTrades ?? 0 } })}
 				</p>
 			</div>

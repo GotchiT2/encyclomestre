@@ -66,7 +66,7 @@
 	<header class="flex min-w-0 items-start justify-between gap-3">
 		<div class="min-w-0">
 			<div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-				<h2 class="break-words font-serif text-base font-bold text-foreground sm:text-lg">
+				<h2 class="break-words text-base font-bold text-foreground sm:text-lg">
 					{isIncoming
 						? $_('trades.from', { values: { user: counterpartName } })
 						: $_('trades.to', { values: { user: counterpartName } })}

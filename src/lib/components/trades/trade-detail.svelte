@@ -74,7 +74,7 @@
 		data-testid="trade-detail-modal"
 	>
 		<header class="shrink-0 border-b border-primary/20 p-3 pr-12 sm:p-4 sm:pr-14">
-			<Dialog.Title class="font-serif text-xl font-black uppercase tracking-tight sm:text-2xl">
+			<Dialog.Title class="text-xl font-black uppercase tracking-tight sm:text-2xl">
 				{$_('trades.detail_title')}
 			</Dialog.Title>
 			{#if offer}
@@ -106,7 +106,7 @@
 			>
 				<div class="flex flex-col gap-5">
 					<section>
-						<h2 class="font-serif text-xl font-black uppercase">{$_('trades.offered')}</h2>
+						<h2 class="text-xl font-black uppercase">{$_('trades.offered')}</h2>
 						<p class="mt-2 forge-label">
 							{$_('trades.money_amount', { values: { amount: offer.offeredMoney ?? 0 } })}
 						</p>
@@ -147,7 +147,7 @@
 						{/if}
 					</section>
 					<section>
-						<h2 class="font-serif text-xl font-black uppercase">{$_('trades.requested')}</h2>
+						<h2 class="text-xl font-black uppercase">{$_('trades.requested')}</h2>
 						<p class="mt-2 forge-label">
 							{$_('trades.money_amount', { values: { amount: offer.requestedMoney ?? 0 } })}
 						</p>

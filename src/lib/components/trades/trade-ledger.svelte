@@ -69,7 +69,7 @@
 			/>{/each}
 	</div>
 {:else}
-	<p class="border border-primary/25 bg-card p-5 font-serif italic text-muted-foreground">
+	<p class="border border-primary/25 bg-card p-5 italic text-muted-foreground">
 		{$_(`trades.empty_${activeTab}`)}
 	</p>
 {/if}

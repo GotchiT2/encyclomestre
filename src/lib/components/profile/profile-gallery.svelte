@@ -36,7 +36,7 @@
 	{#if showTitle}<header
 			class="mb-3 flex items-center justify-between gap-2 border-b border-dashed border-primary/25 pb-2"
 		>
-			<h3 class="font-serif text-lg font-black uppercase tracking-tight text-foreground">
+			<h3 class="text-lg font-black uppercase tracking-tight text-foreground">
 				{gallery.title}
 			</h3>
 			{#if editable}<div class="flex gap-1">

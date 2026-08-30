@@ -26,12 +26,12 @@
 	} = $props();
 
 	const frameByRarity = {
-		Commune: '/images/card-C-empty.png',
-		'Peu Commune': '/images/card-PC-empty.png',
-		Rare: '/images/card-R-empty.png',
-		'Super-Rare': '/images/card-SR-empty.png',
-		'Ultra-Rare': '/images/card-UR-empty.png',
-		Légendaire: '/images/card-L-empty.png'
+		Commune: '/images/templates/commune.png',
+		'Peu Commune': '/images/templates/peu-commune.png',
+		Rare: '/images/templates/rare.png',
+		'Super-Rare': '/images/templates/super-rare.png',
+		'Ultra-Rare': '/images/templates/ultra-rare.png',
+		Légendaire: '/images/templates/legendaire.png'
 	} satisfies Record<CardRecord['rarity'], string>;
 
 	const frameSource = $derived(
@@ -49,7 +49,7 @@
 	let activeInteraction = $state(false);
 	let landscapeFullArt = $state(false);
 	const titleFontStyle = $derived(
-		`--card-title-mobile:${Math.min(0.78, Math.max(0.3, 13.5 / titleLength)).toFixed(3)}rem;--card-title-desktop:${Math.min(1.18, Math.max(0.45, 23 / titleLength)).toFixed(3)}rem`
+		`--card-title-mobile:${Math.min(0.78, Math.max(0.3, 13.5 / titleLength)).toFixed(3)}rem;--card-title-desktop:${Math.min(.8, Math.max(0.45, 23 / titleLength)).toFixed(3)}rem`
 	);
 
 	function handleOpen() {
@@ -152,29 +152,23 @@
 		<p
 			class="absolute right-[15%] left-[15%] z-20 flex items-center whitespace-nowrap font-serif font-bold text-[length:var(--card-title-mobile)] text-[#f8cf51] drop-shadow-[0_2px_1px_rgb(0_0_0_/_85%)] lg:text-[length:var(--card-title-desktop)] {isFullArt
 				? 'top-[75.6%] h-[9.8%]'
-				: 'top-[55.9%] h-[8.6%]'}"
+				: 'top-[58%] h-[8.6%]'}"
 			style={titleFontStyle}
 		>
 			{card.title}
 		</p>
 		{#if !isFullArt}
 			<p
-				class="absolute top-[67%] right-[15%] left-[15%] z-20 line-clamp-2 h-[14%] overflow-hidden text-ellipsis font-serif text-[0.6rem] leading-[1.35] text-[#f8e3a0] lg:line-clamp-3 lg:text-[0.8rem]"
+				class="absolute top-[67%] right-[15%] left-[15%] z-20 line-clamp-2 h-[14%] overflow-hidden text-ellipsis text-[0.6rem] leading-[1.35] text-[#f8e3a0] lg:line-clamp-3 lg:text-[0.8rem]"
 			>
 				{card.shortDescription}
 			</p>
 		{/if}
 		<p
-			class="absolute right-[62%] bottom-[3.8%] left-[13%] z-20 truncate text-center font-serif text-[0.55rem] font-bold text-[#f8c943] drop-shadow-[0_2px_1px_rgb(0_0_0_/_85%)] lg:text-[0.8rem]"
+			class="absolute text-center right-[48%] bottom-[3.2%] z-20 truncate text-[0.55rem] font-bold text-[#000] lg:text-[1rem]"
 			aria-label={`ATK ${card.attack}`}
 		>
 			{card.attack.toLocaleString('fr-FR')}
-		</p>
-		<p
-			class="absolute right-[13%] bottom-[3.8%] left-[75%] z-20 truncate text-center font-serif text-[0.55rem] font-bold text-[#f8c943] drop-shadow-[0_2px_1px_rgb(0_0_0_/_85%)] lg:text-[0.8rem]"
-			aria-label={`DEF ${card.defense}`}
-		>
-			{card.defense.toLocaleString('fr-FR')}
 		</p>
 	</div>
 	{#if card.activeSale}

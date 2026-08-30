@@ -15,7 +15,7 @@
 	<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 		{$_('settings.censorship')}
 	</p>
-	<p class="mt-2 font-serif text-sm italic text-muted-foreground">
+	<p class="mt-2 text-sm italic text-muted-foreground">
 		{$_('settings.censorship_hint')}
 	</p>
 	<div class="mt-3 flex gap-2">

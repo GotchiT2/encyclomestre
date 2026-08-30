@@ -17,7 +17,7 @@
 	{#each blocks as block (block.user.id)}
 		<article class="forge-panel flex min-w-0 items-center justify-between gap-3 p-4">
 			<div class="min-w-0">
-				<h2 class="truncate font-serif text-lg font-black uppercase sm:text-xl">
+				<h2 class="truncate text-lg font-black uppercase sm:text-xl">
 					@{block.user.username}
 				</h2>
 				<p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">

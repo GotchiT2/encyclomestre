@@ -182,7 +182,7 @@
 			</div>
 		</div>
 		{#if error}<p
-				class="shrink-0 border-t border-destructive/40 bg-destructive/10 px-3 py-2 font-serif text-sm italic text-destructive sm:px-4"
+				class="shrink-0 border-t border-destructive/40 bg-destructive/10 px-3 py-2 text-sm italic text-destructive sm:px-4"
 			>
 				{error}
 			</p>{/if}

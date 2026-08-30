@@ -12,9 +12,8 @@
 		</p>
 		<label class="mt-4 flex items-center justify-between gap-4"
 			><span
-				><span class="block font-serif text-lg font-black uppercase">{$_('settings.nsfw')}</span
-				><span class="font-serif text-sm italic text-muted-foreground"
-					>{$_('settings.nsfw_hint')}</span
+				><span class="block text-lg font-black uppercase">{$_('settings.nsfw')}</span><span
+					class="text-sm italic text-muted-foreground">{$_('settings.nsfw_hint')}</span
 				></span
 			><Switch bind:checked={nsfwEnabled} /></label
 		>

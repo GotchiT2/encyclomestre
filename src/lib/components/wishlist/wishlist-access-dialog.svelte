@@ -54,7 +54,7 @@
 									class="size-10 shrink-0 object-cover"
 								/>{/if}
 							<div class="min-w-0 flex-1">
-								<p class="truncate font-serif font-bold">{follower.name}</p>
+								<p class="truncate font-bold">{follower.name}</p>
 								<p class="forge-label">
 									{follower.accepted
 										? $_('wishlist.access_accepted')

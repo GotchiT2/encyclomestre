@@ -84,12 +84,11 @@
 					{#each candidates as candidate (candidate.id)}
 						<li class="flex items-center gap-3 border border-primary/25 bg-background p-2">
 							<span
-								class="flex size-10 shrink-0 items-center justify-center border border-primary/40 bg-card font-serif text-lg font-black text-primary"
+								class="flex size-10 shrink-0 items-center justify-center border border-primary/40 bg-card text-lg font-black text-primary"
 							>
 								{candidate.username.slice(0, 1).toUpperCase()}
 							</span>
-							<span class="min-w-0 flex-1 truncate font-serif font-bold">@{candidate.username}</span
-							>
+							<span class="min-w-0 flex-1 truncate font-bold">@{candidate.username}</span>
 							<PlayerRelationshipControl
 								status={relationshipFor(candidate.id)}
 								busy={invitingId === candidate.id}

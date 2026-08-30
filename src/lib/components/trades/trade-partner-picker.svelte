@@ -49,7 +49,7 @@
 		><Dialog.Overlay class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm" /><Dialog.Content
 			class="fixed top-1/2 left-1/2 z-50 flex max-h-[80dvh] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col border-4 border-double border-primary/40 bg-card shadow-2xl"
 			><header class="border-b border-primary/20 p-4">
-				<Dialog.Title class="font-serif text-2xl font-black uppercase tracking-tight"
+				<Dialog.Title class="text-2xl font-black uppercase tracking-tight"
 					>{$_('trades.choose_partner')}</Dialog.Title
 				>
 			</header>
@@ -63,7 +63,7 @@
 								onSelect(partner);
 								open = false;
 							}}
-							><span class="font-serif text-base font-black">@{partner.username}</span><span
+							><span class="text-base font-black">@{partner.username}</span><span
 								class="font-mono text-[9px] text-primary">{partner.displayName}</span
 							></Button
 						>{/each}

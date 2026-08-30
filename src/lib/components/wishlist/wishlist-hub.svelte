@@ -45,7 +45,7 @@
 				<img src={wishlist.imageUrl} alt="" class="mr-3 size-12 shrink-0 object-cover" />
 			{/if}
 			<span class="min-w-0">
-				<span class="block truncate font-serif text-sm font-black uppercase tracking-tight">
+				<span class="block truncate text-sm font-black uppercase tracking-tight">
 					{wishlist.title}
 				</span>
 				{#if wishlist.cardCount !== null}<span
@@ -125,7 +125,7 @@
 							class="flex flex-wrap items-center gap-2 border border-primary/20 bg-background p-3"
 						>
 							<div class="min-w-0 flex-1">
-								<p class="truncate font-serif font-bold">{wishlist.title}</p>
+								<p class="truncate font-bold">{wishlist.title}</p>
 								<p class="text-xs text-muted-foreground">
 									{$_('wishlist.owner_name', { values: { owner: wishlist.ownerName ?? '—' } })}
 								</p>
