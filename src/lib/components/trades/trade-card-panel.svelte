@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import CardTile from '$lib/components/card-tile.svelte';
-	import CardSearchPanel from '$lib/components/cards/card-search-panel.svelte';
-	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
 	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
 	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { Button } from '$lib/components/ui/button';
+	import * as Field from '$lib/components/ui/field';
 	import { Input } from '$lib/components/ui/input';
 	import XIcon from '@lucide/svelte/icons/x';
 	import { onDestroy, untrack } from 'svelte';
@@ -42,6 +41,10 @@
 		loadComparisonCounts?: (variantIds: string[]) => Promise<Record<string, number>>;
 		selectedIds?: string[];
 	} = $props();
+
+	// Le composant est monté deux fois dans l'éditeur d'échange : les identifiants
+	// de champ doivent rester distincts pour que les libellés restent associés.
+	const uid = $props.id();
 
 	let query = $state('');
 	let rarities = $state<CardRarity[]>([]);
@@ -220,34 +223,62 @@
 		</div>
 	</div>
 
-	<CardSearchPanel class="mt-2">
-		<div class="grid gap-2">
-			<div class="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(14rem,1fr)_auto] lg:items-end">
-				<Input
-					bind:value={query}
-					oninput={changeTextQuery}
-					placeholder={$_('collection.search')}
-					class="h-9 w-full text-sm"
-				/>
-				<select
-					bind:value={sortBy}
-					onchange={changeFilters}
-					aria-label={$_('collection.sort')}
-					class="h-9 w-full self-end border border-primary/50 bg-card px-2 py-0 font-mono text-[10px] leading-9 uppercase tracking-wider text-primary outline-none focus:border-primary lg:w-40"
-				>
-					<option value="relevance">{$_('collection.sortRelevance')}</option>
-					<option value="rarity">{$_('collection.sortRarity')}</option>
-					<option value="name">{$_('collection.sortName')}</option>
-				</select>
+	<div class="@container forge-panel-flat mt-2 p-3">
+		<p class="forge-label mb-2">{$_('cards.searchPanel')}</p>
+		<Field.FieldGroup class="gap-3">
+			<div class="grid gap-2 @md:grid-cols-2">
+				<Field.Field>
+					<Field.FieldLabel for={`${uid}-search`} class="forge-label">
+						{$_('collection.search')}
+					</Field.FieldLabel>
+					<Input
+						id={`${uid}-search`}
+						bind:value={query}
+						oninput={changeTextQuery}
+						placeholder={$_('collection.search')}
+					/>
+				</Field.Field>
+				<Field.Field>
+					<Field.FieldLabel for={`${uid}-sort`} class="forge-label">
+						{$_('filters.sortBy')}
+					</Field.FieldLabel>
+					<select id={`${uid}-sort`} bind:value={sortBy} onchange={changeFilters} class="w-full">
+						<option value="relevance">{$_('collection.sortRelevance')}</option>
+						<option value="rarity">{$_('collection.sortRarity')}</option>
+						<option value="name">{$_('collection.sortName')}</option>
+					</select>
+				</Field.Field>
 			</div>
-			<RaritySelector
-				options={cardRarityOptions}
-				bind:selected={rarities}
-				onChange={changeFilters}
-			/>
-			<CardVariantSelector bind:value={variant} onChange={changeFilters} />
-		</div>
-	</CardSearchPanel>
+
+			<!-- Bloc borné : sur une large modale les pastilles s'étireraient sur toute la largeur. -->
+			<div class="flex flex-col gap-2 @md:flex-row @md:items-end">
+				<Field.FieldSet class="gap-2 @md:max-w-md @md:flex-1">
+					<Field.FieldLegend class="forge-label">{$_('codex.rarities')}</Field.FieldLegend>
+					<RaritySelector
+						options={cardRarityOptions}
+						bind:selected={rarities}
+						compact
+						onChange={changeFilters}
+					/>
+				</Field.FieldSet>
+				<Field.Field class="@md:w-44 @md:shrink-0">
+					<Field.FieldLabel for={`${uid}-variant`} class="forge-label">
+						{$_('cards.variant.label')}
+					</Field.FieldLabel>
+					<select
+						id={`${uid}-variant`}
+						bind:value={variant}
+						onchange={changeFilters}
+						class="w-full"
+					>
+						<option value="all">{$_('cards.variant.all')}</option>
+						<option value="normal">{$_('cards.variant.normal')}</option>
+						<option value="alternative">{$_('cards.variant.alternative')}</option>
+					</select>
+				</Field.Field>
+			</div>
+		</Field.FieldGroup>
+	</div>
 
 	{#if !hasLoaded && !loading}
 		<p

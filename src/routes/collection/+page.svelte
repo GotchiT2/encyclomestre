@@ -365,6 +365,7 @@
 					{assignments}
 					{isSelectionMode}
 					{selectedCardIds}
+					quickActions
 					onToggleCard={toggleCardSelection}
 					onOpenCard={(card) => (selectedCard = card)}
 				/>

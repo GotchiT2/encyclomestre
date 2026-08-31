@@ -49,7 +49,7 @@
 	let activeInteraction = $state(false);
 	let landscapeFullArt = $state(false);
 	const titleFontStyle = $derived(
-		`--card-title-mobile:${Math.min(0.78, Math.max(0.3, 13.5 / titleLength)).toFixed(3)}rem;--card-title-desktop:${Math.min(1, Math.max(0.45, 23 / titleLength)).toFixed(3)}rem`
+		`--card-title-mobile:${Math.min(0.78, Math.max(0.3, 13.5 / titleLength)).toFixed(3)}rem;--card-title-desktop:${Math.min(.7, Math.max(0.45, 23 / titleLength)).toFixed(3)}rem`
 	);
 
 	function handleOpen() {
@@ -150,16 +150,16 @@
 			class="pointer-events-none absolute inset-0 z-10 size-full drop-shadow-[0_14px_16px_rgb(0_0_0_/_45%)]"
 		/>
 		<p
-			class="absolute right-[15%] left-[15%] z-20 flex items-center whitespace-nowrap font-serif font-bold text-[length:var(--card-title-mobile)] text-[#f8cf51] drop-shadow-[0_2px_1px_rgb(0_0_0_/_85%)] lg:text-[length:var(--card-title-desktop)] {isFullArt
+			class="absolute right-[15%] left-[16%] z-20 flex items-center whitespace-nowrap text-[length:var(--card-title-mobile)] text-[#f8cf51] 			lg:text-[length:var(--card-title-desktop)] {isFullArt
 				? 'top-[75.6%] h-[9.8%]'
-				: 'top-[58%] h-[8.6%]'}"
+				: 'top-[45.5%] h-[8.6%]'}"
 			style={titleFontStyle}
 		>
 			{card.title}
 		</p>
 		{#if !isFullArt}
 			<p
-				class="absolute top-[67%] right-[15%] left-[15%] z-20 line-clamp-2 h-[14%] overflow-hidden text-ellipsis text-[0.6rem] leading-[1.35] text-[#f8e3a0] lg:line-clamp-3 lg:text-[0.8rem]"
+				class="absolute top-[56%] right-[11%] left-[11%] z-20 line-clamp-2 h-[30%] overflow-hidden text-ellipsis text-[0.6rem] leading-[1.35] text-[#f8e3a0] lg:line-clamp-5 lg:text-[0.7rem]"
 			>
 				{card.shortDescription}
 			</p>

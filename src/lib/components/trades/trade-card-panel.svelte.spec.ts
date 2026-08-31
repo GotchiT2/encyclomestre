@@ -53,7 +53,8 @@ describe('TradeCardPanel', () => {
 			1,
 			expect.objectContaining({ rarities: [], page: 0, pageSize: 12 })
 		);
-		await page.getByRole('button', { name: 'R Rare', exact: true }).click();
+		// Les pastilles de rareté sont en mode compact : le nom accessible est le libellé complet.
+		await page.getByRole('button', { name: 'Rare', exact: true }).click();
 
 		await vi.waitFor(() => expect(loadCards).toHaveBeenCalledTimes(2));
 		expect(loadCards).toHaveBeenNthCalledWith(

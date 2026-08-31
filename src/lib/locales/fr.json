@@ -207,7 +207,11 @@
 		"error": "La collection est indisponible.",
 		"only_duplicates": "Uniquement les doublons",
 		"only_protected": "Uniquement les cartes protégées",
-		"filtersDescription": "Affinez l’affichage de votre collection."
+		"filtersDescription": "Affinez l’affichage de votre collection.",
+		"quick_protect": "Protéger",
+		"quick_sell": "À vendre",
+		"quick_protect_card": "Protéger {title}",
+		"quick_sell_card": "Mettre {title} en vente"
 	},
 	"common": {
 		"all": "Tous",
