@@ -5,7 +5,7 @@
 	import '@fontsource-variable/source-sans-3/wght-italic.css';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
-	import { hydrateSession, persistSession } from '$lib/auth/session';
+	import { currentSession, hydrateSession, persistSession } from '$lib/auth/session';
 	import { getCurrentUser } from '$lib/api';
 	import { setNsfwFilterSettings } from '$lib/content/nsfw-filter';
 	import AppSidebar from '$lib/components/layout/app-sidebar.svelte';
@@ -53,7 +53,7 @@
 </svelte:head>
 
 <Sidebar.Provider bind:open={sidebarOpen}>
-	<AppSidebar />
+	{#if $currentSession}<AppSidebar />{/if}
 	<MobileTopBar />
 
 	<Sidebar.Inset class="forge-scene bg-transparent">
@@ -66,7 +66,7 @@
 		</div>
 	</Sidebar.Inset>
 
-	<MobileTabBar />
+	{#if $currentSession}<MobileTabBar />{/if}
 </Sidebar.Provider>
 
 <Toaster richColors />

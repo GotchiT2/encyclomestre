@@ -13,10 +13,12 @@
 <header
 	class="fixed inset-x-0 top-0 z-40 flex h-16 items-center gap-2 border-b border-primary/20 bg-background/88 px-3 backdrop-blur-xl md:hidden"
 >
-	<Sidebar.Trigger
-		class="size-10 border border-primary/35 text-primary"
-		aria-label={$_('navigation.openMenu')}
-	/>
+	{#if $currentSession}
+		<Sidebar.Trigger
+			class="size-10 border border-primary/35 text-primary"
+			aria-label={$_('navigation.openMenu')}
+		/>
+	{/if}
 	<a href={resolve('/')} class="min-w-0 flex-1" aria-label={$_('navigation.home')}>
 		<span class="forge-wordmark block truncate text-lg leading-none">{$_('navigation.brand')}</span>
 	</a>
