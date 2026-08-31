@@ -333,3 +333,4 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Aligner les grilles sur les pages de 48 cartes — `fix(cards): align grids to 48-card pages`
 - [x] Préserver le cadrage circulaire des avatars de conversation — `fix(messages): clip conversation avatars`
 - [x] Ouvrir le détail depuis toute la tuile d’échange — `fix(trades): make offer tiles fully actionable`
+- [x] Versionner les illustrations de templates pour invalider le cache CDN — `fix(cards): version card template assets`

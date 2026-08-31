@@ -26,12 +26,12 @@
 	} = $props();
 
 	const frameByRarity = {
-		Commune: '/images/templates/commune.png',
-		'Peu Commune': '/images/templates/peu-commune.png',
-		Rare: '/images/templates/rare.png',
-		'Super-Rare': '/images/templates/super-rare.png',
-		'Ultra-Rare': '/images/templates/ultra-rare.png',
-		Légendaire: '/images/templates/legendaire.png'
+		Commune: '/images/templates/commune-v2.png',
+		'Peu Commune': '/images/templates/peu-commune-v2.png',
+		Rare: '/images/templates/rare-v2.png',
+		'Super-Rare': '/images/templates/super-rare-v2.png',
+		'Ultra-Rare': '/images/templates/ultra-rare-v2.png',
+		Légendaire: '/images/templates/legendaire-v2.png'
 	} satisfies Record<CardRecord['rarity'], string>;
 
 	const frameSource = $derived(

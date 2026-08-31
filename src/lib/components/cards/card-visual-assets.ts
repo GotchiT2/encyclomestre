@@ -11,13 +11,13 @@ export const cardVisualAssetUrls = [
 	'/images/card-R-empty.png',
 	'/images/card-SR-empty.png',
 	'/images/card-UR-empty.png',
-	'/images/templates/alt-legendaire.png',
-	'/images/templates/commune.png',
-	'/images/templates/legendaire.png',
-	'/images/templates/peu-commune.png',
-	'/images/templates/rare.png',
-	'/images/templates/super-rare.png',
-	'/images/templates/ultra-rare.png'
+	'/images/templates/alt-legendaire-v2.png',
+	'/images/templates/commune-v2.png',
+	'/images/templates/legendaire-v2.png',
+	'/images/templates/peu-commune-v2.png',
+	'/images/templates/rare-v2.png',
+	'/images/templates/super-rare-v2.png',
+	'/images/templates/ultra-rare-v2.png'
 ] as const;
 
 export function preloadCardVisualAssets() {
