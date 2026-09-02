@@ -1,13 +1,21 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const { apiEnv } = vi.hoisted(() => ({
+	apiEnv: { PUBLIC_API_MOCK_ENABLED: 'true' } as Record<string, string>
+}));
 vi.mock('$env/dynamic/public', () => ({
-	env: { PUBLIC_API_MOCK_ENABLED: 'true' }
+	env: apiEnv
 }));
 
 import { login } from './auth';
-import { apiRequest } from './client';
+import { API_TIMEOUT_MS, ApiTimeoutError, apiRequest } from './client';
 
 describe('apiRequest en mode mock', () => {
+	afterEach(() => {
+		delete apiEnv.PUBLIC_API_MOCK_DELAY_MS;
+		vi.useRealTimers();
+	});
+
 	it('intercepte la requête sans appeler le fetch fourni', async () => {
 		const fetcher = vi.fn();
 
@@ -33,5 +41,16 @@ describe('apiRequest en mode mock', () => {
 			user: { id: '1' }
 		});
 		expect(fetcher).not.toHaveBeenCalled();
+	});
+
+	it('interrompt une requête qui dépasse 12 secondes', async () => {
+		vi.useFakeTimers();
+		apiEnv.PUBLIC_API_MOCK_DELAY_MS = String(API_TIMEOUT_MS + 1);
+
+		const request = apiRequest('/cards/girls-generation-1');
+		const rejection = expect(request).rejects.toBeInstanceOf(ApiTimeoutError);
+		await vi.advanceTimersByTimeAsync(API_TIMEOUT_MS);
+
+		await rejection;
 	});
 });

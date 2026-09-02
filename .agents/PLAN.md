@@ -302,6 +302,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Séparer visuellement la protection et le nombre d’exemplaires sur les cartes — `fix(cards): separate protection and ownership indicators`
 - [x] Harmoniser le mode sélection et ajouter la protection groupée — `feat(collection): improve bulk selection actions`
 - [x] Renouveler les sessions WikiForge avant l’expiration du jeton d’accès — `fix(auth): refresh wikiforge sessions before expiry`
+- [x] Limiter tous les appels API à 12 secondes et signaler leur expiration — `fix(api): timeout requests after twelve seconds`
 - [x] Adopter les compteurs de possession, l’accueil et les registres sociaux WikiForge — `feat(api): adopt Wikiforge welcome and social contracts`
 - [x] Utiliser directement les URL d’images retournées par WikiForge — `fix(cards): use API image URLs directly`
 - [x] Interpréter les registres sociaux WikiForge vides comme des listes vides — `fix(friends): handle empty social payloads`

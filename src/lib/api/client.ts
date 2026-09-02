@@ -1,11 +1,15 @@
 import { env } from '$env/dynamic/public';
 import { createMockApiResponse } from './mock';
 import { clearSession, restoreSession, persistSession } from '$lib/auth/session';
+import { _ } from '$lib/i18n';
 import type { OAuth2TokenResponse } from '$lib/types';
+import { get } from 'svelte/store';
+import { toast } from 'svelte-sonner';
 
 export type Fetcher = typeof fetch;
 
 export type ApiTarget = 'legacy' | 'wikiforge';
+export const API_TIMEOUT_MS = 12_000;
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
 	body?: unknown;
@@ -24,6 +28,53 @@ export class ApiError extends Error {
 		super(message);
 		this.name = 'ApiError';
 	}
+}
+
+export class ApiTimeoutError extends Error {
+	constructor() {
+		super('La requête API a dépassé le délai maximal de 12 secondes.');
+		this.name = 'ApiTimeoutError';
+	}
+}
+
+function timeoutMessage() {
+	return get(_)('common.api_timeout');
+}
+
+function notifyApiTimeout() {
+	if (typeof window !== 'undefined') toast.error(timeoutMessage());
+}
+
+function combinedSignal(signal: AbortSignal | null | undefined, timeoutSignal: AbortSignal) {
+	if (!signal) return timeoutSignal;
+	return AbortSignal.any([signal, timeoutSignal]);
+}
+
+async function withApiTimeout<T>(
+	operation: (signal: AbortSignal) => Promise<T>,
+	signal?: AbortSignal | null
+): Promise<T> {
+	const timeoutController = new AbortController();
+	let timeoutId: ReturnType<typeof setTimeout> | undefined;
+	const timeout = new Promise<never>((_, reject) => {
+		timeoutId = setTimeout(() => {
+			timeoutController.abort();
+			reject(new ApiTimeoutError());
+		}, API_TIMEOUT_MS);
+	});
+
+	try {
+		return await Promise.race([
+			operation(combinedSignal(signal, timeoutController.signal)),
+			timeout
+		]);
+	} finally {
+		if (timeoutId !== undefined) clearTimeout(timeoutId);
+	}
+}
+
+function fetchWithTimeout(fetcher: Fetcher, input: RequestInfo | URL, init: RequestInit) {
+	return withApiTimeout((signal) => fetcher(input, { ...init, signal }), init.signal);
 }
 
 export function apiUrl(path: string, apiTarget: ApiTarget = 'legacy'): string {
@@ -70,7 +121,7 @@ async function refreshSession(fetcher: Fetcher): Promise<boolean> {
 		if (!session?.refreshToken) return false;
 
 		try {
-			const response = await fetcher(apiUrl('/oauth2/token', 'wikiforge'), {
+			const response = await fetchWithTimeout(fetcher, apiUrl('/oauth2/token', 'wikiforge'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: {
@@ -99,7 +150,8 @@ async function refreshSession(fetcher: Fetcher): Promise<boolean> {
 						: undefined
 			});
 			return true;
-		} catch {
+		} catch (error) {
+			if (error instanceof ApiTimeoutError) notifyApiTimeout();
 			return false;
 		}
 	})();
@@ -128,7 +180,12 @@ function redirectToLogin() {
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-	return request<T>(path, options, false);
+	try {
+		return await request<T>(path, options, false);
+	} catch (error) {
+		if (error instanceof ApiTimeoutError) notifyApiTimeout();
+		throw error;
+	}
 }
 
 async function request<T>(path: string, options: RequestOptions, didRefresh: boolean): Promise<T> {
@@ -152,12 +209,12 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 	}
 	const accessToken = skipAuth ? undefined : session?.accessToken;
 	const response = isMockApiEnabled()
-		? await (async () => {
+		? await withApiTimeout(async () => {
 				const delay = mockDelay();
 				if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
 				return createMockApiResponse({ path, method: init.method, body });
-			})()
-		: await fetcher(apiUrl(path, apiTarget), {
+			}, init.signal)
+		: await fetchWithTimeout(fetcher, apiUrl(path, apiTarget), {
 				credentials: 'include',
 				headers: {
 					accept: 'application/json',

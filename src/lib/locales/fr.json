@@ -225,6 +225,7 @@
 		"visibilityPublic": "Publique"
 	},
 	"common": {
+		"api_timeout": "Le serveur met trop de temps à répondre. Réessayez dans un instant.",
 		"all": "Tous",
 		"add": "Ajouter",
 		"filter": "Filtrer",
