@@ -4,6 +4,7 @@ import { render } from 'vitest-browser-svelte';
 import '$lib/i18n';
 import '../../../app.css';
 import type { Conversation, MessageRecord } from '$lib/types';
+import { chatStreamEvent } from '$lib/messages/stream';
 
 const api = vi.hoisted(() => ({
 	getConversations: vi.fn(),
@@ -52,8 +53,34 @@ const messages: MessageRecord[] = [
 	}
 ];
 
+const longThread: MessageRecord[] = Array.from({ length: 80 }, (_, index) => ({
+	id: `message-${index + 1}`,
+	conversationId: 'conversation-1',
+	senderId: index % 2 ? 'user-1' : 'user-2',
+	content: `Message ${index + 1}`,
+	createdAt: `2026-07-16T10:${String(index).padStart(2, '0')}:00Z`,
+	readAt: null,
+	reactions: []
+}));
+
+async function expectThreadAtBottom() {
+	await vi.waitFor(async () => {
+		const element = (await page.getByTestId('message-scroll-area').element()) as HTMLDivElement;
+		const metrics = {
+			scrollTop: element.scrollTop,
+			scrollHeight: element.scrollHeight,
+			clientHeight: element.clientHeight
+		};
+		expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+		expect(metrics.scrollTop + metrics.clientHeight).toBeGreaterThanOrEqual(
+			metrics.scrollHeight - 1
+		);
+	});
+}
+
 describe('MessageInbox', () => {
 	beforeEach(() => {
+		chatStreamEvent.set(null);
 		api.getConversations
 			.mockReset()
 			.mockResolvedValue({ items: conversations, nextCursor: null, hasNext: false });
@@ -65,7 +92,10 @@ describe('MessageInbox', () => {
 		api.setMessageReaction.mockReset();
 	});
 
-	afterEach(async () => page.viewport(1280, 900));
+	afterEach(async () => {
+		chatStreamEvent.set(null);
+		await page.viewport(1280, 900);
+	});
 
 	it('loads the mobile conversation only after the user selects it', async () => {
 		await page.viewport(390, 844);
@@ -114,5 +144,42 @@ describe('MessageInbox', () => {
 		const threadRect = await page.getByTestId('message-thread').element().getBoundingClientRect();
 		expect(listRect.right).toBeLessThanOrEqual(threadRect.left + 1);
 		expect(threadRect.width).toBeGreaterThan(listRect.width);
+	});
+
+	it('keeps the internal thread scroll at the bottom when opened and when a message arrives', async () => {
+		await page.viewport(1280, 900);
+		api.getConversationMessages.mockResolvedValue({
+			items: longThread.toReversed(),
+			nextCursor: null,
+			hasNext: false
+		});
+		render(MessageInbox, {
+			userId: 'user-1',
+			loadFriends: vi.fn().mockResolvedValue([{ status: 'accepted', user: { id: 'user-2' } }])
+		});
+
+		await expect.element(page.getByText('Message 80')).toBeVisible();
+		await expectThreadAtBottom();
+
+		const scrollArea = (await page.getByTestId('message-scroll-area').element()) as HTMLDivElement;
+		scrollArea.scrollTop = 0;
+		chatStreamEvent.set({
+			conversationId: 'conversation-1',
+			otherUserId: 'user-2',
+			unread: 0,
+			message: {
+				id: 81,
+				conversationId: 1,
+				fromUserId: 2,
+				type: 'TEXT',
+				content: 'Nouveau message',
+				creationDate: '2026-07-16T12:00:00Z'
+			}
+		});
+
+		await expect
+			.element(page.getByTestId('message-scroll-area').getByText('Nouveau message'))
+			.toBeVisible();
+		await expectThreadAtBottom();
 	});
 });

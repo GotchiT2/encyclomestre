@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
@@ -31,6 +32,19 @@
 		onLoadOlder: () => void;
 		onSubmit: () => void;
 	} = $props();
+
+	let scrollArea = $state<HTMLDivElement>();
+	let scrolledThreadKey = '';
+
+	$effect(() => {
+		const threadKey = `${conversation.id}:${thread.at(-1)?.id ?? ''}`;
+		if (threadKey === scrolledThreadKey) return;
+		scrolledThreadKey = threadKey;
+
+		void tick().then(() => {
+			if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight;
+		});
+	});
 </script>
 
 <section class="flex h-full min-h-0 min-w-0 flex-col bg-card" data-testid="message-thread">
@@ -55,7 +69,11 @@
 		</div>
 	</header>
 
-	<div class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-background/35 p-3 sm:p-4">
+	<div
+		bind:this={scrollArea}
+		class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-background/35 p-3 sm:p-4"
+		data-testid="message-scroll-area"
+	>
 		{#if hasOlder}
 			<Button
 				class="mx-auto"

@@ -207,6 +207,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 
 - [x] Créer la boîte de réception, les conversations mockées et les widgets de wishlist de guilde — `feat(messages): build conversations and guild shares`
 - [x] Ajouter la navigation, les réponses, réactions et offres d’échange dans les fils — `feat(messages): add reactions replies and trade offer widgets`
+- [x] Ancrer les fils de discussion en bas à l’ouverture et à la réception — `fix(messages): keep conversation scroll at bottom`
 
 3. `feat(market): build listings and bidding flows`
 
