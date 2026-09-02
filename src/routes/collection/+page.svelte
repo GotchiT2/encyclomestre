@@ -28,6 +28,7 @@
 	} from '$lib/api';
 	import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 	import { _ } from '$lib/i18n';
+	import { realtimeRefresh, refreshIncludes } from '$lib/realtime/resource-refresh';
 	import type {
 		ActiveSaleSummary,
 		CardRarity,
@@ -74,6 +75,7 @@
 	let previousFilterKey = '';
 	let requestId = 0;
 	let requestController: AbortController | null = null;
+	let handledRealtimeRevision = 0;
 	const activeFilterCount = $derived(
 		(query ? 1 : 0) +
 			selectedRarities.length +
@@ -218,6 +220,19 @@
 			}
 		}, 500);
 		return () => window.clearTimeout(filterTimer);
+	});
+
+	$effect(() => {
+		const refresh = $realtimeRefresh;
+		if (
+			!ready ||
+			refresh.revision === handledRealtimeRevision ||
+			!refreshIncludes(refresh, 'collection')
+		)
+			return;
+		handledRealtimeRevision = refresh.revision;
+		// Réutilise la requête courante et son annulation, sans changer les filtres visibles.
+		previousFilterKey = '';
 	});
 
 	async function loadNext() {

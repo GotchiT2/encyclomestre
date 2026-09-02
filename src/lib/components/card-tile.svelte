@@ -10,6 +10,7 @@
 	let {
 		card,
 		showFriendOwners = true,
+		showCollectionState = true,
 		tags = [],
 		tagDisplay = 'bookmark',
 		stateIndicatorsOffset = 0,
@@ -18,6 +19,8 @@
 	}: {
 		card: CardRecord;
 		showFriendOwners?: boolean;
+		/** Masque les indicateurs propres à une collection (quantités, listes et protection). */
+		showCollectionState?: boolean;
 		tags?: CollectionTag[];
 		tagDisplay?: 'bookmark' | 'full';
 		stateIndicatorsOffset?: number;
@@ -49,7 +52,7 @@
 	let activeInteraction = $state(false);
 	let landscapeFullArt = $state(false);
 	const titleFontStyle = $derived(
-		`--card-title-mobile:${Math.min(0.78, Math.max(0.3, 13.5 / titleLength)).toFixed(3)}rem;--card-title-desktop:${Math.min(.7, Math.max(0.45, 23 / titleLength)).toFixed(3)}rem`
+		`--card-title-mobile:${Math.min(0.78, Math.max(0.3, 13.5 / titleLength)).toFixed(3)}rem;--card-title-desktop:${Math.min(0.7, Math.max(0.45, 23 / titleLength)).toFixed(3)}rem`
 	);
 
 	function handleOpen() {
@@ -150,7 +153,7 @@
 			class="pointer-events-none absolute inset-0 z-10 size-full drop-shadow-[0_14px_16px_rgb(0_0_0_/_45%)]"
 		/>
 		<p
-			class="absolute right-[15%] left-[16%] z-20 flex items-center whitespace-nowrap text-[length:var(--card-title-mobile)] text-[#f8cf51] 			lg:text-[length:var(--card-title-desktop)] {isFullArt
+			class="absolute right-[15%] left-[16%] z-20 flex items-center whitespace-nowrap text-[length:var(--card-title-mobile)] text-[#f8cf51] lg:text-[length:var(--card-title-desktop)] {isFullArt
 				? 'top-[75.6%] h-[9.8%]'
 				: 'top-[45.5%] h-[8.6%]'}"
 			style={titleFontStyle}
@@ -234,7 +237,7 @@
 			</div>
 		{/if}
 	{/if}
-	{#if card.userProtected || card.ownedCount > 0 || comparisonOwnership?.count || card.wishlistMemberships?.length || (showFriendOwners && card.friendsWhoOwn.length)}
+	{#if showCollectionState && (card.userProtected || card.ownedCount > 0 || comparisonOwnership?.count || card.wishlistMemberships?.length || (showFriendOwners && card.friendsWhoOwn.length))}
 		<div
 			class="pointer-events-none absolute left-[7%] z-40 flex flex-col items-start gap-1"
 			style={`top:calc(8% + ${stateIndicatorsOffset}px)`}

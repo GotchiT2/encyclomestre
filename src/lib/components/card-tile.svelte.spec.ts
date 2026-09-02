@@ -128,6 +128,21 @@ describe('CardTile', () => {
 		await expect.element(page.getByRole('menuitem', { name: /@Ami/ })).toBeVisible();
 	});
 
+	it('keeps the showcase card editorial while hiding collection-only state', async () => {
+		render(CardTile, {
+			card: {
+				...card,
+				ownedCount: 2,
+				userProtected: true,
+				wishlistMemberships: [{ id: 'list-1', title: 'Priorités', defaultList: false }]
+			},
+			showCollectionState: false
+		});
+
+		await expect.element(page.getByText('Notice encyclopédique.')).toBeVisible();
+		await expect.element(page.getByTestId('card-left-indicators')).not.toBeInTheDocument();
+	});
+
 	it('distinguishes the compared collection ownership count', async () => {
 		render(CardTile, {
 			card,

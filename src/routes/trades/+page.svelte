@@ -6,6 +6,7 @@
 	import { SvelteMap } from 'svelte/reactivity';
 	import { page } from '$app/state';
 	import { _ } from '$lib/i18n';
+	import { realtimeRefresh, refreshIncludes } from '$lib/realtime/resource-refresh';
 	import { currentSession, persistSession } from '$lib/auth/session';
 	import {
 		acceptTradeOfferWithRetry,
@@ -57,6 +58,8 @@
 	let editorDraft = $state<Partial<CreateTradeOfferInput>>({});
 	let counteringOfferId = $state<string | null>(null);
 	let partnersRequest: Promise<User[]> | null = null;
+	let tradesReady = $state(false);
+	let handledRealtimeRevision = 0;
 	const tradeCardsByOffer = new SvelteMap<string, TradeCardDetail[]>();
 
 	onMount(async () => {
@@ -84,7 +87,20 @@
 			loadFailed = true;
 		} finally {
 			loading = false;
+			tradesReady = true;
 		}
+	});
+
+	$effect(() => {
+		const refresh = $realtimeRefresh;
+		if (
+			!tradesReady ||
+			refresh.revision === handledRealtimeRevision ||
+			!refreshIncludes(refresh, 'trades')
+		)
+			return;
+		handledRealtimeRevision = refresh.revision;
+		void loadTrades().catch(() => undefined);
 	});
 
 	async function loadTrades() {

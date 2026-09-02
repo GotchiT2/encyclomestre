@@ -2,6 +2,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { Dialog } from 'bits-ui';
 	import { getConversationMessages, getConversations, sendMessage } from '$lib/api';
+	import { chatStreamEvent, toChatStreamMessage } from '$lib/messages/stream';
 	import ConversationList from './conversation-list.svelte';
 	import MessageThread from './message-thread.svelte';
 	import type { Conversation, LastConnection, MessageRecord } from '$lib/types';
@@ -54,6 +55,46 @@
 				: conversation
 		);
 	}
+
+	async function applyIncomingMessage() {
+		const event = $chatStreamEvent;
+		if (!event) return;
+		const message = toChatStreamMessage(event);
+		const knownConversation = conversations.find(
+			(conversation) =>
+				conversation.id === event.conversationId || conversation.userId === event.otherUserId
+		);
+		if (!knownConversation) {
+			const page = await getConversations();
+			conversations = withFriendPresence(page.items);
+			conversationsCursor = page.nextCursor;
+			hasMoreConversations = page.hasNext;
+			return;
+		}
+
+		const isSelected = knownConversation.id === selectedConversationId;
+		conversations = [
+			{
+				...knownConversation,
+				preview: message.type === 'trade' ? '' : message.content,
+				previewType: message.type,
+				updatedAt: message.createdAt,
+				unreadCount: isSelected ? 0 : event.unread
+			},
+			...conversations.filter((conversation) => conversation.id !== knownConversation.id)
+		];
+		if (isSelected && !thread.some((item) => item.id === message.id)) {
+			thread = [...thread, message];
+		}
+	}
+
+	let handledStreamMessageId = '';
+	$effect(() => {
+		const event = $chatStreamEvent;
+		if (!event || event.message.id === Number(handledStreamMessageId)) return;
+		handledStreamMessageId = String(event.message.id);
+		void applyIncomingMessage();
+	});
 
 	onMount(() => {
 		media = window.matchMedia('(max-width: 1023px)');

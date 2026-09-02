@@ -10,7 +10,7 @@ interface WikiForgeSimpleUserDto {
 	lastConnection?: LastConnection;
 }
 
-interface WikiForgeMessageDto {
+export interface WikiForgeMessageDto {
 	id: number;
 	conversationId: number;
 	fromUserId: number;

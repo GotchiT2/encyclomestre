@@ -137,27 +137,27 @@
 							onDropAt?.(index);
 						}}
 					>
-						<CardTile {card} showFriendOwners={false} />
+						<CardTile {card} showFriendOwners={false} showCollectionState={false} />
 					</div>
 				{:else}
 					{@const isNextEmpty = slotIndex === row.findIndex((entry) => entry === null)}
 					{#if isNextEmpty && onAddAt}
 						<button
 							type="button"
-						class="vitrine__carte vitrine__carte--vide"
-						class:vitrine__carte--cible={dragOverIndex === index}
-						aria-label={$_('profile.add_card_to_showcase')}
-						onclick={() => onAddAt?.(index)}
-						ondragover={(event) => {
-							event.preventDefault();
-							dragOverIndex = index;
-						}}
-						ondragleave={() => dragOverIndex === index && (dragOverIndex = null)}
-						ondrop={(event) => {
-							event.preventDefault();
-							dragOverIndex = null;
-							onDropAt?.(index);
-						}}
+							class="vitrine__carte vitrine__carte--vide"
+							class:vitrine__carte--cible={dragOverIndex === index}
+							aria-label={$_('profile.add_card_to_showcase')}
+							onclick={() => onAddAt?.(index)}
+							ondragover={(event) => {
+								event.preventDefault();
+								dragOverIndex = index;
+							}}
+							ondragleave={() => dragOverIndex === index && (dragOverIndex = null)}
+							ondrop={(event) => {
+								event.preventDefault();
+								dragOverIndex = null;
+								onDropAt?.(index);
+							}}
 						></button>
 					{:else}
 						<div
@@ -169,7 +169,7 @@
 								dragOverIndex = index;
 							}}
 							ondragleave={() => dragOverIndex === index && (dragOverIndex = null)}
-							 ondrop={(event) => {
+							ondrop={(event) => {
 								event.preventDefault();
 								dragOverIndex = null;
 								onDropAt?.(index);

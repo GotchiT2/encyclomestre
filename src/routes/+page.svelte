@@ -1,22 +1,14 @@
 <script lang="ts">
 	import { currentSession } from '$lib/auth/session';
-	import { getCards, getWikiForgeWelcome } from '$lib/api';
+	import { getCards } from '$lib/api';
 	import GuestLanding from '$lib/components/landing/guest-landing.svelte';
 	import PlayerDashboard from '$lib/components/landing/player-dashboard.svelte';
 	import { _ } from '$lib/i18n';
-	import type { CardRecord, DashboardData } from '$lib/types';
+	import type { CardRecord } from '$lib/types';
+	import { currentWelcome } from '$lib/welcome/store';
 
-	let dashboard = $state<DashboardData | null>(null);
-	let loadedDashboardFor = $state<string | null>(null);
 	let showcaseCard = $state<CardRecord | null>(null);
 	let hasLoadedShowcase = $state(false);
-
-	$effect(() => {
-		const session = $currentSession;
-		if (!session || loadedDashboardFor === session.user.id) return;
-		loadedDashboardFor = session.user.id;
-		void getWikiForgeWelcome().then((result) => (dashboard = result));
-	});
 
 	$effect(() => {
 		if ($currentSession || hasLoadedShowcase) return;
@@ -30,7 +22,7 @@
 <svelte:head><title>{$_('app.title')}</title></svelte:head>
 
 {#if $currentSession}
-	<PlayerDashboard username={$currentSession.user.username} {dashboard} />
+	<PlayerDashboard username={$currentSession.user.username} dashboard={$currentWelcome} />
 {:else}
 	<GuestLanding {showcaseCard} />
 {/if}

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import ShowcaseEditor from './showcase-editor.svelte';
 	import CardPicker from './card-picker.svelte';
@@ -10,6 +9,8 @@
 		cancelInstantSale,
 		createInstantSale,
 		getWikiForgeCollectionPage,
+		getMyShowcase,
+		getUserInstantSales,
 		replaceMyShowcase,
 		wikiForgeApiErrorCode,
 		updateWikiForgeImage
@@ -18,6 +19,7 @@
 	import type { CollectionQuery } from '$lib/api';
 	import { currentSession, persistSession } from '$lib/auth/session';
 	import { _ } from '$lib/i18n';
+	import { realtimeRefresh, refreshIncludes } from '$lib/realtime/resource-refresh';
 	import { toast } from 'svelte-sonner';
 	import { untrack } from 'svelte';
 	import type { CollectionTag, SalesResult, Showcase, User } from '$lib/types';
@@ -51,6 +53,7 @@
 	let avatarPickerOpen = $state(false);
 	let avatarBusy = $state(false);
 	let avatarUrl = $state(untrack(() => user.avatarUrl));
+	let handledRealtimeRevision = 0;
 	const ownedCards = $derived(
 		initialCollection.total >= 0
 			? String(initialCollection.total)
@@ -111,13 +114,38 @@
 		try {
 			sales = await cancelInstantSale(saleId);
 			toast.success($_('profile.sale_cancelled'));
-			await invalidateAll();
 		} catch (error) {
 			toast.error(errorMessage(error, 'sale'));
 		} finally {
 			salesBusy = false;
 		}
 	}
+
+	async function refreshRealtimeProfile() {
+		if (saving || buyingSlot || salesBusy || collectionLoading) return;
+		const [nextShowcase, nextSales, nextCollection] = await Promise.all([
+			getMyShowcase(),
+			getUserInstantSales(user.id),
+			getWikiForgeCollectionPage(pickerQuery)
+		]);
+		showcase = nextShowcase;
+		sales = nextSales;
+		collection = nextCollection.items;
+		collectionPage = nextCollection.page;
+		collectionCursor = nextCollection.nextCursor;
+		collectionHasNext = nextCollection.hasNext;
+	}
+
+	$effect(() => {
+		const refresh = $realtimeRefresh;
+		if (
+			refresh.revision === handledRealtimeRevision ||
+			(!refreshIncludes(refresh, 'profile') && !refreshIncludes(refresh, 'collection'))
+		)
+			return;
+		handledRealtimeRevision = refresh.revision;
+		void refreshRealtimeProfile().catch(() => undefined);
+	});
 	async function loadMoreCollection() {
 		if (!collectionHasNext || collectionLoading) return;
 		collectionLoading = true;
@@ -159,7 +187,8 @@
 			const next = await updateWikiForgeImage(Number(card.baseCardId ?? card.id));
 			avatarUrl = next.avatarUrl;
 			const session = $currentSession;
-			if (session) persistSession(localStorage, { ...session, user: { ...session.user, avatarUrl } });
+			if (session)
+				persistSession(localStorage, { ...session, user: { ...session.user, avatarUrl } });
 			avatarPickerOpen = false;
 			toast.success($_('profile.avatar_updated'));
 		} catch {
@@ -185,17 +214,16 @@
 			aria-label={$_('settings.choose_avatar')}
 			onclick={() => (avatarPickerOpen = true)}
 		>
-		{#if avatarUrl}<img
-				src={avatarUrl}
-				alt=""
-				class="size-full object-cover"
-			/>{:else}<span
-				class="grid size-full place-items-center bg-background text-3xl font-serif font-bold text-primary"
-				aria-hidden="true"
+			{#if avatarUrl}<img src={avatarUrl} alt="" class="size-full object-cover" />{:else}<span
+					class="grid size-full place-items-center bg-background text-3xl font-serif font-bold text-primary"
+					aria-hidden="true"
+				>
+					{user.username.slice(0, 1).toUpperCase()}
+				</span>{/if}
+			<span
+				class="absolute inset-x-0 bottom-0 bg-background/80 py-1 text-[9px] font-bold tracking-wider text-primary uppercase opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+				>{$_('settings.choose_avatar')}</span
 			>
-				{user.username.slice(0, 1).toUpperCase()}
-			</span>{/if}
-			<span class="absolute inset-x-0 bottom-0 bg-background/80 py-1 text-[9px] font-bold tracking-wider text-primary uppercase opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">{$_('settings.choose_avatar')}</span>
 		</button>
 		<div class="min-w-0 flex-1">
 			<p class="forge-label text-primary">{$_('profile.title')}</p>

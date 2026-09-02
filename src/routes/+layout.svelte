@@ -5,7 +5,13 @@
 	import '@fontsource-variable/source-sans-3/wght-italic.css';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
-	import { currentSession, hydrateSession, persistSession } from '$lib/auth/session';
+	import {
+		currentSession,
+		hydrateSession,
+		markWikiForgeSessionVerified,
+		persistSession,
+		verifiedWikiForgeSession
+	} from '$lib/auth/session';
 	import { getCurrentUser } from '$lib/api';
 	import { setNsfwFilterSettings } from '$lib/content/nsfw-filter';
 	import AppSidebar from '$lib/components/layout/app-sidebar.svelte';
@@ -22,6 +28,8 @@
 	import { SIDEBAR_COOKIE_NAME } from '$lib/components/ui/sidebar/constants';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import { _ } from '$lib/i18n';
+	import { realtimeRefresh, refreshIncludes } from '$lib/realtime/resource-refresh';
+	import { clearCurrentWelcome, refreshCurrentWelcome } from '$lib/welcome/store';
 	import { onMount } from 'svelte';
 
 	let { children } = $props();
@@ -30,6 +38,18 @@
 	let sidebarOpen = $state(
 		!document.cookie.split('; ').some((entry) => entry === `${SIDEBAR_COOKIE_NAME}=false`)
 	);
+	let handledWelcomeRevision = 0;
+	let welcomeLoadedForUserId: string | null = null;
+
+	async function refreshWelcomeForSession() {
+		const welcome = await refreshCurrentWelcome();
+		const session = $currentSession;
+		if (!session) return;
+		persistSession(localStorage, {
+			...session,
+			user: { ...session.user, money: welcome.money, rank: welcome.rank }
+		});
+	}
 
 	onMount(() => {
 		preloadCardVisualAssets();
@@ -38,9 +58,35 @@
 		void getCurrentUser()
 			.then((user) => {
 				persistSession(localStorage, { ...session, user });
+				markWikiForgeSessionVerified();
 				setNsfwFilterSettings({ enabled: user.nsfwEnabled, keywords: user.safeWords });
 			})
 			.catch(() => setNsfwFilterSettings({}));
+	});
+
+	$effect(() => {
+		if (!$currentSession || !$verifiedWikiForgeSession) {
+			clearCurrentWelcome();
+			welcomeLoadedForUserId = null;
+			return;
+		}
+		if (welcomeLoadedForUserId === $currentSession.user.id) return;
+		welcomeLoadedForUserId = $currentSession.user.id;
+		void refreshWelcomeForSession().catch(() => undefined);
+	});
+
+	$effect(() => {
+		if (!$currentSession || !$verifiedWikiForgeSession) return;
+		const refresh = $realtimeRefresh;
+		if (
+			refresh.revision === handledWelcomeRevision ||
+			(!refreshIncludes(refresh, 'collection') &&
+				!refreshIncludes(refresh, 'profile') &&
+				!refreshIncludes(refresh, 'trades'))
+		)
+			return;
+		handledWelcomeRevision = refresh.revision;
+		void refreshWelcomeForSession().catch(() => undefined);
 	});
 </script>
 

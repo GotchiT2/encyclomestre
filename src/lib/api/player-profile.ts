@@ -17,6 +17,7 @@ export interface ShowcaseCardDto {
 	id: number;
 	pageId: number;
 	title: string;
+	description?: string;
 	image?: string;
 	nsfw?: boolean;
 	rarity: CardRarityCode;
@@ -76,6 +77,7 @@ function toShowcaseCard(card: ShowcaseCardDto) {
 		id: card.id,
 		pageId: card.pageId,
 		title: card.title,
+		description: card.description,
 		image: card.image,
 		nsfw: card.nsfw,
 		rarity: card.rarity,

@@ -19,6 +19,7 @@ const card = {
 	id: 12,
 	pageId: 42,
 	title: 'Rose',
+	description: 'Fleur symbole de passion.',
 	image: 'https://img.test/rose.jpg',
 	rarity: 'SR',
 	atk: 20,
@@ -45,7 +46,9 @@ describe('WikiForge player profile contracts', () => {
 			full: true,
 			lastConnection: 'THIS_WEEK',
 			nbCardsByRarity: { 'Super-Rare': 2 },
-			showcase: [{ cards: [{ id: '12', imageUrl: card.image }] }]
+			showcase: [
+				{ cards: [{ id: '12', imageUrl: card.image, shortDescription: card.description }] }
+			]
 		});
 		expect(apiRequest).toHaveBeenCalledWith('/users/7', { apiTarget: 'wikiforge' });
 

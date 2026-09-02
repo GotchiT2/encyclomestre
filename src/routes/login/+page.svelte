@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { getSafeRedirectTarget } from '$lib/auth/redirect';
-	import { persistSession } from '$lib/auth/session';
+	import { markWikiForgeSessionVerified, persistSession } from '$lib/auth/session';
 	import { login } from '$lib/api';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
@@ -23,6 +23,7 @@
 		try {
 			const session = await login({ email, password });
 			persistSession(localStorage, session);
+			markWikiForgeSessionVerified();
 			await goto(resolve(getSafeRedirectTarget(page.url.searchParams.get('redirectTo')) as '/'));
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : $_('auth.login.failure');

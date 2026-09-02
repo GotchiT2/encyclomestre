@@ -27,6 +27,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { getPlayerRelationship } from '$lib/domain/friends/relationship';
 	import { _ } from '$lib/i18n';
+	import { realtimeRefresh, refreshIncludes } from '$lib/realtime/resource-refresh';
 	import type { Friendship, User, UserBlock } from '$lib/types';
 	import UserPlusIcon from '@lucide/svelte/icons/user-plus';
 
@@ -39,6 +40,8 @@
 	let blockDialogOpen = $state(false);
 	let blockTarget = $state<User | null>(null);
 	let activeView = $state<'friends' | 'blocked'>('friends');
+	let socialReady = $state(false);
+	let handledRealtimeRevision = 0;
 	const receivedRequests = $derived(
 		friendships.filter(
 			(friendship) => friendship.status === 'received' && !isBlocked(friendship.user.id)
@@ -67,7 +70,20 @@
 		userId = $currentSession?.user.id ?? 'demo-user';
 		void refreshSocialLists().finally(() => {
 			loading = false;
+			socialReady = true;
 		});
+	});
+
+	$effect(() => {
+		const refresh = $realtimeRefresh;
+		if (
+			!socialReady ||
+			refresh.revision === handledRealtimeRevision ||
+			!refreshIncludes(refresh, 'friends')
+		)
+			return;
+		handledRealtimeRevision = refresh.revision;
+		void refreshSocialLists().catch(() => undefined);
 	});
 
 	async function refreshSocialLists() {
