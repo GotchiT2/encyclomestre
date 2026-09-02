@@ -10,6 +10,7 @@ export interface WikiForgeWelcomeResponse {
 	};
 	collection: {
 		nbCards: number;
+		rank?: number;
 		recent: WikiForgeCollectionCardDto[];
 	};
 	pendingTrades: number;
@@ -30,6 +31,7 @@ export async function getWikiForgeWelcome(options?: RequestOptions): Promise<Das
 			completionRate: 0
 		},
 		pendingTrades: response.pendingTrades,
+		rank: response.collection.rank,
 		money: response.money ?? 0,
 		boosterStatus: {
 			availableBoosters: response.boostersStatus.available,

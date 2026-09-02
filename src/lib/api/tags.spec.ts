@@ -18,9 +18,9 @@ beforeEach(() => request.mockReset());
 
 describe('WikiForge tag API', () => {
 	it('maps numeric tag identifiers at the frontend boundary', async () => {
-		request.mockResolvedValue([{ id: 2, name: 'Favori', color: '#feb823' }]);
+		request.mockResolvedValue([{ id: 2, name: 'Favori', color: '#feb823', visibility: 'FRIENDS' }]);
 		await expect(getWikiForgeTags()).resolves.toEqual([
-			{ id: '2', name: 'Favori', color: '#feb823' }
+			{ id: '2', name: 'Favori', color: '#feb823', visibility: 'FRIENDS' }
 		]);
 		expect(request).toHaveBeenCalledWith('/tags', { apiTarget: 'wikiforge' });
 	});
@@ -31,19 +31,19 @@ describe('WikiForge tag API', () => {
 			.mockResolvedValueOnce({ id: 3, name: 'Modifiée', color: '#123456' })
 			.mockResolvedValueOnce(undefined);
 
-		await createWikiForgeTag({ name: 'Neuve', color: '#abcdef' });
-		await updateWikiForgeTag('3', { name: 'Modifiée', color: '#123456' });
+		await createWikiForgeTag({ name: 'Neuve', color: '#abcdef', visibility: 'FRIENDS' });
+		await updateWikiForgeTag('3', { name: 'Modifiée', color: '#123456', visibility: 'PUBLIC' });
 		await deleteWikiForgeTag('3');
 
 		expect(request).toHaveBeenNthCalledWith(1, '/tags', {
 			apiTarget: 'wikiforge',
 			method: 'POST',
-			body: { name: 'Neuve', color: '#abcdef' }
+			body: { name: 'Neuve', color: '#abcdef', visibility: 'FRIENDS' }
 		});
 		expect(request).toHaveBeenNthCalledWith(2, '/tags/3', {
 			apiTarget: 'wikiforge',
 			method: 'PATCH',
-			body: { name: 'Modifiée', color: '#123456' }
+			body: { name: 'Modifiée', color: '#123456', visibility: 'PUBLIC' }
 		});
 		expect(request).toHaveBeenNthCalledWith(3, '/tags/3', {
 			apiTarget: 'wikiforge',

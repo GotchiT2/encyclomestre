@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { MediaQuery } from 'svelte/reactivity';
 	import { _ } from '$lib/i18n';
-	import type { VitrineCard } from './vitrine-card';
+	import CardTile from '$lib/components/card-tile.svelte';
+	import type { CardRecord } from '$lib/types/card';
 
 	let {
 		title,
@@ -10,18 +11,22 @@
 		maxPerRow = perRow,
 		onMove,
 		onRemove,
+		onAddAt,
+		onRename,
 		onDragStart,
 		onDragEnd,
 		onDropAt
 	}: {
 		title: string;
-		cards: VitrineCard[];
+		cards: CardRecord[];
 		/** Cartes par étagère. Plafonné plus bas sur les petites largeurs. */
 		perRow?: number;
 		/** Plus grand `perRow` de la page : sert à garder une taille de carte commune. */
 		maxPerRow?: number;
 		onMove?: (cardId: string, delta: -1 | 1) => void;
 		onRemove?: (cardId: string) => void;
+		onAddAt?: (index: number) => void;
+		onRename?: (title: string) => void;
 		onDragStart?: (cardId: string) => void;
 		onDragEnd?: () => void;
 		onDropAt?: (index: number) => void;
@@ -42,11 +47,14 @@
 	/** Découpe en rangées de `columns` exactement, la dernière complétée par des vides. */
 	const rows = $derived.by(() => {
 		const size = Math.max(1, columns);
-		const chunks: Array<Array<VitrineCard | null>> = [];
+		const chunks: Array<Array<CardRecord | null>> = [];
 		for (let index = 0; index < cards.length; index += size) {
 			chunks.push(cards.slice(index, index + size));
 		}
 		if (!chunks.length) chunks.push([]);
+		// Une étagère pleine garde une rangée suivante vide : elle reste le point
+		// d'ajout de cette même vitrine plutôt que de forcer une nouvelle collection.
+		if (cards.length > 0 && cards.length % size === 0) chunks.push([]);
 		const last = chunks[chunks.length - 1];
 		while (last.length < size) last.push(null);
 		return chunks;
@@ -63,12 +71,14 @@
 	}
 
 	function handleContextMenu(event: MouseEvent, cardId: string, index: number) {
+		if (!onMove && !onRemove) return;
 		event.preventDefault();
 		openMenu(cardId, index, event.clientX, event.clientY);
 	}
 
 	/** Le clavier n'a pas de clic droit : Entrée ou Espace ouvre le même menu. */
 	function handleKeydown(event: KeyboardEvent, cardId: string, index: number) {
+		if (!onMove && !onRemove) return;
 		if (event.key !== 'Enter' && event.key !== ' ') return;
 		event.preventDefault();
 		const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
@@ -96,13 +106,14 @@
 			{#each row as card, slotIndex (card?.id ?? `vide-${slotIndex}`)}
 				{@const index = rowIndex * columns + slotIndex}
 				{#if card}
-					<button
-						type="button"
+					<div
 						class="vitrine__carte"
 						class:vitrine__carte--cible={dragOverIndex === index}
-						draggable="true"
+						draggable={Boolean(onDragStart || onDropAt)}
 						aria-label={card.title}
-						aria-haspopup="menu"
+						role="button"
+						tabindex="0"
+						aria-haspopup={onMove || onRemove ? 'menu' : undefined}
 						title={card.title}
 						oncontextmenu={(event) => handleContextMenu(event, card.id, index)}
 						onkeydown={(event) => handleKeydown(event, card.id, index)}
@@ -126,13 +137,17 @@
 							onDropAt?.(index);
 						}}
 					>
-						<img src={card.imageUrl} alt="" loading="lazy" />
-					</button>
+						<CardTile {card} showFriendOwners={false} />
+					</div>
 				{:else}
-					<div
+					{@const isNextEmpty = slotIndex === row.findIndex((entry) => entry === null)}
+					{#if isNextEmpty && onAddAt}
+						<button
+							type="button"
 						class="vitrine__carte vitrine__carte--vide"
 						class:vitrine__carte--cible={dragOverIndex === index}
-						role="presentation"
+						aria-label={$_('profile.add_card_to_showcase')}
+						onclick={() => onAddAt?.(index)}
 						ondragover={(event) => {
 							event.preventDefault();
 							dragOverIndex = index;
@@ -143,14 +158,42 @@
 							dragOverIndex = null;
 							onDropAt?.(index);
 						}}
-					></div>
+						></button>
+					{:else}
+						<div
+							class="vitrine__carte vitrine__carte--vide"
+							class:vitrine__carte--cible={dragOverIndex === index}
+							role="presentation"
+							ondragover={(event) => {
+								event.preventDefault();
+								dragOverIndex = index;
+							}}
+							ondragleave={() => dragOverIndex === index && (dragOverIndex = null)}
+							 ondrop={(event) => {
+								event.preventDefault();
+								dragOverIndex = null;
+								onDropAt?.(index);
+							}}
+						></div>
+					{/if}
 				{/if}
 			{/each}
 		</div>
 		{#if rowIndex < rows.length - 1}
 			<div class="vitrine__etagere vitrine__etagere--fine"></div>
 		{:else}
-			<div class="vitrine__etagere"><span class="vitrine__plaque">{title}</span></div>
+			<div class="vitrine__etagere">
+				{#if onRename}
+					<input
+						class="vitrine__plaque vitrine__plaque--editable"
+						value={title}
+						aria-label={$_('profile.showcase_line_name')}
+						onchange={(event) => onRename?.(event.currentTarget.value)}
+					/>
+				{:else}
+					<span class="vitrine__plaque">{title}</span>
+				{/if}
+			</div>
 		{/if}
 	{/each}
 
@@ -204,7 +247,7 @@
 		--par-ligne: 5;
 		--colonnes-max: 5;
 		--gap: 10px;
-		--marge: 16px; /* retrait des cartes par rapport aux montants */
+		--marge: 30px; /* laisse l'intégralité de la première carte devant le montant */
 		--montant: 22px; /* largeur des montants latéraux */
 		--h-etagere: 90px; /* voir note « épaisseur » plus bas */
 		--h-fine: 28px;
@@ -273,33 +316,46 @@
 		border: 0;
 		border-radius: 4px;
 		overflow: hidden;
-		background: #23303d;
+		background: transparent;
 		box-shadow:
 			0 6px 12px -4px rgba(0, 0, 0, 0.85),
 			inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 	}
-	button.vitrine__carte {
+	button.vitrine__carte,
+	[role='button'].vitrine__carte {
 		cursor: grab;
 	}
-	button.vitrine__carte:active {
+	button.vitrine__carte:active,
+	[role='button'].vitrine__carte:active {
 		cursor: grabbing;
 	}
 	button.vitrine__carte:focus-visible {
 		outline: 2px solid var(--primary);
 		outline-offset: 2px;
 	}
-	.vitrine__carte > img {
-		display: block;
+	.vitrine__carte :global(.wikiforge-card-size) {
 		width: 100%;
 		height: 100%;
-		object-fit: cover;
-		pointer-events: none;
+	}
+	.vitrine__carte :global([data-testid='card-tile']) {
+		height: 100%;
 	}
 
 	/* Emplacement de complément : tient la colonne sans simuler une carte. */
 	.vitrine__carte--vide {
 		background: rgba(12, 8, 4, 0.55);
 		box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+	}
+	button.vitrine__carte--vide {
+		cursor: pointer;
+	}
+	button.vitrine__carte--vide:hover,
+	button.vitrine__carte--vide:focus-visible {
+		background: color-mix(in srgb, var(--primary) 14%, rgba(12, 8, 4, 0.55));
+		box-shadow:
+			inset 0 0 0 1px color-mix(in srgb, var(--primary) 75%, transparent),
+			0 0 18px color-mix(in srgb, var(--primary) 22%, transparent);
+		outline: none;
 	}
 
 	/* Cible de dépôt pendant un glisser-déposer. */
@@ -451,6 +507,14 @@
 			0 3px 6px rgba(0, 0, 0, 0.6),
 			inset 0 0 0 1.5px rgba(246, 220, 178, 0.35);
 	}
+	.vitrine__plaque--editable {
+		border: 0;
+		cursor: text;
+	}
+	.vitrine__plaque--editable:focus {
+		outline: 2px solid color-mix(in srgb, var(--primary) 85%, white);
+		outline-offset: 2px;
+	}
 
 	/* Filet gravé intérieur. */
 	.vitrine__plaque::before {
@@ -508,7 +572,7 @@
 	@media (max-width: 560px) {
 		.vitrine {
 			--gap: 7px;
-			--marge: 10px;
+			--marge: 20px;
 			--montant: 14px;
 		}
 	}

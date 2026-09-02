@@ -3,6 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
 	import { cn } from '$lib/utils';
+	import UserAvatar from '$lib/components/users/user-avatar.svelte';
 	import type { Conversation } from '$lib/types';
 
 	let {
@@ -32,15 +33,6 @@
 			conversation.title.toLocaleLowerCase('fr-FR').includes(query.toLocaleLowerCase('fr-FR'))
 		)
 	);
-
-	function initials(title: string) {
-		return title
-			.split(/\s+/)
-			.slice(0, 2)
-			.map((part) => part[0])
-			.join('')
-			.toUpperCase();
-	}
 
 	function conversationDate(value: string) {
 		const date = new Date(value);
@@ -79,15 +71,14 @@
 					aria-current={selectedId === conversation.id ? 'true' : undefined}
 				>
 					<span class="relative size-12 shrink-0">
-						<span
-							class="grid size-full overflow-hidden rounded-full border border-primary/30 bg-secondary font-mono text-xs font-bold text-[var(--energy-soft)]"
-						>
-							{#if conversation.avatarUrl}
-								<img src={conversation.avatarUrl} alt="" class="size-full object-cover" />
-							{:else}
-								{initials(conversation.title)}
-							{/if}
-						</span>
+						<UserAvatar
+							image={conversation.avatarUrl}
+							name={conversation.title}
+							lastConnection={conversation.lastConnection}
+							presenceSize="md"
+							shape="round"
+							class="size-12 text-xs [&_[role=img]]:z-10"
+						/>
 						{#if conversation.unreadCount}
 							<span
 								class="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-primary font-mono text-[9px] text-primary-foreground"

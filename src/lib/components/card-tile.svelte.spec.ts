@@ -64,7 +64,7 @@ describe('CardTile', () => {
 			.toHaveAttribute('data-frame', '/images/card-L---Overframe-empty.png');
 		await expect.element(page.getByTestId('card-tile')).toHaveAttribute('data-layout', 'full-art');
 		await expect.element(page.getByLabelText('ATK 9500')).toBeVisible();
-		await expect.element(page.getByLabelText('DEF 9800')).toBeVisible();
+		await expect.element(page.getByLabelText('DEF 9800')).not.toBeInTheDocument();
 		await expect.element(page.getByText('Notice encyclopédique.')).not.toBeInTheDocument();
 		await expect.element(page.getByTestId('card-art')).toHaveClass('top-[6.3%]');
 		await expect
@@ -190,12 +190,12 @@ describe('CardTile', () => {
 	});
 
 	it.each([
-		['Commune', 'C', '/images/card-C-empty.png'],
-		['Peu Commune', 'PC', '/images/card-PC-empty.png'],
-		['Rare', 'R', '/images/card-R-empty.png'],
-		['Super-Rare', 'SR', '/images/card-SR-empty.png'],
-		['Ultra-Rare', 'UR', '/images/card-UR-empty.png'],
-		['Légendaire', 'L', '/images/card-L-empty.png']
+		['Commune', 'C', '/images/templates/commune-v2.png'],
+		['Peu Commune', 'PC', '/images/templates/peu-commune-v2.png'],
+		['Rare', 'R', '/images/templates/rare-v2.png'],
+		['Super-Rare', 'SR', '/images/templates/super-rare-v2.png'],
+		['Ultra-Rare', 'UR', '/images/templates/ultra-rare-v2.png'],
+		['Légendaire', 'L', '/images/templates/legendaire-v2.png']
 	] as const)('selects the %s frame', async (rarity, rarityInitials, frame) => {
 		render(CardTile, { card: { ...card, rarity, rarityInitials, isFullArt: false } });
 		await expect.element(page.getByTestId('card-tile')).toHaveAttribute('data-frame', frame);

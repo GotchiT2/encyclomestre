@@ -1,11 +1,13 @@
 import { apiRequest, type RequestOptions } from './client';
 import { wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
 import type { Conversation, CursorPage, MessageRecord, TradeMessageEvent } from '$lib/types';
+import type { LastConnection } from '$lib/types';
 
 interface WikiForgeSimpleUserDto {
 	id: number;
 	name: string;
 	image?: string | null;
+	lastConnection?: LastConnection;
 }
 
 interface WikiForgeMessageDto {
@@ -73,6 +75,7 @@ function toWikiForgeConversation(conversation: WikiForgeConversationDto): Conver
 		participantIds: [String(conversation.user.id)],
 		title: conversation.user.name,
 		avatarUrl: conversation.user.image?.trim() || null,
+		lastConnection: conversation.user.lastConnection,
 		preview: lastMessage?.type === 'TRADE' ? '' : (lastMessage?.content ?? ''),
 		previewType: lastMessage?.type === 'TRADE' ? 'trade' : lastMessage ? 'text' : null,
 		unreadCount: conversation.unread ?? 0,

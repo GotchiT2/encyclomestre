@@ -36,6 +36,8 @@ const user: User = {
 	imagePageId: null,
 	nsfwEnabled: false,
 	safeWords: [],
+	visibility: 'FRIENDS',
+	lastConnection: 'TODAY',
 	role: 'user',
 	createdAt: '2026-08-20T14:11:51.007Z',
 	updatedAt: '2026-08-20T14:11:51.007Z'
@@ -46,6 +48,7 @@ const oauthProfile = {
 	name: 'Test',
 	email: 'demo@example.test',
 	roles: ['USER'],
+	lastConnection: 'TODAY',
 	createdAt: '2026-08-20T14:11:51.007077'
 };
 

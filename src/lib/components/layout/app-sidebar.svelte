@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { currentSession } from '$lib/auth/session';
 	import * as Sidebar from '$lib/components/ui/sidebar';
+	import UserPresence from '$lib/components/users/user-presence.svelte';
 	import { _ } from '$lib/i18n';
 	import { communityNavigation, exploreNavigation, isActiveRoute, type NavItem } from './nav-items';
 	import GalleryVerticalEndIcon from '@lucide/svelte/icons/gallery-vertical-end';
@@ -112,7 +113,10 @@
 					<Sidebar.MenuButton tooltipContent={$_('navigation.profile')}>
 						{#snippet child({ props })}
 							<a href={resolve('/profile')} onclick={closeOnMobile} {...props}>
-								<UserRoundIcon />
+								<span class="relative shrink-0">
+									<UserRoundIcon />
+									<UserPresence value={$currentSession.user.lastConnection} size="sm" />
+								</span>
 								<span>{$currentSession.user.username}</span>
 							</a>
 						{/snippet}

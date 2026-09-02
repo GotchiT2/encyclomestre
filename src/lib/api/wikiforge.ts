@@ -11,7 +11,8 @@ import type {
 	GuildSummary,
 	PaginatedResponse,
 	SaleState,
-	ActiveSaleSummary
+	ActiveSaleSummary,
+	ProfileVisibility
 } from '$lib/types';
 import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/rarities';
 import { cardSearchSortDirection, defaultCardSearchSort } from '$lib/domain/cards/search';
@@ -117,9 +118,15 @@ interface WikiForgeTagDto {
 	id: number;
 	name: string;
 	color: string;
+	visibility?: ProfileVisibility;
 }
 
-const toCollectionTag = (tag: WikiForgeTagDto): CollectionTag => ({ ...tag, id: String(tag.id) });
+const toCollectionTag = (tag: WikiForgeTagDto): CollectionTag => ({
+	id: String(tag.id),
+	name: tag.name,
+	color: tag.color,
+	...(tag.visibility ? { visibility: tag.visibility } : {})
+});
 const tagOptions = (options?: RequestOptions): RequestOptions => ({
 	...options,
 	apiTarget: 'wikiforge'
@@ -133,10 +140,8 @@ const numericWikiForgeId = (value: string) => {
 
 export const getWikiForgeTags = async (options?: RequestOptions) =>
 	(await apiRequest<WikiForgeTagDto[]>('/tags', tagOptions(options))).map(toCollectionTag);
-export const createWikiForgeTag = async (
-	input: Omit<CollectionTag, 'id'>,
-	options?: RequestOptions
-) =>
+type WikiForgeTagInput = Pick<CollectionTag, 'name' | 'color'> & { visibility: ProfileVisibility };
+export const createWikiForgeTag = async (input: WikiForgeTagInput, options?: RequestOptions) =>
 	toCollectionTag(
 		await apiRequest<WikiForgeTagDto>('/tags', {
 			...tagOptions(options),
@@ -146,7 +151,7 @@ export const createWikiForgeTag = async (
 	);
 export const updateWikiForgeTag = (
 	id: string,
-	input: Omit<CollectionTag, 'id'>,
+	input: WikiForgeTagInput,
 	options?: RequestOptions
 ) =>
 	apiRequest<WikiForgeTagDto>(`/tags/${numericWikiForgeId(id)}`, {

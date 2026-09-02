@@ -19,6 +19,7 @@ import {
 	getUserCollectionPage,
 	searchUsers,
 	updateWikiForgeMe,
+	updateWikiForgeImage,
 	unblockUser
 } from './users';
 
@@ -176,7 +177,7 @@ describe('getTradePartners', () => {
 
 	it('uses the friendship registry instead of preloading the public user directory', async () => {
 		apiRequest.mockResolvedValueOnce({
-			friends: [{ id: 2, name: 'Alice' }],
+			friends: [{ id: 2, name: 'Alice', lastConnection: 'TODAY' }],
 			received: [],
 			sent: [{ id: 3, name: 'Bob' }]
 		});
@@ -218,7 +219,7 @@ describe('user blocks', () => {
 
 	it('maps the three friend lists and uses user identifiers in social mutations', async () => {
 		apiRequest.mockResolvedValueOnce({
-			friends: [{ id: 2, name: 'Alice' }],
+			friends: [{ id: 2, name: 'Alice', lastConnection: 'TODAY' }],
 			received: [{ id: 3, name: 'Bob' }],
 			sent: [{ id: 4, name: 'Chloé' }]
 		});
@@ -228,9 +229,13 @@ describe('user blocks', () => {
 		expect(friendships).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({
-					id: '4',
-					status: 'sent',
-					user: expect.objectContaining({ id: '4', username: 'Chloé' })
+					id: '2',
+					status: 'accepted',
+					user: expect.objectContaining({
+						id: '2',
+						username: 'Alice',
+						lastConnection: 'TODAY'
+					})
 				})
 			])
 		);
@@ -259,12 +264,41 @@ describe('current user settings', () => {
 		});
 
 		await expect(
-			updateWikiForgeMe({ name: 'Camille', imagePageId: 12, nsfw: false, safeWords: ['adulte'] })
+			updateWikiForgeMe({
+				name: 'Camille',
+				imagePageId: 12,
+				nsfw: false,
+				safeWords: ['adulte'],
+				visibility: 'FRIENDS'
+			})
 		).resolves.toMatchObject({ username: 'Camille', imagePageId: 12, safeWords: ['adulte'] });
 		expect(apiRequest).toHaveBeenCalledWith('/me', {
 			apiTarget: 'wikiforge',
 			method: 'PATCH',
-			body: { name: 'Camille', imagePageId: 12, nsfw: false, safeWords: ['adulte'] }
+			body: {
+				name: 'Camille',
+				imagePageId: 12,
+				nsfw: false,
+				safeWords: ['adulte'],
+				visibility: 'FRIENDS'
+			}
+		});
+	});
+
+	it('updates the avatar through the dedicated endpoint', async () => {
+		apiRequest.mockResolvedValueOnce({
+			id: 1,
+			name: 'Camille',
+			email: 'camille@example.test',
+			roles: ['USER'],
+			imagePageId: 12,
+			createdAt: '2026-08-26T00:00:00Z'
+		});
+		await updateWikiForgeImage(12);
+		expect(apiRequest).toHaveBeenCalledWith('/me/image', {
+			apiTarget: 'wikiforge',
+			method: 'PATCH',
+			body: { imagePageId: 12 }
 		});
 	});
 });

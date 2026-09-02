@@ -1,4 +1,6 @@
 export type UserRole = 'user' | 'moderator' | 'admin';
+export type ProfileVisibility = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
+export type LastConnection = 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'AWAY';
 
 export interface UserPreferences {
 	language: string;
@@ -17,6 +19,9 @@ export interface User {
 	nsfwEnabled?: boolean;
 	safeWords?: string[];
 	money?: number;
+	visibility?: ProfileVisibility;
+	rank?: number;
+	lastConnection?: LastConnection;
 	bio?: string | null;
 	role: UserRole;
 	preferences?: UserPreferences;

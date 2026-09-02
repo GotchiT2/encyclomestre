@@ -8,6 +8,7 @@
 		username = $bindable(''),
 		avatarUrl,
 		onChooseAvatar = () => undefined,
+		onRemoveAvatar = () => undefined,
 		onLogout,
 		onLogoutAll,
 		onDelete
@@ -15,6 +16,7 @@
 		username?: string;
 		avatarUrl?: string | null;
 		onChooseAvatar?: () => void;
+		onRemoveAvatar?: () => void;
 		onLogout: () => void;
 		onLogoutAll: () => void;
 		onDelete: () => void;
@@ -37,6 +39,9 @@
 					class="size-16 border border-primary/30 object-cover"
 				/>{/if}
 			<Button variant="outline" onclick={onChooseAvatar}>{$_('settings.choose_avatar')}</Button>
+			{#if avatarUrl}<Button variant="ghost" onclick={onRemoveAvatar}
+					>{$_('settings.remove_avatar')}</Button
+				>{/if}
 		</div>
 	</section>
 	<section class="border-4 border-double border-primary/30 bg-card p-4">

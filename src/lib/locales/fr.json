@@ -2,6 +2,12 @@
 	"app": {
 		"title": "WikiForge · Cartes encyclopédiques"
 	},
+	"presence": {
+		"TODAY": "Connecté aujourd’hui",
+		"THIS_WEEK": "Dernière connexion cette semaine",
+		"THIS_MONTH": "Dernière connexion ce mois-ci",
+		"AWAY": "Absent depuis plus d’un mois"
+	},
 	"navigation": {
 		"brand": "WikiForge",
 		"registry": "Collection de cartes",
@@ -15,6 +21,7 @@
 		"guild": "Guilde",
 		"trades": "Échanges",
 		"boosters": "Paquets",
+		"leaderboard": "Classements",
 		"profile": "Mon profil",
 		"settings": "Paramètres",
 		"login": "Connexion",
@@ -211,7 +218,11 @@
 		"quick_protect": "Protéger",
 		"quick_sell": "À vendre",
 		"quick_protect_card": "Protéger {title}",
-		"quick_sell_card": "Mettre {title} en vente"
+		"quick_sell_card": "Mettre {title} en vente",
+		"tagVisibility": "Visibilité de l’étiquette",
+		"visibilityPrivate": "Privée",
+		"visibilityFriends": "Amis",
+		"visibilityPublic": "Publique"
 	},
 	"common": {
 		"all": "Tous",
@@ -220,6 +231,7 @@
 		"save": "Enregistrer",
 		"cancel": "Annuler",
 		"close": "Fermer",
+		"loading": "Chargement…",
 		"retry": "Réessayer",
 		"load_more": "Charger la suite",
 		"previous": "Précédent",
@@ -235,6 +247,10 @@
 		"sortBy": "Trier par"
 	},
 	"profile": {
+		"add_card_to_showcase": "Ajouter une carte à la vitrine",
+		"showcase_line_name": "Nom de la vitrine",
+		"avatar_updated": "Image de profil mise à jour.",
+		"avatar_error": "Impossible de mettre à jour l’image de profil.",
 		"title": "Mon profil",
 		"avatar_title": "Choisir une image de profil",
 		"select_cards": "Sélectionner",
@@ -285,7 +301,37 @@
 		"move_right": "Déplacer à droite",
 		"remove_from_showcase": "Retirer de la vitrine",
 		"showcase_capacity": "{count} / {limit} cartes exposées",
-		"showcase_hint": "Glissez-déposez une carte pour la réorganiser, ou faites un clic droit pour ouvrir le menu."
+		"showcase_hint": "Glissez-déposez une carte pour la réorganiser, ou faites un clic droit pour ouvrir le menu.",
+		"connected_description": "Composez votre vitrine et gérez vos ventes à prix fixe.",
+		"member_since_month": "Membre depuis {month}",
+		"restricted_title": "Profil à visibilité limitée",
+		"restricted_description": "Ce joueur ne partage pas le détail de sa collection, ses étiquettes ou sa vitrine avec vous.",
+		"showcase_slot_limit": "Plafond actuel : {max} emplacements",
+		"add_showcase_line": "Ajouter une ligne",
+		"add_first_showcase_line": "Créer la première ligne de vitrine",
+		"showcase_line_title": "Titre de la ligne",
+		"delete_showcase_line": "Supprimer cette ligne",
+		"add_card": "Ajouter une carte",
+		"buy_showcase_slot": "Acheter un emplacement · {price} ◈",
+		"buy_showcase_slot_confirm": "Acheter un emplacement de vitrine pour {price} pièces ?",
+		"showcase_saved": "Vitrine enregistrée.",
+		"showcase_slot_bought": "Emplacement de vitrine acheté.",
+		"showcase_conflict": "Cette vitrine contient une carte indisponible ou dépasse votre capacité.",
+		"showcase_error": "La vitrine n’a pas pu être enregistrée.",
+		"not_enough_money": "Votre solde est insuffisant.",
+		"instant_sales_capacity": "{count} / 3 ventes actives",
+		"no_instant_sales": "Aucune vente fixe en cours.",
+		"no_sale_card_selected": "Aucune carte sélectionnée",
+		"choose_sale_card": "Choisir une carte",
+		"sale_price": "Prix",
+		"create_instant_sale": "Mettre en vente",
+		"cancel_instant_sale": "Retirer",
+		"sale_created": "Carte mise en vente.",
+		"sale_bought": "Carte achetée et ajoutée à votre collection.",
+		"sale_cancelled": "Vente retirée.",
+		"sale_conflict": "Cette vente ou cette carte n’est plus disponible.",
+		"sale_error": "La vente n’a pas pu être mise à jour.",
+		"load_error": "Le profil n’a pas pu être chargé."
 	},
 	"settings": {
 		"eyebrow": "Préférences du compte",
@@ -314,7 +360,26 @@
 		"censorship_hint": "Les cartes contenant ces mots seront masquées selon vos préférences.",
 		"keyword_placeholder": "Ajouter un mot à censurer…",
 		"choose_avatar": "Selectionner un avatar",
-		"avatar_collection": "Votre collection"
+		"remove_avatar": "Retirer l’avatar",
+		"avatar_collection": "Votre collection",
+		"visibility": "Visibilité du profil",
+		"visibility_hint": "Choisissez qui peut consulter votre vitrine, vos étiquettes et le détail de votre collection.",
+		"visibility_private": "Moi uniquement",
+		"visibility_friends": "Mes amis",
+		"visibility_public": "Tout le monde"
+	},
+	"leaderboard": {
+		"eyebrow": "Registre des collectionneurs",
+		"title": "Classements",
+		"description": "Comparez les collections et les cartes sorties des boosters.",
+		"periods": "Période du classement",
+		"global": "Global",
+		"daily": "Aujourd’hui",
+		"weekly": "Cette semaine",
+		"cards": "{count} cartes",
+		"your_position": "Votre position",
+		"unranked": "Vous n’êtes pas encore classé sur cette période.",
+		"error": "Le classement est momentanément indisponible."
 	},
 	"boosters": {
 		"eyebrow": "Boosters disponibles",

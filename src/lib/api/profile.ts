@@ -14,7 +14,8 @@ const defaultProfile: ProfileSettings = {
 	showcases: [],
 	wantedCardIds: [],
 	nsfwEnabled: false,
-	censoredKeywords: []
+	censoredKeywords: [],
+	visibility: 'FRIENDS'
 };
 
 function normalizeProfile(response: ProfileResponse): ProfileSettings {

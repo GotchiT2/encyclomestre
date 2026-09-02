@@ -2,6 +2,7 @@
 	import PlayerRelationshipControl from '$lib/components/friends/player-relationship-control.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
+	import UserAvatar from '$lib/components/users/user-avatar.svelte';
 	import { _ } from '$lib/i18n';
 	import type { PlayerRelationshipStatus, User } from '$lib/types';
 
@@ -83,11 +84,11 @@
 				<ul class="mt-4 grid max-h-80 gap-2 overflow-y-auto">
 					{#each candidates as candidate (candidate.id)}
 						<li class="flex items-center gap-3 border border-primary/25 bg-background p-2">
-							<span
-								class="flex size-10 shrink-0 items-center justify-center border border-primary/40 bg-card text-lg font-black text-primary"
-							>
-								{candidate.username.slice(0, 1).toUpperCase()}
-							</span>
+							<UserAvatar
+								image={candidate.avatarUrl}
+								name={candidate.username}
+								lastConnection={candidate.lastConnection}
+							/>
 							<span class="min-w-0 flex-1 truncate font-bold">@{candidate.username}</span>
 							<PlayerRelationshipControl
 								status={relationshipFor(candidate.id)}

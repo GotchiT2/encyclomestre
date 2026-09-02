@@ -4,7 +4,7 @@
 	import { getConversationMessages, getConversations, sendMessage } from '$lib/api';
 	import ConversationList from './conversation-list.svelte';
 	import MessageThread from './message-thread.svelte';
-	import type { Conversation, MessageRecord } from '$lib/types';
+	import type { Conversation, LastConnection, MessageRecord } from '$lib/types';
 	import type { getFriends as GetFriends } from '$lib/api/users';
 
 	const defaultLoadFriends: typeof GetFriends = async (...args) =>
@@ -35,6 +35,7 @@
 	let hasMoreConversations = $state(false);
 	let hasOlderMessages = $state(false);
 	let acceptedFriendIds = $state<string[]>([]);
+	let friendPresenceByUserId = $state<Record<string, LastConnection | undefined>>({});
 	let mobileViewport = $state(false);
 	let mobileThreadOpen = $state(false);
 	let requestSequence = 0;
@@ -46,6 +47,13 @@
 	const canSend = $derived(
 		Boolean(selectedConversation?.userId && acceptedFriendIds.includes(selectedConversation.userId))
 	);
+	function withFriendPresence(items: Conversation[]) {
+		return items.map((conversation) =>
+			conversation.userId && friendPresenceByUserId[conversation.userId]
+				? { ...conversation, lastConnection: friendPresenceByUserId[conversation.userId] }
+				: conversation
+		);
+	}
 
 	onMount(() => {
 		media = window.matchMedia('(max-width: 1023px)');
@@ -64,7 +72,10 @@
 		loading = true;
 		try {
 			const [page, friendships] = await Promise.all([getConversations(), loadFriends()]);
-			conversations = page.items;
+			friendPresenceByUserId = Object.fromEntries(
+				friendships.map((friendship) => [friendship.user.id, friendship.user.lastConnection])
+			);
+			conversations = withFriendPresence(page.items);
 			conversationsCursor = page.nextCursor;
 			hasMoreConversations = page.hasNext;
 			acceptedFriendIds = friendships
@@ -89,7 +100,10 @@
 		try {
 			const page = await getConversations(conversationsCursor);
 			const known = new Set(conversations.map((conversation) => conversation.id));
-			conversations = [...conversations, ...page.items.filter((item) => !known.has(item.id))];
+			conversations = [
+				...conversations,
+				...withFriendPresence(page.items).filter((item) => !known.has(item.id))
+			];
 			conversationsCursor = page.nextCursor;
 			hasMoreConversations = page.hasNext;
 		} finally {

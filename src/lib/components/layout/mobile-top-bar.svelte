@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { currentSession } from '$lib/auth/session';
 	import * as Sidebar from '$lib/components/ui/sidebar';
+	import UserPresence from '$lib/components/users/user-presence.svelte';
 	import { _ } from '$lib/i18n';
 	import LogInIcon from '@lucide/svelte/icons/log-in';
 	import UserRoundIcon from '@lucide/svelte/icons/user-round';
@@ -28,6 +29,9 @@
 		class="grid size-10 shrink-0 place-items-center border border-primary/35 text-primary"
 		aria-label={$currentSession ? $_('navigation.profile') : $_('navigation.login')}
 	>
-		{#if $currentSession}<UserRoundIcon class="size-5" />{:else}<LogInIcon class="size-5" />{/if}
+		{#if $currentSession}<span class="relative">
+				<UserRoundIcon class="size-5" />
+				<UserPresence value={$currentSession.user.lastConnection} size="sm" />
+			</span>{:else}<LogInIcon class="size-5" />{/if}
 	</a>
 </header>

@@ -91,7 +91,14 @@ const userByWikiForgeId = (id: string) =>
 const simpleWikiForgeUser = (user: User) => ({
 	id: wikiForgeUserId(user.id),
 	name: user.username,
-	image: null
+	image: null,
+	lastConnection:
+		user.lastConnection ??
+		(user.id === 'demo-user'
+			? 'TODAY'
+			: wikiForgeUserId(user.id) % 3 === 0
+				? 'THIS_MONTH'
+				: 'THIS_WEEK')
 });
 const collectionCard = (card: CardRecord, id: number) => ({
 	id,
@@ -111,6 +118,26 @@ const collectionCard = (card: CardRecord, id: number) => ({
 	ownedCount: card.ownedCount,
 	rarityCounts: card.ownedCount ? { [card.rarityInitials]: card.ownedCount } : {}
 });
+const showcaseCard = (card: CardRecord, id: number) => ({
+	id,
+	pageId: card.baseCardId ?? id,
+	title: card.title,
+	image: card.imageUrl,
+	nsfw: Boolean(card.nsfw),
+	rarity: card.rarityInitials,
+	atk: card.attack,
+	alt: Boolean(card.isFullArt)
+});
+
+let mockShowcaseLines = [
+	{
+		title: 'Mes préférées',
+		cards: mockCards.slice(0, 2).map((card, index) => showcaseCard(card, index + 1))
+	}
+];
+let mockShowcaseSlots = 3;
+let nextInstantSaleId = 50;
+let mockInstantSales = [{ id: 41, price: 500, card: showcaseCard(mockCards[0], 1) }];
 
 const apiRegistry = (registry: LegacyWishlistRegistry) => ({
 	...registry,
@@ -484,7 +511,8 @@ const profileSettings = new Map<string, ProfileSettings>([
 			showcases: [],
 			wantedCardIds: [],
 			nsfwEnabled: false,
-			censoredKeywords: []
+			censoredKeywords: [],
+			visibility: 'FRIENDS'
 		}
 	]
 ]);
@@ -525,7 +553,8 @@ profileSettings.set('friend-0', {
 	],
 	wantedCardIds: ['girls-generation-1', 'red-velvet-1'],
 	nsfwEnabled: false,
-	censoredKeywords: []
+	censoredKeywords: [],
+	visibility: 'FRIENDS'
 });
 
 profileSettings.set('friend-1', {
@@ -542,7 +571,8 @@ profileSettings.set('friend-1', {
 	],
 	wantedCardIds: ['girls-generation-1', '2ne1-1'],
 	nsfwEnabled: false,
-	censoredKeywords: []
+	censoredKeywords: [],
+	visibility: 'PUBLIC'
 });
 
 friendships.set('demo-user', [
@@ -692,6 +722,12 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 					user.avatarUrl;
 			}
 			if (typeof input?.nsfw === 'boolean') profile.nsfwEnabled = input.nsfw;
+			if (
+				input?.visibility === 'PRIVATE' ||
+				input?.visibility === 'FRIENDS' ||
+				input?.visibility === 'PUBLIC'
+			)
+				profile.visibility = input.visibility;
 			if (Array.isArray(input?.safeWords)) {
 				profile.censoredKeywords = input.safeWords.filter(
 					(word): word is string => typeof word === 'string'
@@ -708,7 +744,72 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			nsfw: profile.nsfwEnabled,
 			safeWords: profile.censoredKeywords,
 			money: user.money ?? 350,
-			createdAt: user.createdAt
+			createdAt: user.createdAt,
+			visibility: profile.visibility,
+			lastConnection: 'TODAY',
+			rank: 12
+		});
+	}
+	if (normalizedMethod === 'PATCH' && pathname === '/me/image') {
+		const input = asObject(body);
+		const user = users.get('demo-user')!;
+		user.imagePageId = typeof input?.imagePageId === 'number' ? input.imagePageId : null;
+		user.avatarUrl =
+			user.imagePageId == null
+				? null
+				: (mockCards.find((card) => card.baseCardId === user.imagePageId)?.imageUrl ?? null);
+		const profile = profileSettings.get('demo-user')!;
+		return json({
+			id: 1,
+			name: user.username,
+			email: user.email,
+			roles: ['USER'],
+			imagePageId: user.imagePageId,
+			image: user.avatarUrl,
+			nsfw: profile.nsfwEnabled,
+			safeWords: profile.censoredKeywords,
+			money: user.money ?? 350,
+			createdAt: user.createdAt,
+			visibility: profile.visibility,
+			lastConnection: 'TODAY',
+			rank: 12
+		});
+	}
+	if (pathname === '/me/showcase' && normalizedMethod === 'GET')
+		return json({
+			slots: mockShowcaseSlots,
+			maxSlots: 6,
+			usedSlots: mockShowcaseLines.flatMap((line) => line.cards).length,
+			slotPrice: 100,
+			lines: mockShowcaseLines
+		});
+	if (pathname === '/me/showcase' && normalizedMethod === 'PUT') {
+		const input = asObject(body);
+		const lines = Array.isArray(input?.lines) ? input.lines : [];
+		mockShowcaseLines = lines.flatMap((candidate) => {
+			const line = asObject(candidate);
+			if (!line || typeof line.title !== 'string' || !Array.isArray(line.cardIds)) return [];
+			const cards = line.cardIds.flatMap((id) =>
+				typeof id === 'number' && mockCards[id - 1] ? [showcaseCard(mockCards[id - 1], id)] : []
+			);
+			return cards.length ? [{ title: line.title, cards }] : [];
+		});
+		return json({
+			slots: mockShowcaseSlots,
+			maxSlots: 6,
+			usedSlots: mockShowcaseLines.flatMap((line) => line.cards).length,
+			slotPrice: 100,
+			lines: mockShowcaseLines
+		});
+	}
+	if (pathname === '/me/showcase/slots' && normalizedMethod === 'POST') {
+		mockShowcaseSlots += 1;
+		return json({
+			slots: mockShowcaseSlots,
+			maxSlots: 6,
+			usedSlots: mockShowcaseLines.flatMap((line) => line.cards).length,
+			slotPrice: 100,
+			lines: mockShowcaseLines
 		});
 	}
 	if (normalizedMethod === 'GET' && pathname === '/me/money') {
@@ -724,11 +825,97 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			},
 			collection: {
 				nbCards: mockCards.reduce((total, card) => total + card.ownedCount, 0),
+				rank: 12,
 				recent: mockCards.slice(0, 6).map((card, index) => collectionCard(card, index + 1))
 			},
 			pendingTrades: 0,
 			pendingAuction: 0,
 			money: users.get('demo-user')?.money ?? 350
+		});
+	}
+	const userProfileMatch = /^\/users\/(\d+)$/.exec(pathname);
+	if (normalizedMethod === 'GET' && userProfileMatch) {
+		const user = userByWikiForgeId(userProfileMatch[1]);
+		if (!user) return error(404, 'Joueur introuvable.', 'NOT_FOUND');
+		const full = user.id !== 'blocked-user';
+		return json({
+			id: wikiForgeUserId(user.id),
+			name: user.username,
+			imagePageId: user.imagePageId,
+			image: user.avatarUrl,
+			joinedAt: user.createdAt.slice(0, 7),
+			lastConnection: simpleWikiForgeUser(user).lastConnection,
+			full,
+			nbCards: mockCards.reduce((sum, card) => sum + card.ownedCount, 0),
+			...(full
+				? {
+						nbCardsByRarity: Object.fromEntries(
+							['L', 'UR', 'SR', 'R', 'PC', 'C'].map((rarity) => [
+								rarity,
+								mockCards
+									.filter((card) => card.rarityInitials === rarity)
+									.reduce((sum, card) => sum + card.ownedCount, 0)
+							])
+						),
+						tags: mockCollectionTags.slice(0, 2).map(({ name, color }) => ({ name, color })),
+						showcase: mockShowcaseLines
+					}
+				: {})
+		});
+	}
+	const userSalesMatch = /^\/users\/(\d+)\/sales$/.exec(pathname);
+	if (normalizedMethod === 'GET' && userSalesMatch) {
+		if (!userByWikiForgeId(userSalesMatch[1]))
+			return error(404, 'Joueur introuvable.', 'NOT_FOUND');
+		return json({ instantSales: mockInstantSales });
+	}
+	if (normalizedMethod === 'POST' && pathname === '/me/sales') {
+		const input = asObject(body);
+		const cardId = Number(input?.cardId);
+		const price = Number(input?.price);
+		if (!Number.isSafeInteger(cardId) || !Number.isSafeInteger(price) || price <= 0)
+			return error(400, 'Vente invalide.', 'INVALID_PARAMETER');
+		if (
+			mockInstantSales.length >= 3 ||
+			mockInstantSales.some((sale) => sale.card.id === cardId) ||
+			!mockCards[cardId - 1]
+		)
+			return error(409, 'Conflit de vente.', 'SALE_CONFLICT');
+		mockInstantSales = [
+			...mockInstantSales,
+			{ id: nextInstantSaleId++, price, card: showcaseCard(mockCards[cardId - 1], cardId) }
+		];
+		return json({ instantSales: mockInstantSales });
+	}
+	const mySaleMatch = /^\/me\/sales\/(\d+)$/.exec(pathname);
+	if (normalizedMethod === 'DELETE' && mySaleMatch) {
+		mockInstantSales = mockInstantSales.filter((sale) => sale.id !== Number(mySaleMatch[1]));
+		return json({ instantSales: mockInstantSales });
+	}
+	const buySaleMatch = /^\/sales\/(\d+)\/buy$/.exec(pathname);
+	if (normalizedMethod === 'POST' && buySaleMatch) {
+		const sale = mockInstantSales.find((entry) => entry.id === Number(buySaleMatch[1]));
+		if (!sale) return error(409, 'Vente indisponible.', 'SALE_CONFLICT');
+		const user = users.get('demo-user')!;
+		if ((user.money ?? 0) < sale.price) return error(409, 'Solde insuffisant.', 'NOT_ENOUGH_MONEY');
+		user.money = (user.money ?? 0) - sale.price;
+		mockInstantSales = mockInstantSales.filter((entry) => entry !== sale);
+		return json(undefined, 204);
+	}
+	const leaderboardMatch = /^\/leaderboards\/(global|daily|weekly)$/.exec(pathname);
+	if (normalizedMethod === 'GET' && leaderboardMatch) {
+		const entries = [...users.values()].slice(0, 20).map((user, index) => ({
+			rank: index + 1,
+			id: wikiForgeUserId(user.id),
+			name: user.username,
+			imagePageId: user.imagePageId,
+			image: user.avatarUrl,
+			nbCards:
+				leaderboardMatch[1] === 'global' ? Math.max(1, 120 - index * 7) : Math.max(1, 18 - index)
+		}));
+		return json({
+			top: entries,
+			around: entries.some((entry) => entry.id === 1) ? undefined : entries.slice(-3)
 		});
 	}
 	if (normalizedMethod === 'POST' && pathname === '/auth/logout') return json(undefined, 204);
@@ -833,7 +1020,9 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		if (!userByWikiForgeId(friendTagsMatch[1])) {
 			return error(404, 'Ami introuvable.', 'NOT_FOUND');
 		}
-		return json(mockCollectionTags.map((tag, index) => ({ ...tag, id: index + 1 })));
+		return json(
+			mockCollectionTags.map((tag, index) => ({ ...tag, id: index + 1, visibility: undefined }))
+		);
 	}
 	if (normalizedMethod === 'GET' && pathname === '/collection') {
 		const cursorPage = /mock-collection-cursor-(\d+)/.exec(url.searchParams.get('cursor') ?? '');
@@ -907,16 +1096,32 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		});
 	}
 	if (normalizedMethod === 'GET' && pathname === '/tags') {
-		return json(mockCollectionTags.map((tag, index) => ({ ...tag, id: index + 1 })));
+		return json(
+			mockCollectionTags.map((tag, index) => ({
+				...tag,
+				id: index + 1,
+				visibility: tag.visibility ?? 'FRIENDS'
+			}))
+		);
 	}
 	if (normalizedMethod === 'POST' && pathname === '/tags') {
 		const input = asObject(body);
-		return json({ id: mockCollectionTags.length + 1, name: input?.name, color: input?.color });
+		return json({
+			id: mockCollectionTags.length + 1,
+			name: input?.name,
+			color: input?.color,
+			visibility: input?.visibility
+		});
 	}
 	const tagMatch = /^\/tags\/(\d+)$/.exec(pathname);
 	if (tagMatch && normalizedMethod === 'PATCH') {
 		const input = asObject(body);
-		return json({ id: Number(tagMatch[1]), name: input?.name, color: input?.color });
+		return json({
+			id: Number(tagMatch[1]),
+			name: input?.name,
+			color: input?.color,
+			visibility: input?.visibility
+		});
 	}
 	if (tagMatch && normalizedMethod === 'DELETE') return json(undefined, 204);
 	if (/^\/collection\/\d+\/(?:protect|unprotect)$/.test(pathname) && normalizedMethod === 'PUT') {
@@ -1907,7 +2112,8 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			showcases: [],
 			wantedCardIds: [],
 			nsfwEnabled: false,
-			censoredKeywords: []
+			censoredKeywords: [],
+			visibility: 'FRIENDS'
 		};
 		if (normalizedMethod === 'GET') return json(current);
 		if (normalizedMethod === 'PATCH') {
