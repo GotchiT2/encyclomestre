@@ -5,6 +5,7 @@ export * from './collection';
 export * from './client';
 export * from './mock';
 export * from './messages';
+export * from './notifications';
 export * from './pages';
 export * from './player-profile';
 export * from './profile';

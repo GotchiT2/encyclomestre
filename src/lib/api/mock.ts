@@ -26,6 +26,18 @@ export interface MockApiRequest {
 }
 
 const now = '2026-07-11T09:00:00.000Z';
+const mockNotifications = [
+	{
+		id: 1,
+		type: 'TRADE_RECEIVED',
+		actor: { id: 2, name: 'Assassin Blanc', image: '/avatars/assassin-blanc.jpg' },
+		extId: 12,
+		meta: '{"price":540}',
+		read: false,
+		creationDate: now
+	},
+	{ id: 2, type: 'FRIEND_ACCEPTED', read: true, creationDate: '2026-07-10T09:00:00.000Z' }
+];
 
 interface LegacyWishlistEntry {
 	cardId: string;
@@ -692,6 +704,27 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	const normalizedMethod = method.toUpperCase();
 
 	if (normalizedMethod === 'POST' && pathname === '/oauth2/revoke') return json(undefined);
+	if (normalizedMethod === 'GET' && pathname === '/notifications') {
+		const unreadOnly = url.searchParams.get('unreadOnly') === 'true';
+		const results = unreadOnly ? mockNotifications.filter((notification) => !notification.read) : mockNotifications;
+		return json({
+			results,
+			nextCursor: null,
+			hasNext: false,
+			unread: mockNotifications.filter((notification) => !notification.read).length
+		});
+	}
+	if (normalizedMethod === 'POST' && pathname === '/notifications/read-all') {
+		mockNotifications.forEach((notification) => (notification.read = true));
+		return json(undefined, 204);
+	}
+	const notificationReadMatch = /^\/notifications\/(\d+)\/read$/.exec(pathname);
+	if (normalizedMethod === 'PATCH' && notificationReadMatch) {
+		const notification = mockNotifications.find((entry) => entry.id === Number(notificationReadMatch[1]));
+		if (!notification) return error(404, 'Notification introuvable.', 'NOT_FOUND');
+		notification.read = true;
+		return json(undefined, 204);
+	}
 	if (normalizedMethod === 'POST' && pathname === '/auth/logout-all') return json(undefined, 204);
 	if (normalizedMethod === 'POST' && pathname === '/oauth2/token') {
 		const input = asForm(body);

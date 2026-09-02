@@ -7,6 +7,7 @@
 	import LogInIcon from '@lucide/svelte/icons/log-in';
 	import UserRoundIcon from '@lucide/svelte/icons/user-round';
 	import PlayerMoney from './player-money.svelte';
+	import NotificationBell from '$lib/components/notifications/notification-bell.svelte';
 </script>
 
 <!-- La barre d'onglets couvre les destinations principales : ce bandeau ne porte que
@@ -24,6 +25,7 @@
 		<span class="forge-wordmark block truncate text-lg leading-none">{$_('navigation.brand')}</span>
 	</a>
 	<PlayerMoney />
+	{#if $currentSession}<NotificationBell compact />{/if}
 	<a
 		href={$currentSession ? resolve('/profile') : resolve('/login')}
 		class="grid size-10 shrink-0 place-items-center border border-primary/35 text-primary"

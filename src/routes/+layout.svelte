@@ -16,6 +16,7 @@
 	import ForgeStarfield from '$lib/components/layout/forge-starfield.svelte';
 	import MobileTabBar from '$lib/components/layout/mobile-tab-bar.svelte';
 	import MobileTopBar from '$lib/components/layout/mobile-top-bar.svelte';
+	import NotificationStream from '$lib/components/notifications/notification-stream.svelte';
 	import PlayerMoney from '$lib/components/layout/player-money.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import { SIDEBAR_COOKIE_NAME } from '$lib/components/ui/sidebar/constants';
@@ -54,6 +55,7 @@
 
 <Sidebar.Provider bind:open={sidebarOpen}>
 	{#if $currentSession}<AppSidebar />{/if}
+	{#if $currentSession}<NotificationStream />{/if}
 	<MobileTopBar />
 
 	<Sidebar.Inset class="forge-scene bg-transparent">
