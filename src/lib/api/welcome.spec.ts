@@ -13,6 +13,7 @@ describe('WikiForge welcome API', () => {
 			boostersStatus: { available: 2, max: 10, nextAvailableAt: null },
 			collection: {
 				nbCards: 12,
+				rank: 412,
 				recent: [
 					{ id: 8, pageId: 42, title: 'Rose', rarity: 'SR', ownedCount: 3, rarityCounts: { SR: 3 } }
 				]
@@ -24,6 +25,7 @@ describe('WikiForge welcome API', () => {
 
 		await expect(getWikiForgeWelcome()).resolves.toMatchObject({
 			collection: { uniqueCards: 12 },
+			rank: 412,
 			boosterStatus: { availableBoosters: 2 },
 			money: 350,
 			recentAcquisitions: [

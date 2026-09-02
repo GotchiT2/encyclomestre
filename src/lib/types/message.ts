@@ -10,6 +10,7 @@ export interface Conversation {
 	userId?: string;
 	title: string;
 	avatarUrl?: string | null;
+	lastConnection?: import('./user').LastConnection;
 	preview: string;
 	previewType?: MessageKind | null;
 	unreadCount: number;

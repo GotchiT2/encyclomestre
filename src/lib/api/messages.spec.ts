@@ -13,7 +13,12 @@ describe('WikiForge conversations', () => {
 			results: [
 				{
 					id: 42,
-					user: { id: 7, name: 'Claire', image: 'https://images.wikiforge.fr/claire.jpg' },
+					user: {
+						id: 7,
+						name: 'Claire',
+						image: 'https://images.wikiforge.fr/claire.jpg',
+						lastConnection: 'THIS_WEEK'
+					},
 					lastMessage: {
 						id: 9,
 						conversationId: 42,
@@ -34,7 +39,15 @@ describe('WikiForge conversations', () => {
 		expect(page).toMatchObject({
 			hasNext: true,
 			nextCursor: 'opaque',
-			items: [{ id: '42', userId: '7', unreadCount: 2, updatedAt: '2026-08-23T14:31:00.000Z' }]
+			items: [
+				{
+					id: '42',
+					userId: '7',
+					unreadCount: 2,
+					lastConnection: 'THIS_WEEK',
+					updatedAt: '2026-08-23T14:31:00.000Z'
+				}
+			]
 		});
 	});
 

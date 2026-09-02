@@ -1,38 +1,58 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import CardTile from '$lib/components/card-tile.svelte';
-	import CardSearchPanel from '$lib/components/cards/card-search-panel.svelte';
-	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
-	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
-	import { cardRarityOptions } from '$lib/domain/cards/rarities';
-	import { matchesCardVariant } from '$lib/domain/cards/variants';
-	import { compareCardsByTextRelevance } from '$lib/domain/cards/search';
+	import FilterControls from '$lib/components/collection/filter-controls.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import type { CardRarity, CardRecord, CardVariant } from '$lib/types';
+	import type {
+		CardRarity,
+		CardRecord,
+		CollectionBooleanFilter,
+		CollectionSort,
+		CollectionTag
+	} from '$lib/types';
+	import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
+	import type { CollectionQuery } from '$lib/api';
 
 	let {
 		open = $bindable(false),
 		cards,
+		tags = [],
 		title,
-		onSelect
+		onSelect,
+		hasMore = false,
+		loadingMore = false,
+		onLoadMore
+		,onFiltersChange
 	}: {
 		open?: boolean;
 		cards: CardRecord[];
+		tags?: CollectionTag[];
 		title: string;
 		onSelect: (card: CardRecord) => void;
+		hasMore?: boolean;
+		loadingMore?: boolean;
+		onLoadMore?: () => void;
+		onFiltersChange?: (filters: CollectionQuery) => void;
 	} = $props();
 
 	let query = $state('');
 	let rarities = $state<CardRarity[]>([]);
 	let tagIds = $state<string[]>([]);
-	let variant = $state<CardVariant>('all');
-	const availableTags = $derived([
-		...new Map(
-			cards.flatMap((card) => card.collectionTags ?? []).map((tag) => [tag.id, tag])
-		).values()
-	]);
+	let sortBy = $state<CollectionSort>('acquiredDate');
+	let duplicate = $state<CollectionBooleanFilter>('all');
+	let protection = $state<CollectionBooleanFilter>('all');
+	let filterTimer: number | undefined;
+	let lastFilterKey = '';
+	const filters = $derived<CollectionQuery>({
+		query,
+		sortBy,
+		rarities: rarities.map((rarity) => cardRarityCodeByName[rarity]),
+		tagIds,
+		duplicate,
+		protected: protection
+	});
+	const filterKey = $derived(JSON.stringify(filters));
 	const filteredCards = $derived(
 		cards
 			.filter((card) => {
@@ -43,21 +63,32 @@
 						card.title.toLocaleLowerCase('fr-FR').includes(normalizedQuery) ||
 						card.shortDescription.toLocaleLowerCase('fr-FR').includes(normalizedQuery)) &&
 					(!rarities.length || rarities.includes(card.rarity)) &&
-					matchesCardVariant(card, variant) &&
+					(duplicate === 'all' || Boolean(card.duplicate) === (duplicate === 'yes')) &&
+					(protection === 'all' || Boolean(card.userProtected) === (protection === 'yes')) &&
 					(!tagIds.length || tagIds.every((tagId) => cardTags.includes(tagId)))
 				);
 			})
-			.toSorted((left, right) => compareCardsByTextRelevance(left, right, query))
+			.toSorted((left, right) => {
+				if (sortBy === 'name') return left.title.localeCompare(right.title, 'fr');
+				if (sortBy === 'rarity') return left.rarity.localeCompare(right.rarity, 'fr');
+				return (right.acquiredAt ?? '').localeCompare(left.acquiredAt ?? '');
+			})
 	);
-
-	function toggle<T>(items: T[], item: T) {
-		return items.includes(item) ? items.filter((entry) => entry !== item) : [...items, item];
-	}
 
 	function choose(card: CardRecord) {
 		onSelect(card);
 		open = false;
 	}
+
+	$effect(() => {
+		if (!open || !onFiltersChange || filterKey === lastFilterKey) return;
+		window.clearTimeout(filterTimer);
+		filterTimer = window.setTimeout(() => {
+			lastFilterKey = filterKey;
+			onFiltersChange(filters);
+		}, 450);
+		return () => window.clearTimeout(filterTimer);
+	});
 </script>
 
 <Dialog.Root bind:open>
@@ -70,41 +101,40 @@
 			<Dialog.Title class="truncate text-lg leading-tight sm:text-xl">{title}</Dialog.Title>
 		</div>
 		<div class="min-h-0 overflow-y-auto p-4">
-			<CardSearchPanel class="mb-4">
-				<Input bind:value={query} placeholder={$_('collection.search')} class="mb-3" />
-				<CardVariantSelector bind:value={variant} class="mb-3" />
-				<div class="mb-3" aria-label={$_('collection.rarities')}>
-					<RaritySelector options={cardRarityOptions} bind:selected={rarities} />
-				</div>
-				<div class="flex flex-wrap gap-1.5" aria-label={$_('collection.tags')}>
-					{#each availableTags as tag (tag.id)}
-						<Button
-							variant={tagIds.includes(tag.id) ? 'default' : 'outline'}
-							size="xs"
-							style={tagIds.includes(tag.id)
-								? `background-color:${tag.color};border-color:${tag.color}`
-								: `color:${tag.color};border-color:${tag.color}`}
-							onclick={() => (tagIds = toggle(tagIds, tag.id))}>{tag.name}</Button
-						>
-					{/each}
-				</div>
-			</CardSearchPanel>
+			<div class="forge-panel-flat mb-4 p-4">
+				<FilterControls
+					bind:query
+					bind:sortBy
+					bind:selectedRarities={rarities}
+					bind:tagFilterIds={tagIds}
+					bind:duplicate
+					bind:protected={protection}
+					{tags}
+					canonical
+					allowTagCreation={false}
+					onOpenTagEditor={() => {}}
+					onClear={() => {
+						query = '';
+						rarities = [];
+						tagIds = [];
+						duplicate = 'all';
+						protection = 'all';
+						sortBy = 'acquiredDate';
+					}}
+				/>
+			</div>
 			<div class="wikiforge-card-grid">
 				{#each filteredCards as card (card.id)}
 					<div class="wikiforge-card-size relative">
-						<CardTile {card} showFriendOwners={false} />
-						<Button
-							aria-label={card.title}
-							class="absolute inset-0 z-20 h-full w-full border-0 bg-transparent text-transparent hover:bg-primary/20"
-							onclick={(event) => {
-								event.preventDefault();
-								event.stopPropagation();
-								choose(card);
-							}}
-						/>
+						<CardTile {card} showFriendOwners={false} onOpen={() => choose(card)} />
 					</div>
 				{/each}
 			</div>
+			{#if hasMore}<div class="mt-5 flex justify-center">
+					<Button variant="outline" disabled={loadingMore} onclick={onLoadMore}
+						>{loadingMore ? $_('common.loading') : $_('common.load_more')}</Button
+					>
+				</div>{/if}
 		</div>
 	</Dialog.Content>
 </Dialog.Root>

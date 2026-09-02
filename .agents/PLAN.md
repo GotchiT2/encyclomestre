@@ -334,3 +334,15 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Préserver le cadrage circulaire des avatars de conversation — `fix(messages): clip conversation avatars`
 - [x] Ouvrir le détail depuis toute la tuile d’échange — `fix(trades): make offer tiles fully actionable`
 - [x] Versionner les illustrations de templates pour invalider le cache CDN — `fix(cards): version card template assets`
+
+## 12. Profils et registres WikiForge enrichis (non commitée)
+
+- [x] Connecter les profils complets et réduits, leur visibilité et les collections d’amis autorisées.
+- [x] Remplacer la vitrine fictive par l’éditeur `/me/showcase` et l’achat d’emplacements.
+- [x] Ajouter les ventes fixes de profil, leur retrait et leur achat immédiat.
+- [x] Rendre la visibilité obligatoire dans les paramètres et l’édition des étiquettes.
+- [x] Ajouter les classements global, quotidien et hebdomadaire ainsi que le rang d’accueil.
+- [x] Étendre les mocks et les tests de contrats associés ; aucun commit ni push sans confirmation.
+- [x] Rétablir le cabinet de profil historique avec vitrines WikiForge et ventes fixes réelles.
+- [x] Exposer la dernière connexion dans les profils, les amis et la session avec une présence accessible.
+- [x] Finaliser les vitrines, ventes fixes, profils publics et présence de messagerie — `feat(profile): complete wikiforge profile workspace`

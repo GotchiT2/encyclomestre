@@ -1,4 +1,4 @@
-import type { User, UserRole } from '$lib/types';
+import type { LastConnection, ProfileVisibility, User, UserRole } from '$lib/types';
 import { wikiForgeUtcDate } from './wikiforge-contract';
 
 export interface OAuthCurrentUserResponse {
@@ -11,6 +11,9 @@ export interface OAuthCurrentUserResponse {
 	nsfw?: boolean;
 	safeWords?: string[];
 	money?: number;
+	visibility?: ProfileVisibility;
+	rank?: number;
+	lastConnection?: LastConnection;
 	createdAt: string;
 }
 
@@ -32,6 +35,9 @@ export function toCurrentUser(profile: OAuthCurrentUserResponse): User {
 		nsfwEnabled: Boolean(profile.nsfw),
 		safeWords: profile.safeWords ?? [],
 		...(typeof profile.money === 'number' ? { money: profile.money } : {}),
+		visibility: profile.visibility ?? 'FRIENDS',
+		...(typeof profile.rank === 'number' ? { rank: profile.rank } : {}),
+		lastConnection: profile.lastConnection,
 		role: toUserRole(profile.roles),
 		createdAt: wikiForgeUtcDate(profile.createdAt).toISOString(),
 		updatedAt: wikiForgeUtcDate(profile.createdAt).toISOString()

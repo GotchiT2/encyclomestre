@@ -25,7 +25,8 @@ const friendship: Friendship = {
 			marketingEmails: false
 		},
 		createdAt: '',
-		updatedAt: ''
+		updatedAt: '',
+		lastConnection: 'THIS_WEEK'
 	}
 };
 
@@ -42,6 +43,9 @@ describe('FriendContactCard', () => {
 		await expect.element(page.getByRole('button', { name: 'Échanger' })).toBeEnabled();
 		await expect.element(page.getByRole('button', { name: 'Écrire' })).toBeEnabled();
 		await expect.element(page.getByText('Ami')).toBeVisible();
+		await expect
+			.element(page.getByRole('img', { name: 'Dernière connexion cette semaine' }))
+			.toBeInTheDocument();
 		await expect.element(page.getByRole('button', { name: 'Bloquer' })).toBeEnabled();
 	});
 });

@@ -12,6 +12,9 @@
 
 	let { username, dashboard }: { username: string; dashboard: DashboardData | null } = $props();
 	const recentCards = $derived(dashboard?.recentAcquisitions ?? []);
+	const rank = $derived(
+		dashboard?.rank ? `${dashboard.rank}${dashboard.rank === 1 ? 'er' : 'e'}` : '—'
+	);
 </script>
 
 <section class="flex flex-col gap-7">
@@ -23,7 +26,7 @@
 			</h1>
 			<p class="mt-3 text-muted-foreground">{$_('dashboard.description')}</p>
 		</div>
-		<div class="grid grid-cols-3 gap-2">
+		<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
 			<HudStat
 				label={$_('dashboard.cards')}
 				value={String(dashboard?.collection.uniqueCards ?? 0)}
@@ -34,6 +37,7 @@
 				value={String(dashboard?.pendingTrades ?? 0).padStart(2, '0')}
 			/>
 			<HudStat label={$_('dashboard.money')} value={String(dashboard?.money ?? 0)} />
+			<HudStat label={$_('dashboard.rank')} value={rank} />
 		</div>
 	</header>
 

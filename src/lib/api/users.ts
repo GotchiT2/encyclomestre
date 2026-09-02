@@ -10,11 +10,13 @@ import type {
 	CardRecord,
 	CardSearchSort,
 	CardVariant,
+	LastConnection,
 	Friendship,
 	PaginatedResponse,
 	UpdateUserInput,
 	UpdateUserPreferencesInput,
 	User,
+	ProfileVisibility,
 	UserBlock
 } from '$lib/types';
 import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
@@ -194,13 +196,15 @@ export interface WikiForgeSimpleUserDto {
 	imagePageId?: number | null;
 	image?: string | null;
 	createdAt?: string;
+	lastConnection?: LastConnection;
 }
 
 export interface UpdateWikiForgeMeInput {
 	name: string;
-	imagePageId?: number;
+	imagePageId: number | null;
 	nsfw: boolean;
 	safeWords: string[];
+	visibility: ProfileVisibility;
 }
 
 export interface WikiForgeFriendListsDto {
@@ -227,7 +231,8 @@ export function toWikiForgeUser(user: WikiForgeSimpleUserDto): User {
 		avatarUrl: wikiForgeUserImage(user.image),
 		role: 'user',
 		createdAt: user.createdAt ? wikiForgeUtcDate(user.createdAt).toISOString() : '',
-		updatedAt: user.createdAt ? wikiForgeUtcDate(user.createdAt).toISOString() : ''
+		updatedAt: user.createdAt ? wikiForgeUtcDate(user.createdAt).toISOString() : '',
+		lastConnection: user.lastConnection
 	};
 }
 
@@ -328,6 +333,19 @@ export const updateWikiForgeMe = async (
 		})
 	);
 
+export const updateWikiForgeImage = async (
+	imagePageId: number | null,
+	options?: RequestOptions
+): Promise<User> =>
+	toCurrentUser(
+		await apiRequest<OAuthCurrentUserResponse>('/me/image', {
+			...options,
+			apiTarget: 'wikiforge',
+			method: 'PATCH',
+			body: { imagePageId }
+		})
+	);
+
 export const updateUser = (_id: string, input: UpdateUserInput, options?: RequestOptions) =>
 	apiRequest<User>('/api/users/me', { ...options, method: 'PATCH', body: input });
 
@@ -380,4 +398,5 @@ interface WikiForgeTagDto {
 	id: number;
 	name: string;
 	color: string;
+	visibility?: ProfileVisibility;
 }

@@ -18,9 +18,11 @@
 
 	let draftTagName = $state('');
 	let draftTagColor = $state('#C19A6B');
+	let draftTagVisibility = $state<import('$lib/types').ProfileVisibility>('FRIENDS');
 	let editingTagId = $state<string | null>(null);
 	let editingTagName = $state('');
 	let editingTagColor = $state('#C19A6B');
+	let editingTagVisibility = $state<import('$lib/types').ProfileVisibility>('FRIENDS');
 
 	async function createTag() {
 		const name = draftTagName.trim();
@@ -29,7 +31,11 @@
 			tags.some((tag) => tag.name.localeCompare(name, 'fr', { sensitivity: 'accent' }) === 0)
 		)
 			return;
-		const created = await createWikiForgeTag({ name, color: draftTagColor });
+		const created = await createWikiForgeTag({
+			name,
+			color: draftTagColor,
+			visibility: draftTagVisibility
+		});
 		tags = [...tags, created];
 		draftTagName = '';
 		draftTagColor = '#C19A6B';
@@ -38,7 +44,11 @@
 	async function saveTag() {
 		const name = editingTagName.trim();
 		if (!editingTagId || !name) return;
-		const updated = await updateWikiForgeTag(editingTagId, { name, color: editingTagColor });
+		const updated = await updateWikiForgeTag(editingTagId, {
+			name,
+			color: editingTagColor,
+			visibility: editingTagVisibility
+		});
 		tags = tags.map((tag) => (tag.id === editingTagId ? updated : tag));
 		editingTagId = null;
 	}
@@ -67,7 +77,7 @@
 			></Dialog.Header
 		>
 		<div class="flex min-h-0 flex-col gap-4 overflow-y-auto px-5 py-4">
-			<div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_4rem_auto]">
+			<div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_4rem_9rem_auto]">
 				<Input
 					bind:value={draftTagName}
 					placeholder={$_('collection.tagName')}
@@ -78,7 +88,11 @@
 					type="color"
 					aria-label={$_('collection.tagColor')}
 					class="h-11 w-full border border-primary/35 bg-background/70 p-1"
-				/><Button onclick={createTag}>{$_('collection.createTag')}</Button>
+				/><select bind:value={draftTagVisibility} aria-label={$_('collection.tagVisibility')}>
+					<option value="PRIVATE">{$_('collection.visibilityPrivate')}</option>
+					<option value="FRIENDS">{$_('collection.visibilityFriends')}</option>
+					<option value="PUBLIC">{$_('collection.visibilityPublic')}</option>
+				</select><Button onclick={createTag}>{$_('collection.createTag')}</Button>
 			</div>
 			{#if tags.length}<ul
 					class="flex max-h-[48dvh] flex-col gap-2 overflow-y-auto pr-1 lg:max-h-[52dvh]"
@@ -87,7 +101,7 @@
 							class="flex flex-wrap items-center gap-2 border-t border-dashed border-primary/20 pt-2"
 						>
 							{#if editingTagId === tag.id}<div
-									class="grid w-full gap-2 sm:grid-cols-[minmax(0,1fr)_4rem_auto_auto]"
+									class="grid w-full gap-2 sm:grid-cols-[minmax(0,1fr)_4rem_9rem_auto_auto]"
 								>
 									<Input bind:value={editingTagName} aria-label={$_('collection.tagName')} />
 									<input
@@ -95,7 +109,14 @@
 										type="color"
 										aria-label={$_('collection.tagColor')}
 										class="h-11 w-full border border-primary/35 bg-background/70 p-1"
-									/>
+									/><select
+										bind:value={editingTagVisibility}
+										aria-label={$_('collection.tagVisibility')}
+									>
+										<option value="PRIVATE">{$_('collection.visibilityPrivate')}</option>
+										<option value="FRIENDS">{$_('collection.visibilityFriends')}</option>
+										<option value="PUBLIC">{$_('collection.visibilityPublic')}</option>
+									</select>
 									<Button size="sm" onclick={saveTag}>{$_('common.save')}</Button>
 									<Button size="sm" variant="ghost" onclick={() => (editingTagId = null)}
 										>{$_('common.cancel')}</Button
@@ -114,6 +135,7 @@
 										editingTagId = tag.id;
 										editingTagName = tag.name;
 										editingTagColor = tag.color;
+										editingTagVisibility = tag.visibility ?? 'FRIENDS';
 									}}>{$_('collection.renameTag')}</Button
 								><Button size="sm" variant="ghost" onclick={() => deleteTag(tag.id)}
 									>{$_('collection.deleteTag')}</Button

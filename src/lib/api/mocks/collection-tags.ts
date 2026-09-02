@@ -2,9 +2,9 @@ import type { CollectionTag, CollectionTagAssignments } from '$lib/types';
 import { mockCards } from './cards';
 
 export const mockCollectionTags: CollectionTag[] = [
-	{ id: 'tag-favori', name: 'Favori', color: '#feb823' },
-	{ id: 'tag-echange', name: 'Échange', color: '#1dcf47' },
-	{ id: 'tag-recherche', name: 'Recherche', color: '#b41dcf' }
+	{ id: 'tag-favori', name: 'Favori', color: '#feb823', visibility: 'PRIVATE' },
+	{ id: 'tag-echange', name: 'Échange', color: '#1dcf47', visibility: 'FRIENDS' },
+	{ id: 'tag-recherche', name: 'Recherche', color: '#b41dcf', visibility: 'PUBLIC' }
 ];
 
 export const mockCollectionTagAssignments: CollectionTagAssignments = Object.fromEntries(

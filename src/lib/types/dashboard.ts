@@ -8,7 +8,7 @@ export interface DashboardData {
 	};
 	pendingTrades: number;
 	activeMarketListings?: number;
-	rank?: string;
+	rank?: number;
 	money: number;
 	boosterStatus: {
 		availableBoosters: number;

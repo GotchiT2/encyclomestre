@@ -4,28 +4,15 @@
 	import { _ } from '$lib/i18n';
 	import type { PageData } from './$types';
 	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
-
 	let { data }: { data: PageData } = $props();
 </script>
 
-{#await Promise.all( [data.user, data.collection, data.catalogue, data.settings, data.summary, data.sales] )}
-	<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-		{$_('friends.loading')}
-	</p>
-{:then [user, collection, catalogue, settings, summary, sales]}
-	<PublicProfileView
-		{user}
-		{collection}
-		catalogue={catalogue.items}
-		{settings}
-		{summary}
-		{sales}
-		tags={summary.publicTags}
-		assignments={{}}
-	/>
+{#await Promise.all([data.profile, data.sales])}
+	<p class="forge-label text-primary">{$_('friends.loading')}</p>
+{:then [profile, sales]}
+	<PublicProfileView {profile} initialSales={sales} />
 {:catch}
-	<Alert.Root variant="destructive">
-		<CircleAlertIcon />
-		<Alert.Title>{$_('friends.error')}</Alert.Title>
-	</Alert.Root>
+	<Alert.Root variant="destructive"
+		><CircleAlertIcon /><Alert.Title>{$_('friends.error')}</Alert.Title></Alert.Root
+	>
 {/await}

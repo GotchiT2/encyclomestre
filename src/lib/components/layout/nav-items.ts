@@ -7,6 +7,7 @@ import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
 import ShieldIcon from '@lucide/svelte/icons/shield';
 import StoreIcon from '@lucide/svelte/icons/store';
 import UsersIcon from '@lucide/svelte/icons/users';
+import TrophyIcon from '@lucide/svelte/icons/trophy';
 
 export type NavHref =
 	| '/'
@@ -18,7 +19,8 @@ export type NavHref =
 	| '/guild'
 	| '/friends'
 	| '/messages'
-	| '/boosters';
+	| '/boosters'
+	| '/leaderboard';
 
 export type NavItem = {
 	href: NavHref;
@@ -40,7 +42,8 @@ export const communityNavigation: NavItem[] = [
 	{ href: '/wishlists', label: 'navigation.wishlist', icon: HeartIcon },
 	{ href: '/guild', label: 'navigation.guild', icon: ShieldIcon },
 	{ href: '/friends', label: 'navigation.friends', icon: UsersIcon },
-	{ href: '/messages', label: 'navigation.messages', icon: MessageCircleIcon }
+	{ href: '/messages', label: 'navigation.messages', icon: MessageCircleIcon },
+	{ href: '/leaderboard', label: 'navigation.leaderboard', icon: TrophyIcon }
 ];
 
 /**

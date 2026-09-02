@@ -10,7 +10,8 @@
 		getWikiForgeCollectionPage,
 		logout,
 		logoutAll,
-		updateWikiForgeMe
+		updateWikiForgeMe,
+		updateWikiForgeImage
 	} from '$lib/api';
 	import { setNsfwFilterSettings } from '$lib/content/nsfw-filter';
 	import SettingsPreferences from '$lib/components/settings/settings-preferences.svelte';
@@ -40,7 +41,8 @@
 			showcases: [],
 			wantedCardIds: [],
 			nsfwEnabled: Boolean(user.nsfwEnabled),
-			censoredKeywords: user.safeWords ?? []
+			censoredKeywords: user.safeWords ?? [],
+			visibility: user.visibility ?? 'FRIENDS'
 		};
 		avatarImageUrl = user.avatarUrl ?? null;
 		setNsfwFilterSettings({ enabled: profile.nsfwEnabled, keywords: profile.censoredKeywords });
@@ -50,9 +52,10 @@
 		if (!profile) return;
 		const user = await updateWikiForgeMe({
 			name: profile.username.trim(),
-			...(profile.avatarCardId ? { imagePageId: Number(profile.avatarCardId) } : {}),
+			imagePageId: profile.avatarCardId ? Number(profile.avatarCardId) : null,
 			nsfw: profile.nsfwEnabled,
-			safeWords: profile.censoredKeywords
+			safeWords: profile.censoredKeywords,
+			visibility: profile.visibility
 		});
 		setNsfwFilterSettings({ enabled: user.nsfwEnabled, keywords: user.safeWords });
 		const session = $currentSession;
@@ -85,11 +88,22 @@
 		};
 	}
 
-	function selectAvatar(card: CardRecord) {
+	async function selectAvatar(card: CardRecord) {
 		if (!profile) return;
-		profile.avatarCardId = String(card.baseCardId ?? card.id);
-		avatarImageUrl = card.imageUrl;
-		avatarPickerOpen = false;
+		const imagePageId = Number(card.baseCardId ?? card.catalogueId);
+		const user = await updateWikiForgeImage(imagePageId);
+		profile.avatarCardId = imagePageId.toString();
+		avatarImageUrl = user.avatarUrl ?? card.imageUrl;
+		const session = $currentSession;
+		if (session) persistSession(localStorage, { ...session, user });
+	}
+	async function removeAvatar() {
+		if (!profile) return;
+		const user = await updateWikiForgeImage(null);
+		profile.avatarCardId = null;
+		avatarImageUrl = null;
+		const session = $currentSession;
+		if (session) persistSession(localStorage, { ...session, user });
 	}
 	async function logoutFromSettings() {
 		try {
@@ -127,10 +141,12 @@
 			{$_('settings.loading')}
 		</p>{:else if profile}<SettingsPreferences
 			bind:nsfwEnabled={profile.nsfwEnabled}
+			bind:visibility={profile.visibility}
 		/><CensoredKeywords bind:keywords={profile.censoredKeywords} /><SettingsAccount
 			bind:username={profile.username}
 			avatarUrl={avatarImageUrl}
 			onChooseAvatar={() => (avatarPickerOpen = true)}
+			onRemoveAvatar={removeAvatar}
 			onLogout={logoutFromSettings}
 			onLogoutAll={logoutFromAllDevices}
 			onDelete={deleteAccount}
