@@ -6,6 +6,10 @@ import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
 	server: {
+		// Le poste de développement associe dev.wikiforge.fr à 127.0.0.1 :
+		// écouter sur toutes les interfaces évite de tenter de binder son DNS public.
+		host: true,
+		allowedHosts: ['dev.wikiforge.fr'],
 		proxy: {
 			'/api': {
 				target: 'http://localhost:8080',

@@ -31,4 +31,12 @@
 			<option value="PUBLIC">{$_('settings.visibility_public')}</option>
 		</select>
 	</section>
+	<section class="forge-panel-flat p-4">
+		<p class="forge-label">{$_('settings.push_title')}</p>
+		<p class="mt-1 text-sm text-muted-foreground">{$_('settings.push_pending')}</p>
+		<div class="mt-3 grid gap-2 sm:grid-cols-2">
+			<button class="h-10 border border-primary/25 text-sm text-muted-foreground" disabled>{$_('settings.push_browser')}</button>
+			<button class="h-10 border border-primary/25 text-sm text-muted-foreground" disabled>{$_('settings.discord_relay')}</button>
+		</div>
+	</section>
 </div>

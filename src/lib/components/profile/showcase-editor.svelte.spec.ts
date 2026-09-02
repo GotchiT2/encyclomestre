@@ -59,4 +59,23 @@ describe('ShowcaseEditor', () => {
 			.element(page.getByRole('button', { name: 'Acheter un emplacement · 100 ◈' }))
 			.toBeDisabled();
 	});
+
+	it('enables saving as soon as a named collection contains a card', async () => {
+		render(ShowcaseEditor, {
+			showcase: {
+				slots: 3,
+				maxSlots: 4,
+				usedSlots: 1,
+				slotPrice: 100,
+				lines: [{ title: '', cards: [card] }]
+			},
+			collection: [card],
+			money: 500,
+			onSave: vi.fn(),
+			onBuySlot: vi.fn()
+		});
+		await expect.element(page.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
+		await page.getByRole('textbox', { name: 'Nom de la vitrine' }).fill('Collection été');
+		await expect.element(page.getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
+	});
 });

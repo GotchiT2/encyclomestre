@@ -12,6 +12,7 @@
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import UserPlusIcon from '@lucide/svelte/icons/user-plus';
 	import UserRoundIcon from '@lucide/svelte/icons/user-round';
+	import NotificationBell from '$lib/components/notifications/notification-bell.svelte';
 
 	const sidebar = Sidebar.useSidebar();
 
@@ -109,6 +110,7 @@
 			</Sidebar.MenuItem>
 
 			{#if $currentSession}
+				<Sidebar.MenuItem><NotificationBell /></Sidebar.MenuItem>
 				<Sidebar.MenuItem>
 					<Sidebar.MenuButton tooltipContent={$_('navigation.profile')}>
 						{#snippet child({ props })}

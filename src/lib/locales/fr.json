@@ -366,7 +366,41 @@
 		"visibility_hint": "Choisissez qui peut consulter votre vitrine, vos étiquettes et le détail de votre collection.",
 		"visibility_private": "Moi uniquement",
 		"visibility_friends": "Mes amis",
-		"visibility_public": "Tout le monde"
+		"visibility_public": "Tout le monde",
+		"push_title": "Notifications navigateur et Discord",
+		"push_pending": "Ces relais seront disponibles quand le backend sécurisé prendra en charge les abonnements push.",
+		"push_browser": "Notifications navigateur — bientôt",
+		"discord_relay": "Relais Discord — bientôt"
+	},
+	"notifications": {
+		"eyebrow": "Flux personnel",
+		"title": "Notifications",
+		"description": "Suivez les événements importants de votre collection et de vos échanges.",
+		"open": "Ouvrir les notifications ({count} non lue(s))",
+		"unread_only": "Non lues uniquement",
+		"tabs": "Types de notifications",
+		"tab_all": "Toutes",
+		"tab_trades": "Échanges",
+		"tab_sales": "Ventes",
+		"tab_friends": "Amis",
+		"mark_all": "Tout marquer comme lu",
+		"loading": "Chargement des notifications…",
+		"error": "Les notifications n’ont pas pu être chargées.",
+		"empty": "Aucune notification à afficher.",
+		"empty_tab": "Aucune notification dans cette catégorie.",
+		"system": "WikiForge",
+		"type_unknown": "Nouvelle activité",
+		"type": {
+			"TRADE_RECEIVED": "Nouvelle proposition d’échange",
+			"TRADE_COUNTERED": "Contre-proposition reçue",
+			"TRADE_ACCEPTED": "Échange accepté",
+			"TRADE_DECLINED": "Échange refusé",
+			"TRADE_CANCELLED": "Échange annulé",
+			"TRADE_EXPIRED": "Échange expiré",
+			"SALE_SOLD": "Carte vendue",
+			"FRIEND_REQUEST": "Demande d’ami reçue",
+			"FRIEND_ACCEPTED": "Demande d’ami acceptée"
+		}
 	},
 	"leaderboard": {
 		"eyebrow": "Registre des collectionneurs",

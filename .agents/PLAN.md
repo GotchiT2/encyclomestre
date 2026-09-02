@@ -346,3 +346,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Rétablir le cabinet de profil historique avec vitrines WikiForge et ventes fixes réelles.
 - [x] Exposer la dernière connexion dans les profils, les amis et la session avec une présence accessible.
 - [x] Finaliser les vitrines, ventes fixes, profils publics et présence de messagerie — `feat(profile): complete wikiforge profile workspace`
+
+## 13. Notifications WikiForge
+
+- [x] Ajouter le centre de notifications, la synchronisation SSE, les préférences en attente du backend et les modales d’amis enrichies — `feat(notifications): add realtime notification center`

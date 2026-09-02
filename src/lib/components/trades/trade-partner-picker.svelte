@@ -3,6 +3,7 @@
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import UserAvatar from '$lib/components/users/user-avatar.svelte';
 	import type { User } from '$lib/types';
 
 	let {
@@ -63,9 +64,7 @@
 								onSelect(partner);
 								open = false;
 							}}
-							><span class="text-base font-black">@{partner.username}</span><span
-								class="font-mono text-[9px] text-primary">{partner.displayName}</span
-							></Button
+							><UserAvatar image={partner.avatarUrl} name={partner.username} lastConnection={partner.lastConnection} /><span class="min-w-0 flex-1 truncate text-base font-black">@{partner.username}</span></Button
 						>{/each}
 				</div>
 			</div></Dialog.Content

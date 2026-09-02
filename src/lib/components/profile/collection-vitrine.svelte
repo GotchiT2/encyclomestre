@@ -187,8 +187,9 @@
 					<input
 						class="vitrine__plaque vitrine__plaque--editable"
 						value={title}
+						maxlength="64"
 						aria-label={$_('profile.showcase_line_name')}
-						onchange={(event) => onRename?.(event.currentTarget.value)}
+						oninput={(event) => onRename?.(event.currentTarget.value)}
 					/>
 				{:else}
 					<span class="vitrine__plaque">{title}</span>

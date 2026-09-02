@@ -26,7 +26,7 @@ export class ApiError extends Error {
 	}
 }
 
-function apiUrl(path: string, apiTarget: ApiTarget = 'legacy'): string {
+export function apiUrl(path: string, apiTarget: ApiTarget = 'legacy'): string {
 	const baseUrl = (
 		apiTarget === 'wikiforge'
 			? (env.PUBLIC_WIKIFORGE_API_BASE_URL ?? env.PUBLIC_CARDS_API_BASE_URL)

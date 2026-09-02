@@ -5,6 +5,7 @@ export * from './common';
 export * from './dashboard';
 export * from './friend';
 export * from './message';
+export * from './notification';
 export * from './profile';
 export * from './sales';
 export * from './tag';
