@@ -351,3 +351,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 
 - [x] Ajouter le centre de notifications, la synchronisation SSE, les préférences en attente du backend et les modales d’amis enrichies — `feat(notifications): add realtime notification center`
 - [x] Attendre la session validée, synchroniser les domaines concernés et partager l’agrégat d’accueil — `fix(realtime): target session refreshes`
+
+## 14. Performance de navigation
+
+- [x] Réutiliser la session validée du profil et paralléliser ses lectures indépendantes — `perf(profile): parallelize profile loading`

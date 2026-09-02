@@ -1,19 +1,21 @@
+import { browser } from '$app/environment';
 import {
-	getCurrentUser,
 	getMyShowcase,
 	getUserInstantSales,
 	getWikiForgeCollectionPage,
 	getWikiForgeTags
 } from '$lib/api';
+import { restoreSession } from '$lib/auth/session';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = ({ fetch }) => {
-	const user = getCurrentUser({ fetch });
+	// `/me` est déjà relu et validé par le layout de session. Réutiliser son id
+	// évite une seconde requête bloquante et permet de lancer les quatre lectures ensemble.
+	const userId = browser ? restoreSession(localStorage)?.user.id : undefined;
 	return {
-		user,
 		showcase: getMyShowcase({ fetch }),
 		collection: getWikiForgeCollectionPage({}, { fetch }),
 		tags: getWikiForgeTags({ fetch }).catch(() => []),
-		sales: user.then((current) => getUserInstantSales(current.id, { fetch }))
+		sales: userId ? getUserInstantSales(userId, { fetch }) : Promise.resolve({ instantSales: [] })
 	};
 };
