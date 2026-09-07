@@ -446,28 +446,12 @@
 	<CardDetailModal
 		card={selectedCard}
 		owned
-		loadVariantCopies={false}
 		{wishlists}
 		bind:tags
 		bind:assignments
 		onToggleWishlist={(wishlistId, selected) =>
 			void toggleWishlist(wishlistId, selectedCard!, selected)}
 		onToggleProtection={() => void toggleProtection(selectedCard!)}
-		onSaleCreated={(sale, userCardId) => {
-			const summary: ActiveSaleSummary = {
-				id: sale.id,
-				type: sale.type,
-				status: sale.status ?? 'active',
-				price: sale.price,
-				currentPrice: sale.currentPrice ?? sale.price,
-				minimumBid: sale.minimumBid ?? Math.ceil(sale.price * 1.1),
-				endsAt: sale.endsAt ?? null
-			};
-			cards = cards.map((card) =>
-				card.id === userCardId ? { ...card, activeSale: summary } : card
-			);
-			if (selectedCard?.id === userCardId) selectedCard = { ...selectedCard, activeSale: summary };
-		}}
 		onClose={() => (selectedCard = null)}
 	/>
 {/if}

@@ -363,3 +363,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 - [x] Ajouter les opérations groupées de collection et wishlist, les wishlists partagées et le filtre de rareté du classement.
 - [x] Afficher les amis détenteurs dans les recherches de cartes et préparer un échange par rareté sans quitter le détail.
 - [x] Ajouter la sélection groupée du catalogue vers une wishlist et fiabiliser le rendu des résultats publics — `feat(cards): add bulk wishlist and social ownership flows`
+
+## 16. API WikiForge unique
+
+- [x] Aligner les paramètres sur le corps complet de `/me` et retirer les appels de l’API historique sans équivalent WikiForge — `refactor(api): remove legacy API workflows`

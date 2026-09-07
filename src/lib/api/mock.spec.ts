@@ -31,31 +31,6 @@ describe('createMockApiResponse', () => {
 		);
 	});
 
-	it('reads social-state card ids from a POST body', async () => {
-		const response = createMockApiResponse({
-			path: '/api/cards/social-states',
-			method: 'POST',
-			body: { cardIds: ['girls-generation-1'] }
-		});
-
-		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual([
-			expect.objectContaining({ cardId: 'girls-generation-1' })
-		]);
-	});
-
-	it('retourne une réponse HTTP 200 avec le contrat de la carte', async () => {
-		const response = createMockApiResponse({ path: '/cards/girls-generation-1' });
-
-		expect(response.status).toBe(200);
-		expect(await response.json()).toMatchObject({
-			id: 'girls-generation-1',
-			wikipediaTitle: "Girls' Generation",
-			rarity: 'L',
-			variant: 'NORMAL'
-		});
-	});
-
 	it('retourne un 404 JSON pour une route non gérée', async () => {
 		const response = createMockApiResponse({ path: '/not-a-route', method: 'GET' });
 
@@ -102,16 +77,6 @@ describe('createMockApiResponse', () => {
 						})
 					])
 				})
-			])
-		);
-		const initiatorCollection = createMockApiResponse({
-			path: '/api/users/friend-0/collection?page=0&size=100'
-		});
-		expect(
-			((await initiatorCollection.json()) as { results: { userCardId: string }[] }).results
-		).toEqual(
-			expect.arrayContaining([
-				expect.objectContaining({ userCardId: 'owned-friend-0-girls-generation-1' })
 			])
 		);
 		expect(payload.sent.length).toBeGreaterThan(0);
@@ -161,25 +126,6 @@ describe('createMockApiResponse', () => {
 		);
 	});
 
-	it('retourne la même conversation directe lors de deux appels identiques', async () => {
-		const first = createMockApiResponse({
-			path: '/api/conversations/direct',
-			method: 'POST',
-			body: { participantId: 'friend-2' }
-		});
-		const second = createMockApiResponse({
-			path: '/api/conversations/direct',
-			method: 'POST',
-			body: { participantId: 'friend-2' }
-		});
-
-		expect(first.status).toBe(200);
-		expect(second.status).toBe(200);
-		const firstConversation = (await first.json()) as { id: string };
-		const secondConversation = (await second.json()) as { id: string };
-		expect(firstConversation.id).toBe(secondConversation.id);
-	});
-
 	it('gère les wishlists WikiForge, leurs pages et leurs invitations', async () => {
 		const created = createMockApiResponse({
 			path: '/wishlists',
@@ -215,51 +161,6 @@ describe('createMockApiResponse', () => {
 		expect(await followers.json()).toEqual([expect.objectContaining({ id: 17, accepted: false })]);
 	});
 
-	it('filtre les ventes actives pour une carte', async () => {
-		const response = createMockApiResponse({ path: '/sales?cardId=red-velvet-1' });
-		expect(response.status).toBe(200);
-		expect(((await response.json()) as { results: unknown[] }).results).toEqual([
-			expect.objectContaining({ cardId: 'red-velvet-1', type: 'auction' })
-		]);
-	});
-
-	it('creates a sale for an exact copy and exposes it through collection filters', async () => {
-		const created = createMockApiResponse({
-			path: '/api/sales',
-			method: 'POST',
-			body: {
-				userCardId: 'owned-2ne1-1-2',
-				type: 'auction',
-				price: 10,
-				durationMinutes: 10
-			}
-		});
-		expect(created.status).toBe(201);
-		expect(await created.json()).toMatchObject({
-			userCardId: 'owned-2ne1-1-2',
-			minimumBid: 11,
-			status: 'active'
-		});
-
-		const copies = createMockApiResponse({
-			path: '/api/collection/variants/2ne1-1/copies'
-		});
-		expect(await copies.json()).toEqual(
-			expect.arrayContaining([
-				expect.objectContaining({
-					userCardId: 'owned-2ne1-1-2',
-					activeSale: expect.objectContaining({ id: expect.any(String) })
-				})
-			])
-		);
-	});
-
-	it('resolves punctuation-normalized card ids', async () => {
-		const response = createMockApiResponse({ path: '/cards/g-i-dle-2' });
-		expect(response.status).toBe(200);
-		expect(await response.json()).toMatchObject({ id: 'g-i-dle-2' });
-	});
-
 	it('persists user blocks in the WikiForge social registry', async () => {
 		const blocked = createMockApiResponse({
 			path: '/blocks/2',
@@ -271,12 +172,6 @@ describe('createMockApiResponse', () => {
 		expect(await blocks.json()).toEqual([expect.objectContaining({ id: 2, name: 'SoneS9' })]);
 		const friends = createMockApiResponse({ path: '/friends' });
 		expect(await friends.json()).toMatchObject({ friends: [expect.objectContaining({ id: 2 })] });
-		const messages = createMockApiResponse({ path: '/api/messages?userId=demo-user' });
-		expect(await messages.json()).not.toEqual(
-			expect.arrayContaining([
-				expect.objectContaining({ participantIds: expect.arrayContaining(['friend-0']) })
-			])
-		);
 
 		const unblocked = createMockApiResponse({
 			path: '/blocks/2',

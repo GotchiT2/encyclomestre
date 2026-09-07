@@ -2,7 +2,6 @@ import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/raritie
 import type { CardRecord, CollectionBooleanFilter, CollectionSort } from '$lib/types';
 import { apiRequest, type RequestOptions } from './client';
 import { wikiForgeImageUrl } from './pages';
-import { getWikiForgeVariantCopies, toCollectionCardRecord } from './wikiforge';
 import { wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
 
 export interface WikiForgeCollectionCardDto {
@@ -165,9 +164,6 @@ export async function getWikiForgeCollectionPage(
 }
 
 export const getCollection = (options?: RequestOptions) => getWikiForgeCollectionPage({}, options);
-
-export const getVariantCopies = async (variantId: string, options?: RequestOptions) =>
-	(await getWikiForgeVariantCopies(variantId, options)).map(toCollectionCardRecord);
 
 export const protectWikiForgeCard = (cardId: string, options?: RequestOptions) =>
 	apiRequest<void>(`/collection/${wikiForgeNumericId(cardId, 'carte')}/protect`, {

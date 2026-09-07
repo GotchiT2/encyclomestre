@@ -173,7 +173,6 @@
 		{wishlists}
 		bind:tags
 		bind:assignments
-		loadVariantCopies={false}
 		onToggleWishlist={(wishlistId, selected) =>
 			void toggleWishlist(wishlistId, selectedCard!, selected)}
 		onClose={() => (selectedCard = null)}

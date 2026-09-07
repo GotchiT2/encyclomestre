@@ -3,9 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('$env/dynamic/public', () => ({
 	env: {
 		PUBLIC_API_MOCK_ENABLED: 'false',
-		PUBLIC_API_BASE_URL: 'https://wikiforge-api.roselaqueen.fr',
-		PUBLIC_WIKIFORGE_API_BASE_URL: 'https://api.wikiforge.fr',
-		PUBLIC_CARDS_API_BASE_URL: 'https://api.wikiforge.fr'
+		PUBLIC_WIKIFORGE_API_BASE_URL: 'https://api.wikiforge.fr'
 	}
 }));
 
@@ -170,17 +168,21 @@ describe('apiRequest authentication recovery', () => {
 		expect(restoreSession(storage)).toBeNull();
 	});
 
-	it('conserve la session lorsqu’une route legacy rejette le jeton OAuth WikiForge', async () => {
+	it('renouvelle la session lorsqu’une ressource WikiForge rejette le jeton', async () => {
 		const fetcher = vi
 			.fn()
-			.mockResolvedValue(Response.json({ message: 'Non autorisé' }, { status: 401 }));
+			.mockImplementation((input: string | URL | Request) =>
+				String(input).endsWith('/oauth2/token')
+					? Response.json({ error: 'invalid_grant' }, { status: 400 })
+					: Response.json({ message: 'Non autorisé' }, { status: 401 })
+			);
 
 		await expect(
-			apiRequest('/api/dashboard', { fetch: fetcher as typeof fetch })
+			apiRequest('/collection', { fetch: fetcher as typeof fetch })
 		).rejects.toBeInstanceOf(ApiError);
 
-		expect(fetcher).toHaveBeenCalledOnce();
-		expect(restoreSession(storage)?.accessToken).toBe('expired');
+		expect(fetcher).toHaveBeenCalledTimes(2);
+		expect(restoreSession(storage)).toBeNull();
 	});
 
 	it('ne réécrit pas la session lorsqu’un refresh se termine après logout-all', async () => {

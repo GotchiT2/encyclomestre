@@ -12,8 +12,7 @@ services:
       WIKIFORGE_FRONTEND_GIT_TOKEN: ${WIKIFORGE_FRONTEND_GIT_TOKEN:-}
       GIT_TERMINAL_PROMPT: '0'
       ORIGIN: ${ORIGIN:-https://www.wikiforge.fr}
-      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-https://wikiforge-api.roselaqueen.fr}
-      PUBLIC_CARDS_API_BASE_URL: ${PUBLIC_CARDS_API_BASE_URL:-https://api.wikiforge.fr}
+      PUBLIC_WIKIFORGE_API_BASE_URL: ${PUBLIC_WIKIFORGE_API_BASE_URL:-https://api.wikiforge.fr}
       PUBLIC_API_MOCK_ENABLED: 'false'
       HOST: 0.0.0.0
       PORT: 3000

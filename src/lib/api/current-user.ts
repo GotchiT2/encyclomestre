@@ -1,4 +1,10 @@
-import type { LastConnection, ProfileVisibility, User, UserRole } from '$lib/types';
+import type {
+	LastConnection,
+	MutedNotificationCategory,
+	ProfileVisibility,
+	User,
+	UserRole
+} from '$lib/types';
 import { wikiForgeUtcDate } from './wikiforge-contract';
 
 export interface OAuthCurrentUserResponse {
@@ -10,6 +16,7 @@ export interface OAuthCurrentUserResponse {
 	image?: string | null;
 	nsfw?: boolean;
 	safeWords?: string[];
+	mutedNotifications?: MutedNotificationCategory[];
 	money?: number;
 	visibility?: ProfileVisibility;
 	rank?: number;
@@ -34,6 +41,7 @@ export function toCurrentUser(profile: OAuthCurrentUserResponse): User {
 		imagePageId: profile.imagePageId ?? null,
 		nsfwEnabled: Boolean(profile.nsfw),
 		safeWords: profile.safeWords ?? [],
+		mutedNotifications: profile.mutedNotifications ?? [],
 		...(typeof profile.money === 'number' ? { money: profile.money } : {}),
 		visibility: profile.visibility ?? 'FRIENDS',
 		...(typeof profile.rank === 'number' ? { rank: profile.rank } : {}),

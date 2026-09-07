@@ -81,7 +81,6 @@ describe('CardDetailModal', () => {
 	it('does not load local collection copies for a public catalogue card', async () => {
 		render(CardDetailModal, {
 			card,
-			loadVariantCopies: false,
 			onToggleWishlist: vi.fn(),
 			onClose: vi.fn()
 		});
@@ -195,7 +194,6 @@ describe('CardDetailModal', () => {
 		render(CardDetailModal, {
 			card: { ...card, userProtected: true },
 			owned: true,
-			loadVariantCopies: false,
 			onToggleWishlist: vi.fn(),
 			onToggleProtection,
 			onClose: vi.fn()

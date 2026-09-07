@@ -23,6 +23,7 @@ export interface ProfileSettings {
 	nsfwEnabled: boolean;
 	censoredKeywords: string[];
 	visibility: import('./user').ProfileVisibility;
+	mutedNotifications: import('./user').MutedNotificationCategory[];
 }
 
 export interface ShowcaseLine {

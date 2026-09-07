@@ -208,7 +208,6 @@
 {#if selectedCard}
 	<CardDetailModal
 		card={selectedCard}
-		loadVariantCopies={false}
 		{wishlists}
 		onToggleWishlist={(wishlistId, selected) =>
 			void toggleWishlist(wishlistId, selectedCard!.id, selected)}

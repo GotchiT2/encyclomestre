@@ -533,7 +533,6 @@
 	<CardDetailModal
 		card={selectedCard}
 		wishlists={groups.owned}
-		loadVariantCopies={false}
 		onToggleWishlist={addCardFromDetail}
 		onClose={() => (selectedCard = null)}
 	/>

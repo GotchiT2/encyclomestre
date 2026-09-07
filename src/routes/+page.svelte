@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { currentSession } from '$lib/auth/session';
-	import { getCards } from '$lib/api';
+	import { getWikiForgePublicPages, toPublicPage } from '$lib/api';
 	import GuestLanding from '$lib/components/landing/guest-landing.svelte';
 	import PlayerDashboard from '$lib/components/landing/player-dashboard.svelte';
 	import { _ } from '$lib/i18n';
@@ -13,8 +13,8 @@
 	$effect(() => {
 		if ($currentSession || hasLoadedShowcase) return;
 		hasLoadedShowcase = true;
-		void getCards({ page: 1, pageSize: 1 }).then(
-			(result) => (showcaseCard = result.items[0] ?? null)
+		void getWikiForgePublicPages({ page: 0 }).then((result) =>
+			(showcaseCard = toPublicPage(result).items[0] ?? null)
 		);
 	});
 </script>

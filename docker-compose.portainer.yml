@@ -9,10 +9,8 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 3000
-      # Legacy public API hostname used by existing platform requests.
-      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-https://wikiforge-api.roselaqueen.fr}
-      # OAuth2 and current-user API hostname.
-      PUBLIC_CARDS_API_BASE_URL: ${PUBLIC_CARDS_API_BASE_URL:-https://api.wikiforge.fr}
+      # Canonical public API hostname.
+      PUBLIC_WIKIFORGE_API_BASE_URL: ${PUBLIC_WIKIFORGE_API_BASE_URL:-https://api.wikiforge.fr}
       PUBLIC_API_MOCK_ENABLED: 'false'
       ORIGIN: ${ORIGIN}
     ports:

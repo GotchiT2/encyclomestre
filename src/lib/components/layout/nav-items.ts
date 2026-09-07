@@ -5,7 +5,6 @@ import HeartIcon from '@lucide/svelte/icons/heart';
 import LibraryBigIcon from '@lucide/svelte/icons/library-big';
 import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
 import ShieldIcon from '@lucide/svelte/icons/shield';
-import StoreIcon from '@lucide/svelte/icons/store';
 import UsersIcon from '@lucide/svelte/icons/users';
 import TrophyIcon from '@lucide/svelte/icons/trophy';
 
@@ -13,7 +12,6 @@ export type NavHref =
 	| '/'
 	| '/cards'
 	| '/collection'
-	| '/market'
 	| '/trades'
 	| '/wishlists'
 	| '/guild'
@@ -32,8 +30,7 @@ export type NavItem = {
 export const exploreNavigation: NavItem[] = [
 	{ href: '/', label: 'navigation.home', icon: GalleryVerticalEndIcon },
 	{ href: '/cards', label: 'navigation.cards', icon: BookOpenIcon },
-	{ href: '/collection', label: 'navigation.collection', icon: LibraryBigIcon },
-	{ href: '/market', label: 'navigation.market', icon: StoreIcon }
+	{ href: '/collection', label: 'navigation.collection', icon: LibraryBigIcon }
 ];
 
 /** Destinations sociales : sidebar uniquement, accessibles sur mobile via le tiroir. */

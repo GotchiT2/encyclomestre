@@ -8,14 +8,14 @@ import { toast } from 'svelte-sonner';
 
 export type Fetcher = typeof fetch;
 
-export type ApiTarget = 'legacy' | 'wikiforge';
+export type ApiTarget = 'wikiforge';
 export const API_TIMEOUT_MS = 12_000;
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
 	body?: unknown;
 	fetch?: Fetcher;
 	skipAuth?: boolean;
-	/** Selects the public API that owns this endpoint. Defaults to the legacy platform API. */
+	/** All endpoints are served by the WikiForge public API. */
 	apiTarget?: ApiTarget;
 }
 
@@ -77,12 +77,14 @@ function fetchWithTimeout(fetcher: Fetcher, input: RequestInfo | URL, init: Requ
 	return withApiTimeout((signal) => fetcher(input, { ...init, signal }), init.signal);
 }
 
-export function apiUrl(path: string, apiTarget: ApiTarget = 'legacy'): string {
-	const baseUrl = (
-		apiTarget === 'wikiforge'
-			? (env.PUBLIC_WIKIFORGE_API_BASE_URL ?? env.PUBLIC_CARDS_API_BASE_URL)
-			: env.PUBLIC_API_BASE_URL
-	)?.replace(/\/$/, '');
+export function apiUrl(path: string, apiTarget: ApiTarget = 'wikiforge'): string {
+	void apiTarget;
+	// `PUBLIC_CARDS_API_BASE_URL` was the initial name of the WikiForge API URL.
+	// Keep it as a deployment-only compatibility alias: it never targets the retired API.
+	const baseUrl = (env.PUBLIC_WIKIFORGE_API_BASE_URL ?? env.PUBLIC_CARDS_API_BASE_URL)?.replace(
+		/\/$/,
+		''
+	);
 	return baseUrl ? `${baseUrl}${path}` : path;
 }
 
@@ -194,7 +196,7 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 		fetch: fetcher = fetch,
 		headers,
 		skipAuth = false,
-		apiTarget = 'legacy',
+		apiTarget = 'wikiforge',
 		...init
 	} = options;
 	let session = typeof localStorage === 'undefined' ? null : restoreSession(localStorage);
@@ -242,7 +244,6 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 		apiTarget === 'wikiforge' &&
 		isAuthenticationFailure &&
 		typeof localStorage !== 'undefined' &&
-		!path.startsWith('/api/auth/') &&
 		!path.startsWith('/oauth2/') &&
 		!path.startsWith('/auth/');
 

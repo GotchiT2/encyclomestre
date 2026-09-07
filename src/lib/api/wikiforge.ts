@@ -1,21 +1,15 @@
 import { apiRequest, type RequestOptions } from './client';
 import type {
 	CardRecord,
-	CardSearchSort,
-	CardVariant,
 	CardVariantCode,
 	CollectionTag,
-	DashboardData,
 	GuildMember,
-	GuildObjective,
 	GuildSummary,
 	PaginatedResponse,
-	SaleState,
 	ActiveSaleSummary,
 	ProfileVisibility
 } from '$lib/types';
 import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/rarities';
-import { cardSearchSortDirection, defaultCardSearchSort } from '$lib/domain/cards/search';
 
 export type WikiForgeRarity = CardRarityCode;
 
@@ -60,59 +54,6 @@ export interface WikiForgePage<T> {
 	filters?: Record<string, unknown>;
 	q?: string | null;
 }
-
-export interface WikiForgeQuery {
-	q?: string;
-	page?: number;
-	size?: number;
-	sortBy?: CardSearchSort;
-	sortDirection?: 'ASC' | 'DESC';
-	cursor?: string;
-	rarities?: WikiForgeRarity[];
-	tagIds?: string[];
-	untagged?: boolean;
-	variant?: CardVariant;
-	saleState?: SaleState;
-}
-
-const apiVariantByFilter: Record<CardVariant, 'ALL' | CardVariantCode> = {
-	all: 'ALL',
-	normal: 'NORMAL',
-	alternative: 'FULL_ART'
-};
-
-function queryPath(endpoint: '/api/cards' | '/api/collection', query: WikiForgeQuery) {
-	const sortBy = defaultCardSearchSort(query.q, query.sortBy, 'name');
-	const parameters = new URLSearchParams({
-		page: String(Math.max(0, query.page ?? 0)),
-		size: String(Math.min(100, Math.max(1, query.size ?? 50))),
-		sortBy: sortBy.toUpperCase(),
-		sortDirection: query.sortDirection ?? cardSearchSortDirection(sortBy)
-	});
-	if (query.q) parameters.set('q', query.q);
-	if (query.cursor) parameters.set('cursor', query.cursor);
-	parameters.set('variant', apiVariantByFilter[query.variant ?? 'all']);
-	query.rarities?.forEach((rarity) => parameters.append('rarity', rarity));
-	query.tagIds?.forEach((tagId) => parameters.append('tag', tagId));
-	if (query.untagged) parameters.set('untagged', 'true');
-	if (endpoint === '/api/collection') parameters.set('saleState', query.saleState ?? 'ALL');
-	return `${endpoint}?${parameters}`;
-}
-
-export const getWikiForgeCards = (query: WikiForgeQuery = {}, options?: RequestOptions) =>
-	apiRequest<WikiForgePage<WikiForgeCard>>(queryPath('/api/cards', query), options);
-
-export const getWikiForgeCollection = (query: WikiForgeQuery = {}, options?: RequestOptions) =>
-	apiRequest<WikiForgePage<WikiForgeCollectionCard>>(queryPath('/api/collection', query), options);
-
-export const getWikiForgeVariantCopies = (variantId: string, options?: RequestOptions) =>
-	apiRequest<WikiForgeCollectionCard[]>(
-		`/api/collection/variants/${encodeURIComponent(variantId)}/copies`,
-		options
-	);
-
-export const getWikiForgeCard = (id: string, options?: RequestOptions) =>
-	apiRequest<WikiForgeCard>(`/api/cards/${encodeURIComponent(id)}`, options);
 
 interface WikiForgeTagDto {
 	id: number;
@@ -192,47 +133,14 @@ export const removeWikiForgeTag = (
 		)
 	);
 
-interface DashboardResponse extends Omit<DashboardData, 'recentAcquisitions'> {
-	recentAcquisitions: Array<{
-		userCardId: string;
-		cardId: string;
-		variant: CardVariantCode;
-		isFullArt: boolean;
-		rarity: string;
-		acquiredAt: string;
-		wikipediaTitle: string;
-		imageUrl: string;
-	}>;
-}
-
-export const getDashboard = async (options?: RequestOptions): Promise<DashboardData> => {
-	const response = await apiRequest<DashboardResponse>('/api/dashboard', options);
-	return {
-		...response,
-		recentAcquisitions: response.recentAcquisitions.map((item) =>
-			toCardRecord({
-				id: item.cardId,
-				variant: item.variant,
-				isFullArt: item.isFullArt,
-				wikipediaTitle: item.wikipediaTitle,
-				imageUrl: item.imageUrl,
-				rarity: item.rarity,
-				acquiredAt: item.acquiredAt
-			})
-		)
-	};
-};
-
 export const getMyGuild = (options?: RequestOptions) =>
-	apiRequest<GuildSummary | Record<string, never>>('/api/guilds/me', options);
+	apiRequest<GuildSummary | Record<string, never>>('/me/guild', { ...options, apiTarget: 'wikiforge' });
 export const getGuildMembers = (id: string, options?: RequestOptions) =>
-	apiRequest<GuildMember[]>(`/api/guilds/${encodeURIComponent(id)}/members`, options);
-export const getGuildObjective = (id: string, options?: RequestOptions) =>
-	apiRequest<GuildObjective>(`/api/guilds/${encodeURIComponent(id)}/objective`, options);
+	apiRequest<GuildMember[]>(`/guilds/${encodeURIComponent(id)}/members`, { ...options, apiTarget: 'wikiforge' });
 export const getWikiForgeGuildWishlistShares = <T = unknown>(
 	id: string,
 	options?: RequestOptions
-) => apiRequest<T[]>(`/api/guilds/${encodeURIComponent(id)}/wishlist-shares`, options);
+) => apiRequest<T[]>(`/guilds/${encodeURIComponent(id)}/wishlists`, { ...options, apiTarget: 'wikiforge' });
 
 export function toCardRecord(card: WikiForgeCard): CardRecord {
 	const rarity = cardRarityByCode[card.rarity as CardRarityCode] ?? cardRarityByCode.C;

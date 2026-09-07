@@ -6,15 +6,7 @@ import {
 } from './client';
 import { toCurrentUser, type OAuthCurrentUserResponse } from './current-user';
 import { restoreSession } from '$lib/auth/session';
-import type { AuthSession, LoginInput, OAuth2TokenResponse, User } from '$lib/types';
-
-export interface WikiForgeTokens {
-	accessToken: string;
-	refreshToken: string;
-	accessTokenExpiresInSeconds: number;
-	refreshTokenExpiresInSeconds: number;
-	user: User;
-}
+import type { AuthSession, LoginInput, OAuth2TokenResponse } from '$lib/types';
 
 function oauthForm(values: Record<string, string>) {
 	return new URLSearchParams(values);
@@ -28,13 +20,6 @@ function accessTokenExpiresAt(tokens: OAuth2TokenResponse) {
 	const lifetime = Number(tokens.expires_in);
 	return Number.isFinite(lifetime) && lifetime > 0 ? Date.now() + lifetime * 1_000 : undefined;
 }
-
-export const register = (input: LoginInput, options?: RequestOptions) =>
-	apiRequest<WikiForgeTokens>('/api/auth/register', {
-		...options,
-		method: 'POST',
-		body: input
-	});
 
 export async function login(input: LoginInput, options?: RequestOptions): Promise<AuthSession> {
 	enableWikiForgeSessionRefresh();
@@ -81,17 +66,3 @@ export const logoutAll = (options?: RequestOptions) => {
 		apiTarget: 'wikiforge'
 	});
 };
-
-export const forgotPassword = (email: string, options?: RequestOptions) =>
-	apiRequest<void>('/api/auth/forgot-password', {
-		...options,
-		method: 'POST',
-		body: { email }
-	});
-
-export const resetPassword = (token: string, newPassword: string, options?: RequestOptions) =>
-	apiRequest<void>('/api/auth/reset-password', {
-		...options,
-		method: 'POST',
-		body: { token, newPassword }
-	});

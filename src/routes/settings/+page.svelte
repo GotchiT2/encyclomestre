@@ -5,7 +5,6 @@
 	import { _ } from '$lib/i18n';
 	import { clearSession, currentSession, persistSession } from '$lib/auth/session';
 	import {
-		deleteUser,
 		getCurrentUser,
 		getWikiForgeCollectionPage,
 		logout,
@@ -26,12 +25,10 @@
 
 	let profile = $state<ProfileSettings | null>(null);
 	let loading = $state(true);
-	let userId = $state('demo-user');
 	let avatarPickerOpen = $state(false);
 	let avatarImageUrl = $state<string | null>(null);
 
 	onMount(async () => {
-		userId = $currentSession?.user.id ?? 'demo-user';
 		const user = await getCurrentUser();
 		profile = {
 			username: user.username,
@@ -42,7 +39,8 @@
 			wantedCardIds: [],
 			nsfwEnabled: Boolean(user.nsfwEnabled),
 			censoredKeywords: user.safeWords ?? [],
-			visibility: user.visibility ?? 'FRIENDS'
+			visibility: user.visibility ?? 'FRIENDS',
+			mutedNotifications: user.mutedNotifications ?? []
 		};
 		avatarImageUrl = user.avatarUrl ?? null;
 		setNsfwFilterSettings({ enabled: profile.nsfwEnabled, keywords: profile.censoredKeywords });
@@ -55,7 +53,8 @@
 			imagePageId: profile.avatarCardId ? Number(profile.avatarCardId) : null,
 			nsfw: profile.nsfwEnabled,
 			safeWords: profile.censoredKeywords,
-			visibility: profile.visibility
+			visibility: profile.visibility,
+			mutedNotifications: profile.mutedNotifications
 		});
 		setNsfwFilterSettings({ enabled: user.nsfwEnabled, keywords: user.safeWords });
 		const session = $currentSession;
@@ -121,11 +120,6 @@
 			await goto(resolve('/'));
 		}
 	}
-	async function deleteAccount() {
-		await deleteUser(userId);
-		clearSession(localStorage);
-		await goto(resolve('/'));
-	}
 </script>
 
 <section class="flex flex-col gap-6">
@@ -142,14 +136,15 @@
 		</p>{:else if profile}<SettingsPreferences
 			bind:nsfwEnabled={profile.nsfwEnabled}
 			bind:visibility={profile.visibility}
-		/><CensoredKeywords bind:keywords={profile.censoredKeywords} /><SettingsAccount
+			bind:mutedNotifications={profile.mutedNotifications}
+		/>
+		<CensoredKeywords bind:keywords={profile.censoredKeywords} /><SettingsAccount
 			bind:username={profile.username}
 			avatarUrl={avatarImageUrl}
 			onChooseAvatar={() => (avatarPickerOpen = true)}
 			onRemoveAvatar={removeAvatar}
 			onLogout={logoutFromSettings}
 			onLogoutAll={logoutFromAllDevices}
-			onDelete={deleteAccount}
 		/>
 	{/if}
 </section>

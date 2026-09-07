@@ -3,9 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('$env/dynamic/public', () => ({
 	env: {
 		PUBLIC_API_MOCK_ENABLED: 'false',
-		PUBLIC_API_BASE_URL: 'https://wikiforge-api.roselaqueen.fr',
-		PUBLIC_WIKIFORGE_API_BASE_URL: 'https://api.wikiforge.fr',
-		PUBLIC_CARDS_API_BASE_URL: 'https://api.wikiforge.fr'
+		PUBLIC_WIKIFORGE_API_BASE_URL: 'https://api.wikiforge.fr'
 	}
 }));
 
@@ -37,6 +35,7 @@ const user: User = {
 	nsfwEnabled: false,
 	safeWords: [],
 	visibility: 'FRIENDS',
+	mutedNotifications: [],
 	lastConnection: 'TODAY',
 	role: 'user',
 	createdAt: '2026-08-20T14:11:51.007Z',

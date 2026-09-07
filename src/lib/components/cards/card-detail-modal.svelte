@@ -1,10 +1,6 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardActions from './card-actions.svelte';
-	import CardMarketModal from './card-market-modal.svelte';
-	import SaleListingDialog from '$lib/components/market/sale-listing-dialog.svelte';
 	import CardTagControls from './card-tag-controls.svelte';
 	import CardTelemetry from './card-telemetry.svelte';
 	import FriendOwnerLedger from '$lib/components/social/friend-owner-ledger.svelte';
@@ -15,7 +11,6 @@
 	import {
 		createTradeOffer,
 		getFriendCollectionPage,
-		getVariantCopies,
 		getWikiForgeCollectionCard,
 		getWikiForgeCollectionPage
 	} from '$lib/api';
@@ -27,14 +22,12 @@
 	import LockOpenIcon from '@lucide/svelte/icons/lock-open';
 	import { createModalLayer } from '$lib/components/ui/dialog/modal-layer';
 	import type {
-		CardPriceHistory,
 		CardRecord,
 		CardRarityInitials,
 		CollectionTag,
 		CollectionTagAssignments,
 		CreateTradeOfferInput,
 		PaginatedResponse,
-		SaleListing,
 		TradeCardSearchQuery,
 		User,
 		WishlistRegistrySummary
@@ -43,65 +36,31 @@
 	let {
 		card,
 		owned = false,
-		loadVariantCopies = true,
 		wishlists = [],
 		tags = $bindable<CollectionTag[]>([]),
 		assignments = $bindable<CollectionTagAssignments>({}),
-		sales,
-		history,
 		onToggleWishlist,
 		onToggleProtection,
-		onSaleCreated = () => undefined,
 		onClose
 	}: {
 		card: CardRecord;
 		owned?: boolean;
-		loadVariantCopies?: boolean;
 		wishlists?: WishlistRegistrySummary[];
 		tags?: CollectionTag[];
 		assignments?: CollectionTagAssignments;
-		sales?: SaleListing[];
-		history?: CardPriceHistory;
 		onToggleWishlist: (wishlistId: string, selected: boolean) => void | Promise<void>;
 		onToggleProtection?: () => void | Promise<void>;
-		onSaleCreated?: (sale: SaleListing, userCardId: string) => void;
 		onClose: () => void;
 	} = $props();
 
 	const detailLayer = createModalLayer(100);
 	let activeTab = $state<'data' | 'social'>('data');
-	let marketOpen = $state(false);
-	let saleDialogOpen = $state(false);
 	let tradeEditorOpen = $state(false);
 	let tradePartner = $state<User | null>(null);
 	let tradePartnerCards = $state<CardRecord[]>([]);
 	let tradeDraft = $state<Partial<CreateTradeOfferInput>>({});
-	let copies = $state<CardRecord[]>([]);
-	let copiesLoading = $state(false);
 	let sharedWishlistsLoading = $state(false);
 	let sharedWishlistsCardId = $state<string | null>(null);
-	const availableCopies = $derived(copies.filter((copy) => !copy.activeSale));
-	const activeSale = $derived(copies.find((copy) => copy.activeSale)?.activeSale);
-
-	$effect(() => {
-		if (!loadVariantCopies) {
-			copies = [];
-			copiesLoading = false;
-			return;
-		}
-		const variantId = card.catalogueId ?? card.id;
-		copiesLoading = true;
-		void getVariantCopies(variantId)
-			.then((result) => {
-				copies = result;
-			})
-			.catch(() => {
-				copies = owned ? [card] : [];
-			})
-			.finally(() => {
-				copiesLoading = false;
-			});
-	});
 
 	$effect(() => {
 		if (!owned) return;
@@ -119,11 +78,6 @@
 				if (card.id === cardId) sharedWishlistsLoading = false;
 			});
 	});
-
-	function viewSale(saleId: string) {
-		onClose();
-		void goto(resolve('/market/[id]', { id: saleId }));
-	}
 
 
 	function asTradePage(result: Awaited<ReturnType<typeof getWikiForgeCollectionPage>>): PaginatedResponse<CardRecord> {
@@ -203,21 +157,6 @@
 		}
 	}
 
-	function handleSaleCreated(sale: SaleListing, userCardId: string) {
-		const summary = {
-			id: sale.id,
-			type: sale.type,
-			status: sale.status ?? ('active' as const),
-			price: sale.price,
-			currentPrice: sale.currentPrice ?? sale.price,
-			minimumBid: sale.minimumBid ?? Math.ceil(sale.price * 1.1),
-			endsAt: sale.endsAt ?? null
-		};
-		copies = copies.map((copy) =>
-			copy.id === userCardId ? { ...copy, activeSale: summary } : copy
-		);
-		onSaleCreated(sale, userCardId);
-	}
 </script>
 
 <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
@@ -279,10 +218,6 @@
 								card={{ ...card, ownedCount: owned ? Math.max(1, card.ownedCount) : 0 }}
 								{wishlists}
 								{onToggleWishlist}
-								canSell={!copiesLoading && availableCopies.length > 0}
-								activeSaleId={activeSale?.id}
-								onSell={() => (saleDialogOpen = true)}
-								onViewSale={viewSale}
 							/>
 						</div>
 
@@ -291,7 +226,7 @@
 							role="tablist"
 							aria-label={$_('cardDetail.tabs')}
 						>
-							{#each [{ id: 'data', label: 'cardDetail.data' }, { id: 'social', label: 'cardDetail.social' }] as tab, index (tab.id)}
+						{#each [{ id: 'data', label: 'cardDetail.data' }, { id: 'social', label: 'cardDetail.social' }] as tab (tab.id)}
 								<Button
 									variant="ghost"
 									class={activeTab === tab.id ? 'forge-nav-active' : ''}
@@ -299,11 +234,6 @@
 									role="tab"
 									aria-selected={activeTab === tab.id}>{$_(tab.label)}</Button
 								>
-								{#if index === 0}
-									<Button variant="ghost" onclick={() => (marketOpen = true)}>
-										{$_('cardDetail.market_tab')}
-									</Button>
-								{/if}
 							{/each}
 						</div>
 
@@ -356,7 +286,7 @@
 					aria-label={$_('cardDetail.tabs')}
 					data-testid="card-detail-mobile-tabs"
 				>
-					{#each [{ id: 'data', label: 'cardDetail.data' }, { id: 'social', label: 'cardDetail.social' }] as tab, index (tab.id)}
+					{#each [{ id: 'data', label: 'cardDetail.data' }, { id: 'social', label: 'cardDetail.social' }] as tab (tab.id)}
 						<Button
 							variant="ghost"
 							class={`min-w-0 flex-1 px-2 ${activeTab === tab.id ? 'forge-nav-active' : ''}`}
@@ -364,13 +294,6 @@
 							role="tab"
 							aria-selected={activeTab === tab.id}>{$_(tab.label)}</Button
 						>
-						{#if index === 0}
-							<Button
-								variant="ghost"
-								class="min-w-0 flex-1 px-2"
-								onclick={() => (marketOpen = true)}>{$_('cardDetail.market_tab')}</Button
-							>
-						{/if}
 					{/each}
 				</div>
 				<div
@@ -381,10 +304,6 @@
 						card={{ ...card, ownedCount: owned ? Math.max(1, card.ownedCount) : 0 }}
 						{wishlists}
 						{onToggleWishlist}
-						canSell={!copiesLoading && availableCopies.length > 0}
-						activeSaleId={activeSale?.id}
-						onSell={() => (saleDialogOpen = true)}
-						onViewSale={viewSale}
 					/>
 				</div>
 			</div>
@@ -392,11 +311,6 @@
 	</Dialog.Portal>
 </Dialog.Root>
 
-{#if marketOpen}
-	<CardMarketModal {card} {history} {sales} onClose={() => (marketOpen = false)} />
-{/if}
-
-<SaleListingDialog bind:open={saleDialogOpen} {copies} onCreated={handleSaleCreated} />
 {#if tradePartner}
 	<TradeEditor
 		bind:open={tradeEditorOpen}

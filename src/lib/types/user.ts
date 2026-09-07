@@ -1,6 +1,7 @@
 export type UserRole = 'user' | 'moderator' | 'admin';
 export type ProfileVisibility = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
 export type LastConnection = 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'AWAY';
+export type MutedNotificationCategory = 'TRADE' | 'SALE' | 'FRIEND' | 'GUILD';
 
 export interface UserPreferences {
 	language: string;
@@ -18,6 +19,7 @@ export interface User {
 	imagePageId?: number | null;
 	nsfwEnabled?: boolean;
 	safeWords?: string[];
+	mutedNotifications?: MutedNotificationCategory[];
 	money?: number;
 	visibility?: ProfileVisibility;
 	rank?: number;

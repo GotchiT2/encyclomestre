@@ -533,8 +533,9 @@ const profileSettings = new Map<string, ProfileSettings>([
 			showcases: [],
 			wantedCardIds: [],
 			nsfwEnabled: false,
-			censoredKeywords: [],
-			visibility: 'FRIENDS'
+		censoredKeywords: [],
+		visibility: 'FRIENDS',
+		mutedNotifications: []
 		}
 	]
 ]);
@@ -576,7 +577,8 @@ profileSettings.set('friend-0', {
 	wantedCardIds: ['girls-generation-1', 'red-velvet-1'],
 	nsfwEnabled: false,
 	censoredKeywords: [],
-	visibility: 'FRIENDS'
+	visibility: 'FRIENDS',
+	mutedNotifications: []
 });
 
 profileSettings.set('friend-1', {
@@ -594,7 +596,8 @@ profileSettings.set('friend-1', {
 	wantedCardIds: ['girls-generation-1', '2ne1-1'],
 	nsfwEnabled: false,
 	censoredKeywords: [],
-	visibility: 'PUBLIC'
+	visibility: 'PUBLIC',
+	mutedNotifications: []
 });
 
 friendships.set('demo-user', [
@@ -776,6 +779,12 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 					(word): word is string => typeof word === 'string'
 				);
 			}
+			if (Array.isArray(input?.mutedNotifications)) {
+				user.mutedNotifications = input.mutedNotifications.filter(
+					(category): category is import('$lib/types').MutedNotificationCategory =>
+						category === 'TRADE' || category === 'SALE' || category === 'FRIEND' || category === 'GUILD'
+				);
+			}
 		}
 		return json({
 			id: wikiForgeUserId(user.id),
@@ -786,6 +795,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			image: user.avatarUrl,
 			nsfw: profile.nsfwEnabled,
 			safeWords: profile.censoredKeywords,
+			mutedNotifications: user.mutedNotifications ?? [],
 			money: user.money ?? 350,
 			createdAt: user.createdAt,
 			visibility: profile.visibility,
@@ -1470,7 +1480,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	}
 	if (
 		normalizedMethod === 'POST' &&
-		(pathname === '/api/conversations/direct' || pathname === '/conversations/direct')
+		pathname === '/conversations/direct'
 	) {
 		const participantId = asObject(body)?.participantId;
 		if (typeof participantId !== 'string' || !users.has(participantId))
