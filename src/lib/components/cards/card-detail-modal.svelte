@@ -6,13 +6,22 @@
 	import CardMarketModal from './card-market-modal.svelte';
 	import SaleListingDialog from '$lib/components/market/sale-listing-dialog.svelte';
 	import CardTagControls from './card-tag-controls.svelte';
-	import CardTradePartnerDialog from './card-trade-partner-dialog.svelte';
 	import CardTelemetry from './card-telemetry.svelte';
 	import FriendOwnerLedger from '$lib/components/social/friend-owner-ledger.svelte';
+	import TradeEditor from '$lib/components/trades/trade-editor.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Dialog } from 'bits-ui';
 	import { _ } from '$lib/i18n';
-	import { getVariantCopies } from '$lib/api';
+	import {
+		createTradeOffer,
+		getFriendCollectionPage,
+		getVariantCopies,
+		getWikiForgeCollectionCard,
+		getWikiForgeCollectionPage
+	} from '$lib/api';
+	import { currentSession } from '$lib/auth/session';
+	import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
+	import { toast } from 'svelte-sonner';
 	import XIcon from '@lucide/svelte/icons/x';
 	import LockIcon from '@lucide/svelte/icons/lock';
 	import LockOpenIcon from '@lucide/svelte/icons/lock-open';
@@ -20,9 +29,14 @@
 	import type {
 		CardPriceHistory,
 		CardRecord,
+		CardRarityInitials,
 		CollectionTag,
 		CollectionTagAssignments,
+		CreateTradeOfferInput,
+		PaginatedResponse,
 		SaleListing,
+		TradeCardSearchQuery,
+		User,
 		WishlistRegistrySummary
 	} from '$lib/types';
 
@@ -58,9 +72,14 @@
 	let activeTab = $state<'data' | 'social'>('data');
 	let marketOpen = $state(false);
 	let saleDialogOpen = $state(false);
-	let tradePartnerDialogOpen = $state(false);
+	let tradeEditorOpen = $state(false);
+	let tradePartner = $state<User | null>(null);
+	let tradePartnerCards = $state<CardRecord[]>([]);
+	let tradeDraft = $state<Partial<CreateTradeOfferInput>>({});
 	let copies = $state<CardRecord[]>([]);
 	let copiesLoading = $state(false);
+	let sharedWishlistsLoading = $state(false);
+	let sharedWishlistsCardId = $state<string | null>(null);
 	const availableCopies = $derived(copies.filter((copy) => !copy.activeSale));
 	const activeSale = $derived(copies.find((copy) => copy.activeSale)?.activeSale);
 
@@ -84,24 +103,104 @@
 			});
 	});
 
+	$effect(() => {
+		if (!owned) return;
+		const cardId = card.id;
+		if (sharedWishlistsCardId === cardId) return;
+		sharedWishlistsCardId = cardId;
+		sharedWishlistsLoading = true;
+		void getWikiForgeCollectionCard(cardId)
+			.then((detail) => {
+				if (card.id !== cardId) return;
+				card = { ...card, sharedWishlistMemberships: detail.sharedWishlistMemberships };
+			})
+			.catch(() => undefined)
+			.finally(() => {
+				if (card.id === cardId) sharedWishlistsLoading = false;
+			});
+	});
+
 	function viewSale(saleId: string) {
 		onClose();
 		void goto(resolve('/market/[id]', { id: saleId }));
 	}
 
-	function openTrade() {
-		if (card.friendsWhoOwn.length === 1) {
-			startTrade(card.friendsWhoOwn[0]);
-			return;
-		}
-		if (card.friendsWhoOwn.length > 1) tradePartnerDialogOpen = true;
+
+	function asTradePage(result: Awaited<ReturnType<typeof getWikiForgeCollectionPage>>): PaginatedResponse<CardRecord> {
+		const page = result.page + 1;
+		const pageSize = Math.max(1, result.items.length);
+		return {
+			items: result.items,
+			meta: {
+				page,
+				pageSize,
+				total: result.total < 0 ? result.items.length : result.total,
+				totalPages: result.total < 0 ? page + (result.hasNext ? 1 : 0) : Math.max(1, Math.ceil(result.total / pageSize)),
+				...(result.nextCursor ? { nextCursor: result.nextCursor } : {})
+			}
+		};
 	}
 
-	function startTrade(owner: CardRecord['friendsWhoOwn'][number]) {
-		const cardId = card.catalogueId ?? card.id;
-		const target = `/trades?partner=${encodeURIComponent(owner.friendId)}&cards=${encodeURIComponent(cardId)}`;
-		onClose();
-		void goto(resolve(target as '/'));
+	async function loadOwnedTradeCards(query: TradeCardSearchQuery) {
+		return asTradePage(
+			await getWikiForgeCollectionPage({
+				query: query.query,
+				sortBy: query.sortBy === 'name' ? 'name' : query.sortBy === 'rarity' ? 'rarity' : 'acquiredDate',
+				rarities: query.rarities?.map((rarity) => cardRarityCodeByName[rarity]),
+				page: query.cursor ? undefined : query.page,
+				cursor: query.cursor
+			}),
+		);
+	}
+
+	async function loadPartnerTradeCards(query: TradeCardSearchQuery) {
+		if (!tradePartner) return { items: [], meta: { page: 1, pageSize: 1, total: 0, totalPages: 1 } };
+		const result = await getFriendCollectionPage(tradePartner.id, {
+			query: query.query,
+			sortBy: query.sortBy === 'name' ? 'name' : query.sortBy === 'rarity' ? 'rarity' : 'acquiredDate',
+			rarities: query.rarities?.map((rarity) => cardRarityCodeByName[rarity]),
+			page: query.cursor ? undefined : query.page,
+			cursor: query.cursor
+		});
+		return asTradePage(result);
+	}
+
+	async function startTrade(owner: CardRecord['friendsWhoOwn'][number], requestedRarity: string) {
+		const rarity = requestedRarity as CardRarityInitials;
+		const requestedPageId = String(card.baseCardId ?? card.catalogueId ?? card.id);
+		try {
+			const result = await getFriendCollectionPage(owner.friendId, { rarities: [rarity] });
+			const requestedCard = result.items.find(
+				(copy) => String(copy.baseCardId ?? copy.catalogueId ?? copy.id) === requestedPageId && copy.rarityInitials === rarity
+			);
+			if (!requestedCard) {
+				toast.error($_('cardDetail.trade_card_unavailable'));
+				return;
+			}
+			tradePartner = {
+				id: owner.friendId,
+				username: owner.username,
+				displayName: owner.username,
+				avatarUrl: owner.avatarUrl ?? null,
+				role: 'user',
+				createdAt: '',
+				updatedAt: ''
+			};
+			tradePartnerCards = [requestedCard];
+			tradeDraft = { recipientId: owner.friendId, requestedCardIds: [requestedCard.id] };
+			tradeEditorOpen = true;
+		} catch {
+			toast.error($_('cardDetail.trade_card_unavailable'));
+		}
+	}
+
+	async function submitTrade(input: CreateTradeOfferInput) {
+		try {
+			await createTradeOffer(input);
+			toast.success($_('trades.offer_sent'));
+		} catch {
+			toast.error($_('common.error'));
+		}
 	}
 
 	function handleSaleCreated(sale: SaleListing, userCardId: string) {
@@ -180,7 +279,6 @@
 								card={{ ...card, ownedCount: owned ? Math.max(1, card.ownedCount) : 0 }}
 								{wishlists}
 								{onToggleWishlist}
-								onTrade={openTrade}
 								canSell={!copiesLoading && availableCopies.length > 0}
 								activeSaleId={activeSale?.id}
 								onSell={() => (saleDialogOpen = true)}
@@ -230,7 +328,24 @@
 										>{$_('codex.wikipedia')}</Button
 									>{/if}
 							{:else}
-								<FriendOwnerLedger friends={card.friendsWhoOwn} />
+								<FriendOwnerLedger
+									friends={card.friendsWhoOwn}
+									onPrepareTrade={(friend, rarity) => void startTrade(friend, rarity)}
+								/>
+								{#if sharedWishlistsLoading}
+									<p class="mt-3 forge-label">{$_('cardState.shared_wishlists_loading')}</p>
+								{:else if card.sharedWishlistMemberships?.length}
+									<section class="mt-3 border-t border-energy/25 pt-3">
+										<h3 class="forge-label text-energy">{$_('cardState.shared_wishlists_title')}</h3>
+										<ul class="mt-2 grid gap-1">
+											{#each card.sharedWishlistMemberships as wishlist (`${wishlist.userId}-${wishlist.id}`)}
+												<li class="flex items-center justify-between gap-3 border border-energy/25 bg-background/40 px-2 py-1.5 text-sm">
+													<span class="truncate">{wishlist.title}</span><span class="shrink-0 text-muted-foreground">@{wishlist.userName}</span>
+												</li>
+											{/each}
+										</ul>
+									</section>
+								{/if}
 							{/if}
 						</div>
 					</div>
@@ -266,7 +381,6 @@
 						card={{ ...card, ownedCount: owned ? Math.max(1, card.ownedCount) : 0 }}
 						{wishlists}
 						{onToggleWishlist}
-						onTrade={openTrade}
 						canSell={!copiesLoading && availableCopies.length > 0}
 						activeSaleId={activeSale?.id}
 						onSell={() => (saleDialogOpen = true)}
@@ -283,11 +397,20 @@
 {/if}
 
 <SaleListingDialog bind:open={saleDialogOpen} {copies} onCreated={handleSaleCreated} />
-<CardTradePartnerDialog
-	bind:open={tradePartnerDialogOpen}
-	owners={card.friendsWhoOwn}
-	onSelect={startTrade}
-/>
+{#if tradePartner}
+	<TradeEditor
+		bind:open={tradeEditorOpen}
+		modalLayer={detailLayer + 20}
+		currentUserId={$currentSession?.user.id ?? ''}
+		availableMoney={$currentSession?.user.money ?? 0}
+		partner={tradePartner}
+		initialPartnerCards={tradePartnerCards}
+		loadOwnedCards={loadOwnedTradeCards}
+		loadPartnerCards={loadPartnerTradeCards}
+		bind:draft={tradeDraft}
+		onSubmit={(input) => void submitTrade(input)}
+	/>
+{/if}
 
 <style>
 	.card-detail-preview :global(.wikiforge-card-size) {

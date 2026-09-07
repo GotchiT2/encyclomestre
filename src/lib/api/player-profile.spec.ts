@@ -126,4 +126,12 @@ describe('WikiForge player profile contracts', () => {
 			});
 		}
 	);
+
+	it('passes a single rarity only to the global leaderboard and maps its cache metadata', async () => {
+		apiRequest.mockResolvedValueOnce({ top: [], computedAt: '2026-09-07T10:00:00', refreshAt: '2026-09-07T10:05:00' });
+		await expect(getLeaderboard('global', 'SR')).resolves.toMatchObject({
+			computedAt: '2026-09-07T10:00:00', refreshAt: '2026-09-07T10:05:00'
+		});
+		expect(apiRequest).toHaveBeenCalledWith('/leaderboards/global?rarity=SR', { apiTarget: 'wikiforge' });
+	});
 });

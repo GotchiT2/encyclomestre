@@ -68,6 +68,8 @@ interface LeaderboardEntryDto {
 interface LeaderboardDto {
 	top?: LeaderboardEntryDto[];
 	around?: LeaderboardEntryDto[];
+	computedAt?: string;
+	refreshAt?: string;
 }
 
 export type LeaderboardPeriod = 'global' | 'daily' | 'weekly';
@@ -200,14 +202,23 @@ function toLeaderboardEntry(entry: LeaderboardEntryDto): LeaderboardEntry {
 	};
 }
 
-export const getLeaderboard = (period: LeaderboardPeriod, options?: RequestOptions) =>
-	apiRequest<LeaderboardDto>(`/leaderboards/${period}`, {
+export const getLeaderboard = (
+	period: LeaderboardPeriod,
+	rarity?: CardRarityCode,
+	options?: RequestOptions
+) => {
+	const parameters = new URLSearchParams();
+	if (period === 'global' && rarity) parameters.set('rarity', rarity);
+	return apiRequest<LeaderboardDto>(`/leaderboards/${period}${parameters.size ? `?${parameters}` : ''}`, {
 		...options,
 		apiTarget: 'wikiforge'
 	}).then((dto): Leaderboard => ({
 		top: (dto.top ?? []).map(toLeaderboardEntry),
-		around: (dto.around ?? []).map(toLeaderboardEntry)
+		around: (dto.around ?? []).map(toLeaderboardEntry),
+		computedAt: dto.computedAt ?? null,
+		refreshAt: dto.refreshAt ?? null
 	}));
+};
 
 export interface CompleteMeUpdate {
 	name: string;

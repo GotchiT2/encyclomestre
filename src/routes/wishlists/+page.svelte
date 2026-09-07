@@ -3,6 +3,7 @@
 	import {
 		acceptWishlistInvitation,
 		addWishlistRegistryCard,
+		addWishlistRegistryCards,
 		createWishlistRegistry,
 		deleteWishlistRegistry,
 		getWikiForgePublicPages,
@@ -12,6 +13,8 @@
 		inviteWishlistFollower,
 		leaveWishlist,
 		removeWishlistRegistryCard,
+		removeWishlistRegistryCards,
+		removeOwnedWishlistRegistryCards,
 		revokeWishlistFollower,
 		toPublicPage,
 		updateWishlistRegistry
@@ -63,6 +66,10 @@
 	let createImage = $state<CardRecord | null>(null);
 	let editImage = $state<CardRecord | null>(null);
 	let pickerAddedCardIds = $state<string[]>([]);
+	let selectedPageIds = $state<string[]>([]);
+	let selectionMode = $state(false);
+	let cleaningOwned = $state(false);
+	let removingSelection = $state(false);
 	let accessOpen = $state(false);
 	let createOpen = $state(false);
 	let editOpen = $state(false);
@@ -143,6 +150,8 @@
 		query = '';
 		rarities = [];
 		page = 1;
+		selectedPageIds = [];
+		selectionMode = false;
 	}
 
 	function resetPage() {
@@ -203,6 +212,24 @@
 		await Promise.all([refreshGroups(wishlist.id), loadEntries()]);
 	}
 
+	async function addCards(cards: CardRecord[]) {
+		if (!activeWishlist || !editable || !cards.length) return;
+		const wishlist = activeWishlist;
+		const pageIds = cards.map((card) => String(card.baseCardId ?? card.id));
+		try {
+			await addWishlistRegistryCards(wishlist.id, pageIds);
+		} catch (error) {
+			if (wikiForgeApiErrorCode(error) === 'WISHLIST_FULL') {
+				toast.error($_('wishlist.full_error'));
+				return;
+			}
+			throw error;
+		}
+		pickerAddedCardIds = [...new Set([...pickerAddedCardIds, ...pageIds])];
+		toast.success($_('wishlist.cards_added', { values: { count: pageIds.length, wishlist: wishlist.title } }));
+		await Promise.all([refreshGroups(wishlist.id), loadEntries()]);
+	}
+
 	function openPicker() {
 		pickerAddedCardIds = [];
 		pickerOpen = true;
@@ -214,6 +241,38 @@
 		await Promise.all([refreshGroups(activeWishlist.id), loadEntries()]);
 		if (selectedCard && String(selectedCard.baseCardId ?? selectedCard.id) === pageId) {
 			selectedCard = null;
+		}
+	}
+
+	function toggleSelection(pageId: string) {
+		selectedPageIds = selectedPageIds.includes(pageId)
+			? selectedPageIds.filter((id) => id !== pageId)
+			: [...selectedPageIds, pageId];
+	}
+
+	async function removeSelection() {
+		if (!activeWishlist || !editable || !selectedPageIds.length) return;
+		removingSelection = true;
+		try {
+			await removeWishlistRegistryCards(activeWishlist.id, selectedPageIds);
+			selectedPageIds = [];
+			selectionMode = false;
+			await Promise.all([refreshGroups(activeWishlist.id), loadEntries()]);
+		} finally {
+			removingSelection = false;
+		}
+	}
+
+	async function cleanOwnedCards() {
+		if (!activeWishlist || !editable) return;
+		if (!window.confirm($_('wishlist.clean_owned_confirm'))) return;
+		cleaningOwned = true;
+		try {
+			await removeOwnedWishlistRegistryCards(activeWishlist.id);
+			await Promise.all([refreshGroups(activeWishlist.id), loadEntries()]);
+			toast.success($_('wishlist.clean_owned_success'));
+		} finally {
+			cleaningOwned = false;
 		}
 	}
 
@@ -360,6 +419,12 @@
 								>{$_('wishlist.manage_access')}</Button
 							>
 							<Button onclick={openPicker}>{$_('wishlist.add_card_action')}</Button>
+							<Button variant="outline" onclick={() => (selectionMode = !selectionMode)}
+								>{selectionMode ? $_('wishlist.cancel_selection') : $_('wishlist.select_cards')}</Button
+							>
+							<Button variant="outline" disabled={cleaningOwned} onclick={() => void cleanOwnedCards()}
+								>{$_('wishlist.clean_owned')}</Button
+							>
 						</div>
 					{/if}
 				</header>
@@ -390,9 +455,18 @@
 							<WishlistSocialGrid
 								{entries}
 								{editable}
+								{selectionMode}
+								{selectedPageIds}
 								onRemove={removeCard}
+								onToggleSelection={toggleSelection}
 								onOpen={(entry) => (selectedCard = entry.card)}
 							/>
+							{#if selectionMode}
+								<div class="flex items-center justify-between gap-3 border border-energy/30 bg-energy/10 p-3">
+									<p class="forge-label text-energy">{$_('wishlist.selected_cards', { values: { count: selectedPageIds.length } })}</p>
+									<Button variant="destructive" disabled={!selectedPageIds.length || removingSelection} onclick={() => void removeSelection()}>{$_('wishlist.remove_selected')}</Button>
+								</div>
+							{/if}
 							<nav
 								class="flex items-center justify-between border-t border-primary/20 pt-4"
 								aria-label={$_('wishlist.page')}
@@ -421,6 +495,7 @@
 	]}
 	loadCards={loadCandidateCards}
 	onSelect={addCard}
+	onSelectMany={addCards}
 />
 <WishlistRegistryDrawers
 	bind:createOpen

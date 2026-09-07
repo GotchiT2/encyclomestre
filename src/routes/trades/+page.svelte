@@ -32,6 +32,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import type {
 		CardRecord,
+		CardRarityInitials,
 		CreateTradeOfferInput,
 		TradeCardDetail,
 		TradeOffer,
@@ -75,13 +76,22 @@
 			)
 				.split(',')
 				.filter(Boolean);
+			const requestedPageId = page.url.searchParams.get('requestedPageId');
+			const requestedRarityParam = page.url.searchParams.get('requestedRarity');
+			const requestedRarity = (['L', 'UR', 'SR', 'R', 'PC', 'C'] as const).includes(
+				requestedRarityParam as CardRarityInitials
+			)
+				? (requestedRarityParam as CardRarityInitials)
+				: undefined;
 			const offeredCardIds = (page.url.searchParams.get('offerCards') ?? '')
 				.split(',')
 				.filter(Boolean);
-			if (partnerId && (cardIds.length || offeredCardIds.length)) {
+			const requestedCatalogueIds = requestedPageId ? [requestedPageId] : cardIds;
+			if (partnerId && (requestedCatalogueIds.length || offeredCardIds.length)) {
 				const tradePartners = await loadPartners();
 				const requestedPartner = tradePartners.find((partner) => partner.id === partnerId);
-				if (requestedPartner) await selectPartner(requestedPartner, cardIds, offeredCardIds);
+				if (requestedPartner)
+					await selectPartner(requestedPartner, requestedCatalogueIds, offeredCardIds, requestedRarity);
 			}
 		} catch {
 			loadFailed = true;
@@ -139,7 +149,8 @@
 	async function selectPartner(
 		partner: User,
 		requestedCatalogueIds: string[] = [],
-		offeredUserCardIds: string[] = []
+		offeredUserCardIds: string[] = [],
+		requestedRarity?: CardRarityInitials
 	) {
 		selectedPartner = partner;
 		counteringOfferId = null;
@@ -148,11 +159,15 @@
 		if (requestedCatalogueIds.length || offeredUserCardIds.length) {
 			const [ownPage, partnerPage] = await Promise.all([
 				getWikiForgeCollectionPage(),
-				getFriendCollectionPage(partner.id).catch(() => ({ items: [] as CardRecord[] }))
+				getFriendCollectionPage(partner.id, {
+					rarities: requestedRarity ? [requestedRarity] : []
+				}).catch(() => ({ items: [] as CardRecord[] }))
 			]);
 			ownedCards = ownPage.items.filter((card) => offeredUserCardIds.includes(card.id));
-			partnerCards = partnerPage.items.filter((card) =>
-				requestedCatalogueIds.includes(String(card.catalogueId ?? card.baseCardId ?? card.id))
+			partnerCards = partnerPage.items.filter(
+				(card) =>
+					requestedCatalogueIds.includes(String(card.catalogueId ?? card.baseCardId ?? card.id)) &&
+					(!requestedRarity || card.rarityInitials === requestedRarity)
 			);
 			editorDraft = {
 				recipientId: partner.id,

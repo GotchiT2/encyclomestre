@@ -23,6 +23,12 @@ export interface WikiForgeCollectionCardDto {
 	pendingTradeId?: number | null;
 	ownedCount?: number;
 	rarityCounts?: Partial<Record<CardRarityCode, number>>;
+	wishlists?: Array<{
+		id: number;
+		name: string;
+		userId: number;
+		userName: string;
+	}>;
 }
 
 export interface WikiForgeCollectionResponse {
@@ -129,7 +135,14 @@ export function toWikiForgeCollectionCard(card: WikiForgeCollectionCardDto): Car
 		duplicate: Boolean(card.duplicate),
 		userProtected: Boolean(card.protected),
 		pendingTradeId: card.pendingTradeId == null ? null : String(card.pendingTradeId),
-		nsfw: Boolean(card.nsfw)
+		nsfw: Boolean(card.nsfw),
+		sharedWishlistMemberships: (card.wishlists ?? []).map((wishlist) => ({
+			id: String(wishlist.id),
+			title: wishlist.name,
+			defaultList: false,
+			userId: String(wishlist.userId),
+			userName: wishlist.userName
+		}))
 	};
 }
 
@@ -169,6 +182,36 @@ export const unprotectWikiForgeCard = (cardId: string, options?: RequestOptions)
 		apiTarget: 'wikiforge',
 		method: 'PUT'
 	});
+
+const wikiForgeCardBatch = (cardIds: string[]) => {
+	const ids = [...new Set(cardIds)];
+	if (!ids.length || ids.length > 500) throw new Error('1 à 500 cartes sont requises.');
+	return ids.map((cardId) => wikiForgeNumericId(cardId, 'carte'));
+};
+
+export const protectWikiForgeCards = (cardIds: string[], options?: RequestOptions) =>
+	apiRequest<void>('/collection/protect', {
+		...options,
+		apiTarget: 'wikiforge',
+		method: 'PUT',
+		body: wikiForgeCardBatch(cardIds)
+	});
+
+export const unprotectWikiForgeCards = (cardIds: string[], options?: RequestOptions) =>
+	apiRequest<void>('/collection/unprotect', {
+		...options,
+		apiTarget: 'wikiforge',
+		method: 'PUT',
+		body: wikiForgeCardBatch(cardIds)
+	});
+
+export const getWikiForgeCollectionCard = async (cardId: string, options?: RequestOptions) =>
+	toWikiForgeCollectionCard(
+		await apiRequest<WikiForgeCollectionCardDto>(
+			`/collection/${wikiForgeNumericId(cardId, 'carte')}`,
+			{ ...options, apiTarget: 'wikiforge' }
+		)
+	);
 
 export const addWikiForgeCardTag = (cardId: string, tagId: string, options?: RequestOptions) =>
 	apiRequest<WikiForgeCollectionCardDto>(

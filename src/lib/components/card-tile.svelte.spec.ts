@@ -124,7 +124,7 @@ describe('CardTile', () => {
 		});
 		await expect.element(page.getByLabelText(/2 exemplaire/)).toBeVisible();
 		await expect.element(page.getByLabelText(/Présente dans 1 wishlist/)).toBeVisible();
-		await page.getByLabelText(/Possédée par 1 autre/).click();
+		await page.getByLabelText(/Possédée par 1 ami/).click();
 		await expect.element(page.getByRole('menuitem', { name: /@Ami/ })).toBeVisible();
 	});
 

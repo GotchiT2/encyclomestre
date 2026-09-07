@@ -177,7 +177,7 @@ describe('getTradePartners', () => {
 
 	it('uses the friendship registry instead of preloading the public user directory', async () => {
 		apiRequest.mockResolvedValueOnce({
-			friends: [{ id: 2, name: 'Alice', lastConnection: 'TODAY' }],
+			friends: [{ id: 2, name: 'Alice', lastConnection: 'TODAY', sharesWishlist: true }],
 			received: [],
 			sent: [{ id: 3, name: 'Bob' }]
 		});
@@ -219,7 +219,7 @@ describe('user blocks', () => {
 
 	it('maps the three friend lists and uses user identifiers in social mutations', async () => {
 		apiRequest.mockResolvedValueOnce({
-			friends: [{ id: 2, name: 'Alice', lastConnection: 'TODAY' }],
+			friends: [{ id: 2, name: 'Alice', lastConnection: 'TODAY', sharesWishlist: true }],
 			received: [{ id: 3, name: 'Bob' }],
 			sent: [{ id: 4, name: 'Chloé' }]
 		});
@@ -234,7 +234,8 @@ describe('user blocks', () => {
 					user: expect.objectContaining({
 						id: '2',
 						username: 'Alice',
-						lastConnection: 'TODAY'
+						lastConnection: 'TODAY',
+						sharesWishlist: true
 					})
 				})
 			])

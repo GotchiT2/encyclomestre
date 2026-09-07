@@ -7,7 +7,6 @@
 		card,
 		wishlists = [],
 		onToggleWishlist,
-		onTrade,
 		canSell = false,
 		activeSaleId,
 		onSell,
@@ -16,7 +15,6 @@
 		card: CardRecord;
 		wishlists?: WishlistRegistrySummary[];
 		onToggleWishlist: (wishlistId: string, selected: boolean) => void | Promise<void>;
-		onTrade: () => void;
 		canSell?: boolean;
 		activeSaleId?: string;
 		onSell: () => void;
@@ -26,9 +24,6 @@
 
 <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
 	<WishlistActionMenu {wishlists} cardTitle={card.title} onToggle={onToggleWishlist} />
-	<Button variant="outline" disabled={!card.friendsWhoOwn.length} onclick={onTrade}
-		>{$_('cardDetail.trade')}</Button
-	>
 	{#if canSell}
 		<Button variant="outline" onclick={onSell}>{$_('cardDetail.sell')}</Button>
 	{/if}

@@ -22,6 +22,8 @@ export interface User {
 	visibility?: ProfileVisibility;
 	rank?: number;
 	lastConnection?: LastConnection;
+	/** L'ami a au moins une wishlist partagée avec le joueur courant. */
+	sharesWishlist?: boolean;
 	bio?: string | null;
 	role: UserRole;
 	preferences?: UserPreferences;

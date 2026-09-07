@@ -4,9 +4,11 @@ import { render } from 'vitest-browser-svelte';
 import '$lib/i18n';
 import '../../../app.css';
 
-const { gotoMock, getVariantCopiesMock } = vi.hoisted(() => ({
+const { gotoMock, getVariantCopiesMock, getWikiForgeCollectionCardMock, getFriendCollectionPageMock } = vi.hoisted(() => ({
 	gotoMock: vi.fn(),
-	getVariantCopiesMock: vi.fn(async () => [])
+	getVariantCopiesMock: vi.fn(async () => []),
+	getWikiForgeCollectionCardMock: vi.fn(async () => ({ sharedWishlistMemberships: [] })),
+	getFriendCollectionPageMock: vi.fn<() => Promise<CollectionPageResult>>(async () => ({ items: [], page: 0, total: 0, hasNext: false, nextCursor: null, rarityResults: null }))
 }));
 vi.mock('$app/navigation', () => ({ goto: gotoMock }));
 
@@ -19,6 +21,10 @@ vi.mock('$lib/api', () => ({
 	updateWikiForgeTag: vi.fn(),
 	deleteWikiForgeTag: vi.fn(),
 	getVariantCopies: getVariantCopiesMock,
+	getWikiForgeCollectionCard: getWikiForgeCollectionCardMock,
+	getFriendCollectionPage: getFriendCollectionPageMock,
+	getWikiForgeCollectionPage: vi.fn(async () => ({ items: [], page: 0, total: 0, hasNext: false, nextCursor: null, rarityResults: null })),
+	createTradeOffer: vi.fn(),
 	createSale: vi.fn(
 		async (input: { userCardId: string; type: 'auction' | 'direct'; price: number }) => ({
 			id: 'sale-created',
@@ -45,6 +51,7 @@ vi.mock('$lib/api', () => ({
 
 import CardDetailModal from './card-detail-modal.svelte';
 import type { CardRecord } from '$lib/types';
+import type { CollectionPageResult } from '$lib/api/collection';
 
 const card: CardRecord = {
 	id: 'card-1',
@@ -152,7 +159,7 @@ describe('CardDetailModal', () => {
 		expect(tabs.getBoundingClientRect().bottom).toBeLessThanOrEqual(
 			actions.getBoundingClientRect().top
 		);
-		expect(actions.querySelectorAll('button')).toHaveLength(2);
+		expect(actions.querySelectorAll('button')).toHaveLength(1);
 		for (const button of actions.querySelectorAll('button')) {
 			expect(button.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
 		}
@@ -198,39 +205,39 @@ describe('CardDetailModal', () => {
 		expect(onToggleProtection).toHaveBeenCalledOnce();
 	});
 
-	it('opens a prefilled trade directly for one owner and a selector for several owners', async () => {
-		const oneOwner = { friendId: 'friend-1', username: 'alice', avatarUrl: '', ownedCount: 1 };
+	it('prepares an exchange with the selected owner rarity', async () => {
 		const onClose = vi.fn();
-		const view = render(CardDetailModal, {
-			card: { ...card, catalogueId: 'variant-1', friendsWhoOwn: [oneOwner] },
-			onToggleWishlist: vi.fn(),
-			onClose
-		});
-
-		await page.getByRole('button', { name: 'Proposer un échange' }).click();
-		expect(onClose).toHaveBeenCalledOnce();
-		expect(gotoMock).toHaveBeenCalledWith('/trades?partner=friend-1&cards=variant-1');
-		view.unmount();
-
 		render(CardDetailModal, {
 			card: {
 				...card,
+				baseCardId: 42,
 				friendsWhoOwn: [
-					oneOwner,
-					{ friendId: 'friend-2', username: 'bob', avatarUrl: '', ownedCount: 3 }
+					{
+						friendId: 'friend-1',
+						username: 'alice',
+						avatarUrl: '',
+						ownedCount: 3,
+						rarityCounts: { SR: 2, C: 1 }
+					}
 				]
 			},
 			onToggleWishlist: vi.fn(),
-			onClose: vi.fn()
+			onClose
+		});
+		getFriendCollectionPageMock.mockResolvedValueOnce({
+			items: [{ ...card, id: 'requested-copy', baseCardId: 42, rarityInitials: 'SR' }],
+			page: 0,
+			total: 1,
+			hasNext: false,
+			nextCursor: null,
+			rarityResults: null
 		});
 
-		await page.getByRole('button', { name: 'Proposer un échange' }).click();
-		const selector = page.getByTestId('card-trade-partner-dialog');
-		await expect.element(selector).toBeVisible();
-		expect(Number(getComputedStyle(selector.element()).zIndex)).toBeGreaterThan(
-			Number(getComputedStyle(page.getByTestId('card-detail-modal').element()).zIndex)
-		);
-		await expect.element(page.getByRole('button', { name: /@alice/ })).toBeVisible();
-		await expect.element(page.getByRole('button', { name: /@bob/ })).toBeVisible();
+		await page.getByRole('tab', { name: 'Réseau' }).first().click();
+		await page.getByRole('button', { name: /alice.*SR/i }).click();
+		await expect.element(page.getByRole('dialog', { name: /Échanger avec alice/i })).toBeVisible();
+		expect(onClose).not.toHaveBeenCalled();
+		expect(gotoMock).not.toHaveBeenCalled();
+		expect(getFriendCollectionPageMock).toHaveBeenCalledWith('friend-1', { rarities: ['SR'] });
 	});
 });

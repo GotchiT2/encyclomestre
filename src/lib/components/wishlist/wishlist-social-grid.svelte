@@ -8,11 +8,17 @@
 		entries,
 		editable,
 		onRemove,
+		selectionMode = false,
+		selectedPageIds = [],
+		onToggleSelection,
 		onOpen
 	}: {
 		entries: WishlistPageEntry[];
 		editable: boolean;
 		onRemove: (pageId: string) => void | Promise<void>;
+		selectionMode?: boolean;
+		selectedPageIds?: string[];
+		onToggleSelection?: (pageId: string) => void;
 		onOpen: (entry: WishlistPageEntry) => void;
 	} = $props();
 </script>
@@ -21,7 +27,16 @@
 	<div class="wikiforge-card-grid" data-testid="wishlist-card-grid">
 		{#each entries as entry (entry.card.id)}
 			<article class="wikiforge-card-size relative isolate">
-				<CardTile card={entry.card} showFriendOwners={false} onOpen={() => onOpen(entry)} />
+				<CardTile
+					card={entry.card}
+					onOpen={() =>
+						selectionMode
+							? onToggleSelection?.(String(entry.card.baseCardId ?? entry.card.id))
+							: onOpen(entry)}
+				/>
+				{#if selectionMode && selectedPageIds.includes(String(entry.card.baseCardId ?? entry.card.id))}
+					<span class="pointer-events-none absolute inset-0 z-40 border-2 border-energy bg-energy/15" aria-hidden="true"></span>
+				{/if}
 				{#if editable}
 					<Button
 						size="icon-xs"

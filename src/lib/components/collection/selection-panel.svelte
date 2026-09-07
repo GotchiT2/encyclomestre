@@ -10,9 +10,11 @@
 		tags,
 		bulkTagIds = $bindable<string[]>([]),
 		canProtect = false,
+		canUnprotect = false,
 		onSelectAll,
 		onApply,
 		onProtect,
+		onUnprotect = () => undefined,
 		onOpenTagEditor,
 		onCancel
 	}: {
@@ -20,14 +22,17 @@
 		tags: CollectionTag[];
 		bulkTagIds: string[];
 		canProtect?: boolean;
+		canUnprotect?: boolean;
 		onSelectAll: () => void;
 		onApply: () => void | Promise<void>;
 		onProtect: () => void | Promise<void>;
+		onUnprotect?: () => void | Promise<void>;
 		onOpenTagEditor: () => void;
 		onCancel: () => void;
 	} = $props();
 	let applying = $state(false);
 	let protecting = $state(false);
+	let unprotecting = $state(false);
 
 	async function applyTags() {
 		applying = true;
@@ -44,6 +49,15 @@
 			await onProtect();
 		} finally {
 			protecting = false;
+		}
+	}
+
+	async function unprotectCards() {
+		unprotecting = true;
+		try {
+			await onUnprotect();
+		} finally {
+			unprotecting = false;
 		}
 	}
 </script>
@@ -75,6 +89,13 @@
 				disabled={!selectedCount || !canProtect || protecting}
 				onclick={protectCards}
 				><ShieldCheckIcon data-icon="inline-start" />{$_('collection.protect_selection')}</Button
+			><Button
+				size="sm"
+				class="sm:h-11"
+				variant="outline"
+				disabled={!selectedCount || !canUnprotect || unprotecting}
+				onclick={unprotectCards}
+				>{$_('collection.unprotect_selection')}</Button
 			><Button size="sm" class="sm:h-11" variant="ghost" onclick={onCancel}
 				>{$_('common.cancel')}</Button
 			>

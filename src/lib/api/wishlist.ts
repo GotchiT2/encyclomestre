@@ -209,6 +209,32 @@ export const removeWishlistRegistryCard = (
 		}
 	);
 
+const wishlistPageBatch = (pageIds: string[]) => {
+	const ids = [...new Set(pageIds)];
+	if (!ids.length || ids.length > 500) throw new Error('1 à 500 articles sont requis.');
+	return ids.map((pageId) => wikiForgeNumericId(pageId, 'article'));
+};
+
+export const addWishlistRegistryCards = (id: string, pageIds: string[], options?: RequestOptions) =>
+	apiRequest<void>(`/wishlists/${wikiForgeNumericId(id, 'wishlist')}/pages`, {
+		...wikiForgeOptions(options),
+		method: 'PUT',
+		body: wishlistPageBatch(pageIds)
+	});
+
+export const removeWishlistRegistryCards = (id: string, pageIds: string[], options?: RequestOptions) =>
+	apiRequest<void>(`/wishlists/${wikiForgeNumericId(id, 'wishlist')}/pages`, {
+		...wikiForgeOptions(options),
+		method: 'DELETE',
+		body: wishlistPageBatch(pageIds)
+	});
+
+export const removeOwnedWishlistRegistryCards = (id: string, options?: RequestOptions) =>
+	apiRequest<void>(`/wishlists/${wikiForgeNumericId(id, 'wishlist')}/pages/owned`, {
+		...wikiForgeOptions(options),
+		method: 'DELETE'
+	});
+
 export const inviteWishlistFollower = (
 	wishlistId: string,
 	invitedId: string,

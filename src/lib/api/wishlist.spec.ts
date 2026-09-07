@@ -6,6 +6,7 @@ import { apiRequest } from './client';
 import {
 	acceptWishlistInvitation,
 	addWishlistRegistryCard,
+	addWishlistRegistryCards,
 	createWishlistRegistry,
 	deleteWishlistRegistry,
 	getWishlistFollowers,
@@ -14,6 +15,8 @@ import {
 	inviteWishlistFollower,
 	leaveWishlist,
 	removeWishlistRegistryCard,
+	removeWishlistRegistryCards,
+	removeOwnedWishlistRegistryCards,
 	revokeWishlistFollower,
 	updateWishlistRegistry
 } from './wishlist';
@@ -135,6 +138,23 @@ describe('WikiForge wishlist API', () => {
 			apiTarget: 'wikiforge',
 			method: 'DELETE'
 		});
+	});
+
+	it('uses the bulk and owned-card wishlist contracts', async () => {
+		mockedRequest.mockResolvedValue(undefined);
+		await addWishlistRegistryCards('1', ['42', '43', '42']);
+		await removeWishlistRegistryCards('1', ['42', '43']);
+		await removeOwnedWishlistRegistryCards('1');
+		expect(mockedRequest).toHaveBeenNthCalledWith(1, '/wishlists/1/pages', {
+			apiTarget: 'wikiforge', method: 'PUT', body: [42, 43]
+		});
+		expect(mockedRequest).toHaveBeenNthCalledWith(2, '/wishlists/1/pages', {
+			apiTarget: 'wikiforge', method: 'DELETE', body: [42, 43]
+		});
+		expect(mockedRequest).toHaveBeenNthCalledWith(3, '/wishlists/1/pages/owned', {
+			apiTarget: 'wikiforge', method: 'DELETE'
+		});
+		expect(() => addWishlistRegistryCards('1', [])).toThrow('1 à 500');
 	});
 
 	it('supports invitations, followers, acceptance, leaving and revocation', async () => {

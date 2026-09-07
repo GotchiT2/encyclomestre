@@ -74,4 +74,6 @@ export interface LeaderboardEntry {
 export interface Leaderboard {
 	top: LeaderboardEntry[];
 	around: LeaderboardEntry[];
+	computedAt?: string | null;
+	refreshAt?: string | null;
 }

@@ -125,7 +125,11 @@ describe('WikiForge public pages API', () => {
 					rarity: 'L',
 					createdAt: '2026-08-18T12:00:00Z',
 					globalCount: 3,
-					ownedCount: 2
+					ownedCount: 2,
+					friends: [
+						{ id: 7, name: 'Alice', rarityCounts: { SR: 1, C: 2 } },
+						{ id: 8, name: 'Bob', rarityCounts: { L: 1 } }
+					]
 				}
 			],
 			sortBy: 'RARITY',
@@ -141,6 +145,10 @@ describe('WikiForge public pages API', () => {
 			attack: 120,
 			globalSupply: 3,
 			ownedCount: 2,
+			friendsWhoOwn: [
+				{ friendId: '7', username: 'Alice', ownedCount: 3, rarityCounts: { SR: 1, C: 2 } },
+				{ friendId: '8', username: 'Bob', ownedCount: 1, rarityCounts: { L: 1 } }
+			],
 			wikipediaUrl: 'https://fr.wikipedia.org/?curid=42'
 		});
 		expect(page.items[0].imageUrl).toBe('https://images.wikiforge.test/Paris.jpg');
@@ -161,5 +169,61 @@ describe('WikiForge public pages API', () => {
 			rarityResults: { L: 0, UR: 0, SR: 0, R: 0, PC: 0, C: 0 },
 			meta: { page: 1, pageSize: 1, total: 0, totalPages: 1 }
 		});
+	});
+
+	it('keeps results visible when optional friend data is malformed', () => {
+		const result = toPublicPage({
+			nbResults: 1,
+			page: 0,
+			results: [
+				{
+					id: 42,
+					title: 'Paris',
+					atk: 120,
+					viewCount: 1000,
+					rarity: 'L',
+					createdAt: '2026-08-18T12:00:00Z',
+					globalCount: 3,
+					friends: {} as never
+				}
+			],
+			sortBy: 'RARITY',
+			sortDirection: 'ASC'
+		});
+
+		expect(result.items).toHaveLength(1);
+		expect(result.items[0].friendsWhoOwn).toEqual([]);
+	});
+
+	it('accepts creationDate and does not reject a card when its date is absent', () => {
+		const result = toPublicPage({
+			nbResults: 2,
+			page: 0,
+			results: [
+				{
+					id: 42,
+					title: 'Avec date récente',
+					atk: 120,
+					viewCount: 1000,
+					rarity: 'L',
+					creationDate: '2026-09-07T10:00:00',
+					globalCount: 3
+				},
+				{
+					id: 43,
+					title: 'Sans date',
+					atk: 10,
+					viewCount: 20,
+					rarity: 'C',
+					globalCount: 1
+				}
+			],
+			sortBy: 'RARITY',
+			sortDirection: 'ASC'
+		});
+
+		expect(result.items).toHaveLength(2);
+		expect(result.items[0].acquiredAt).toBe('2026-09-07T10:00:00.000Z');
+		expect(result.items[1].acquiredAt).toBeUndefined();
 	});
 });

@@ -15,6 +15,7 @@
 		existingCardIds,
 		loadCards,
 		onSelect,
+		onSelectMany,
 		title = $_('wishlist.add_card'),
 		catalogueLabel = $_('wishlist.catalogue')
 	}: {
@@ -22,6 +23,7 @@
 		existingCardIds: string[];
 		loadCards: (query: CardQuery) => Promise<PaginatedResponse<CardRecord>>;
 		onSelect: (card: CardRecord) => void | Promise<void>;
+		onSelectMany?: (cards: CardRecord[]) => void | Promise<void>;
 		title?: string;
 		catalogueLabel?: string;
 	} = $props();
@@ -37,6 +39,9 @@
 	let failed = $state(false);
 	let debounceTimer: number | undefined;
 	let requestId = 0;
+	let selectedCards = $state<CardRecord[]>([]);
+	const selectedIds = $derived(selectedCards.map((card) => String(card.baseCardId ?? card.id)));
+	let selecting = $state(false);
 	const visibleCards = $derived(
 		cards.filter((card) => !existingCardIds.includes(String(card.baseCardId ?? card.id)))
 	);
@@ -80,7 +85,25 @@
 	});
 
 	async function select(card: CardRecord) {
-		await onSelect(card);
+		if (!onSelectMany) {
+			await onSelect(card);
+			return;
+		}
+		const id = String(card.baseCardId ?? card.id);
+		selectedCards = selectedIds.includes(id)
+			? selectedCards.filter((selectedCard) => String(selectedCard.baseCardId ?? selectedCard.id) !== id)
+			: [...selectedCards, card];
+	}
+
+	async function addSelected() {
+		if (!onSelectMany || !selectedIds.length) return;
+		selecting = true;
+		try {
+			await onSelectMany(selectedCards);
+			selectedCards = [];
+		} finally {
+			selecting = false;
+		}
 	}
 </script>
 
@@ -138,7 +161,12 @@
 			{:else}
 				<div class="wikiforge-card-grid mt-4">
 					{#each visibleCards as card (card.id)}
-						<CardTile {card} showFriendOwners={false} onOpen={select} />
+						<div class="relative">
+							<CardTile {card} onOpen={select} />
+							{#if onSelectMany && selectedIds.includes(String(card.baseCardId ?? card.id))}
+								<span class="pointer-events-none absolute inset-0 z-40 border-2 border-energy bg-energy/15" aria-hidden="true"></span>
+							{/if}
+						</div>
 					{/each}
 				</div>
 			{/if}
@@ -151,10 +179,16 @@
 			<Button size="sm" variant="outline" disabled={page === 1} onclick={() => (page -= 1)}
 				>{$_('codex.previous')}</Button
 			>
-			<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
+			{#if onSelectMany}
+				<Button size="sm" disabled={!selectedIds.length || selecting} onclick={addSelected}
+					>{$_('wishlist.add_selected', { values: { count: selectedIds.length } })}</Button
+				>
+			{:else}
+				<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 				{$_('codex.page')}
 				{page} / {totalPages}
-			</p>
+				</p>
+			{/if}
 			<Button size="sm" variant="outline" disabled={page === totalPages} onclick={() => (page += 1)}
 				>{$_('codex.next')}</Button
 			>

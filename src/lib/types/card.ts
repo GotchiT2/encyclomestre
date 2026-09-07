@@ -3,12 +3,16 @@ export interface FriendOwnerInfo {
 	username: string;
 	avatarUrl: string;
 	ownedCount: number;
+	rarityCounts?: Partial<Record<CardRarityInitials, number>>;
 }
 
 export interface CardWishlistReference {
 	id: string | null;
 	title: string | null;
 	defaultList: boolean;
+	/** Renseigné pour les wishlists d'amis partagées dans le détail d'un exemplaire. */
+	userId?: string | null;
+	userName?: string | null;
 }
 
 export type CardRarity =
@@ -41,6 +45,8 @@ export interface Card {
 	globalSupply: number;
 	friendsWhoOwn: FriendOwnerInfo[];
 	wishlistMemberships?: CardWishlistReference[];
+	/** Wishlists d'amis ayant accepté de les partager, disponible uniquement au détail. */
+	sharedWishlistMemberships?: CardWishlistReference[];
 	isFullArt?: boolean;
 	category?: string;
 	qScore?: number;

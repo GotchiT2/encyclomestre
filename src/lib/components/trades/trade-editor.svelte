@@ -22,6 +22,7 @@
 		partner,
 		initialOwnedCards = [],
 		initialPartnerCards = [],
+		modalLayer,
 		loadOwnedCards,
 		loadPartnerCards,
 		draft = $bindable<Partial<CreateTradeOfferInput>>({}),
@@ -33,6 +34,7 @@
 		partner: User | null;
 		initialOwnedCards?: CardRecord[];
 		initialPartnerCards?: CardRecord[];
+		modalLayer?: number;
 		loadOwnedCards: (query: TradeCardSearchQuery) => Promise<PaginatedResponse<CardRecord>>;
 		loadPartnerCards: (query: TradeCardSearchQuery) => Promise<PaginatedResponse<CardRecord>>;
 		draft?: Partial<CreateTradeOfferInput>;
@@ -82,7 +84,7 @@
 	}
 </script>
 
-<TradeModal bind:open title={$_('trades.exchange_with', { values: { user: partnerName } })}>
+<TradeModal bind:open {modalLayer} title={$_('trades.exchange_with', { values: { user: partnerName } })}>
 	<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
 		<div
 			class="shrink-0 border-b border-primary/20 bg-background/55 px-3 py-2 text-center font-mono text-[10px] uppercase tracking-wider text-muted-foreground sm:px-4"

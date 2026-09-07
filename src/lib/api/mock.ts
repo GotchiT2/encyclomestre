@@ -93,7 +93,16 @@ const publicPage = (card: CardRecord) => ({
 	rarity: card.rarityInitials,
 	createdAt: card.acquiredAt ?? now,
 	globalCount: card.globalSupply,
-	ownedCount: card.ownedCount
+	ownedCount: card.ownedCount,
+	...(card.friendsWhoOwn.length
+		? {
+				friends: card.friendsWhoOwn.map((friend) => ({
+					id: wikiForgeUserId(friend.friendId),
+					name: friend.username,
+					rarityCounts: friend.rarityCounts ?? { [card.rarityInitials]: friend.ownedCount }
+				}))
+			}
+		: {})
 });
 
 const wikiForgeUserId = (id: string) =>
@@ -110,7 +119,8 @@ const simpleWikiForgeUser = (user: User) => ({
 			? 'TODAY'
 			: wikiForgeUserId(user.id) % 3 === 0
 				? 'THIS_MONTH'
-				: 'THIS_WEEK')
+			: 'THIS_WEEK'),
+	sharesWishlist: user.id === 'friend-0'
 });
 const collectionCard = (card: CardRecord, id: number) => ({
 	id,
@@ -948,7 +958,9 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		}));
 		return json({
 			top: entries,
-			around: entries.some((entry) => entry.id === 1) ? undefined : entries.slice(-3)
+			around: entries.some((entry) => entry.id === 1) ? undefined : entries.slice(-3),
+			computedAt: now,
+			refreshAt: new Date(Date.now() + 5 * 60_000).toISOString()
 		});
 	}
 	if (normalizedMethod === 'POST' && pathname === '/auth/logout') return json(undefined, 204);
@@ -1159,6 +1171,22 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	if (tagMatch && normalizedMethod === 'DELETE') return json(undefined, 204);
 	if (/^\/collection\/\d+\/(?:protect|unprotect)$/.test(pathname) && normalizedMethod === 'PUT') {
 		return json(undefined, 204);
+	}
+	if ((pathname === '/collection/protect' || pathname === '/collection/unprotect') && normalizedMethod === 'PUT') {
+		return Array.isArray(body) && body.length
+			? json(undefined, 204)
+			: error(404, 'Aucune carte sélectionnée.', 'NOT_FOUND');
+	}
+	const collectionDetailMatch = /^\/collection\/(\d+)$/.exec(pathname);
+	if (normalizedMethod === 'GET' && collectionDetailMatch) {
+		const cardIndex = Number(collectionDetailMatch[1]) - 1;
+		const card = mockCards[cardIndex];
+		return card
+			? json({
+					...collectionCard(card, cardIndex + 1),
+					wishlists: [{ id: 301, name: 'Cartes cinéma', userId: 2, userName: 'SoneS9' }]
+				})
+			: error(404, 'Carte introuvable.', 'NOT_FOUND');
 	}
 	const collectionCardTagMatch = /^\/collection\/(\d+)\/tags\/\d+$/.exec(pathname);
 	if (collectionCardTagMatch && (normalizedMethod === 'PUT' || normalizedMethod === 'DELETE')) {
@@ -1611,6 +1639,39 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		}
 	}
 
+	const wishlistPageBatchMatch = /^\/wishlists\/([^/]+)\/pages$/.exec(pathname);
+	if (wishlistPageBatchMatch && (normalizedMethod === 'PUT' || normalizedMethod === 'DELETE')) {
+		const registry = (wishlists.get('demo-user') ?? []).find(
+			(entry) => entry.id === decodeURIComponent(wishlistPageBatchMatch[1])
+		);
+		if (!registry) return error(404, 'Wishlist introuvable.', 'WISHLIST_NOT_FOUND');
+		const pageIds = Array.isArray(body) ? body.filter((id): id is number => typeof id === 'number') : [];
+		if (!pageIds.length) return error(404, 'Aucun article sélectionné.', 'NOT_FOUND');
+		for (const pageId of pageIds) {
+			const card = mockCards.find((entry) => entry.baseCardId === pageId);
+			if (!card && normalizedMethod === 'PUT') return error(404, 'Carte introuvable.', 'PAGE_NOT_FOUND');
+			if (!card) continue;
+			if (normalizedMethod === 'PUT' && !registry.cards.includes(card)) {
+				registry.cards.push(card);
+				registry.cardIds.push(card.id);
+			}
+			if (normalizedMethod === 'DELETE') {
+				registry.cards = registry.cards.filter((entry) => entry !== card);
+				registry.cardIds = registry.cardIds.filter((entry) => entry !== card.id);
+			}
+		}
+		return json(undefined, 204);
+	}
+	const wishlistOwnedPagesMatch = /^\/wishlists\/([^/]+)\/pages\/owned$/.exec(pathname);
+	if (wishlistOwnedPagesMatch && normalizedMethod === 'DELETE') {
+		const registry = (wishlists.get('demo-user') ?? []).find(
+			(entry) => entry.id === decodeURIComponent(wishlistOwnedPagesMatch[1])
+		);
+		if (!registry) return error(404, 'Wishlist introuvable.', 'WISHLIST_NOT_FOUND');
+		registry.cards = registry.cards.filter((card) => card.ownedCount < 1);
+		registry.cardIds = registry.cards.map((card) => card.id);
+		return json(undefined, 204);
+	}
 	const wishlistPageMatch = /^\/wishlists\/([^/]+)\/pages\/([^/]+)$/.exec(pathname);
 	if (wishlistPageMatch && (normalizedMethod === 'PUT' || normalizedMethod === 'DELETE')) {
 		const [, encodedWishlistId, encodedPageId] = wishlistPageMatch;

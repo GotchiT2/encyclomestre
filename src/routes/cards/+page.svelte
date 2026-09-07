@@ -6,11 +6,13 @@
 	import CatalogueFilters from '$lib/components/cards/catalogue-filters.svelte';
 	import FilterShell from '$lib/components/layout/filter-shell.svelte';
 	import CatalogueResultSummary from '$lib/components/cards/catalogue-result-summary.svelte';
+	import CatalogueWishlistSelectionBar from '$lib/components/wishlist/catalogue-wishlist-selection-bar.svelte';
 	import EmptyState from '$lib/components/layout/empty-state.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import {
 		addWishlistRegistryCard,
+		addWishlistRegistryCards,
 		getWikiForgePublicPage,
 		getWishlists,
 		toPublicPageCardRecord
@@ -26,6 +28,9 @@
 	let selectedCard = $state<CardRecord | null>(null);
 	let detailRequest = $state(0);
 	let wishlists = $state<WishlistRegistrySummary[]>([]);
+	let selectionMode = $state(false);
+	let selectedCardIds = $state<string[]>([]);
+	let wishlistAdding = $state(false);
 
 	onMount(async () => {
 		if (!restoreSession(localStorage)?.accessToken) return;
@@ -33,6 +38,12 @@
 	});
 
 	async function openCard(card: CardRecord) {
+		if (selectionMode) {
+			selectedCardIds = selectedCardIds.includes(card.id)
+				? selectedCardIds.filter((id) => id !== card.id)
+				: [...selectedCardIds, card.id];
+			return;
+		}
 		const request = ++detailRequest;
 		selectedCard = card;
 		try {
@@ -40,6 +51,23 @@
 			if (detailRequest === request && selectedCard?.id === card.id) selectedCard = detailedCard;
 		} catch {
 			// The catalogue summary stays usable if the provisional detail endpoint is unavailable.
+		}
+	}
+
+	async function addSelectedToWishlist(wishlistId: string) {
+		if (!selectedCardIds.length) return;
+		wishlistAdding = true;
+		try {
+			await addWishlistRegistryCards(wishlistId, selectedCardIds);
+			toast.success($_('codex.selection_added', { values: { count: selectedCardIds.length } }));
+			selectedCardIds = [];
+			selectionMode = false;
+			wishlists = await getWishlists();
+		} catch (error) {
+			if (wikiForgeApiErrorCode(error) === 'WISHLIST_FULL') toast.error($_('wishlist.full_error'));
+			else toast.error($_('common.error'));
+		} finally {
+			wishlistAdding = false;
 		}
 	}
 
@@ -116,11 +144,40 @@
 					{$_('codex.loading')}
 				</p>
 			{:then result}
-				<CatalogueResultSummary total={result.meta.total} />
+				<div class="flex flex-wrap items-center gap-3">
+					<div class="min-w-0 flex-1"><CatalogueResultSummary total={result.meta.total} /></div>
+					{#if wishlists.length && !selectionMode}
+						<Button size="sm" variant="outline" onclick={() => (selectionMode = true)}>
+							{$_('codex.select_cards')}
+						</Button>
+					{/if}
+				</div>
+				{#if selectionMode}
+					<CatalogueWishlistSelectionBar
+						count={selectedCardIds.length}
+						{wishlists}
+						busy={wishlistAdding}
+						onAdd={addSelectedToWishlist}
+						onCancel={() => { selectionMode = false; selectedCardIds = []; }}
+						onSelectAll={() => (selectedCardIds = result.items.map((card) => card.id))}
+					/>
+				{/if}
 				{#if result.items.length}
 					<div class="wikiforge-card-grid">
 						{#each result.items as card (card.id)}
-							<CardTile {card} onOpen={openCard} />
+							<div class="relative w-full">
+								<CardTile {card} onOpen={openCard} />
+								{#if selectionMode}
+									<button
+										class={`absolute inset-0 z-20 flex items-start justify-end bg-primary/10 p-2 outline-none ring-inset ring-energy focus-visible:ring-2 ${selectedCardIds.includes(card.id) ? 'bg-primary/25' : ''}`}
+										aria-label={$_('codex.toggle_card_selection', { values: { title: card.title } })}
+										aria-pressed={selectedCardIds.includes(card.id)}
+										onclick={() => openCard(card)}
+									>
+										<span class="flex size-6 items-center justify-center border border-primary bg-background/90 text-xs text-primary">{selectedCardIds.includes(card.id) ? '✓' : ''}</span>
+									</button>
+								{/if}
+							</div>
 						{/each}
 					</div>
 				{:else}

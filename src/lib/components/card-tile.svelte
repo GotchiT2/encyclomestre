@@ -2,6 +2,7 @@
 	import { _ } from '$lib/i18n';
 	import CardEffects from '$lib/components/cards/card-effects.svelte';
 	import CardStateIndicators from '$lib/components/cards/card-state-indicators.svelte';
+	import FriendOwnershipChip from '$lib/components/cards/friend-ownership-chip.svelte';
 	import { nsfwFilterSettings, shouldBlurCardIllustration } from '$lib/content/nsfw-filter';
 	import { cn } from '$lib/utils';
 	import type { CardRecord, CollectionTag } from '$lib/types';
@@ -237,7 +238,10 @@
 			</div>
 		{/if}
 	{/if}
-	{#if showCollectionState && (card.userProtected || card.ownedCount > 0 || comparisonOwnership?.count || card.wishlistMemberships?.length || (showFriendOwners && card.friendsWhoOwn.length))}
+	{#if showFriendOwners && card.friendsWhoOwn.length}
+		<FriendOwnershipChip owners={card.friendsWhoOwn} />
+	{/if}
+	{#if showCollectionState && (card.userProtected || card.ownedCount > 0 || comparisonOwnership?.count || card.wishlistMemberships?.length || card.sharedWishlistMemberships?.length || (showFriendOwners && card.friendsWhoOwn.length))}
 		<div
 			class="pointer-events-none absolute left-[7%] z-40 flex flex-col items-start gap-1"
 			style={`top:calc(8% + ${stateIndicatorsOffset}px)`}
@@ -253,12 +257,13 @@
 					<LockIcon class="size-3.5" />
 				</span>
 			{/if}
-			{#if card.ownedCount > 0 || comparisonOwnership?.count || card.wishlistMemberships?.length || (showFriendOwners && card.friendsWhoOwn.length)}
+			{#if card.ownedCount > 0 || comparisonOwnership?.count || card.wishlistMemberships?.length || card.sharedWishlistMemberships?.length}
 				<CardStateIndicators
 					ownedCount={card.ownedCount}
 					{comparisonOwnership}
 					wishlists={card.wishlistMemberships}
-					owners={showFriendOwners ? card.friendsWhoOwn : []}
+					sharedWishlists={card.sharedWishlistMemberships}
+					owners={[]}
 				/>
 			{/if}
 		</div>

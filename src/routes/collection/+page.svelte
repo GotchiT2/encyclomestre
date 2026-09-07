@@ -24,7 +24,9 @@
 		getWishlists,
 		nextCollectionPosition,
 		protectWikiForgeCard,
-		unprotectWikiForgeCard
+		protectWikiForgeCards,
+		unprotectWikiForgeCard,
+		unprotectWikiForgeCards
 	} from '$lib/api';
 	import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 	import { _ } from '$lib/i18n';
@@ -87,6 +89,9 @@
 	);
 	const selectedUnprotectedCount = $derived(
 		cards.filter((card) => selectedCardIds.includes(card.id) && !card.userProtected).length
+	);
+	const selectedProtectedCount = $derived(
+		cards.filter((card) => selectedCardIds.includes(card.id) && card.userProtected).length
 	);
 
 	const filterKey = $derived(
@@ -166,7 +171,7 @@
 		wishlistOwners = [
 			...(sessionUser ? [sessionUser] : []),
 			...friendships
-				.filter((friendship) => friendship.status === 'accepted')
+				.filter((friendship) => friendship.status === 'accepted' && friendship.user.sharesWishlist)
 				.map((friendship) => friendship.user)
 		];
 	});
@@ -278,13 +283,29 @@
 			.filter((card) => selectedCardIds.includes(card.id) && !card.userProtected)
 			.map((card) => card.id);
 		if (!ids.length) return;
-		await Promise.all(ids.map((id) => protectWikiForgeCard(id)));
+		await protectWikiForgeCards(ids);
 		const protectedIds = new Set(ids);
 		cards = cards.map((card) =>
 			protectedIds.has(card.id) ? { ...card, userProtected: true } : card
 		);
 		if (selectedCard && protectedIds.has(selectedCard.id)) {
 			selectedCard = { ...selectedCard, userProtected: true };
+		}
+		selectedCardIds = [];
+	}
+
+	async function unprotectSelection() {
+		const ids = cards
+			.filter((card) => selectedCardIds.includes(card.id) && card.userProtected)
+			.map((card) => card.id);
+		if (!ids.length) return;
+		await unprotectWikiForgeCards(ids);
+		const unprotectedIds = new Set(ids);
+		cards = cards.map((card) =>
+			unprotectedIds.has(card.id) ? { ...card, userProtected: false } : card
+		);
+		if (selectedCard && unprotectedIds.has(selectedCard.id)) {
+			selectedCard = { ...selectedCard, userProtected: false };
 		}
 		selectedCardIds = [];
 	}
@@ -406,9 +427,11 @@
 			{tags}
 			bind:bulkTagIds
 			canProtect={selectedUnprotectedCount > 0}
+			canUnprotect={selectedProtectedCount > 0}
 			onSelectAll={toggleSelectAll}
 			onApply={applyTagToSelection}
 			onProtect={protectSelection}
+			onUnprotect={unprotectSelection}
 			onOpenTagEditor={() => (isTagEditorOpen = true)}
 			onCancel={() => {
 				isSelectionMode = false;

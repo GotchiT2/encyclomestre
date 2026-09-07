@@ -7,11 +7,14 @@ import {
 	addWikiForgeCardTag,
 	collectionPath,
 	getWikiForgeCollectionPage,
+	getWikiForgeCollectionCard,
 	nextCollectionPosition,
 	protectWikiForgeCard,
+	protectWikiForgeCards,
 	removeWikiForgeCardTag,
 	toWikiForgeCollectionCard,
 	unprotectWikiForgeCard
+	,unprotectWikiForgeCards
 } from './collection';
 
 const request = vi.mocked(apiRequest);
@@ -176,9 +179,34 @@ describe('WikiForge collection API', () => {
 		});
 	});
 
+	it('uses one atomic WikiForge request for each bulk protection action', async () => {
+		request.mockResolvedValue(undefined);
+		await protectWikiForgeCards(['81', '82', '81']);
+		await unprotectWikiForgeCards(['81', '82']);
+		expect(request).toHaveBeenNthCalledWith(1, '/collection/protect', {
+			apiTarget: 'wikiforge', method: 'PUT', body: [81, 82]
+		});
+		expect(request).toHaveBeenNthCalledWith(2, '/collection/unprotect', {
+			apiTarget: 'wikiforge', method: 'PUT', body: [81, 82]
+		});
+		expect(() => protectWikiForgeCards([])).toThrow('1 à 500');
+		expect(() => unprotectWikiForgeCards(Array.from({ length: 501 }, (_, index) => String(index + 1)))).toThrow('1 à 500');
+	});
+
 	it('builds the shared card mapping deterministically', () => {
 		expect(
 			toWikiForgeCollectionCard({ id: 1, pageId: 2, title: 'Test', rarity: 'C' })
 		).toMatchObject({ id: '1', baseCardId: 2, rarityInitials: 'C' });
+	});
+
+	it('loads shared friend wishlists only from the collection-card detail', async () => {
+		request.mockResolvedValueOnce({
+			id: 81, pageId: 42, title: 'Rose', rarity: 'R',
+			wishlists: [{ id: 3, name: 'Manquantes', userId: 7, userName: 'Alice' }]
+		});
+		await expect(getWikiForgeCollectionCard('81')).resolves.toMatchObject({
+			sharedWishlistMemberships: [{ id: '3', title: 'Manquantes', userId: '7', userName: 'Alice' }]
+		});
+		expect(request).toHaveBeenCalledWith('/collection/81', { apiTarget: 'wikiforge' });
 	});
 });

@@ -357,3 +357,9 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 ## 14. Performance de navigation
 
 - [x] Réutiliser la session validée du profil et paralléliser ses lectures indépendantes — `perf(profile): parallelize profile loading`
+
+## 15. Actions groupées et liens sociaux des cartes
+
+- [x] Ajouter les opérations groupées de collection et wishlist, les wishlists partagées et le filtre de rareté du classement.
+- [x] Afficher les amis détenteurs dans les recherches de cartes et préparer un échange par rareté sans quitter le détail.
+- [x] Ajouter la sélection groupée du catalogue vers une wishlist et fiabiliser le rendu des résultats publics — `feat(cards): add bulk wishlist and social ownership flows`

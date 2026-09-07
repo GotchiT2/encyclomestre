@@ -16,9 +16,16 @@ export interface WikiForgePublicPageCard {
 	length?: number;
 	viewCount: number;
 	rarity: WikiForgePublicPageRarity;
-	createdAt: string;
+	createdAt?: string;
+	/** Champ utilisé par les versions récentes du DTO WikiForge. */
+	creationDate?: string;
 	globalCount: number;
 	ownedCount?: number;
+	friends?: Array<{
+		id: number;
+		name: string;
+		rarityCounts?: Partial<Record<WikiForgePublicPageRarity, number>>;
+	}>;
 }
 
 export interface WikiForgePublicPagesResponse {
@@ -60,6 +67,15 @@ const emptyRarityResults: Record<WikiForgePublicPageRarity, number> = {
 
 export function wikiForgeImageUrl(image?: string | null): string {
 	return image?.trim() || '/card-placeholder.svg';
+}
+
+function publicPageDate(card: WikiForgePublicPageCard): string | undefined {
+	const value = [card.createdAt, card.creationDate].find(
+		(candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0
+	);
+	if (!value) return undefined;
+	const date = wikiForgeUtcDate(value);
+	return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
 function publicPagesPath(query: WikiForgePublicPagesQuery): string {
@@ -106,6 +122,10 @@ export async function getWikiForgePublicPage(
 
 export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecord {
 	const rarity = cardRarityByCode[card.rarity] ?? cardRarityByCode.C;
+	const acquiredAt = publicPageDate(card);
+	// Les données sociales sont optionnelles pendant la migration API : une valeur
+	// incomplète ne doit jamais empêcher le rendu de toute la page catalogue.
+	const friends = Array.isArray(card.friends) ? card.friends : [];
 	return {
 		id: String(card.id),
 		baseCardId: card.id,
@@ -123,9 +143,21 @@ export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecor
 		defense: 0,
 		ownedCount: card.ownedCount ?? 0,
 		globalSupply: card.globalCount,
-		friendsWhoOwn: [],
+		friendsWhoOwn: friends.map((friend) => {
+			const rarityCounts = friend.rarityCounts ?? {};
+			return {
+				friendId: String(friend.id),
+				username: friend.name,
+				avatarUrl: '',
+				rarityCounts,
+				ownedCount: Object.values(rarityCounts).reduce(
+					(total, count) => total + (Number.isFinite(count) ? count : 0),
+					0
+				)
+			};
+		}),
 		isFullArt: false,
-		acquiredAt: wikiForgeUtcDate(card.createdAt).toISOString(),
+		...(acquiredAt ? { acquiredAt } : {}),
 		nsfw: Boolean(card.nsfw)
 	};
 }

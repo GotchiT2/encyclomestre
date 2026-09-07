@@ -197,6 +197,7 @@ export interface WikiForgeSimpleUserDto {
 	image?: string | null;
 	createdAt?: string;
 	lastConnection?: LastConnection;
+	sharesWishlist?: boolean;
 }
 
 export interface UpdateWikiForgeMeInput {
@@ -232,7 +233,8 @@ export function toWikiForgeUser(user: WikiForgeSimpleUserDto): User {
 		role: 'user',
 		createdAt: user.createdAt ? wikiForgeUtcDate(user.createdAt).toISOString() : '',
 		updatedAt: user.createdAt ? wikiForgeUtcDate(user.createdAt).toISOString() : '',
-		lastConnection: user.lastConnection
+		lastConnection: user.lastConnection,
+		sharesWishlist: user.sharesWishlist
 	};
 }
 
