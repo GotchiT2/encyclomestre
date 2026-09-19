@@ -23,9 +23,16 @@
 	} from '$lib/api';
 	import { currentSession, persistSession } from '$lib/auth/session';
 	import { getPlayerRelationship } from '$lib/domain/friends/relationship';
-	import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 	import { _ } from '$lib/i18n';
-	import type { CardRarity, CardRecord, CollectionBooleanFilter, CollectionSort, CollectionTag, PlayerRelationshipStatus, SalesResult, UserProfile } from '$lib/types';
+	import type {
+		CardRecord,
+		CollectionBooleanFilter,
+		CollectionSort,
+		CollectionTag,
+		PlayerRelationshipStatus,
+		SalesResult,
+		UserProfile
+	} from '$lib/types';
 	import LockKeyholeIcon from '@lucide/svelte/icons/lock-keyhole';
 	import { toast } from 'svelte-sonner';
 
@@ -39,7 +46,7 @@
 	let friendTags = $state<CollectionTag[]>([]);
 	let friendQuery = $state('');
 	let friendSort = $state<CollectionSort>('acquiredDate');
-	let friendRarities = $state<CardRarity[]>([]);
+	let friendVariantIds = $state<number[]>([]);
 	let friendTagIds = $state<string[]>([]);
 	let friendDuplicate = $state<CollectionBooleanFilter>('all');
 	let friendProtection = $state<CollectionBooleanFilter>('all');
@@ -57,12 +64,15 @@
 			const [friends, blocks] = await Promise.all([getFriends(), getUserBlocks()]);
 			relationship = getPlayerRelationship(profile.id, friends, blocks).status;
 			if (relationship === 'friend') {
-				const [tags] = await Promise.all([getFriendTags(profile.id).catch(() => []), loadCollection()]);
+				const [tags] = await Promise.all([
+					getFriendTags(profile.id).catch(() => []),
+					loadCollection()
+				]);
 				friendTags = tags;
 				friendFilterKey = JSON.stringify([
 					friendQuery,
 					friendSort,
-					friendRarities,
+					friendVariantIds,
 					friendTagIds,
 					friendDuplicate,
 					friendProtection
@@ -77,7 +87,7 @@
 		return {
 			query: friendQuery,
 			sortBy: friendSort,
-			rarities: friendRarities.map((rarity) => cardRarityCodeByName[rarity]),
+			variantIds: friendVariantIds,
 			tagIds: friendTagIds,
 			duplicate: friendDuplicate,
 			protected: friendProtection,
@@ -107,7 +117,14 @@
 
 	$effect(() => {
 		if (relationship !== 'friend') return;
-		const key = JSON.stringify([friendQuery, friendSort, friendRarities, friendTagIds, friendDuplicate, friendProtection]);
+		const key = JSON.stringify([
+			friendQuery,
+			friendSort,
+			friendVariantIds,
+			friendTagIds,
+			friendDuplicate,
+			friendProtection
+		]);
 		if (key === friendFilterKey) return;
 		window.clearTimeout(friendFilterTimer);
 		friendFilterTimer = window.setTimeout(() => {
@@ -154,7 +171,9 @@
 </script>
 
 <section class="flex flex-col gap-6 pb-12">
-	<header class="forge-panel flex flex-col gap-5 overflow-hidden p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
+	<header
+		class="forge-panel flex flex-col gap-5 overflow-hidden p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6"
+	>
 		<UserAvatar
 			image={profile.image}
 			name={profile.name}
@@ -173,27 +192,53 @@
 				</div>
 				<div class="border border-primary/25 bg-background/40 px-3 py-2">
 					<p class="forge-label">{$_('profile.member_since')}</p>
-					<p class="mt-1 text-sm font-bold">{new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(`${profile.joinedAt}-01T00:00:00Z`))}</p>
+					<p class="mt-1 text-sm font-bold">
+						{new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(
+							new Date(`${profile.joinedAt}-01T00:00:00Z`)
+						)}
+					</p>
 				</div>
 			</div>
 			{#if profile.full && profile.tags.length}<div class="mt-4">
-				<p class="forge-label">{$_('profile.tags_title')}</p>
-				<ul class="mt-2 flex flex-wrap gap-1.5">
-					{#each profile.tags as tag (`${tag.name}-${tag.color}`)}<li class="border px-2 py-0.5 text-[11px] font-bold tracking-wider uppercase" style={`color:${tag.color};border-color:${tag.color}`}>{tag.name}</li>{/each}
-				</ul>
-			</div>{/if}
+					<p class="forge-label">{$_('profile.tags_title')}</p>
+					<ul class="mt-2 flex flex-wrap gap-1.5">
+						{#each profile.tags as tag (`${tag.name}-${tag.color}`)}<li
+								class="border px-2 py-0.5 text-[11px] font-bold tracking-wider uppercase"
+								style={`color:${tag.color};border-color:${tag.color}`}
+							>
+								{tag.name}
+							</li>{/each}
+					</ul>
+				</div>{/if}
 		</div>
 		<PlayerRelationshipControl status={relationship} busy={inviting} onInvite={invite} />
 	</header>
 
 	<div
-		class="grid border border-primary/30 bg-card p-1 {relationship === 'friend' ? 'grid-cols-3' : 'grid-cols-2'}"
+		class="grid border border-primary/30 bg-card p-1 {relationship === 'friend'
+			? 'grid-cols-3'
+			: 'grid-cols-2'}"
 		role="tablist"
 		aria-label={$_('profile.tabs_aria')}
 	>
-		<Button variant={activeTab === 'showcase' ? 'default' : 'ghost'} role="tab" aria-selected={activeTab === 'showcase'} onclick={() => (activeTab = 'showcase')}>{$_('profile.tab_showcase')}</Button>
-		<Button variant={activeTab === 'sales' ? 'default' : 'ghost'} role="tab" aria-selected={activeTab === 'sales'} onclick={() => (activeTab = 'sales')}>{$_('profile.tab_sales')}</Button>
-		{#if relationship === 'friend'}<Button variant={activeTab === 'collection' ? 'default' : 'ghost'} role="tab" aria-selected={activeTab === 'collection'} onclick={() => (activeTab = 'collection')}>{$_('friends.collection_tab')}</Button>{/if}
+		<Button
+			variant={activeTab === 'showcase' ? 'default' : 'ghost'}
+			role="tab"
+			aria-selected={activeTab === 'showcase'}
+			onclick={() => (activeTab = 'showcase')}>{$_('profile.tab_showcase')}</Button
+		>
+		<Button
+			variant={activeTab === 'sales' ? 'default' : 'ghost'}
+			role="tab"
+			aria-selected={activeTab === 'sales'}
+			onclick={() => (activeTab = 'sales')}>{$_('profile.tab_sales')}</Button
+		>
+		{#if relationship === 'friend'}<Button
+				variant={activeTab === 'collection' ? 'default' : 'ghost'}
+				role="tab"
+				aria-selected={activeTab === 'collection'}
+				onclick={() => (activeTab = 'collection')}>{$_('friends.collection_tab')}</Button
+			>{/if}
 	</div>
 
 	{#if !profile.full && activeTab === 'showcase'}
@@ -215,25 +260,25 @@
 	{/if}
 
 	{#if activeTab === 'sales'}<section>
-		<h2 class="font-serif text-2xl font-bold">{$_('profile.buy_now_title')}</h2>
-		{#if sales.instantSales.length}<ContextualCardRail
-				class="mt-4"
-				items={sales.instantSales}
-				label={$_('profile.buy_now_title')}
-				itemKey={(sale) => sale.id}
-				desktopGridClass="lg:grid-cols-4 xl:grid-cols-6"
-				>{#snippet children(sale)}<article class="forge-panel-flat p-2">
-						<CardTile card={sale.card} showFriendOwners={false} />
-						<div class="mt-2 flex items-center justify-between gap-2">
-							<strong>{sale.price} ◈</strong><Button
-								size="sm"
-								disabled={buyingId !== null || profile.id === $currentSession?.user.id}
-								onclick={() => buy(sale.id)}>{$_('profile.buy_action')}</Button
-							>
-						</div>
-					</article>{/snippet}</ContextualCardRail
-			>{:else}<p class="mt-3 text-sm text-muted-foreground">{$_('friends.empty_sales')}</p>{/if}
-	</section>{/if}
+			<h2 class="font-serif text-2xl font-bold">{$_('profile.buy_now_title')}</h2>
+			{#if sales.instantSales.length}<ContextualCardRail
+					class="mt-4"
+					items={sales.instantSales}
+					label={$_('profile.buy_now_title')}
+					itemKey={(sale) => sale.id}
+					desktopGridClass="lg:grid-cols-4 xl:grid-cols-6"
+					>{#snippet children(sale)}<article class="forge-panel-flat p-2">
+							<CardTile card={sale.card} showFriendOwners={false} />
+							<div class="mt-2 flex items-center justify-between gap-2">
+								<strong>{sale.price} ◈</strong><Button
+									size="sm"
+									disabled={buyingId !== null || profile.id === $currentSession?.user.id}
+									onclick={() => buy(sale.id)}>{$_('profile.buy_action')}</Button
+								>
+							</div>
+						</article>{/snippet}</ContextualCardRail
+				>{:else}<p class="mt-3 text-sm text-muted-foreground">{$_('friends.empty_sales')}</p>{/if}
+		</section>{/if}
 
 	{#if relationship === 'friend' && activeTab === 'collection'}
 		<section class="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
@@ -241,7 +286,7 @@
 				<FilterControls
 					bind:query={friendQuery}
 					bind:sortBy={friendSort}
-					bind:selectedRarities={friendRarities}
+					bind:variantIds={friendVariantIds}
 					bind:tagFilterIds={friendTagIds}
 					bind:duplicate={friendDuplicate}
 					bind:protected={friendProtection}
@@ -252,7 +297,7 @@
 					onClear={() => {
 						friendQuery = '';
 						friendSort = 'acquiredDate';
-						friendRarities = [];
+						friendVariantIds = [];
 						friendTagIds = [];
 						friendDuplicate = 'all';
 						friendProtection = 'all';
@@ -265,12 +310,18 @@
 					<CardGrid
 						cards={friendCards}
 						tags={friendTags}
-						assignments={Object.fromEntries(friendCards.map((card) => [card.id, card.collectionTagIds ?? []]))}
+						assignments={Object.fromEntries(
+							friendCards.map((card) => [card.id, card.collectionTagIds ?? []])
+						)}
 						isSelectionMode={false}
 						selectedCardIds={[]}
 						onToggleCard={() => {}}
 					/>
-					{#if friendHasNext}<div class="mt-5 flex justify-center"><Button variant="outline" onclick={() => void loadCollection(true)}>{$_('collection.load_more')}</Button></div>{/if}
+					{#if friendHasNext}<div class="mt-5 flex justify-center">
+							<Button variant="outline" onclick={() => void loadCollection(true)}
+								>{$_('collection.load_more')}</Button
+							>
+						</div>{/if}
 				{:else}<p class="text-sm text-muted-foreground">{$_('friends.empty_collection')}</p>{/if}
 			</div>
 		</section>

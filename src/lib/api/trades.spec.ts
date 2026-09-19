@@ -3,6 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { apiRequest } = vi.hoisted(() => ({ apiRequest: vi.fn() }));
 
 vi.mock('./client', () => ({ apiRequest }));
+vi.mock('./variants', async (importOriginal) => ({
+	...(await importOriginal<typeof import('./variants')>()),
+	getVariants: vi
+		.fn()
+		.mockResolvedValue([
+			{ id: 1, name: 'Standard', color: '#b8f2d5', styles: ['NORMAL'], renderKey: 'standard' }
+		])
+}));
 
 import {
 	cancelTradeOffer,
@@ -20,7 +28,8 @@ const apiCard = (id: number, pageId: number, title: string) => ({
 	title,
 	description: `${title} description`,
 	image: `https://images.wikiforge.fr/${pageId}.jpg`,
-	rarity: 'R' as const,
+	variantId: 1,
+	packId: 1,
 	atk: 42,
 	alt: false,
 	duplicate: false,

@@ -1,59 +1,6 @@
 import { apiRequest, type RequestOptions } from './client';
-import type {
-	CardRecord,
-	CardVariantCode,
-	CollectionTag,
-	GuildMember,
-	GuildSummary,
-	PaginatedResponse,
-	ActiveSaleSummary,
-	ProfileVisibility
-} from '$lib/types';
-import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/rarities';
-
-export type WikiForgeRarity = CardRarityCode;
-
-export interface WikiForgeCard {
-	id: string;
-	baseCardId?: number;
-	variant: CardVariantCode;
-	wikipediaTitle: string;
-	shortDescription?: string;
-	longDescription?: string;
-	imageUrl: string;
-	rarity: string;
-	isFullArt: boolean;
-	category?: string;
-	atk?: number;
-	def?: number;
-	qScore?: number;
-	pageviews?: number;
-	globalSupply?: number;
-	acquiredAt?: string;
-	createdAt?: string;
-	wikipediaUrl?: string;
-}
-
-export interface WikiForgeCollectionCard {
-	userCardId: string;
-	cardId: string;
-	acquiredAt: string;
-	tags: CollectionTag[];
-	card: WikiForgeCard;
-	activeSale?: ActiveSaleSummary | null;
-}
-
-export interface WikiForgePage<T> {
-	results?: T[] | null;
-	page: number;
-	nbResults: number;
-	size?: number;
-	nextCursor?: string | null;
-	sortBy?: string;
-	sortDirection?: string;
-	filters?: Record<string, unknown>;
-	q?: string | null;
-}
+import type { CollectionTag, GuildMember, GuildSummary, ProfileVisibility } from '$lib/types';
+import { getVariants } from './variants';
 
 interface WikiForgeTagDto {
 	id: number;
@@ -102,102 +49,51 @@ export const updateWikiForgeTag = (
 	}).then(toCollectionTag);
 export const deleteWikiForgeTag = (id: string, options?: RequestOptions) =>
 	apiRequest<void>(`/tags/${numericWikiForgeId(id)}`, { ...tagOptions(options), method: 'DELETE' });
+
+async function updateCardsTags(
+	method: 'PUT' | 'DELETE',
+	tagId: string,
+	userCardIds: string[],
+	options?: RequestOptions
+) {
+	const [cards, variants] = await Promise.all([
+		apiRequest<import('./collection').WikiForgeCollectionCardDto[]>(
+			`/collection/tags/${numericWikiForgeId(tagId)}`,
+			{
+				...tagOptions(options),
+				method,
+				body: userCardIds.map(numericWikiForgeId)
+			}
+		),
+		getVariants(options)
+	]);
+	const { toWikiForgeCollectionCard } = await import('./collection');
+	return cards.map((card) => toWikiForgeCollectionCard(card, variants));
+}
+
 export const applyWikiForgeTag = (tagId: string, userCardIds: string[], options?: RequestOptions) =>
-	apiRequest<import('./collection').WikiForgeCollectionCardDto[]>(
-		`/collection/tags/${numericWikiForgeId(tagId)}`,
-		{
-			...tagOptions(options),
-			method: 'PUT',
-			body: userCardIds.map(numericWikiForgeId)
-		}
-	).then((cards) =>
-		Promise.all([import('./collection')]).then(([module]) =>
-			cards.map(module.toWikiForgeCollectionCard)
-		)
-	);
+	updateCardsTags('PUT', tagId, userCardIds, options);
 export const removeWikiForgeTag = (
 	tagId: string,
 	userCardIds: string[],
 	options?: RequestOptions
-) =>
-	apiRequest<import('./collection').WikiForgeCollectionCardDto[]>(
-		`/collection/tags/${numericWikiForgeId(tagId)}`,
-		{
-			...tagOptions(options),
-			method: 'DELETE',
-			body: userCardIds.map(numericWikiForgeId)
-		}
-	).then((cards) =>
-		Promise.all([import('./collection')]).then(([module]) =>
-			cards.map(module.toWikiForgeCollectionCard)
-		)
-	);
+) => updateCardsTags('DELETE', tagId, userCardIds, options);
 
 export const getMyGuild = (options?: RequestOptions) =>
-	apiRequest<GuildSummary | Record<string, never>>('/me/guild', { ...options, apiTarget: 'wikiforge' });
+	apiRequest<GuildSummary | Record<string, never>>('/me/guild', {
+		...options,
+		apiTarget: 'wikiforge'
+	});
 export const getGuildMembers = (id: string, options?: RequestOptions) =>
-	apiRequest<GuildMember[]>(`/guilds/${encodeURIComponent(id)}/members`, { ...options, apiTarget: 'wikiforge' });
+	apiRequest<GuildMember[]>(`/guilds/${encodeURIComponent(id)}/members`, {
+		...options,
+		apiTarget: 'wikiforge'
+	});
 export const getWikiForgeGuildWishlistShares = <T = unknown>(
 	id: string,
 	options?: RequestOptions
-) => apiRequest<T[]>(`/guilds/${encodeURIComponent(id)}/wishlists`, { ...options, apiTarget: 'wikiforge' });
-
-export function toCardRecord(card: WikiForgeCard): CardRecord {
-	const rarity = cardRarityByCode[card.rarity as CardRarityCode] ?? cardRarityByCode.C;
-	return {
-		id: String(card.id),
-		baseCardId: card.baseCardId,
-		variant: card.variant,
-		title: card.wikipediaTitle,
-		shortDescription: card.shortDescription ?? card.category ?? '',
-		longDescription: card.longDescription ?? card.shortDescription ?? card.category ?? '',
-		rarity: rarity.name,
-		rarityInitials: rarity.initials,
-		rarityColor: rarity.color,
-		viewCount: card.pageviews ?? 0,
-		imageUrl: card.imageUrl || '/card-placeholder.svg',
-		wikipediaUrl: card.wikipediaUrl ?? '',
-		attack: card.atk ?? 0,
-		defense: card.def ?? 0,
-		ownedCount: card.acquiredAt ? 1 : 0,
-		globalSupply: card.globalSupply ?? 0,
-		friendsWhoOwn: [],
-		isFullArt: card.isFullArt,
-		category: card.category,
-		qScore: card.qScore,
-		acquiredAt: card.acquiredAt
-	};
-}
-
-export function toCollectionCardRecord(item: WikiForgeCollectionCard): CardRecord {
-	return {
-		...toCardRecord({ ...item.card, id: item.userCardId, acquiredAt: item.acquiredAt }),
-		catalogueId: String(item.cardId),
-		collectionTags: item.tags ?? [],
-		activeSale: item.activeSale ?? null
-	};
-}
-
-export function toCardPage(source: WikiForgePage<WikiForgeCard>): PaginatedResponse<CardRecord> {
-	return toFrontendPage(source, (source.results ?? []).map(toCardRecord));
-}
-
-export function toCollectionPage(
-	source: WikiForgePage<WikiForgeCollectionCard>
-): PaginatedResponse<CardRecord> {
-	return toFrontendPage(source, (source.results ?? []).map(toCollectionCardRecord));
-}
-
-function toFrontendPage<T>(source: WikiForgePage<unknown>, items: T[]): PaginatedResponse<T> {
-	const pageSize = Math.max(1, source.size ?? (source.results?.length || 50));
-	return {
-		items,
-		meta: {
-			page: source.page + 1,
-			pageSize,
-			total: source.nbResults,
-			totalPages: Math.max(1, Math.ceil(source.nbResults / pageSize)),
-			...(source.nextCursor === undefined ? {} : { nextCursor: source.nextCursor })
-		}
-	};
-}
+) =>
+	apiRequest<T[]>(`/guilds/${encodeURIComponent(id)}/wishlists`, {
+		...options,
+		apiTarget: 'wikiforge'
+	});

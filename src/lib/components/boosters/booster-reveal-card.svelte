@@ -4,7 +4,7 @@
 	import BoosterCardBack from './booster-card-back.svelte';
 	import { _ } from '$lib/i18n';
 	import { cn } from '$lib/utils';
-	import type { CardRecord } from '$lib/types';
+	import { cardHasStyle, type CardRecord } from '$lib/types';
 	const particles = Array.from({ length: 8 }, (_, index) => index);
 
 	let {
@@ -29,6 +29,8 @@
 	let previousRevealed = $state(false);
 	let propagationTimer: number | undefined;
 	let propagationFrame: number | undefined;
+	let landscape = $state(false);
+	const fullArt = $derived(cardHasStyle(card, 'FULL_ART'));
 	const actionable = $derived((!revealed && interactive) || (revealed && detailsEnabled));
 
 	function propagate() {
@@ -51,6 +53,15 @@
 		previousRevealed = revealed;
 	});
 
+	$effect(() => {
+		void card.imageUrl;
+		landscape = false;
+		if (!fullArt || typeof Image === 'undefined') return;
+		const image = new Image();
+		image.onload = () => (landscape = image.naturalWidth / image.naturalHeight >= 1.2);
+		image.src = card.imageUrl;
+	});
+
 	onDestroy(() => {
 		window.clearTimeout(propagationTimer);
 		window.cancelAnimationFrame(propagationFrame ?? 0);
@@ -60,18 +71,18 @@
 <div
 	class={cn('booster-reveal-card', className)}
 	class:is-revealed={revealed}
-	class:is-legendary={card.rarityInitials === 'L'}
-	class:is-full-art={Boolean(card.isFullArt)}
+	class:is-full-art={fullArt}
+	class:is-landscape={landscape}
 	class:is-propagating={propagating}
-	style={`--rarity-color:${card.rarityColor}`}
-	data-rarity={card.rarityInitials}
+	style={`--variant-color:${card.variant.color}`}
+	data-render-key={card.variant.renderKey}
 	data-revealed={revealed}
 >
-	<div class="booster-rarity-aura" aria-hidden="true"></div>
+	<div class="booster-variant-aura" aria-hidden="true"></div>
 	<div class="booster-light-propagation" aria-hidden="true">
 		{#each [0, 1, 2] as wave (wave)}<span style={`--wave-index:${wave}`}></span>{/each}
 	</div>
-	{#if card.rarity !== 'Commune'}
+	{#if card.variant.renderKey !== 'standard'}
 		<div class="booster-particles" aria-hidden="true">
 			{#each particles as index (index)}<span style={`--particle-index:${index}`}></span>{/each}
 		</div>
@@ -86,7 +97,7 @@
 		}}
 		aria-label={revealed
 			? $_('boosters.open_card_detail', { values: { title: card.title } })
-			: $_('boosters.reveal_card', { values: { rarity: card.rarity } })}
+			: $_('boosters.reveal_card', { values: { variant: card.variant.name } })}
 		data-booster-interactive
 	>
 		<span class="booster-card-flipper">
@@ -94,7 +105,7 @@
 				<CardTile {card} showFriendOwners={false} />
 			</span>
 			<span class="booster-card-face booster-card-reverse">
-				<BoosterCardBack rarityColor={card.rarityColor} isFullArt={card.isFullArt} />
+				<BoosterCardBack color={card.variant.color} {fullArt} renderKey={card.variant.renderKey} />
 			</span>
 		</span>
 	</button>
@@ -109,14 +120,18 @@
 		perspective: 1200px;
 		isolation: isolate;
 	}
+	.booster-reveal-card.is-landscape {
+		width: 19rem;
+		aspect-ratio: 1221/862;
+	}
 
-	.booster-rarity-aura {
+	.booster-variant-aura {
 		position: absolute;
 		inset: -9%;
 		z-index: -2;
 		background: radial-gradient(
 			ellipse,
-			color-mix(in srgb, var(--rarity-color) 52%, transparent),
+			color-mix(in srgb, var(--variant-color) 52%, transparent),
 			transparent 70%
 		);
 		filter: blur(22px);
@@ -133,14 +148,14 @@
 	}
 
 	.booster-light-propagation span {
-		border: 1px solid color-mix(in srgb, var(--rarity-color) 38%, transparent);
+		border: 1px solid color-mix(in srgb, var(--variant-color) 38%, transparent);
 		background: radial-gradient(
 			ellipse,
 			transparent 48%,
-			color-mix(in srgb, var(--rarity-color) 20%, transparent) 62%,
+			color-mix(in srgb, var(--variant-color) 20%, transparent) 62%,
 			transparent 78%
 		);
-		box-shadow: 0 0 1.75rem color-mix(in srgb, var(--rarity-color) 30%, transparent);
+		box-shadow: 0 0 1.75rem color-mix(in srgb, var(--variant-color) 30%, transparent);
 		filter: blur(12px);
 		opacity: 0;
 		transform: scale(0.78);
@@ -157,31 +172,11 @@
 		animation-delay: calc(var(--wave-index) * 210ms);
 	}
 
-	.booster-reveal-card:hover .booster-rarity-aura,
-	.booster-reveal-card:focus-within .booster-rarity-aura,
-	.is-propagating .booster-rarity-aura {
+	.booster-reveal-card:hover .booster-variant-aura,
+	.booster-reveal-card:focus-within .booster-variant-aura,
+	.is-propagating .booster-variant-aura {
 		opacity: 0.72;
 		filter: blur(27px);
-	}
-
-	.booster-reveal-card[data-rarity='SR'] .booster-light-propagation,
-	.booster-reveal-card[data-rarity='UR'] .booster-light-propagation {
-		inset: -13%;
-	}
-
-	.booster-reveal-card[data-rarity='L'] .booster-light-propagation {
-		inset: -16%;
-	}
-
-	.booster-reveal-card[data-rarity='SR'] .booster-rarity-aura,
-	.booster-reveal-card[data-rarity='UR'] .booster-rarity-aura {
-		opacity: 0.62;
-	}
-
-	.booster-reveal-card[data-rarity='L'] .booster-rarity-aura {
-		inset: -13%;
-		opacity: 0.72;
-		filter: blur(26px);
 	}
 
 	.booster-card-button,
@@ -235,7 +230,7 @@
 		filter: drop-shadow(0 16px 18px rgb(0 0 0 / 55%));
 	}
 
-	.is-revealed .booster-rarity-aura {
+	.is-revealed .booster-variant-aura {
 		animation: booster-reveal-flash 850ms ease-out both;
 	}
 
@@ -246,8 +241,8 @@
 		z-index: -1;
 		width: 5px;
 		aspect-ratio: 1;
-		background: var(--rarity-color);
-		box-shadow: 0 0 10px var(--rarity-color);
+		background: var(--variant-color);
+		box-shadow: 0 0 10px var(--variant-color);
 		opacity: 0;
 	}
 
@@ -340,8 +335,8 @@
 		.booster-card-flipper {
 			transition: none;
 		}
-		.booster-rarity-aura,
-		.is-revealed .booster-rarity-aura,
+		.booster-variant-aura,
+		.is-revealed .booster-variant-aura,
 		.is-revealed .booster-particles span,
 		.is-full-art.is-revealed::after {
 			animation: none;

@@ -1,7 +1,5 @@
 <script lang="ts">
-	import type { RenderKey } from './catalogue';
-
-	let { profile, fullArt, active }: { profile: RenderKey; fullArt: boolean; active: boolean } =
+	let { profile, fullArt, active }: { profile: string; fullArt: boolean; active: boolean } =
 		$props();
 </script>
 

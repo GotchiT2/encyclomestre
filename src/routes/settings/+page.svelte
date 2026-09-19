@@ -19,7 +19,6 @@
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import WishlistPicker from '$lib/components/wishlist/wishlist-picker.svelte';
-	import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 	import type { CardQuery } from '$lib/api';
 	import type { CardRecord, ProfileSettings } from '$lib/types';
 
@@ -65,13 +64,8 @@
 		const result = await getWikiForgeCollectionPage({
 			page: Math.max(0, (cardQuery.page ?? 1) - 1),
 			query: cardQuery.query,
-			rarities: (cardQuery.rarities ?? []).map((rarity) => cardRarityCodeByName[rarity]),
-			sortBy:
-				cardQuery.sortBy === 'rarity'
-					? 'rarity'
-					: cardQuery.sortBy === 'name'
-						? 'name'
-						: 'acquiredDate'
+			variantIds: cardQuery.variantIds,
+			sortBy: cardQuery.sortBy === 'name' ? 'name' : 'acquiredDate'
 		});
 		const page = result.page + 1;
 		const pageSize = Math.max(1, result.items.length);

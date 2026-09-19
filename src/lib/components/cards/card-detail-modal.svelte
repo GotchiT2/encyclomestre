@@ -15,7 +15,6 @@
 		getWikiForgeCollectionPage
 	} from '$lib/api';
 	import { currentSession } from '$lib/auth/session';
-	import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 	import { toast } from 'svelte-sonner';
 	import XIcon from '@lucide/svelte/icons/x';
 	import LockIcon from '@lucide/svelte/icons/lock';
@@ -23,7 +22,6 @@
 	import { createModalLayer } from '$lib/components/ui/dialog/modal-layer';
 	import type {
 		CardRecord,
-		CardRarityInitials,
 		CollectionTag,
 		CollectionTagAssignments,
 		CreateTradeOfferInput,
@@ -79,8 +77,9 @@
 			});
 	});
 
-
-	function asTradePage(result: Awaited<ReturnType<typeof getWikiForgeCollectionPage>>): PaginatedResponse<CardRecord> {
+	function asTradePage(
+		result: Awaited<ReturnType<typeof getWikiForgeCollectionPage>>
+	): PaginatedResponse<CardRecord> {
 		const page = result.page + 1;
 		const pageSize = Math.max(1, result.items.length);
 		return {
@@ -89,7 +88,10 @@
 				page,
 				pageSize,
 				total: result.total < 0 ? result.items.length : result.total,
-				totalPages: result.total < 0 ? page + (result.hasNext ? 1 : 0) : Math.max(1, Math.ceil(result.total / pageSize)),
+				totalPages:
+					result.total < 0
+						? page + (result.hasNext ? 1 : 0)
+						: Math.max(1, Math.ceil(result.total / pageSize)),
 				...(result.nextCursor ? { nextCursor: result.nextCursor } : {})
 			}
 		};
@@ -99,33 +101,37 @@
 		return asTradePage(
 			await getWikiForgeCollectionPage({
 				query: query.query,
-				sortBy: query.sortBy === 'name' ? 'name' : query.sortBy === 'rarity' ? 'rarity' : 'acquiredDate',
-				rarities: query.rarities?.map((rarity) => cardRarityCodeByName[rarity]),
+				sortBy: query.sortBy === 'name' ? 'name' : 'acquiredDate',
+				variantIds: query.variantIds,
 				page: query.cursor ? undefined : query.page,
 				cursor: query.cursor
-			}),
+			})
 		);
 	}
 
 	async function loadPartnerTradeCards(query: TradeCardSearchQuery) {
-		if (!tradePartner) return { items: [], meta: { page: 1, pageSize: 1, total: 0, totalPages: 1 } };
+		if (!tradePartner)
+			return { items: [], meta: { page: 1, pageSize: 1, total: 0, totalPages: 1 } };
 		const result = await getFriendCollectionPage(tradePartner.id, {
 			query: query.query,
-			sortBy: query.sortBy === 'name' ? 'name' : query.sortBy === 'rarity' ? 'rarity' : 'acquiredDate',
-			rarities: query.rarities?.map((rarity) => cardRarityCodeByName[rarity]),
+			sortBy: query.sortBy === 'name' ? 'name' : 'acquiredDate',
+			variantIds: query.variantIds,
 			page: query.cursor ? undefined : query.page,
 			cursor: query.cursor
 		});
 		return asTradePage(result);
 	}
 
-	async function startTrade(owner: CardRecord['friendsWhoOwn'][number], requestedRarity: string) {
-		const rarity = requestedRarity as CardRarityInitials;
+	async function startTrade(owner: CardRecord['friendsWhoOwn'][number]) {
 		const requestedPageId = String(card.baseCardId ?? card.catalogueId ?? card.id);
 		try {
-			const result = await getFriendCollectionPage(owner.friendId, { rarities: [rarity] });
+			const result = await getFriendCollectionPage(owner.friendId, {
+				variantIds: [card.variantId]
+			});
 			const requestedCard = result.items.find(
-				(copy) => String(copy.baseCardId ?? copy.catalogueId ?? copy.id) === requestedPageId && copy.rarityInitials === rarity
+				(copy) =>
+					String(copy.baseCardId ?? copy.catalogueId ?? copy.id) === requestedPageId &&
+					copy.variantId === card.variantId
 			);
 			if (!requestedCard) {
 				toast.error($_('cardDetail.trade_card_unavailable'));
@@ -156,7 +162,6 @@
 			toast.error($_('common.error'));
 		}
 	}
-
 </script>
 
 <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
@@ -200,8 +205,8 @@
 					</div>
 					<div class="flex min-h-0 min-w-0 flex-col gap-3">
 						<header class="forge-divider pb-3 sm:pr-14">
-							<p class="forge-label" style={`color:${card.rarityColor}`}>
-								{card.rarityInitials} · {card.rarity}
+							<p class="forge-label" style={`color:${card.variant.color}`}>
+								{card.variant.name}
 							</p>
 							<Dialog.Title
 								id="card-detail-modal-title"
@@ -226,7 +231,7 @@
 							role="tablist"
 							aria-label={$_('cardDetail.tabs')}
 						>
-						{#each [{ id: 'data', label: 'cardDetail.data' }, { id: 'social', label: 'cardDetail.social' }] as tab (tab.id)}
+							{#each [{ id: 'data', label: 'cardDetail.data' }, { id: 'social', label: 'cardDetail.social' }] as tab (tab.id)}
 								<Button
 									variant="ghost"
 									class={activeTab === tab.id ? 'forge-nav-active' : ''}
@@ -254,23 +259,39 @@
 									/>
 								{/if}
 								<div class:mt-3={owned}><CardTelemetry {card} /></div>
+								{#if card.imageAttribution}
+									<p class="mt-3 text-xs text-muted-foreground">
+										<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+										<a class="underline" href={card.imageAttribution.sourceUrl} target="_blank"
+											>{card.imageAttribution.author ?? $_('codex.wikipedia')}</a
+										>
+										{#if card.imageAttribution.license}
+											· {card.imageAttribution.license}{/if}
+									</p>
+								{/if}
 								{#if card.wikipediaUrl}<Button href={card.wikipediaUrl} target="_blank" class="mt-3"
 										>{$_('codex.wikipedia')}</Button
 									>{/if}
 							{:else}
 								<FriendOwnerLedger
 									friends={card.friendsWhoOwn}
-									onPrepareTrade={(friend, rarity) => void startTrade(friend, rarity)}
+									onPrepareTrade={(friend) => void startTrade(friend)}
 								/>
 								{#if sharedWishlistsLoading}
 									<p class="mt-3 forge-label">{$_('cardState.shared_wishlists_loading')}</p>
 								{:else if card.sharedWishlistMemberships?.length}
 									<section class="mt-3 border-t border-energy/25 pt-3">
-										<h3 class="forge-label text-energy">{$_('cardState.shared_wishlists_title')}</h3>
+										<h3 class="forge-label text-energy">
+											{$_('cardState.shared_wishlists_title')}
+										</h3>
 										<ul class="mt-2 grid gap-1">
 											{#each card.sharedWishlistMemberships as wishlist (`${wishlist.userId}-${wishlist.id}`)}
-												<li class="flex items-center justify-between gap-3 border border-energy/25 bg-background/40 px-2 py-1.5 text-sm">
-													<span class="truncate">{wishlist.title}</span><span class="shrink-0 text-muted-foreground">@{wishlist.userName}</span>
+												<li
+													class="flex items-center justify-between gap-3 border border-energy/25 bg-background/40 px-2 py-1.5 text-sm"
+												>
+													<span class="truncate">{wishlist.title}</span><span
+														class="shrink-0 text-muted-foreground">@{wishlist.userName}</span
+													>
 												</li>
 											{/each}
 										</ul>

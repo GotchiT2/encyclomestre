@@ -20,6 +20,8 @@
 		nextDelay,
 		opening,
 		openingId = 0,
+		packName,
+		packImage,
 		cards,
 		error = false,
 		suspended = false,
@@ -32,6 +34,8 @@
 		nextDelay?: string;
 		opening: boolean;
 		openingId?: number;
+		packName: string;
+		packImage: string;
 		cards: CardRecord[] | null;
 		error?: boolean;
 		suspended?: boolean;
@@ -52,14 +56,6 @@
 	let mobileViewport = $state(false);
 	let deckElement = $state<HTMLDivElement>();
 	let carouselApi = $state<EmblaCarouselType>();
-	const rarityOrder: Record<CardRecord['rarityInitials'], number> = {
-		C: 0,
-		PC: 1,
-		R: 2,
-		SR: 3,
-		UR: 4,
-		L: 5
-	};
 	const mobileSceneActive = $derived(
 		mobileViewport && ['dealing', 'revealing', 'complete'].includes(phase)
 	);
@@ -106,15 +102,7 @@
 		clearTimers();
 		openRequested = false;
 		handledOpeningId = nextOpeningId;
-		const sortedCards = nextCards
-			.map((card, originalIndex) => ({ card, originalIndex }))
-			.sort(
-				(left, right) =>
-					rarityOrder[left.card.rarityInitials] - rarityOrder[right.card.rarityInitials] ||
-					left.originalIndex - right.originalIndex
-			)
-			.map(({ card }) => card);
-		slots = sortedCards.map((card) => ({ card, revealed: false }));
+		slots = nextCards.map((card) => ({ card, revealed: false }));
 		mobileIndex = 0;
 		phase = 'dealing';
 		if (suspended) return;
@@ -245,8 +233,8 @@
 	});
 
 	$effect(() => {
-		if (cards?.length && openingId !== handledOpeningId) {
-			startDeal(cards, openingId);
+		if (cards?.length) {
+			if (openingId !== handledOpeningId) startDeal(cards, openingId);
 			return;
 		}
 		if (opening) phase = 'opening';
@@ -306,7 +294,7 @@
 							? $_('boosters.opening_error')
 							: $_('boosters.chamberReady')}
 				</p>
-				<h2 class="mt-3 text-3xl font-bold sm:text-4xl">{$_('boosters.stageTitle')}</h2>
+				<h2 class="mt-3 text-3xl font-bold sm:text-4xl">{packName}</h2>
 				<button
 					class="forge-energy-orbit mt-4 flex w-56 cursor-pointer flex-col items-center border-0 bg-transparent p-4 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45 sm:w-72"
 					disabled={!available || opening}
@@ -322,7 +310,7 @@
 					data-booster-interactive
 				>
 					<img
-						src="/images/booster.png"
+						src={packImage}
 						alt=""
 						class="w-full drop-shadow-[0_0_2rem_rgb(253_121_12_/_38%)]"
 						class:forge-booster-idle={phase === 'idle'}
@@ -531,6 +519,15 @@
 		}
 	}
 
+	@media (min-width: 1024px) {
+		.booster-slot :global(.booster-reveal-card) {
+			width: 10rem;
+		}
+		.booster-slot :global(.booster-reveal-card.is-landscape) {
+			width: 14rem;
+		}
+	}
+
 	@media (max-width: 1023px) {
 		:global(.booster-mobile-fullscreen) {
 			position: fixed;
@@ -582,6 +579,9 @@
 		}
 		.booster-slot :global(.booster-reveal-card) {
 			width: min(58vw, 13rem, calc((100dvh - 15rem) * 0.706));
+		}
+		.booster-slot :global(.booster-reveal-card.is-landscape) {
+			width: min(86vw, 19rem, calc((100dvh - 15rem) * 1.416));
 		}
 		:global(.booster-mobile-fullscreen) .booster-stage-energy {
 			inset: 0;

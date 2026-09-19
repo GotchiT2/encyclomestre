@@ -29,9 +29,9 @@
 		</div>
 		<div class="pl-3 py-3">
 			<dt class="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-				{$_('profile.rareCards')}
+				{$_('profile.distinctCards')}
 			</dt>
-			<dd class="font-mono text-lg text-primary">{summary.rareCards}</dd>
+			<dd class="font-mono text-lg text-primary">{summary.distinctCards}</dd>
 		</div>
 	</dl>
 	{#if summary.publicTags.length}<div class="mt-4 flex flex-wrap gap-2">

@@ -127,9 +127,9 @@
 				{#each offeredCards as entry (entry.userCardId)}
 					<span
 						class="max-w-full truncate font-mono text-[10px] font-bold sm:text-xs"
-						style={`color:${entry.card.rarityColor}`}
+						style={`color:${entry.card.variant.color}`}
 					>
-						{entry.card.rarityInitials} · {entry.card.title}
+						{entry.card.variant.name} · {entry.card.title}
 					</span>
 				{/each}
 				{#if !offeredCards.length && offer.offeredCardIds.length}
@@ -159,9 +159,9 @@
 				{#each requestedCards as entry (entry.userCardId)}
 					<span
 						class="max-w-full truncate font-mono text-[10px] font-bold sm:text-xs"
-						style={`color:${entry.card.rarityColor}`}
+						style={`color:${entry.card.variant.color}`}
 					>
-						{entry.card.rarityInitials} · {entry.card.title}
+						{entry.card.variant.name} · {entry.card.title}
 					</span>
 				{/each}
 				{#if !requestedCards.length && offer.requestedCardIds.length}

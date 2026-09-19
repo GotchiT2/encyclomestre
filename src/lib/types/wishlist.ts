@@ -1,5 +1,5 @@
 export type WishlistAccess = 'owned' | 'shared' | 'pending';
-export type WishlistSort = 'date' | 'name' | 'rarity';
+export type WishlistSort = 'date' | 'name';
 
 export interface WishlistRegistrySummary {
 	id: string;
@@ -27,7 +27,6 @@ export interface WishlistPageEntry {
 export interface WishlistQuery {
 	page?: number;
 	query?: string;
-	rarities?: import('./card').CardRarity[];
 	sortBy?: WishlistSort;
 	sortDirection?: 'ASC' | 'DESC';
 }

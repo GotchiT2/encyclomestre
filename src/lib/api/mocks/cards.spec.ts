@@ -2,16 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { mockCards } from './cards';
 
 describe('mock card variants', () => {
-	it('provides exactly one full-art variant for every legendary normal card', () => {
-		const normalLegendaries = mockCards.filter(
-			(card) => card.rarity === 'Légendaire' && card.variant === 'NORMAL'
-		);
-		const fullArts = mockCards.filter((card) => card.variant === 'FULL_ART');
-
-		expect(fullArts).toHaveLength(normalLegendaries.length);
-		for (const card of normalLegendaries) {
-			expect(fullArts.filter((fullArt) => fullArt.baseCardId === card.baseCardId)).toHaveLength(1);
+	it('provides every configured finish for each subject', () => {
+		const subjects = new Set(mockCards.map((card) => card.baseCardId));
+		for (const subject of subjects) {
+			const cards = mockCards.filter((card) => card.baseCardId === subject);
+			expect(cards.map((card) => card.variantId)).toEqual([1, 2, 3, 4]);
+			expect(cards.filter((card) => card.variant.styles.includes('FULL_ART'))).toHaveLength(2);
 		}
-		expect(fullArts.every((card) => card.rarity === 'Légendaire' && card.isFullArt)).toBe(true);
 	});
 });

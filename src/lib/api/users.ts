@@ -16,6 +16,7 @@ import {
 	type WikiForgeCollectionResponse
 } from './collection';
 import { wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
+import { getVariants } from './variants';
 
 export const getCurrentUser = async (options?: RequestOptions) =>
 	toCurrentUser(
@@ -213,17 +214,19 @@ export async function getFriendCollectionPage(
 	options?: RequestOptions
 ): Promise<CollectionPageResult> {
 	const endpoint = `/friends/${wikiForgeNumericId(friendId, 'ami')}/collection`;
-	const response = await apiRequest<WikiForgeCollectionResponse>(collectionPath(query, endpoint), {
-		...options,
-		apiTarget: 'wikiforge'
-	});
+	const [response, variants] = await Promise.all([
+		apiRequest<WikiForgeCollectionResponse>(collectionPath(query, endpoint), {
+			...options,
+			apiTarget: 'wikiforge'
+		}),
+		getVariants(options)
+	]);
 	return {
-		items: (response.results ?? []).map(toWikiForgeCollectionCard),
+		items: (response.results ?? []).map((card) => toWikiForgeCollectionCard(card, variants)),
 		page: response.page,
 		total: response.nbResults,
 		hasNext: response.hasNext,
-		nextCursor: response.nextCursor,
-		rarityResults: response.rarityResults ?? null
+		nextCursor: response.nextCursor
 	};
 }
 

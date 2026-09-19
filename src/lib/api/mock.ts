@@ -9,14 +9,13 @@ import type {
 	SaleListing,
 	ProfileSettings,
 	TradeOffer,
-	BoosterInventory,
 	GuildWishlistShare,
 	Friendship,
 	Conversation,
 	MessageRecord,
 	SaleBid
 } from '$lib/types';
-import { mockCards } from './mocks/cards';
+import { mockCards, mockVariants } from './mocks/cards';
 import { mockCollectionTags } from './mocks/collection-tags';
 
 export interface MockApiRequest {
@@ -65,23 +64,18 @@ const auctionSoon = new Date(Date.now() + 45_000).toISOString();
 const auctionLater = new Date(Date.now() + 3_600_000).toISOString();
 const auctionPast = new Date(Date.now() - 60_000).toISOString();
 const apiCard = (card: CardRecord) => ({
-	id: card.id,
-	baseCardId: card.baseCardId ?? (Number.parseInt(card.id.replace(/\D/g, ''), 10) || 0),
-	variant: card.isFullArt ? 'FULL_ART' : 'NORMAL',
-	isFullArt: Boolean(card.isFullArt),
-	wikipediaTitle: card.title,
-	shortDescription: card.shortDescription,
-	longDescription: card.longDescription,
-	imageUrl: card.imageUrl,
-	wikipediaUrl: card.wikipediaUrl,
-	rarity: card.rarityInitials,
-	category: card.category,
+	id: Number.parseInt(card.id.replace(/\D/g, ''), 10) || 1,
+	pageId: card.baseCardId ?? 1,
+	title: card.title,
+	description: card.longDescription || card.shortDescription,
+	image: card.imageUrl,
+	variantId: card.variantId,
+	packId: card.packId ?? 1,
+	serialNumber: card.serialNumber,
+	maxCopies: card.maxCopies,
 	atk: card.attack,
-	def: card.defense,
-	qScore: card.qScore,
-	pageviews: card.viewCount,
-	globalSupply: card.globalSupply,
-	createdAt: now
+	ownedCount: card.ownedCount,
+	creationDate: now
 });
 const publicPage = (card: CardRecord) => ({
 	id: card.baseCardId ?? (Number.parseInt(card.id.replace(/\D/g, ''), 10) || 0),
@@ -89,8 +83,7 @@ const publicPage = (card: CardRecord) => ({
 	description: card.longDescription || card.shortDescription,
 	image: card.imageUrl,
 	atk: card.attack,
-	viewCount: card.viewCount,
-	rarity: card.rarityInitials,
+	defaultVariantId: card.variantId,
 	createdAt: card.acquiredAt ?? now,
 	globalCount: card.globalSupply,
 	ownedCount: card.ownedCount,
@@ -99,7 +92,7 @@ const publicPage = (card: CardRecord) => ({
 				friends: card.friendsWhoOwn.map((friend) => ({
 					id: wikiForgeUserId(friend.friendId),
 					name: friend.username,
-					rarityCounts: friend.rarityCounts ?? { [card.rarityInitials]: friend.ownedCount }
+					nbCards: friend.ownedCount
 				}))
 			}
 		: {})
@@ -119,7 +112,7 @@ const simpleWikiForgeUser = (user: User) => ({
 			? 'TODAY'
 			: wikiForgeUserId(user.id) % 3 === 0
 				? 'THIS_MONTH'
-			: 'THIS_WEEK'),
+				: 'THIS_WEEK'),
 	sharesWishlist: user.id === 'friend-0'
 });
 const collectionCard = (card: CardRecord, id: number) => ({
@@ -128,17 +121,18 @@ const collectionCard = (card: CardRecord, id: number) => ({
 	title: card.title,
 	description: card.longDescription || card.shortDescription,
 	image: card.imageUrl,
-	rarity: card.rarityInitials,
+	variantId: card.variantId,
+	packId: card.packId ?? 1,
+	serialNumber: card.serialNumber,
+	maxCopies: card.maxCopies,
 	atk: card.attack,
-	alt: Boolean(card.isFullArt),
 	duplicate: card.ownedCount > 1,
 	protected: Boolean(card.userProtected),
 	tagIds: card.collectionTagIds?.map(Number) ?? [],
 	acquiredDate: card.acquiredAt ?? now,
 	creationDate: now,
 	pendingTradeId: null,
-	ownedCount: card.ownedCount,
-	rarityCounts: card.ownedCount ? { [card.rarityInitials]: card.ownedCount } : {}
+	ownedCount: card.ownedCount
 });
 const showcaseCard = (card: CardRecord, id: number) => ({
 	id,
@@ -146,9 +140,11 @@ const showcaseCard = (card: CardRecord, id: number) => ({
 	title: card.title,
 	image: card.imageUrl,
 	nsfw: Boolean(card.nsfw),
-	rarity: card.rarityInitials,
-	atk: card.attack,
-	alt: Boolean(card.isFullArt)
+	variantId: card.variantId,
+	packId: card.packId ?? 1,
+	serialNumber: card.serialNumber,
+	maxCopies: card.maxCopies,
+	atk: card.attack
 });
 
 let mockShowcaseLines = [
@@ -533,9 +529,9 @@ const profileSettings = new Map<string, ProfileSettings>([
 			showcases: [],
 			wantedCardIds: [],
 			nsfwEnabled: false,
-		censoredKeywords: [],
-		visibility: 'FRIENDS',
-		mutedNotifications: []
+			censoredKeywords: [],
+			visibility: 'FRIENDS',
+			mutedNotifications: []
 		}
 	]
 ]);
@@ -688,7 +684,11 @@ function priceHistory(cardId: string): CardPriceHistory {
 	};
 }
 
-function boosterInventory(userId: string): BoosterInventory {
+function boosterInventory(userId: string): {
+	available: number;
+	capacity: number;
+	nextRechargeAt: string | null;
+} {
 	const state = boosterReserve.get(userId) ?? {
 		available: boosterCapacity,
 		lastRechargeAt: Date.now()
@@ -717,9 +717,12 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	const normalizedMethod = method.toUpperCase();
 
 	if (normalizedMethod === 'POST' && pathname === '/oauth2/revoke') return json(undefined);
+	if (normalizedMethod === 'GET' && pathname === '/variants') return json(mockVariants);
 	if (normalizedMethod === 'GET' && pathname === '/notifications') {
 		const unreadOnly = url.searchParams.get('unreadOnly') === 'true';
-		const results = unreadOnly ? mockNotifications.filter((notification) => !notification.read) : mockNotifications;
+		const results = unreadOnly
+			? mockNotifications.filter((notification) => !notification.read)
+			: mockNotifications;
 		return json({
 			results,
 			nextCursor: null,
@@ -733,7 +736,9 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	}
 	const notificationReadMatch = /^\/notifications\/(\d+)\/read$/.exec(pathname);
 	if (normalizedMethod === 'PATCH' && notificationReadMatch) {
-		const notification = mockNotifications.find((entry) => entry.id === Number(notificationReadMatch[1]));
+		const notification = mockNotifications.find(
+			(entry) => entry.id === Number(notificationReadMatch[1])
+		);
 		if (!notification) return error(404, 'Notification introuvable.', 'NOT_FOUND');
 		notification.read = true;
 		return json(undefined, 204);
@@ -782,7 +787,10 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			if (Array.isArray(input?.mutedNotifications)) {
 				user.mutedNotifications = input.mutedNotifications.filter(
 					(category): category is import('$lib/types').MutedNotificationCategory =>
-						category === 'TRADE' || category === 'SALE' || category === 'FRIEND' || category === 'GUILD'
+						category === 'TRADE' ||
+						category === 'SALE' ||
+						category === 'FRIEND' ||
+						category === 'GUILD'
 				);
 			}
 		}
@@ -871,11 +879,18 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	if (normalizedMethod === 'GET' && pathname === '/welcome') {
 		const inventory = boosterInventory('demo-user');
 		return json({
-			boostersStatus: {
-				available: inventory.available,
-				max: inventory.capacity,
-				nextAvailableAt: inventory.nextRechargeAt
-			},
+			packs: [
+				{
+					id: 1,
+					name: 'Pack quotidien',
+					description: 'Cinq cartes WikiForge',
+					image: '/images/booster.png',
+					nbCards: 5,
+					available: inventory.available,
+					max: inventory.capacity,
+					nextAvailableAt: inventory.nextRechargeAt
+				}
+			],
 			collection: {
 				nbCards: mockCards.reduce((total, card) => total + card.ownedCount, 0),
 				rank: 12,
@@ -902,14 +917,6 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			nbCards: mockCards.reduce((sum, card) => sum + card.ownedCount, 0),
 			...(full
 				? {
-						nbCardsByRarity: Object.fromEntries(
-							['L', 'UR', 'SR', 'R', 'PC', 'C'].map((rarity) => [
-								rarity,
-								mockCards
-									.filter((card) => card.rarityInitials === rarity)
-									.reduce((sum, card) => sum + card.ownedCount, 0)
-							])
-						),
 						tags: mockCollectionTags.slice(0, 2).map(({ name, color }) => ({ name, color })),
 						showcase: mockShowcaseLines
 					}
@@ -1037,15 +1044,11 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
 		const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get('size') ?? 20)));
 		const query = url.searchParams.get('q')?.trim().toLocaleLowerCase('fr-FR');
-		const rarities = url.searchParams.getAll('rarity');
-		const variant = url.searchParams.get('variant') ?? 'ALL';
+		const variantIds = url.searchParams.getAll('variant').map(Number);
 		const items = mockCards.filter(
 			(card) =>
 				(!query || card.title.toLocaleLowerCase('fr-FR').includes(query)) &&
-				(!rarities.length || rarities.includes(card.rarityInitials)) &&
-				(variant === 'ALL' ||
-					(variant === 'FULL_ART' && card.isFullArt) ||
-					(variant === 'NORMAL' && !card.isFullArt))
+				(!variantIds.length || variantIds.includes(card.variantId))
 		);
 		return json({
 			results: items.slice(page * pageSize, (page + 1) * pageSize).map(apiCard),
@@ -1055,7 +1058,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			nextCursor: (page + 1) * pageSize < items.length ? `mock-cards-cursor-${page + 1}` : null,
 			sortBy: url.searchParams.get('sortBy') ?? 'name',
 			sortDirection: url.searchParams.get('sortDirection') ?? 'ASC',
-			filters: { rarity: rarities, variant },
+			filters: { variant: variantIds },
 			q: query ?? null
 		});
 	}
@@ -1086,7 +1089,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			: Math.max(0, Number(url.searchParams.get('page') ?? 0));
 		const pageSize = 50;
 		const query = url.searchParams.get('q')?.toLocaleLowerCase('fr-FR');
-		const rarities = url.searchParams.getAll('rarity');
+		const variantIds = url.searchParams.getAll('variant').map(Number);
 		const tagIds = url.searchParams.getAll('tags');
 		const duplicate = url.searchParams.get('duplicate');
 		const protection = url.searchParams.get('protected');
@@ -1103,7 +1106,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				({ card, index, tagIds: cardTagIds }) =>
 					card.ownedCount > 0 &&
 					(!query || card.title.toLocaleLowerCase('fr-FR').includes(query)) &&
-					(!rarities.length || rarities.includes(card.rarityInitials)) &&
+					(!variantIds.length || variantIds.includes(card.variantId)) &&
 					(!tagIds.length ||
 						(tagIds.includes('-1')
 							? cardTagIds.length === 0
@@ -1122,9 +1125,11 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				description: card.longDescription || card.shortDescription,
 				image: card.imageUrl,
 				nsfw: card.nsfw,
-				rarity: card.rarityInitials,
+				variantId: card.variantId,
+				packId: card.packId ?? 1,
+				serialNumber: card.serialNumber,
+				maxCopies: card.maxCopies,
 				atk: card.attack,
-				alt: Boolean(card.isFullArt),
 				duplicate: card.ownedCount > 1,
 				protected: index % 3 === 0,
 				tagIds: cardTagIds,
@@ -1133,20 +1138,17 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				pendingTradeId: null
 			})),
 			page,
-			nbResults: items.length,
+			nbResults:
+				query || variantIds.length || tagIds.length || duplicate || protection || wishlistOwner
+					? -1
+					: items.length,
 			sortBy: url.searchParams.get('sortBy') ?? 'ACQUIRED_DATE',
-			sortDirection: url.searchParams.get('sortBy') === 'RARITY' ? 'ASC' : 'DESC',
+			sortDirection: 'DESC',
 			nextCursor:
 				hasNext && !query && url.searchParams.get('sortBy') !== 'NAME'
 					? `mock-collection-cursor-${page + 1}`
 					: null,
 			hasNext,
-			rarityResults: Object.fromEntries(
-				['L', 'UR', 'SR', 'R', 'PC', 'C'].map((rarity) => [
-					rarity,
-					items.filter(({ card }) => card.rarityInitials === rarity).length
-				])
-			),
 			q: query ?? null
 		});
 	}
@@ -1182,7 +1184,10 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	if (/^\/collection\/\d+\/(?:protect|unprotect)$/.test(pathname) && normalizedMethod === 'PUT') {
 		return json(undefined, 204);
 	}
-	if ((pathname === '/collection/protect' || pathname === '/collection/unprotect') && normalizedMethod === 'PUT') {
+	if (
+		(pathname === '/collection/protect' || pathname === '/collection/unprotect') &&
+		normalizedMethod === 'PUT'
+	) {
 		return Array.isArray(body) && body.length
 			? json(undefined, 204)
 			: error(404, 'Aucune carte sélectionnée.', 'NOT_FOUND');
@@ -1285,33 +1290,18 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	}
 	if (normalizedMethod === 'GET' && pathname === '/pages') {
 		const query = url.searchParams.get('q')?.trim().toLocaleLowerCase('fr-FR') ?? '';
-		const rarities = new Set(url.searchParams.getAll('rarity'));
 		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
-		const sortBy = (url.searchParams.get('sortBy') ?? 'rarity').toUpperCase();
+		const sortBy = (url.searchParams.get('sortBy') ?? 'name').toUpperCase();
 		const sortDirection = url.searchParams.get('sortDirection') === 'DESC' ? 'DESC' : 'ASC';
 		const cards = mockCards
-			.filter(
-				(card) =>
-					(!query || card.title.toLocaleLowerCase('fr-FR').includes(query)) &&
-					(!rarities.size || rarities.has(card.rarityInitials))
-			)
+			.filter((card) => !query || card.title.toLocaleLowerCase('fr-FR').includes(query))
 			.toSorted((left, right) => {
-				const comparison =
-					sortBy === 'NAME'
-						? left.title.localeCompare(right.title, 'fr')
-						: left.rarityInitials.localeCompare(right.rarityInitials, 'fr');
+				const comparison = left.title.localeCompare(right.title, 'fr');
 				return sortDirection === 'DESC' ? -comparison : comparison;
 			});
-		const rarityResults = Object.fromEntries(
-			['L', 'UR', 'SR', 'R', 'PC', 'C'].map((rarity) => [
-				rarity,
-				cards.filter((card) => card.rarityInitials === rarity).length
-			])
-		);
 		return json({
 			nbResults: cards.length,
 			page,
-			rarityResults,
 			results: cards.slice(page * 50, (page + 1) * 50).map(publicPage),
 			sortBy,
 			sortDirection
@@ -1478,10 +1468,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				.toSorted((first, second) => second.updatedAt.localeCompare(first.updatedAt))
 		);
 	}
-	if (
-		normalizedMethod === 'POST' &&
-		pathname === '/conversations/direct'
-	) {
+	if (normalizedMethod === 'POST' && pathname === '/conversations/direct') {
 		const participantId = asObject(body)?.participantId;
 		if (typeof participantId !== 'string' || !users.has(participantId))
 			return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
@@ -1589,23 +1576,16 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		if (!registry) return error(404, 'Wishlist introuvable.', 'WISHLIST_NOT_FOUND');
 		if (normalizedMethod === 'GET') {
 			const query = url.searchParams.get('q')?.trim().toLocaleLowerCase('fr-FR') ?? '';
-			const rarities = new Set(url.searchParams.getAll('rarity'));
 			const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
 			const sortBy = url.searchParams.get('sortBy') ?? 'ADDED_AT';
 			const sortDirection = url.searchParams.get('sortDirection') === 'ASC' ? 'ASC' : 'DESC';
 			const cards = registry.cards
-				.filter(
-					(card) =>
-						(!query || card.title.toLocaleLowerCase('fr-FR').includes(query)) &&
-						(!rarities.size || rarities.has(card.rarityInitials))
-				)
+				.filter((card) => !query || card.title.toLocaleLowerCase('fr-FR').includes(query))
 				.toSorted((left, right) => {
 					const comparison =
 						sortBy === 'NAME'
 							? left.title.localeCompare(right.title, 'fr')
-							: sortBy === 'RARITY'
-								? left.rarityInitials.localeCompare(right.rarityInitials, 'fr')
-								: (left.acquiredAt ?? now).localeCompare(right.acquiredAt ?? now);
+							: (left.acquiredAt ?? now).localeCompare(right.acquiredAt ?? now);
 					return sortDirection === 'DESC' ? -comparison : comparison;
 				});
 			return json({
@@ -1655,11 +1635,14 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			(entry) => entry.id === decodeURIComponent(wishlistPageBatchMatch[1])
 		);
 		if (!registry) return error(404, 'Wishlist introuvable.', 'WISHLIST_NOT_FOUND');
-		const pageIds = Array.isArray(body) ? body.filter((id): id is number => typeof id === 'number') : [];
+		const pageIds = Array.isArray(body)
+			? body.filter((id): id is number => typeof id === 'number')
+			: [];
 		if (!pageIds.length) return error(404, 'Aucun article sélectionné.', 'NOT_FOUND');
 		for (const pageId of pageIds) {
 			const card = mockCards.find((entry) => entry.baseCardId === pageId);
-			if (!card && normalizedMethod === 'PUT') return error(404, 'Carte introuvable.', 'PAGE_NOT_FOUND');
+			if (!card && normalizedMethod === 'PUT')
+				return error(404, 'Carte introuvable.', 'PAGE_NOT_FOUND');
 			if (!card) continue;
 			if (normalizedMethod === 'PUT' && !registry.cards.includes(card)) {
 				registry.cards.push(card);
@@ -1861,20 +1844,25 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			return json(undefined, 204);
 		}
 	}
-	if (normalizedMethod === 'GET' && pathname === '/boosters/inventory')
-		return json(boosterInventory(url.searchParams.get('userId') ?? 'demo-user'));
 	if (normalizedMethod === 'GET' && pathname === '/boosters') {
 		const inventory = boosterInventory('demo-user');
-		return json({
-			available: inventory.available,
-			max: inventory.capacity,
-			nextAvailableAt: inventory.nextRechargeAt
-		});
+		return json([
+			{
+				id: 1,
+				name: 'Pack quotidien',
+				description: 'Cinq cartes WikiForge',
+				image: '/images/booster.png',
+				nbCards: 5,
+				available: inventory.available,
+				max: inventory.capacity,
+				nextAvailableAt: inventory.nextRechargeAt
+			}
+		]);
 	}
-	if (normalizedMethod === 'POST' && pathname === '/boosters/open') {
+	if (normalizedMethod === 'POST' && pathname === '/boosters/1/open') {
 		const userId = 'demo-user';
 		const inventory = boosterInventory(userId);
-		if (!inventory.available) return error(409, 'Aucun paquet disponible.', 'BOOSTER_EMPTY');
+		if (!inventory.available) return error(403, 'Aucun paquet disponible.', 'NO_BOOSTER_AVAILABLE');
 		const state = boosterReserve.get(userId)!;
 		state.available -= 1;
 		const cards = Array.from({ length: 5 }, (_, index) => {
@@ -1885,10 +1873,12 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				pageId: card.baseCardId ?? (Number.parseInt(card.id.replace(/\D/g, ''), 10) || index + 1),
 				title: card.title,
 				description: card.longDescription || card.shortDescription,
-				image: `${card.title.replaceAll(' ', '_')}.jpg`,
-				rarity: card.rarityInitials,
+				image: card.imageUrl,
+				variantId: card.variantId,
+				packId: card.packId ?? 1,
+				serialNumber: card.serialNumber,
+				maxCopies: card.maxCopies,
 				atk: card.attack,
-				alt: Boolean(card.isFullArt),
 				duplicate: card.ownedCount > 1,
 				protected: false,
 				tagIds: [],
@@ -1897,11 +1887,8 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				pendingTradeId: null
 			};
 		});
-		const updatedInventory = boosterInventory(userId);
 		return json({
-			available: updatedInventory.available,
-			max: updatedInventory.capacity,
-			nextAvailableAt: updatedInventory.nextRechargeAt,
+			packId: 1,
 			cards
 		});
 	}
@@ -2241,7 +2228,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		return json({
 			ownedCards: ownedCards.length,
 			totalCopies: ownedCards.reduce((total, card) => total + card.ownedCount, 0),
-			rareCards: ownedCards.filter((card) => card.rarity !== 'Commune').length,
+			distinctCards: new Set(ownedCards.map((card) => card.baseCardId)).size,
 			publicTags: mockCollectionTags
 		});
 	}
@@ -2250,8 +2237,6 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const userId = decodeURIComponent(userCollectionMatch[1]);
 		if (!users.has(userId)) return error(404, 'Utilisateur introuvable.', 'USER_NOT_FOUND');
 		const query = (url.searchParams.get('q') ?? '').trim().toLocaleLowerCase('fr-FR');
-		const rarities = url.searchParams.getAll('rarity');
-		const variant = url.searchParams.get('variant') ?? 'ALL';
 		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
 		const size = Math.max(1, Math.min(24, Number(url.searchParams.get('size') ?? 12)));
 		const cards = mockCards
@@ -2260,11 +2245,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 					? card.ownedCount > 0
 					: card.friendsWhoOwn.some((friend) => friend.friendId === userId)
 			)
-			.filter((card) => !query || card.title.toLocaleLowerCase('fr-FR').includes(query))
-			.filter((card) => !rarities.length || rarities.includes(card.rarityInitials))
-			.filter(
-				(card) => variant === 'ALL' || (variant === 'FULL_ART' ? card.isFullArt : !card.isFullArt)
-			);
+			.filter((card) => !query || card.title.toLocaleLowerCase('fr-FR').includes(query));
 		const results = cards.slice(page * size, (page + 1) * size);
 		return json({
 			results: results.map((card) => ({

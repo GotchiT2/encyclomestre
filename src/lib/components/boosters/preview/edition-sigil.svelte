@@ -1,6 +1,5 @@
 <script lang="ts">
-	import type { RenderKey } from './catalogue';
-	let { key, class: className }: { key: RenderKey; class?: string } = $props();
+	let { key, class: className }: { key: string; class?: string } = $props();
 </script>
 
 <svg

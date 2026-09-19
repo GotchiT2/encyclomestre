@@ -4,7 +4,7 @@ import type { CardRecord } from './card';
 export interface ProfileRegistrySummary {
 	ownedCards: number;
 	totalCopies: number;
-	rareCards: number;
+	distinctCards: number;
 	publicTags: CollectionTag[];
 }
 
@@ -48,7 +48,6 @@ export interface UserProfile {
 	lastConnection?: import('./user').LastConnection;
 	full: boolean;
 	nbCards: number;
-	nbCardsByRarity: Partial<Record<import('./card').CardRarity, number>>;
 	tags: Array<Pick<CollectionTag, 'name' | 'color'>>;
 	showcase: ShowcaseLine[];
 }

@@ -1,24 +1,19 @@
 <script lang="ts">
-	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
-	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
+	import VariantSelector from '$lib/components/cards/variant-selector.svelte';
 	import * as Field from '$lib/components/ui/field';
 	import { Input } from '$lib/components/ui/input';
-	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { _ } from '$lib/i18n';
 	import type { MarketSort } from '$lib/domain/market/auction-display';
-	import type { CardRarity, CardVariant } from '$lib/types';
 
 	let {
 		query = $bindable(''),
-		variant = $bindable<CardVariant>('all'),
-		rarities = $bindable<CardRarity[]>([]),
+		variantIds = $bindable<number[]>([]),
 		sort = $bindable<MarketSort>('ending'),
 		onSearch,
 		onFilterChange
 	}: {
 		query: string;
-		variant: CardVariant;
-		rarities: CardRarity[];
+		variantIds: number[];
 		sort: MarketSort;
 		onSearch: () => void;
 		onFilterChange: () => void;
@@ -38,17 +33,7 @@
 		/>
 	</Field.Field>
 
-	<CardVariantSelector bind:value={variant} onChange={onFilterChange} />
-
-	<Field.FieldSet class="gap-2">
-		<Field.FieldLegend class="forge-label">{$_('codex.rarities')}</Field.FieldLegend>
-		<RaritySelector
-			options={cardRarityOptions}
-			bind:selected={rarities}
-			compact
-			onChange={onFilterChange}
-		/>
-	</Field.FieldSet>
+	<VariantSelector bind:selected={variantIds} compact onChange={onFilterChange} />
 
 	<Field.Field>
 		<Field.FieldLabel for="market-sort" class="forge-label">{$_('market.sort')}</Field.FieldLabel>

@@ -1,17 +1,13 @@
 <script lang="ts">
-	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
-	import CardVariantSelector from '$lib/components/cards/card-variant-selector.svelte';
+	import VariantSelector from '$lib/components/cards/variant-selector.svelte';
 	import TagFilterSelector from '$lib/components/collection/tag-filter-selector.svelte';
-	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { Button } from '$lib/components/ui/button';
 	import * as Field from '$lib/components/ui/field';
 	import { Input } from '$lib/components/ui/input';
 	import { Switch } from '$lib/components/ui/switch';
 	import { _ } from '$lib/i18n';
 	import type {
-		CardRarity,
 		CardSearchSort,
-		CardVariant,
 		CollectionBooleanFilter,
 		CollectionSort,
 		CollectionTag,
@@ -21,48 +17,42 @@
 	let {
 		query = $bindable(''),
 		sortBy = $bindable<CollectionSort | CardSearchSort>('acquiredDate'),
-		selectedRarities = $bindable<CardRarity[]>([]),
+		variantIds = $bindable<number[]>([]),
 		tagFilterIds = $bindable<string[]>([]),
 		duplicate = $bindable<CollectionBooleanFilter>('all'),
 		protected: protection = $bindable<CollectionBooleanFilter>('all'),
 		wishlistOwnerId = $bindable(''),
 		wishlistOwners = [],
-		variant = $bindable<CardVariant>('all'),
 		tags,
 		untaggedOption,
 		allowTagCreation = true,
 		canonical = false,
-		rarityCounts,
 		onOpenTagEditor,
 		onClear
 	}: {
 		query: string;
 		sortBy: CollectionSort | CardSearchSort;
-		selectedRarities: CardRarity[];
+		variantIds: number[];
 		tagFilterIds: string[];
 		duplicate?: CollectionBooleanFilter;
 		protected?: CollectionBooleanFilter;
 		wishlistOwnerId?: string;
 		wishlistOwners?: User[];
-		variant?: CardVariant;
 		tags: CollectionTag[];
 		untaggedOption?: string;
 		allowTagCreation?: boolean;
 		canonical?: boolean;
-		/** Nombre de résultats par rareté, affiché sur les pastilles. */
-		rarityCounts?: Record<string, number | undefined>;
 		onOpenTagEditor: () => void;
 		onClear: () => void;
 	} = $props();
 
 	const hasActiveFilters = $derived(
 		Boolean(query) ||
-			selectedRarities.length > 0 ||
+			variantIds.length > 0 ||
 			tagFilterIds.length > 0 ||
-			(canonical ? sortBy !== 'acquiredDate' : sortBy !== 'rarity') ||
+			(canonical ? sortBy !== 'acquiredDate' : sortBy !== 'name') ||
 			duplicate !== 'all' ||
 			protection !== 'all' ||
-			variant !== 'all' ||
 			Boolean(wishlistOwnerId)
 	);
 </script>
@@ -110,27 +100,19 @@
 			>
 				{#if canonical}
 					<option value="acquiredDate">{$_('collection.sortAcquiredDate')}</option>
-					<option value="rarity">{$_('collection.sortRarity')}</option>
 					<option value="name">{$_('collection.sortName')}</option>
 				{:else}
 					<option value="relevance">{$_('collection.sortRelevance')}</option>
 					<option value="name">{$_('collection.sortName')}</option>
-					<option value="rarity">{$_('collection.sortRarity')}</option>
 				{/if}
 			</select>
 		</Field.Field>
 	</div>
 
 	<Field.FieldSet class="gap-2">
-		<Field.FieldLegend class="forge-label">{$_('collection.rarities')}</Field.FieldLegend>
-		<RaritySelector
-			options={cardRarityOptions}
-			bind:selected={selectedRarities}
-			counts={rarityCounts}
-			compact
-		/>
+		<Field.FieldLegend class="forge-label">{$_('collection.variants')}</Field.FieldLegend>
+		<VariantSelector bind:selected={variantIds} compact />
 	</Field.FieldSet>
-	{#if !canonical}<CardVariantSelector bind:value={variant} />{/if}
 
 	{#if canonical}
 		<div class="grid gap-2 @md:grid-cols-2">

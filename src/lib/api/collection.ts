@@ -1,51 +1,31 @@
-import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/rarities';
-import type { CardRecord, CollectionBooleanFilter, CollectionSort } from '$lib/types';
+import type {
+	CardRecord,
+	CollectionBooleanFilter,
+	CollectionSort,
+	VariantDefinition
+} from '$lib/types';
 import { apiRequest, type RequestOptions } from './client';
-import { wikiForgeImageUrl } from './pages';
-import { wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
+import { toCardRecord, type WikiForgeCardDto } from './cards';
+import { getVariants, standardVariant } from './variants';
+import { wikiForgeNumericId } from './wikiforge-contract';
 
-export interface WikiForgeCollectionCardDto {
-	id: number;
-	pageId: number;
-	title: string;
-	description?: string;
-	image?: string;
-	nsfw?: boolean;
-	rarity: CardRarityCode;
-	atk?: number;
-	alt?: boolean;
-	duplicate?: boolean;
-	protected?: boolean;
-	tagIds?: number[];
-	acquiredDate?: string;
-	creationDate?: string;
-	pendingTradeId?: number | null;
-	ownedCount?: number;
-	rarityCounts?: Partial<Record<CardRarityCode, number>>;
-	wishlists?: Array<{
-		id: number;
-		name: string;
-		userId: number;
-		userName: string;
-	}>;
-}
+export type WikiForgeCollectionCardDto = WikiForgeCardDto;
 
 export interface WikiForgeCollectionResponse {
 	nbResults: number;
 	page: number;
-	sortBy: 'ACQUIRED_DATE' | 'RARITY' | 'NAME';
+	sortBy: 'ACQUIRED_DATE' | 'NAME';
 	sortDirection: 'ASC' | 'DESC';
 	results?: WikiForgeCollectionCardDto[] | null;
 	nextCursor: string | null;
 	hasNext: boolean;
-	rarityResults?: Partial<Record<CardRarityCode, number>> | null;
 	q: string | null;
 }
 
 export interface CollectionQuery {
 	query?: string;
 	sortBy?: CollectionSort;
-	rarities?: CardRarityCode[];
+	variantIds?: number[];
 	tagIds?: string[];
 	duplicate?: CollectionBooleanFilter;
 	protected?: CollectionBooleanFilter;
@@ -60,7 +40,6 @@ export interface CollectionPageResult {
 	total: number;
 	hasNext: boolean;
 	nextCursor: string | null;
-	rarityResults: Partial<Record<CardRarityCode, number>> | null;
 }
 
 export interface CollectionPosition {
@@ -70,7 +49,6 @@ export interface CollectionPosition {
 
 const sortCode: Record<CollectionSort, WikiForgeCollectionResponse['sortBy']> = {
 	acquiredDate: 'ACQUIRED_DATE',
-	rarity: 'RARITY',
 	name: 'NAME'
 };
 
@@ -78,7 +56,7 @@ export function collectionPath(query: CollectionQuery = {}, endpoint = '/collect
 	const parameters = new URLSearchParams({ sortBy: sortCode[query.sortBy ?? 'acquiredDate'] });
 	const text = query.query?.trim() ?? '';
 	if (text.length >= 3) parameters.set('q', text);
-	query.rarities?.forEach((rarity) => parameters.append('rarity', rarity));
+	query.variantIds?.forEach((variantId) => parameters.append('variant', String(variantId)));
 	const tagIds = query.tagIds?.includes('-1') ? ['-1'] : (query.tagIds ?? []);
 	tagIds.forEach((tagId) =>
 		parameters.append('tags', tagId === '-1' ? '-1' : String(wikiForgeNumericId(tagId, 'tag')))
@@ -89,7 +67,8 @@ export function collectionPath(query: CollectionQuery = {}, endpoint = '/collect
 	if (query.protected && query.protected !== 'all') {
 		parameters.set('protected', String(query.protected === 'yes'));
 	}
-	if (query.cursor) parameters.set('cursor', query.cursor);
+	const cursorPagination = (query.sortBy ?? 'acquiredDate') === 'acquiredDate' && text.length < 3;
+	if (query.cursor && cursorPagination) parameters.set('cursor', query.cursor);
 	else if ((query.page ?? 0) > 0) parameters.set('page', String(query.page));
 	if (query.wishlistOwnerId) {
 		parameters.set('wishlist', String(wikiForgeNumericId(query.wishlistOwnerId, 'wishlist')));
@@ -98,68 +77,41 @@ export function collectionPath(query: CollectionQuery = {}, endpoint = '/collect
 }
 
 export function nextCollectionPosition(
-	response: Pick<WikiForgeCollectionResponse, 'hasNext' | 'nextCursor' | 'page'>
+	response: Pick<WikiForgeCollectionResponse, 'hasNext' | 'nextCursor' | 'page'> &
+		Partial<Pick<WikiForgeCollectionResponse, 'sortBy' | 'q'>>
 ): CollectionPosition | null {
 	if (!response.hasNext) return null;
-	return response.nextCursor
+	return response.nextCursor &&
+		(response.sortBy ?? 'ACQUIRED_DATE') === 'ACQUIRED_DATE' &&
+		!response.q
 		? { page: 0, cursor: response.nextCursor }
 		: { page: response.page + 1, cursor: null };
 }
 
-export function toWikiForgeCollectionCard(card: WikiForgeCollectionCardDto): CardRecord {
-	const rarity = cardRarityByCode[card.rarity] ?? cardRarityByCode.C;
-	return {
-		id: String(card.id),
-		catalogueId: String(card.pageId),
-		baseCardId: card.pageId,
-		variant: card.alt ? 'FULL_ART' : 'NORMAL',
-		title: card.title,
-		shortDescription: card.description ?? '',
-		longDescription: card.description ?? '',
-		rarity: rarity.name,
-		rarityInitials: rarity.initials,
-		rarityColor: rarity.color,
-		viewCount: 0,
-		imageUrl: wikiForgeImageUrl(card.image),
-		wikipediaUrl: `https://fr.wikipedia.org/?curid=${card.pageId}`,
-		attack: card.atk ?? 0,
-		defense: 0,
-		ownedCount: card.ownedCount ?? 1,
-		rarityCounts: card.rarityCounts,
-		globalSupply: 0,
-		friendsWhoOwn: [],
-		isFullArt: Boolean(card.alt),
-		acquiredAt: card.acquiredDate ? wikiForgeUtcDate(card.acquiredDate).toISOString() : undefined,
-		collectionTagIds: (card.tagIds ?? []).map(String),
-		duplicate: Boolean(card.duplicate),
-		userProtected: Boolean(card.protected),
-		pendingTradeId: card.pendingTradeId == null ? null : String(card.pendingTradeId),
-		nsfw: Boolean(card.nsfw),
-		sharedWishlistMemberships: (card.wishlists ?? []).map((wishlist) => ({
-			id: String(wishlist.id),
-			title: wishlist.name,
-			defaultList: false,
-			userId: String(wishlist.userId),
-			userName: wishlist.userName
-		}))
-	};
+export function toWikiForgeCollectionCard(
+	card: WikiForgeCollectionCardDto,
+	variants: VariantDefinition[] = [standardVariant]
+): CardRecord {
+	return toCardRecord(card, variants);
 }
 
 export async function getWikiForgeCollectionPage(
 	query: CollectionQuery = {},
 	options?: RequestOptions
 ): Promise<CollectionPageResult> {
-	const response = await apiRequest<WikiForgeCollectionResponse>(collectionPath(query), {
-		...options,
-		apiTarget: 'wikiforge'
-	});
+	const [response, variants] = await Promise.all([
+		apiRequest<WikiForgeCollectionResponse>(collectionPath(query), {
+			...options,
+			apiTarget: 'wikiforge'
+		}),
+		getVariants(options)
+	]);
 	return {
-		items: (response.results ?? []).map(toWikiForgeCollectionCard),
+		items: (response.results ?? []).map((card) => toWikiForgeCollectionCard(card, variants)),
 		page: response.page,
 		total: response.nbResults,
 		hasNext: response.hasNext,
-		nextCursor: response.nextCursor,
-		rarityResults: response.rarityResults ?? null
+		nextCursor: response.nextCursor
 	};
 }
 
@@ -201,22 +153,43 @@ export const unprotectWikiForgeCards = (cardIds: string[], options?: RequestOpti
 		body: wikiForgeCardBatch(cardIds)
 	});
 
-export const getWikiForgeCollectionCard = async (cardId: string, options?: RequestOptions) =>
-	toWikiForgeCollectionCard(
-		await apiRequest<WikiForgeCollectionCardDto>(
-			`/collection/${wikiForgeNumericId(cardId, 'carte')}`,
-			{ ...options, apiTarget: 'wikiforge' }
-		)
-	);
+export const getWikiForgeCollectionCard = async (cardId: string, options?: RequestOptions) => {
+	const [card, variants] = await Promise.all([
+		apiRequest<WikiForgeCollectionCardDto>(`/collection/${wikiForgeNumericId(cardId, 'carte')}`, {
+			...options,
+			apiTarget: 'wikiforge'
+		}),
+		getVariants(options)
+	]);
+	return toWikiForgeCollectionCard(card, variants);
+};
 
-export const addWikiForgeCardTag = (cardId: string, tagId: string, options?: RequestOptions) =>
-	apiRequest<WikiForgeCollectionCardDto>(
-		`/collection/${wikiForgeNumericId(cardId, 'carte')}/tags/${wikiForgeNumericId(tagId, 'tag')}`,
-		{ ...options, apiTarget: 'wikiforge', method: 'PUT' }
-	).then(toWikiForgeCollectionCard);
+export const addWikiForgeCardTag = async (
+	cardId: string,
+	tagId: string,
+	options?: RequestOptions
+) => {
+	const [card, variants] = await Promise.all([
+		apiRequest<WikiForgeCollectionCardDto>(
+			`/collection/${wikiForgeNumericId(cardId, 'carte')}/tags/${wikiForgeNumericId(tagId, 'tag')}`,
+			{ ...options, apiTarget: 'wikiforge', method: 'PUT' }
+		),
+		getVariants(options)
+	]);
+	return toWikiForgeCollectionCard(card, variants);
+};
 
-export const removeWikiForgeCardTag = (cardId: string, tagId: string, options?: RequestOptions) =>
-	apiRequest<WikiForgeCollectionCardDto>(
-		`/collection/${wikiForgeNumericId(cardId, 'carte')}/tags/${wikiForgeNumericId(tagId, 'tag')}`,
-		{ ...options, apiTarget: 'wikiforge', method: 'DELETE' }
-	).then(toWikiForgeCollectionCard);
+export const removeWikiForgeCardTag = async (
+	cardId: string,
+	tagId: string,
+	options?: RequestOptions
+) => {
+	const [card, variants] = await Promise.all([
+		apiRequest<WikiForgeCollectionCardDto>(
+			`/collection/${wikiForgeNumericId(cardId, 'carte')}/tags/${wikiForgeNumericId(tagId, 'tag')}`,
+			{ ...options, apiTarget: 'wikiforge', method: 'DELETE' }
+		),
+		getVariants(options)
+	]);
+	return toWikiForgeCollectionCard(card, variants);
+};

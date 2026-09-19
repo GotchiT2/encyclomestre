@@ -5,13 +5,11 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import type {
-		CardRarity,
 		CardRecord,
 		CollectionBooleanFilter,
 		CollectionSort,
 		CollectionTag
 	} from '$lib/types';
-	import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 	import type { CollectionQuery } from '$lib/api';
 
 	let {
@@ -22,8 +20,8 @@
 		onSelect,
 		hasMore = false,
 		loadingMore = false,
-		onLoadMore
-		,onFiltersChange
+		onLoadMore,
+		onFiltersChange
 	}: {
 		open?: boolean;
 		cards: CardRecord[];
@@ -37,7 +35,7 @@
 	} = $props();
 
 	let query = $state('');
-	let rarities = $state<CardRarity[]>([]);
+	let variantIds = $state<number[]>([]);
 	let tagIds = $state<string[]>([]);
 	let sortBy = $state<CollectionSort>('acquiredDate');
 	let duplicate = $state<CollectionBooleanFilter>('all');
@@ -47,7 +45,7 @@
 	const filters = $derived<CollectionQuery>({
 		query,
 		sortBy,
-		rarities: rarities.map((rarity) => cardRarityCodeByName[rarity]),
+		variantIds,
 		tagIds,
 		duplicate,
 		protected: protection
@@ -62,7 +60,7 @@
 					(!normalizedQuery ||
 						card.title.toLocaleLowerCase('fr-FR').includes(normalizedQuery) ||
 						card.shortDescription.toLocaleLowerCase('fr-FR').includes(normalizedQuery)) &&
-					(!rarities.length || rarities.includes(card.rarity)) &&
+					(!variantIds.length || variantIds.includes(card.variantId)) &&
 					(duplicate === 'all' || Boolean(card.duplicate) === (duplicate === 'yes')) &&
 					(protection === 'all' || Boolean(card.userProtected) === (protection === 'yes')) &&
 					(!tagIds.length || tagIds.every((tagId) => cardTags.includes(tagId)))
@@ -70,7 +68,6 @@
 			})
 			.toSorted((left, right) => {
 				if (sortBy === 'name') return left.title.localeCompare(right.title, 'fr');
-				if (sortBy === 'rarity') return left.rarity.localeCompare(right.rarity, 'fr');
 				return (right.acquiredAt ?? '').localeCompare(left.acquiredAt ?? '');
 			})
 	);
@@ -105,7 +102,7 @@
 				<FilterControls
 					bind:query
 					bind:sortBy
-					bind:selectedRarities={rarities}
+					bind:variantIds
 					bind:tagFilterIds={tagIds}
 					bind:duplicate
 					bind:protected={protection}
@@ -115,7 +112,7 @@
 					onOpenTagEditor={() => {}}
 					onClear={() => {
 						query = '';
-						rarities = [];
+						variantIds = [];
 						tagIds = [];
 						duplicate = 'all';
 						protection = 'all';

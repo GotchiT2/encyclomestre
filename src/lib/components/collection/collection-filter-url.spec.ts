@@ -7,7 +7,7 @@ describe('collection filter URL', () => {
 			buildCollectionFilterTarget({
 				query: '',
 				sortBy: 'acquiredDate',
-				selectedRarities: [],
+				variantIds: [],
 				tagFilterIds: [],
 				duplicate: 'all',
 				protected: 'all'
@@ -20,12 +20,12 @@ describe('collection filter URL', () => {
 			buildCollectionFilterTarget({
 				query: '  test  ',
 				sortBy: 'name',
-				selectedRarities: ['Rare'],
+				variantIds: [4, 7],
 				tagFilterIds: ['2', '7'],
 				duplicate: 'yes',
 				protected: 'no'
 			})
-		).toBe('/collection?q=test&sortBy=name&rarity=Rare&tag=2&tag=7&duplicate=yes&protected=no');
+		).toBe('/collection?q=test&sortBy=name&variant=4&variant=7&tag=2&tag=7&duplicate=yes&protected=no');
 	});
 
 	it('treats one or two non-blank characters as no search', () => {

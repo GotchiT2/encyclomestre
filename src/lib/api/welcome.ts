@@ -1,13 +1,11 @@
 import type { DashboardData } from '$lib/types';
 import { apiRequest, type RequestOptions } from './client';
 import { toWikiForgeCollectionCard, type WikiForgeCollectionCardDto } from './collection';
+import { toPackSummary, type PackSummaryDto } from './boosters';
+import { getVariants } from './variants';
 
 export interface WikiForgeWelcomeResponse {
-	boostersStatus: {
-		available: number;
-		max: number;
-		nextAvailableAt: string | null;
-	};
+	packs: PackSummaryDto[];
 	collection: {
 		nbCards: number;
 		rank?: number;
@@ -20,10 +18,13 @@ export interface WikiForgeWelcomeResponse {
 
 /** The authenticated home payload supplied by WikiForge. */
 export async function getWikiForgeWelcome(options?: RequestOptions): Promise<DashboardData> {
-	const response = await apiRequest<WikiForgeWelcomeResponse>('/welcome', {
-		...options,
-		apiTarget: 'wikiforge'
-	});
+	const [response, variants] = await Promise.all([
+		apiRequest<WikiForgeWelcomeResponse>('/welcome', {
+			...options,
+			apiTarget: 'wikiforge'
+		}),
+		getVariants(options)
+	]);
 	return {
 		collection: {
 			uniqueCards: response.collection.nbCards,
@@ -33,10 +34,9 @@ export async function getWikiForgeWelcome(options?: RequestOptions): Promise<Das
 		pendingTrades: response.pendingTrades,
 		rank: response.collection.rank,
 		money: response.money ?? 0,
-		boosterStatus: {
-			availableBoosters: response.boostersStatus.available,
-			nextBoosterAvailableAt: response.boostersStatus.nextAvailableAt
-		},
-		recentAcquisitions: response.collection.recent.map(toWikiForgeCollectionCard)
+		packs: response.packs.map(toPackSummary),
+		recentAcquisitions: response.collection.recent.map((card) =>
+			toWikiForgeCollectionCard(card, variants)
+		)
 	};
 }

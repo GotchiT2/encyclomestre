@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./client', () => ({ apiRequest: vi.fn() }));
+vi.mock('./variants', async (importOriginal) => ({
+	...(await importOriginal<typeof import('./variants')>()),
+	getVariants: vi
+		.fn()
+		.mockResolvedValue([
+			{ id: 1, name: 'Standard', color: '#b8f2d5', styles: ['NORMAL'], renderKey: 'standard' }
+		])
+}));
 
 import { apiRequest } from './client';
 import {
@@ -50,7 +58,7 @@ describe('WikiForge wishlist API', () => {
 		mockedRequest.mockResolvedValue({
 			nbResults: 51,
 			page: 0,
-			sortBy: 'RARITY',
+			sortBy: 'NAME',
 			sortDirection: 'DESC',
 			results: [
 				{
@@ -62,7 +70,7 @@ describe('WikiForge wishlist API', () => {
 						image: 'Paris.jpg',
 						atk: 120,
 						viewCount: 1000,
-						rarity: 'L',
+						defaultVariantId: 1,
 						createdAt: '2026-08-18T12:00:00Z',
 						globalCount: 3
 					}
@@ -72,13 +80,12 @@ describe('WikiForge wishlist API', () => {
 
 		const result = await getWishlistPage('1', {
 			query: 'Paris',
-			rarities: ['Légendaire', 'Rare'],
-			sortBy: 'rarity',
+			sortBy: 'name',
 			sortDirection: 'DESC'
 		});
 
 		expect(mockedRequest).toHaveBeenCalledWith(
-			'/wishlists/1?page=0&sortBy=RARITY&sortDirection=DESC&q=Paris&rarity=L&rarity=R',
+			'/wishlists/1?page=0&sortBy=NAME&sortDirection=DESC&q=Paris',
 			{ apiTarget: 'wikiforge' }
 		);
 		expect(result.meta).toEqual({ page: 1, pageSize: 1, total: 51, totalPages: 51 });
@@ -146,13 +153,18 @@ describe('WikiForge wishlist API', () => {
 		await removeWishlistRegistryCards('1', ['42', '43']);
 		await removeOwnedWishlistRegistryCards('1');
 		expect(mockedRequest).toHaveBeenNthCalledWith(1, '/wishlists/1/pages', {
-			apiTarget: 'wikiforge', method: 'PUT', body: [42, 43]
+			apiTarget: 'wikiforge',
+			method: 'PUT',
+			body: [42, 43]
 		});
 		expect(mockedRequest).toHaveBeenNthCalledWith(2, '/wishlists/1/pages', {
-			apiTarget: 'wikiforge', method: 'DELETE', body: [42, 43]
+			apiTarget: 'wikiforge',
+			method: 'DELETE',
+			body: [42, 43]
 		});
 		expect(mockedRequest).toHaveBeenNthCalledWith(3, '/wishlists/1/pages/owned', {
-			apiTarget: 'wikiforge', method: 'DELETE'
+			apiTarget: 'wikiforge',
+			method: 'DELETE'
 		});
 		expect(() => addWishlistRegistryCards('1', [])).toThrow('1 à 500');
 	});

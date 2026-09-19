@@ -1,88 +1,69 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$env/dynamic/public', () => ({
-	env: {
-		PUBLIC_API_MOCK_ENABLED: 'false',
-		PUBLIC_WIKIFORGE_API_BASE_URL: 'https://api.wikiforge.fr'
-	}
+const { request, variants } = vi.hoisted(() => ({
+	request: vi.fn(),
+	variants: [{ id: 2, name: 'Chrome', color: '#b1cff2', styles: ['CHROME'], renderKey: 'chrome' }]
+}));
+vi.mock('./client', () => ({ apiRequest: request }));
+vi.mock('./variants', async (importOriginal) => ({
+	...(await importOriginal<typeof import('./variants')>()),
+	getVariants: vi.fn().mockResolvedValue(variants)
 }));
 
-import { getBoosterInventory, openBooster } from './boosters';
+import { getBoosters, openBooster } from './boosters';
 
-afterEach(() => vi.unstubAllGlobals());
+describe('booster API', () => {
+	beforeEach(() => request.mockReset());
 
-describe('WikiForge boosters API', () => {
-	it('loads the inventory from the canonical endpoint', async () => {
-		const fetcher = vi.fn(async () =>
-			Response.json({ available: 3, max: 10, nextAvailableAt: '2026-08-23T12:00:00Z' })
-		);
+	it('maps every active pack returned by the API', async () => {
+		request.mockResolvedValue([
+			{
+				id: 4,
+				name: 'Chrome annuel',
+				description: 'Cinq cartes',
+				image: '/chrome.png',
+				imageAttribution: { sourceUrl: 'https://example.test/source', author: 'WikiForge' },
+				nbCards: 5,
+				available: 2,
+				max: 3,
+				nextAvailableAt: null
+			}
+		]);
 
-		await expect(
-			getBoosterInventory(undefined, { fetch: fetcher as typeof fetch })
-		).resolves.toEqual({
-			available: 3,
-			capacity: 10,
-			nextRechargeAt: '2026-08-23T12:00:00Z'
-		});
-		expect(fetcher).toHaveBeenCalledWith(
-			'https://api.wikiforge.fr/boosters',
-			expect.objectContaining({ credentials: 'include' })
-		);
+		await expect(getBoosters()).resolves.toEqual([
+			expect.objectContaining({
+				id: 4,
+				imageUrl: '/chrome.png',
+				available: 2,
+				imageAttribution: { sourceUrl: 'https://example.test/source', author: 'WikiForge' }
+			})
+		]);
+		expect(request).toHaveBeenCalledWith('/boosters', { apiTarget: 'wikiforge' });
 	});
 
-	it('uses the opening response directly without reloading the inventory', async () => {
-		const fetcher = vi.fn(async () =>
-			Response.json({
-				available: 2,
-				max: 10,
-				nextAvailableAt: '2026-08-23T12:00:00Z',
-				cards: [
-					{
-						id: 8818,
-						pageId: 12208062,
-						title: 'Rose Thisse-Derouette',
-						description: 'Compositrice belge',
-						image: 'https://images.wikiforge.test/Rose%20Thisse%20Derouette.jpg',
-						rarity: 'SR',
-						atk: 70,
-						alt: true,
-						duplicate: true,
-						protected: true,
-						tagIds: [4, 9],
-						acquiredDate: '2026-08-23T11:00:00Z',
-						creationDate: '2026-08-23T11:00:00Z',
-						pendingTradeId: 12,
-						ownedCount: 4,
-						rarityCounts: { SR: 3, R: 1 }
-					}
-				]
-			})
-		);
-
-		const result = await openBooster(undefined, { fetch: fetcher as typeof fetch });
-
-		expect(fetcher).toHaveBeenCalledTimes(1);
-		expect(fetcher).toHaveBeenCalledWith(
-			'https://api.wikiforge.fr/boosters/open',
-			expect.objectContaining({ method: 'POST', credentials: 'include' })
-		);
-		expect(result.inventory).toEqual({
-			available: 2,
-			capacity: 10,
-			nextRechargeAt: '2026-08-23T12:00:00Z'
+	it('opens the selected pack and preserves the response order', async () => {
+		request.mockResolvedValue({
+			packId: 4,
+			cards: [
+				{ id: 9, pageId: 90, title: 'Première', variantId: 2, packId: 4 },
+				{
+					id: 3,
+					pageId: 30,
+					title: 'Spéciale',
+					variantId: 2,
+					packId: 4,
+					serialNumber: 1,
+					maxCopies: 10
+				}
+			]
 		});
-		expect(result.pulls[0]?.card).toMatchObject({
-			id: '8818',
-			catalogueId: '12208062',
-			variant: 'FULL_ART',
-			title: 'Rose Thisse-Derouette',
-			imageUrl: 'https://images.wikiforge.test/Rose%20Thisse%20Derouette.jpg',
-			collectionTagIds: ['4', '9'],
-			duplicate: true,
-			userProtected: true,
-			pendingTradeId: '12',
-			ownedCount: 4,
-			rarityCounts: { SR: 3, R: 1 }
+
+		const result = await openBooster(4);
+		expect(request).toHaveBeenCalledWith('/boosters/4/open', {
+			apiTarget: 'wikiforge',
+			method: 'POST'
 		});
+		expect(result.cards.map((card) => card.id)).toEqual(['9', '3']);
+		expect(result.cards[1]).toMatchObject({ serialNumber: 1, maxCopies: 10 });
 	});
 });

@@ -23,7 +23,6 @@
 		respondToTradeOffer,
 		searchUsers
 	} from '$lib/api';
-	import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 	import TradeDetail from '$lib/components/trades/trade-detail.svelte';
 	import TradeEditor from '$lib/components/trades/trade-editor.svelte';
 	import TradePartnerPicker from '$lib/components/trades/trade-partner-picker.svelte';
@@ -32,7 +31,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import type {
 		CardRecord,
-		CardRarityInitials,
 		CreateTradeOfferInput,
 		TradeCardDetail,
 		TradeOffer,
@@ -77,12 +75,8 @@
 				.split(',')
 				.filter(Boolean);
 			const requestedPageId = page.url.searchParams.get('requestedPageId');
-			const requestedRarityParam = page.url.searchParams.get('requestedRarity');
-			const requestedRarity = (['L', 'UR', 'SR', 'R', 'PC', 'C'] as const).includes(
-				requestedRarityParam as CardRarityInitials
-			)
-				? (requestedRarityParam as CardRarityInitials)
-				: undefined;
+			const requestedVariantId =
+				Number(page.url.searchParams.get('requestedVariantId')) || undefined;
 			const offeredCardIds = (page.url.searchParams.get('offerCards') ?? '')
 				.split(',')
 				.filter(Boolean);
@@ -91,7 +85,12 @@
 				const tradePartners = await loadPartners();
 				const requestedPartner = tradePartners.find((partner) => partner.id === partnerId);
 				if (requestedPartner)
-					await selectPartner(requestedPartner, requestedCatalogueIds, offeredCardIds, requestedRarity);
+					await selectPartner(
+						requestedPartner,
+						requestedCatalogueIds,
+						offeredCardIds,
+						requestedVariantId
+					);
 			}
 		} catch {
 			loadFailed = true;
@@ -150,7 +149,7 @@
 		partner: User,
 		requestedCatalogueIds: string[] = [],
 		offeredUserCardIds: string[] = [],
-		requestedRarity?: CardRarityInitials
+		requestedVariantId?: number
 	) {
 		selectedPartner = partner;
 		counteringOfferId = null;
@@ -160,14 +159,14 @@
 			const [ownPage, partnerPage] = await Promise.all([
 				getWikiForgeCollectionPage(),
 				getFriendCollectionPage(partner.id, {
-					rarities: requestedRarity ? [requestedRarity] : []
+					variantIds: requestedVariantId ? [requestedVariantId] : []
 				}).catch(() => ({ items: [] as CardRecord[] }))
 			]);
 			ownedCards = ownPage.items.filter((card) => offeredUserCardIds.includes(card.id));
 			partnerCards = partnerPage.items.filter(
 				(card) =>
 					requestedCatalogueIds.includes(String(card.catalogueId ?? card.baseCardId ?? card.id)) &&
-					(!requestedRarity || card.rarityInitials === requestedRarity)
+					(!requestedVariantId || card.variantId === requestedVariantId)
 			);
 			editorDraft = {
 				recipientId: partner.id,
@@ -186,9 +185,8 @@
 	async function loadOwnedTradeCards(query: import('$lib/types').TradeCardSearchQuery) {
 		const result = await getWikiForgeCollectionPage({
 			query: query?.query,
-			sortBy:
-				query?.sortBy === 'rarity' ? 'rarity' : query?.sortBy === 'name' ? 'name' : 'acquiredDate',
-			rarities: query?.rarities?.map((rarity) => cardRarityCodeByName[rarity]),
+			sortBy: query?.sortBy === 'name' ? 'name' : 'acquiredDate',
+			variantIds: query?.variantIds,
 			page: query?.cursor ? undefined : query?.page,
 			cursor: query?.cursor
 		});
@@ -217,9 +215,8 @@
 		}
 		const result = await getFriendCollectionPage(selectedPartner.id, {
 			query: query.query,
-			sortBy:
-				query.sortBy === 'rarity' ? 'rarity' : query.sortBy === 'name' ? 'name' : 'acquiredDate',
-			rarities: query.rarities?.map((rarity) => cardRarityCodeByName[rarity]),
+			sortBy: query.sortBy === 'name' ? 'name' : 'acquiredDate',
+			variantIds: query.variantIds,
 			page: query.cursor ? undefined : query.page,
 			cursor: query.cursor
 		});

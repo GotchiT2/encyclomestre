@@ -30,12 +30,10 @@
 	import WishlistPicker from '$lib/components/wishlist/wishlist-picker.svelte';
 	import WishlistRegistryDrawers from '$lib/components/wishlist/wishlist-registry-drawers.svelte';
 	import WishlistSocialGrid from '$lib/components/wishlist/wishlist-social-grid.svelte';
-	import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 	import { _ } from '$lib/i18n';
 	import { toast } from 'svelte-sonner';
 	import type { CardQuery } from '$lib/api';
 	import type {
-		CardRarity,
 		CardRecord,
 		WishlistFollower,
 		WishlistGroups,
@@ -50,7 +48,6 @@
 	let entries = $state<WishlistPageEntry[]>([]);
 	let followers = $state<WishlistFollower[]>([]);
 	let query = $state('');
-	let rarities = $state<CardRarity[]>([]);
 	let sortBy = $state<WishlistSort>('date');
 	let sortDirection = $state<'ASC' | 'DESC'>('DESC');
 	let page = $state(1);
@@ -81,7 +78,7 @@
 	let requestId = 0;
 	let debounceTimer: number | undefined;
 	const filterKey = $derived(
-		JSON.stringify([activeWishlist?.id, query, rarities, sortBy, sortDirection, page])
+		JSON.stringify([activeWishlist?.id, query, sortBy, sortDirection, page])
 	);
 	let previousFilterKey = $state('');
 	const editable = $derived(activeWishlist?.access === 'owned');
@@ -107,7 +104,6 @@
 			const result = await getWishlistPage(activeWishlist.id, {
 				page,
 				query: query.trim() || undefined,
-				rarities,
 				sortBy,
 				sortDirection
 			});
@@ -148,14 +144,13 @@
 	function selectWishlist(wishlist: WishlistRegistrySummary) {
 		activeWishlist = wishlist;
 		query = '';
-		rarities = [];
 		page = 1;
 		selectedPageIds = [];
 		selectionMode = false;
 	}
 
 	function resetPage() {
-		const nextKey = JSON.stringify([activeWishlist?.id, query, rarities, sortBy, sortDirection]);
+		const nextKey = JSON.stringify([activeWishlist?.id, query, sortBy, sortDirection]);
 		if (nextKey !== previousFilterKey) {
 			previousFilterKey = nextKey;
 			page = 1;
@@ -226,7 +221,9 @@
 			throw error;
 		}
 		pickerAddedCardIds = [...new Set([...pickerAddedCardIds, ...pageIds])];
-		toast.success($_('wishlist.cards_added', { values: { count: pageIds.length, wishlist: wishlist.title } }));
+		toast.success(
+			$_('wishlist.cards_added', { values: { count: pageIds.length, wishlist: wishlist.title } })
+		);
 		await Promise.all([refreshGroups(wishlist.id), loadEntries()]);
 	}
 
@@ -315,7 +312,6 @@
 			await getWikiForgePublicPages({
 				page: Math.max(0, (cardQuery.page ?? 1) - 1),
 				q: cardQuery.query,
-				rarities: (cardQuery.rarities ?? []).map((rarity) => cardRarityCodeByName[rarity]),
 				sortBy: cardQuery.sortBy,
 				sortDirection: cardQuery.sortDirection
 			})
@@ -351,10 +347,7 @@
 		illustrationPickerOpen = false;
 	}
 	const activeFilterCount = $derived(
-		(query ? 1 : 0) +
-			rarities.length +
-			(sortBy !== 'date' ? 1 : 0) +
-			(sortDirection === 'ASC' ? 1 : 0)
+		(query ? 1 : 0) + (sortBy !== 'date' ? 1 : 0) + (sortDirection === 'ASC' ? 1 : 0)
 	);
 </script>
 
@@ -420,10 +413,14 @@
 							>
 							<Button onclick={openPicker}>{$_('wishlist.add_card_action')}</Button>
 							<Button variant="outline" onclick={() => (selectionMode = !selectionMode)}
-								>{selectionMode ? $_('wishlist.cancel_selection') : $_('wishlist.select_cards')}</Button
+								>{selectionMode
+									? $_('wishlist.cancel_selection')
+									: $_('wishlist.select_cards')}</Button
 							>
-							<Button variant="outline" disabled={cleaningOwned} onclick={() => void cleanOwnedCards()}
-								>{$_('wishlist.clean_owned')}</Button
+							<Button
+								variant="outline"
+								disabled={cleaningOwned}
+								onclick={() => void cleanOwnedCards()}>{$_('wishlist.clean_owned')}</Button
 							>
 						</div>
 					{/if}
@@ -431,13 +428,7 @@
 
 				<div class="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
 					<FilterShell activeCount={activeFilterCount}>
-						<WishlistListControls
-							bind:query
-							bind:rarities
-							bind:sortBy
-							bind:sortDirection
-							onChange={resetPage}
-						/>
+						<WishlistListControls bind:query bind:sortBy bind:sortDirection onChange={resetPage} />
 					</FilterShell>
 
 					<div class="flex min-w-0 flex-col gap-4">
@@ -462,9 +453,17 @@
 								onOpen={(entry) => (selectedCard = entry.card)}
 							/>
 							{#if selectionMode}
-								<div class="flex items-center justify-between gap-3 border border-energy/30 bg-energy/10 p-3">
-									<p class="forge-label text-energy">{$_('wishlist.selected_cards', { values: { count: selectedPageIds.length } })}</p>
-									<Button variant="destructive" disabled={!selectedPageIds.length || removingSelection} onclick={() => void removeSelection()}>{$_('wishlist.remove_selected')}</Button>
+								<div
+									class="flex items-center justify-between gap-3 border border-energy/30 bg-energy/10 p-3"
+								>
+									<p class="forge-label text-energy">
+										{$_('wishlist.selected_cards', { values: { count: selectedPageIds.length } })}
+									</p>
+									<Button
+										variant="destructive"
+										disabled={!selectedPageIds.length || removingSelection}
+										onclick={() => void removeSelection()}>{$_('wishlist.remove_selected')}</Button
+									>
 								</div>
 							{/if}
 							<nav

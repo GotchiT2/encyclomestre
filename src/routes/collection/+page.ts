@@ -1,37 +1,29 @@
 import { getWikiForgeCollectionPage, getWikiForgeTags } from '$lib/api';
-import { cardRarityCodeByName, cardRarityOptions } from '$lib/domain/cards/rarities';
-import type { CardRarity, CollectionBooleanFilter, CollectionSort } from '$lib/types';
+import type { CollectionBooleanFilter, CollectionSort } from '$lib/types';
 import type { PageLoad } from './$types';
 
-const validRarities = new Set(cardRarityOptions.map((rarity) => rarity.value));
 const booleanFilter = (value: string | null): CollectionBooleanFilter =>
 	value === 'yes' || value === 'no' ? value : 'all';
 
 export const load: PageLoad = ({ fetch, url }) => {
-	const query = url.searchParams.get('q')?.trim() ?? '';
-	const selectedRarities = url.searchParams
-		.getAll('rarity')
-		.filter((rarity): rarity is CardRarity => validRarities.has(rarity as CardRarity));
-	const tagFilterIds = url.searchParams
-		.getAll('tag')
-		.filter((id) => id === '-1' || (Number.isSafeInteger(Number(id)) && Number(id) > 0));
+	const query = url.searchParams.get('q') ?? '';
 	const requestedSort = url.searchParams.get('sortBy');
-	const sortBy: CollectionSort =
-		requestedSort === 'rarity' || requestedSort === 'name' ? requestedSort : 'acquiredDate';
+	const sortBy: CollectionSort = requestedSort === 'name' ? 'name' : 'acquiredDate';
+	const variantIds = url.searchParams
+		.getAll('variant')
+		.map(Number)
+		.filter((id) => Number.isSafeInteger(id) && id > 0);
+	const tagFilterIds = url.searchParams.getAll('tag');
 	const duplicate = booleanFilter(url.searchParams.get('duplicate'));
 	const protection = booleanFilter(url.searchParams.get('protected'));
-	const requestedWishlistOwnerId = url.searchParams.get('wishlist') ?? '';
-	const wishlistOwnerId =
-		Number.isSafeInteger(Number(requestedWishlistOwnerId)) && Number(requestedWishlistOwnerId) > 0
-			? requestedWishlistOwnerId
-			: '';
-
+	const wishlistOwnerId = url.searchParams.get('wishlistOwner') ?? '';
 	return {
+		tags: getWikiForgeTags({ fetch }),
 		collection: getWikiForgeCollectionPage(
 			{
 				query,
 				sortBy,
-				rarities: selectedRarities.map((rarity) => cardRarityCodeByName[rarity]),
+				variantIds,
 				tagIds: tagFilterIds,
 				duplicate,
 				protected: protection,
@@ -39,15 +31,6 @@ export const load: PageLoad = ({ fetch, url }) => {
 			},
 			{ fetch }
 		),
-		tags: getWikiForgeTags({ fetch }),
-		filters: {
-			query,
-			selectedRarities,
-			tagFilterIds,
-			sortBy,
-			duplicate,
-			protection,
-			wishlistOwnerId
-		}
+		filters: { query, sortBy, variantIds, tagFilterIds, duplicate, protection, wishlistOwnerId }
 	};
 };

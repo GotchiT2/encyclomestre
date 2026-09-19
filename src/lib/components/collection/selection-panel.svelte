@@ -86,6 +86,7 @@
 				size="sm"
 				class="sm:h-11"
 				variant="outline"
+				data-testid="protect-selection"
 				disabled={!selectedCount || !canProtect || protecting}
 				onclick={protectCards}
 				><ShieldCheckIcon data-icon="inline-start" />{$_('collection.protect_selection')}</Button
@@ -93,9 +94,9 @@
 				size="sm"
 				class="sm:h-11"
 				variant="outline"
+				data-testid="unprotect-selection"
 				disabled={!selectedCount || !canUnprotect || unprotecting}
-				onclick={unprotectCards}
-				>{$_('collection.unprotect_selection')}</Button
+				onclick={unprotectCards}>{$_('collection.unprotect_selection')}</Button
 			><Button size="sm" class="sm:h-11" variant="ghost" onclick={onCancel}
 				>{$_('common.cancel')}</Button
 			>

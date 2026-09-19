@@ -6,7 +6,7 @@ export const cardSearchSortDirection = (sortBy: CardSearchSort): 'ASC' | 'DESC' 
 export const defaultCardSearchSort = (
 	query: string | undefined,
 	requestedSort: CardSearchSort | undefined,
-	fallback: CardSearchSort = 'rarity'
+	fallback: CardSearchSort = 'name'
 ): CardSearchSort => requestedSort ?? (query?.trim() ? 'relevance' : fallback);
 
 function normalized(value: string): string {

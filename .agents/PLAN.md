@@ -367,3 +367,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 ## 16. API WikiForge unique
 
 - [x] Aligner les paramètres sur le corps complet de `/me` et retirer les appels de l’API historique sans équivalent WikiForge — `refactor(api): remove legacy API workflows`
+
+## 17. Variantes et packs WikiForge
+
+- [x] Remplacer la rareté par le catalogue de variantes, partager le rendu des cartes et brancher les packs actifs — `feat(cards): migrate rarity model to variants and packs`

@@ -1,18 +1,18 @@
-import type { CardRecord } from './card';
+import type { CardRecord, ImageAttribution } from './card';
 
-export interface BoosterInventory {
+export interface PackSummary {
+	id: number;
+	name: string;
+	description: string;
+	imageUrl: string;
+	imageAttribution?: ImageAttribution;
+	nbCards: number;
 	available: number;
-	capacity: number;
-	nextRechargeAt: string | null;
-}
-
-export interface BoosterPull {
-	card: CardRecord;
-	ownedBefore: number;
-	ownedAfter: number;
+	max: number;
+	nextAvailableAt: string | null;
 }
 
 export interface BoosterOpenResult {
-	pulls: BoosterPull[];
-	inventory: BoosterInventory;
+	packId: number;
+	cards: CardRecord[];
 }

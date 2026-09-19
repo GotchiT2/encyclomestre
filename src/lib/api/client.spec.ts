@@ -19,11 +19,11 @@ describe('apiRequest en mode mock', () => {
 	it('intercepte la requête sans appeler le fetch fourni', async () => {
 		const fetcher = vi.fn();
 
-		const card = await apiRequest<{ id: string }>('/cards/girls-generation-1', {
+		const card = await apiRequest<{ id: number; variantId: number }>('/cards/girls-generation-1', {
 			fetch: fetcher as typeof fetch
 		});
 
-		expect(card.id).toBe('girls-generation-1');
+		expect(card).toMatchObject({ id: 1, variantId: expect.any(Number) });
 		expect(fetcher).not.toHaveBeenCalled();
 	});
 

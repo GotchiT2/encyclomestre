@@ -10,10 +10,7 @@ export interface DashboardData {
 	activeMarketListings?: number;
 	rank?: number;
 	money: number;
-	boosterStatus: {
-		availableBoosters: number;
-		nextBoosterAvailableAt: string | null;
-	};
+	packs: import('./booster').PackSummary[];
 	recentAcquisitions: CardRecord[];
 }
 

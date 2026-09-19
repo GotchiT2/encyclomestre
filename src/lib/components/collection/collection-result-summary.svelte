@@ -20,7 +20,6 @@
 	);
 </script>
 
-<!-- La répartition par rareté est portée par les pastilles du filtre : ici, seul le total. -->
 <section class="border-y border-primary/20 py-3">
 	<p class="forge-label">{countLabel}</p>
 </section>

@@ -8,6 +8,8 @@ import type {
 	TradeOfferStatus,
 	TradeParticipant
 } from '$lib/types';
+import type { VariantDefinition } from '$lib/types';
+import { getVariants } from './variants';
 import { wikiForgeApiErrorCode, wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
 
 interface WikiForgeTradeParticipantDto {
@@ -68,19 +70,27 @@ function toParticipant(user: WikiForgeTradeParticipantDto): TradeParticipant {
 	};
 }
 
-function toTradeCardDetail(entry: WikiForgeTradeCardDto, side: TradeCardSide): TradeCardDetail {
+function toTradeCardDetail(
+	entry: WikiForgeTradeCardDto,
+	side: TradeCardSide,
+	variants: VariantDefinition[]
+): TradeCardDetail {
 	return {
 		userCardId: String(entry.card.id),
 		side,
 		status:
 			entry.status === 'REMOVED' ? 'removed' : entry.status === 'ADDED' ? 'added' : 'unchanged',
-		card: toWikiForgeCollectionCard(entry.card)
+		card: toWikiForgeCollectionCard(entry.card, variants)
 	};
 }
 
-function toTradeOffer(offer: WikiForgeTradeDto): TradeOffer {
-	const offered = (offer.offered ?? []).map((entry) => toTradeCardDetail(entry, 'offered'));
-	const requested = (offer.requested ?? []).map((entry) => toTradeCardDetail(entry, 'requested'));
+function toTradeOffer(offer: WikiForgeTradeDto, variants: VariantDefinition[]): TradeOffer {
+	const offered = (offer.offered ?? []).map((entry) =>
+		toTradeCardDetail(entry, 'offered', variants)
+	);
+	const requested = (offer.requested ?? []).map((entry) =>
+		toTradeCardDetail(entry, 'requested', variants)
+	);
 	return {
 		id: String(offer.id),
 		initiatorId: String(offer.initiator.id),
@@ -116,14 +126,17 @@ export async function getTradeRegistry(
 	options?: RequestOptions
 ): Promise<TradeRegistry> {
 	const safeDone = Math.max(0, Math.trunc(done));
-	const response = await apiRequest<WikiForgeTradesDto>(`/trades?done=${safeDone}`, {
-		...options,
-		apiTarget: 'wikiforge'
-	});
+	const [response, variants] = await Promise.all([
+		apiRequest<WikiForgeTradesDto>(`/trades?done=${safeDone}`, {
+			...options,
+			apiTarget: 'wikiforge'
+		}),
+		getVariants(options)
+	]);
 	return {
-		received: (response.received ?? []).map(toTradeOffer),
-		sent: (response.sent ?? []).map(toTradeOffer),
-		done: (response.done ?? []).map(toTradeOffer)
+		received: (response.received ?? []).map((offer) => toTradeOffer(offer, variants)),
+		sent: (response.sent ?? []).map((offer) => toTradeOffer(offer, variants)),
+		done: (response.done ?? []).map((offer) => toTradeOffer(offer, variants))
 	};
 }
 
@@ -141,13 +154,16 @@ export const getTradeOffers = async (_userId?: string, options?: RequestOptions)
 	return [...registry.received, ...registry.sent, ...registry.done];
 };
 
-export const getTradeOffer = async (id: string, options?: RequestOptions) =>
-	toTradeOffer(
-		await apiRequest<WikiForgeTradeDto>(
+export const getTradeOffer = async (id: string, options?: RequestOptions) => {
+	const [offer, variants] = await Promise.all([
+		apiRequest<WikiForgeTradeDto>(
 			`/trades/${wikiForgeNumericId(id, 'échange')}`,
 			wikiForgeOptions(options)
-		)
-	);
+		),
+		getVariants(options)
+	]);
+	return toTradeOffer(offer, variants);
+};
 
 export const getTradeCards = async (
 	id: string,
@@ -180,7 +196,7 @@ async function tradeMutation(
 		method: 'POST',
 		...(body === undefined ? {} : { body })
 	});
-	if (response) return toTradeOffer(response);
+	if (response) return toTradeOffer(response, await getVariants(options));
 	if (path === '/trades') {
 		throw new Error('La création de l’échange n’a renvoyé aucun détail.');
 	}
