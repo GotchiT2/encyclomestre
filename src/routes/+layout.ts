@@ -10,7 +10,14 @@ import type { LayoutLoad } from './$types';
 export const ssr = false;
 
 export const load: LayoutLoad = ({ url }) => {
-	if (browser && !isPublicAuthenticationRoute(url.pathname) && !restoreSession(localStorage)) {
+	// The isolated preview contains only local fixtures and never opens a real booster.
+	const isBoosterPreview = url.pathname.replace(/\/$/, '') === '/boosters/apercu';
+	if (
+		browser &&
+		!isBoosterPreview &&
+		!isPublicAuthenticationRoute(url.pathname) &&
+		!restoreSession(localStorage)
+	) {
 		redirect(307, createLoginRedirect(url));
 	}
 };
