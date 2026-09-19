@@ -3,14 +3,41 @@ import { createMockApiResponse } from './mock';
 
 describe('createMockApiResponse', () => {
 	it('expose les contrats WikiForge des boosters et des tags', async () => {
+		const catalogue = createMockApiResponse({ path: '/packs' });
+		expect(await catalogue.json()).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ id: 1, status: 'OPEN', drawGroups: expect.any(Array) }),
+				expect.objectContaining({ status: 'UPCOMING' }),
+				expect.objectContaining({ status: 'EXHAUSTED' })
+			])
+		);
+		const details = createMockApiResponse({ path: '/packs/3' });
+		expect(await details.json()).toMatchObject({
+			id: 3,
+			drawGroups: [
+				expect.any(Object),
+				expect.objectContaining({
+					variants: [
+						expect.objectContaining({
+							maxCopies: 99,
+							remainingCopies: 198,
+							pages: expect.arrayContaining([expect.objectContaining({ title: 'Wikipédia' })])
+						})
+					]
+				})
+			]
+		});
+
 		const inventory = createMockApiResponse({ path: '/boosters' });
-		expect(await inventory.json()).toEqual([
-			expect.objectContaining({
-				id: expect.any(Number),
-				available: expect.any(Number),
-				max: expect.any(Number)
-			})
-		]);
+		expect(await inventory.json()).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					id: expect.any(Number),
+					available: expect.any(Number),
+					max: expect.any(Number)
+				})
+			])
+		);
 
 		const opening = createMockApiResponse({ path: '/boosters/1/open', method: 'POST' });
 		expect(await opening.json()).toMatchObject({

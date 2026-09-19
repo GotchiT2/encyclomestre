@@ -438,6 +438,85 @@ const friendships = new Map<string, Friendship[]>();
 const boosterReserve = new Map<string, { available: number; lastRechargeAt: number }>([
 	['demo-user', { available: 10, lastRechargeAt: Date.now() }]
 ]);
+
+const mockPackCatalogue = [
+	{
+		id: 1,
+		slotId: 1,
+		position: 1,
+		family: 'NORMAL',
+		name: 'daily',
+		description: 'daily',
+		renderKey: 'standard',
+		status: 'OPEN',
+		nbCards: 5,
+		openAll: true,
+		drawGroups: [
+			{
+				count: 5,
+				variants: [
+					{ variantId: 1, dropRate: 0.95 },
+					{ variantId: 2, dropRate: 0.05 }
+				]
+			}
+		]
+	},
+	...[
+		[2, 2, 1, 'PREMIUM', 'chrome', 'chrome', 4, 99, 198, 'OPEN'],
+		[3, 3, 1, 'PREMIUM_PLUS', 'nebula', 'nebula', 9, 99, 198, 'OPEN'],
+		[4, 3, 2, 'PREMIUM_PLUS', 'arcade', 'arcade', 11, 99, 198, 'UPCOMING'],
+		[5, 3, 3, 'PREMIUM_PLUS', 'neon', 'neon', 5, 99, 198, 'UPCOMING'],
+		[6, 3, 4, 'PREMIUM_PLUS', 'comics', 'comics', 14, 99, 0, 'EXHAUSTED']
+	].map(
+		([
+			id,
+			slotId,
+			position,
+			family,
+			name,
+			renderKey,
+			variantId,
+			maxCopies,
+			remainingCopies,
+			status
+		]) => ({
+			id,
+			slotId,
+			position,
+			family,
+			name,
+			description: name,
+			renderKey,
+			status,
+			...(id === 2 ? { startsAt: '2026-01-01T00:00:00Z', endsAt: '2027-01-01T00:00:00Z' } : {}),
+			nbCards: 5,
+			openAll: false,
+			drawGroups: [
+				{ count: 4, variants: [{ variantId: id === 2 ? 3 : 1, dropRate: 1 }] },
+				{
+					count: 1,
+					variants: [
+						{
+							variantId,
+							dropRate: 0.85,
+							maxCopies,
+							remainingCopies,
+							pages: [
+								{
+									id: 5411,
+									title: 'Soleil',
+									image:
+										'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/The_Sun_in_white_light.jpg/250px-The_Sun_in_white_light.jpg'
+								},
+								{ id: 5958, title: 'Wikipédia' }
+							]
+						}
+					]
+				}
+			]
+		})
+	)
+];
 const boosterCapacity = 10;
 const rechargeMs = 10 * 60 * 1000;
 const mockTradeParticipant = (id: string) => {
@@ -1856,10 +1935,27 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				available: inventory.available,
 				max: inventory.capacity,
 				nextAvailableAt: inventory.nextRechargeAt
+			},
+			{
+				id: 3,
+				name: 'nebula',
+				description: 'nebula',
+				nbCards: 5,
+				available: Math.min(1, inventory.available),
+				max: 1,
+				nextAvailableAt: inventory.nextRechargeAt
 			}
 		]);
 	}
-	if (normalizedMethod === 'POST' && pathname === '/boosters/1/open') {
+	if (normalizedMethod === 'GET' && pathname === '/packs') return json(mockPackCatalogue);
+	const packDetailMatch = /^\/packs\/(\d+)$/.exec(pathname);
+	if (normalizedMethod === 'GET' && packDetailMatch) {
+		const pack = mockPackCatalogue.find((candidate) => candidate.id === Number(packDetailMatch[1]));
+		return pack ? json(pack) : error(404, 'Pack introuvable.', 'NOT_FOUND');
+	}
+	const boosterOpenMatch = /^\/boosters\/(1|3)\/open$/.exec(pathname);
+	if (normalizedMethod === 'POST' && boosterOpenMatch) {
+		const packId = Number(boosterOpenMatch[1]);
 		const userId = 'demo-user';
 		const inventory = boosterInventory(userId);
 		if (!inventory.available) return error(403, 'Aucun paquet disponible.', 'NO_BOOSTER_AVAILABLE');
@@ -1875,7 +1971,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				description: card.longDescription || card.shortDescription,
 				image: card.imageUrl,
 				variantId: card.variantId,
-				packId: card.packId ?? 1,
+				packId,
 				serialNumber: card.serialNumber,
 				maxCopies: card.maxCopies,
 				atk: card.attack,
@@ -1888,7 +1984,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			};
 		});
 		return json({
-			packId: 1,
+			packId,
 			cards
 		});
 	}

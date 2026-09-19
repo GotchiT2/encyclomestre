@@ -4,12 +4,21 @@
 	import {
 		addWishlistRegistryCard,
 		getBoosters,
+		getPackDetails,
+		getPacks,
+		getVariants,
 		getWikiForgeTags,
 		getWishlists,
-		openBooster
+		mergePackCatalogue,
+		openBooster,
+		resetPackDetailsCache
 	} from '$lib/api';
+	import { resolvePackDefinition, type ResolvedPackDefinition } from '$lib/api/boosters';
 	import { wikiForgeApiErrorCode } from '$lib/api/wikiforge-contract';
 	import BoosterOpeningStage from '$lib/components/boosters/booster-opening-stage.svelte';
+	import PackCatalogue from '$lib/components/boosters/pack-catalogue.svelte';
+	import PackDetailDialog from '$lib/components/boosters/pack-detail-dialog.svelte';
+	import { packNameKey } from '$lib/components/boosters/pack-labels';
 	import {
 		formatBoosterDelay,
 		getBoosterRefreshDelay
@@ -21,13 +30,22 @@
 		CardRecord,
 		CollectionTag,
 		CollectionTagAssignments,
+		PackCatalogueItem,
+		PackDefinition,
 		PackSummary,
+		VariantDefinition,
 		WishlistRegistrySummary
 	} from '$lib/types';
 
-	let packs = $state<PackSummary[] | null>(null);
+	let packDefinitions = $state<PackDefinition[] | null>(null);
+	let credits = $state<PackSummary[]>([]);
+	let variants = $state<VariantDefinition[]>([]);
 	let selectedPackId = $state<number | null>(null);
-	let selectedPackSnapshot = $state<PackSummary | null>(null);
+	let selectedPackSnapshot = $state<PackCatalogueItem | null>(null);
+	let detailPack = $state<PackCatalogueItem | null>(null);
+	let detail = $state<ResolvedPackDefinition | null>(null);
+	let detailLoading = $state(false);
+	let detailError = $state(false);
 	let result = $state<CardRecord[] | null>(null);
 	let opening = $state(false);
 	let openingError = $state<string | null>(null);
@@ -38,33 +56,49 @@
 	let wishlists = $state<WishlistRegistrySummary[]>([]);
 	let detailDependenciesLoaded = $state(false);
 	let now = $state(Date.now());
+	const packs = $derived(packDefinitions ? mergePackCatalogue(packDefinitions, credits) : null);
 	const selectedPack = $derived(
 		packs?.find((pack) => pack.id === selectedPackId) ??
 			(selectedPackSnapshot?.id === selectedPackId ? selectedPackSnapshot : null)
 	);
 	const nextDelay = $derived(
-		selectedPack?.nextAvailableAt
-			? formatBoosterDelay(Math.max(0, Date.parse(selectedPack.nextAvailableAt) - now))
+		selectedPack?.credit?.nextAvailableAt
+			? formatBoosterDelay(Math.max(0, Date.parse(selectedPack.credit.nextAvailableAt) - now))
 			: undefined
 	);
+	const selectedPackName = $derived.by(() => {
+		if (!selectedPack) return '';
+		const key = packNameKey(selectedPack.name);
+		return key ? $_(key) : selectedPack.credit?.name || selectedPack.name;
+	});
 
 	async function refreshPacks() {
-		packs = await getBoosters();
+		const [catalogue, inventory, loadedVariants] = await Promise.all([
+			getPacks(),
+			getBoosters(),
+			getVariants()
+		]);
+		packDefinitions = catalogue;
+		credits = inventory;
+		variants = loadedVariants;
 		if (selectedPackId != null) {
-			const refreshed = packs.find((pack) => pack.id === selectedPackId);
+			const refreshed = mergePackCatalogue(catalogue, inventory).find(
+				(pack) => pack.id === selectedPackId
+			);
 			selectedPackSnapshot =
-				refreshed ?? (selectedPackSnapshot ? { ...selectedPackSnapshot, available: 0 } : null);
+				refreshed ??
+				(selectedPackSnapshot ? { ...selectedPackSnapshot, credit: null, status: 'CLOSED' } : null);
 		}
 	}
 
 	onMount(() => {
 		const clock = window.setInterval(() => (now = Date.now()), 1_000);
-		void refreshPacks().catch(() => (packs = []));
+		void refreshPacks().catch(() => (packDefinitions = []));
 		return () => window.clearInterval(clock);
 	});
 
 	$effect(() => {
-		const delays = (packs ?? [])
+		const delays = credits
 			.map((pack) => getBoosterRefreshDelay(pack.nextAvailableAt))
 			.filter((delay): delay is number => delay != null);
 		if (!delays.length) return;
@@ -76,7 +110,7 @@
 	});
 
 	async function open() {
-		if (!selectedPack?.available || opening) return;
+		if (!selectedPack?.credit?.available || selectedPack.status !== 'OPEN' || opening) return;
 		opening = true;
 		result = null;
 		openingError = null;
@@ -90,8 +124,30 @@
 				? code!
 				: 'UNKNOWN';
 		} finally {
+			resetPackDetailsCache();
 			await refreshPacks().catch(() => undefined);
 			opening = false;
+		}
+	}
+
+	function selectPack(pack: PackCatalogueItem) {
+		selectedPackId = pack.id;
+		selectedPackSnapshot = pack;
+		openingError = null;
+		result = null;
+	}
+
+	async function showDetails(pack: PackCatalogueItem) {
+		detailPack = pack;
+		detail = null;
+		detailError = false;
+		detailLoading = true;
+		try {
+			detail = resolvePackDefinition(await getPackDetails(pack.id), variants);
+		} catch {
+			detailError = true;
+		} finally {
+			detailLoading = false;
 		}
 	}
 
@@ -137,44 +193,7 @@
 			{$_('boosters.no_active_packs')}
 		</div>
 	{:else if !selectedPack}
-		<div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3" data-testid="active-packs">
-			{#each packs as pack (pack.id)}
-				<article class="forge-panel flex min-h-full flex-col p-5">
-					<div class="grid min-h-64 place-items-center bg-background/40 p-4">
-						<img src={pack.imageUrl} alt="" class="max-h-56 max-w-full object-contain" />
-					</div>
-					<p class="forge-label mt-4">{pack.available} / {pack.max}</p>
-					<h2 class="mt-2 text-2xl font-bold">{pack.name}</h2>
-					<p class="mt-2 grow text-sm text-muted-foreground">{pack.description}</p>
-					{#if pack.imageAttribution}
-						<!-- eslint-disable svelte/no-navigation-without-resolve -->
-						<a
-							class="mt-2 w-fit text-xs text-muted-foreground underline underline-offset-2"
-							href={pack.imageAttribution.sourceUrl}
-							target="_blank"
-							rel="noreferrer"
-						>
-							{$_('boosters.image_credit')}
-						</a>
-						<!-- eslint-enable svelte/no-navigation-without-resolve -->
-					{/if}
-					<p class="mt-4 font-mono text-xs text-primary">
-						{$_('boosters.pack_card_count', { values: { count: pack.nbCards } })}
-					</p>
-					<Button
-						class="mt-4"
-						disabled={!pack.available}
-						onclick={() => {
-							selectedPackId = pack.id;
-							selectedPackSnapshot = pack;
-							openingError = null;
-						}}
-					>
-						{pack.available ? $_('boosters.select_pack') : $_('boosters.emptyReserve')}
-					</Button>
-				</article>
-			{/each}
-		</div>
+		<PackCatalogue {packs} onDetails={showDetails} onOpen={selectPack} />
 	{:else}
 		<div class="flex items-center justify-between gap-4">
 			<Button
@@ -194,11 +213,11 @@
 			{/if}
 		</div>
 		<BoosterOpeningStage
-			available={selectedPack.available}
-			maximum={selectedPack.max}
+			available={selectedPack.credit?.available ?? 0}
+			maximum={selectedPack.credit?.max ?? 0}
 			{nextDelay}
-			packName={selectedPack.name}
-			packImage={selectedPack.imageUrl}
+			packName={selectedPackName}
+			packImage={selectedPack.credit?.imageUrl ?? '/images/booster.png'}
 			{opening}
 			{openingId}
 			cards={result}
@@ -224,5 +243,19 @@
 		onToggleWishlist={(wishlistId, selected) =>
 			void toggleWishlist(wishlistId, selectedCard!, selected)}
 		onClose={() => (selectedCard = null)}
+	/>
+{/if}
+
+{#if detailPack}
+	<PackDetailDialog
+		pack={detailPack}
+		details={detail}
+		loading={detailLoading}
+		error={detailError}
+		onClose={() => (detailPack = null)}
+		onOpen={() => {
+			selectPack(detailPack!);
+			detailPack = null;
+		}}
 	/>
 {/if}

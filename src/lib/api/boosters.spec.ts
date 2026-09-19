@@ -10,10 +10,52 @@ vi.mock('./variants', async (importOriginal) => ({
 	getVariants: vi.fn().mockResolvedValue(variants)
 }));
 
-import { getBoosters, openBooster } from './boosters';
+import {
+	getBoosters,
+	getPackDetails,
+	getPacks,
+	mergePackCatalogue,
+	openBooster,
+	resetPackDetailsCache,
+	resolvePackDefinition
+} from './boosters';
 
 describe('booster API', () => {
-	beforeEach(() => request.mockReset());
+	beforeEach(() => {
+		request.mockReset();
+		resetPackDetailsCache();
+	});
+
+	const nebula = {
+		id: 3,
+		slotId: 3,
+		position: 1,
+		family: 'PREMIUM_PLUS' as const,
+		name: 'nebula',
+		description: 'nebula',
+		renderKey: 'nebula',
+		status: 'OPEN' as const,
+		nbCards: 5,
+		openAll: false,
+		drawGroups: [
+			{ count: 4, variants: [{ variantId: 1, dropRate: 1 }] },
+			{
+				count: 1,
+				variants: [
+					{
+						variantId: 2,
+						dropRate: 0.85,
+						maxCopies: 99,
+						remainingCopies: 198,
+						pages: [
+							{ id: 5411, title: 'Soleil', image: '/sun.jpg' },
+							{ id: 5958, title: 'Wikipédia' }
+						]
+					}
+				]
+			}
+		]
+	};
 
 	it('maps every active pack returned by the API', async () => {
 		request.mockResolvedValue([
@@ -39,6 +81,55 @@ describe('booster API', () => {
 			})
 		]);
 		expect(request).toHaveBeenCalledWith('/boosters', { apiTarget: 'wikiforge' });
+	});
+
+	it('maps the pack catalogue and preserves decimal rates and aggregate stock', async () => {
+		request.mockResolvedValue([nebula]);
+
+		const [pack] = await getPacks();
+		expect(request).toHaveBeenCalledWith('/packs', { apiTarget: 'wikiforge' });
+		expect(pack.drawGroups[1].variants[0]).toMatchObject({
+			dropRate: 0.85,
+			maxCopies: 99,
+			remainingCopies: 198,
+			pages: [
+				{ id: 5411, title: 'Soleil', image: '/sun.jpg' },
+				{ id: 5958, title: 'Wikipédia' }
+			]
+		});
+	});
+
+	it('caches pack details and resolves their variant definitions', async () => {
+		request.mockResolvedValue(nebula);
+
+		const first = await getPackDetails(3);
+		const second = await getPackDetails(3);
+		expect(first).toBe(second);
+		expect(request).toHaveBeenCalledTimes(1);
+		expect(resolvePackDefinition(first, variants).drawGroups[1].variants[0].variant).toEqual(
+			variants[0]
+		);
+	});
+
+	it('merges user credits by pack without making upcoming packs openable', () => {
+		const upcoming = { ...nebula, id: 4, status: 'UPCOMING' as const };
+		const credits = [
+			{
+				id: 3,
+				name: 'Nébuleuse',
+				description: '',
+				imageUrl: '/images/booster.png',
+				nbCards: 5,
+				available: 0,
+				max: 3,
+				nextAvailableAt: null
+			}
+		];
+
+		expect(mergePackCatalogue([nebula, upcoming], credits)).toMatchObject([
+			{ id: 3, credit: { available: 0 } },
+			{ id: 4, credit: null }
+		]);
 	});
 
 	it('opens the selected pack and preserves the response order', async () => {

@@ -466,6 +466,43 @@
 		"pack_card_count": "{count} cartes par ouverture",
 		"select_pack": "Choisir ce pack",
 		"back_to_packs": "Retour aux packs",
+		"view_contents": "Voir le contenu",
+		"credits": "{available} / {max} crédits disponibles",
+		"no_credit": "Aucun crédit disponible",
+		"catalogue": {
+			"open": "Packs ouverts",
+			"open_eyebrow": "Disponibles maintenant",
+			"upcoming": "Prochaines éditions",
+			"upcoming_eyebrow": "À venir",
+			"past": "Archives des éditions",
+			"past_eyebrow": "Terminées ou épuisées"
+		},
+		"family": {
+			"NORMAL": "Quotidien",
+			"PREMIUM": "Premium",
+			"PREMIUM_PLUS": "Premium +"
+		},
+		"status": {
+			"OPEN": "Ouvert",
+			"UPCOMING": "À venir",
+			"CLOSED": "Terminé",
+			"EXHAUSTED": "Épuisé"
+		},
+		"detail": {
+			"status": "État de l’édition",
+			"composition": "Composition",
+			"period": "Période",
+			"no_period": "Sans date de fin annoncée",
+			"credits": "Crédits d’ouverture",
+			"error": "Le détail de ce pack est momentanément indisponible.",
+			"draw_group": "Groupe de tirage {number}",
+			"group_cards": "{count} carte(s) tirée(s)",
+			"drop_rate": "Probabilité dans ce groupe : {rate}",
+			"global_stock": "{count} exemplaires encore disponibles au total",
+			"per_subject_run": "Tirage maximal : {count} exemplaires par sujet",
+			"image_missing": "Illustration indisponible",
+			"ready": "Ce pack peut être ouvert avec vos crédits disponibles."
+		},
 		"errors": {
 			"NO_BOOSTER_AVAILABLE": "Aucun crédit n’est disponible pour ce pack.",
 			"NOT_FOUND": "Ce pack n’est plus disponible.",
