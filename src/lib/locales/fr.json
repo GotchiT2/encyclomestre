@@ -380,6 +380,7 @@
 		"mute_sale": "Ventes",
 		"mute_friend": "Amis",
 		"mute_guild": "Guildes",
+		"mute_achievement": "Succès",
 		"push_title": "Notifications navigateur et Discord",
 		"push_pending": "Ces relais seront disponibles quand le backend sécurisé prendra en charge les abonnements push.",
 		"push_browser": "Notifications navigateur — bientôt",
@@ -396,6 +397,7 @@
 		"tab_trades": "Échanges",
 		"tab_sales": "Ventes",
 		"tab_friends": "Amis",
+		"tab_guilds": "Guildes",
 		"tab_achievements": "Succès",
 		"mark_all": "Tout marquer comme lu",
 		"loading": "Chargement des notifications…",
@@ -414,7 +416,13 @@
 			"SALE_SOLD": "Carte vendue",
 			"FRIEND_REQUEST": "Demande d’ami reçue",
 			"FRIEND_ACCEPTED": "Demande d’ami acceptée",
-			"ACHIEVEMENT_UNLOCKED": "Succès débloqué"
+			"ACHIEVEMENT_UNLOCKED": "Succès débloqué",
+			"GUILD_INVITE": "Invitation de guilde reçue",
+			"GUILD_JOINED": "Nouveau membre dans la guilde",
+			"GUILD_KICKED": "Exclusion de la guilde",
+			"GUILD_PROMOTED": "Permissions de guilde modifiées",
+			"GUILD_OWNER_CHANGED": "Nouveau propriétaire de la guilde",
+			"GUILD_DISBANDED": "Guilde dissoute"
 		}
 	},
 	"achievements": {
@@ -505,6 +513,7 @@
 		"back_to_packs": "Retour aux packs",
 		"view_contents": "Voir le contenu",
 		"credits": "{available} / {max} crédits disponibles",
+		"bonus_credits": "+{count} crédit(s) bonus de succès",
 		"no_credit": "Aucun crédit disponible",
 		"catalogue": {
 			"open": "Packs ouverts",
@@ -522,7 +531,7 @@
 		"status": {
 			"OPEN": "Ouvert",
 			"UPCOMING": "À venir",
-			"CLOSED": "Terminé",
+			"ENDED": "Terminé",
 			"EXHAUSTED": "Épuisé"
 		},
 		"detail": {
@@ -537,6 +546,7 @@
 			"drop_rate": "Probabilité dans ce groupe : {rate}",
 			"global_stock": "{count} exemplaires encore disponibles au total",
 			"per_subject_run": "Tirage maximal : {count} exemplaires par sujet",
+			"page_stock": "{remaining} / {max} restants",
 			"image_missing": "Illustration indisponible",
 			"ready": "Ce pack peut être ouvert avec vos crédits disponibles."
 		},
@@ -1032,6 +1042,7 @@
 		"details": "Voir le contenu",
 		"detail_label": "Voir le contenu du paquet {pack}",
 		"open": "Ouvrir",
+		"open_all": "Tout ouvrir ({count})",
 		"exhausted_title": "Éditions épuisées",
 		"composition": "Dans le paquet",
 		"availability": "Disponibilité",

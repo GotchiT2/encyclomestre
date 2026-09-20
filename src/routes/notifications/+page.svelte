@@ -15,7 +15,7 @@
 	let cursor = $state<string | null>(null);
 	let hasNext = $state(false);
 	let unreadOnly = $state(false);
-	let activeTab = $state<'all' | 'trades' | 'sales' | 'friends' | 'achievements'>('all');
+	let activeTab = $state<'all' | 'trades' | 'sales' | 'friends' | 'guilds' | 'achievements'>('all');
 	let loading = $state(true);
 	let loadingMore = $state(false);
 	let failed = $state(false);
@@ -29,9 +29,11 @@
 					? notification.type.startsWith('TRADE_')
 					: activeTab === 'sales'
 						? notification.type === 'SALE_SOLD'
-					: activeTab === 'friends'
-						? notification.type === 'FRIEND_REQUEST' || notification.type === 'FRIEND_ACCEPTED'
-						: notification.type === 'ACHIEVEMENT_UNLOCKED'
+						: activeTab === 'friends'
+							? notification.type === 'FRIEND_REQUEST' || notification.type === 'FRIEND_ACCEPTED'
+							: activeTab === 'guilds'
+								? notification.type.startsWith('GUILD_')
+								: notification.type === 'ACHIEVEMENT_UNLOCKED'
 		)
 	);
 
@@ -43,6 +45,7 @@
 		if (notification.type === 'FRIEND_REQUEST' || notification.type === 'FRIEND_ACCEPTED')
 			return resolve('/friends');
 		if (notification.type === 'SALE_SOLD') return resolve('/profile');
+		if (notification.type.startsWith('GUILD_')) return resolve('/guild');
 		return null;
 	}
 	function label(notification: AppNotification) {
@@ -56,7 +59,13 @@
 			'SALE_SOLD',
 			'FRIEND_REQUEST',
 			'FRIEND_ACCEPTED',
-			'ACHIEVEMENT_UNLOCKED'
+			'ACHIEVEMENT_UNLOCKED',
+			'GUILD_INVITE',
+			'GUILD_JOINED',
+			'GUILD_KICKED',
+			'GUILD_PROMOTED',
+			'GUILD_OWNER_CHANGED',
+			'GUILD_DISBANDED'
 		]);
 		return known.has(notification.type)
 			? $_(`notifications.type.${notification.type}`)
@@ -125,11 +134,11 @@
 		>
 	</div>
 	<div
-		class="grid grid-cols-2 border border-primary/30 bg-card p-1 sm:grid-cols-5"
+		class="grid grid-cols-2 border border-primary/30 bg-card p-1 sm:grid-cols-3 lg:grid-cols-6"
 		role="tablist"
 		aria-label={$_('notifications.tabs')}
 	>
-		{#each ['all', 'trades', 'sales', 'friends', 'achievements'] as tab (tab)}<Button
+		{#each ['all', 'trades', 'sales', 'friends', 'guilds', 'achievements'] as tab (tab)}<Button
 				variant={activeTab === tab ? 'default' : 'ghost'}
 				role="tab"
 				aria-selected={activeTab === tab}

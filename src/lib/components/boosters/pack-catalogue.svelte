@@ -49,7 +49,7 @@
 						<div class="mx-auto w-full max-w-36">
 							<BoosterPackArt
 								name={name(pack)}
-								renderKey={pack.renderKey}
+								renderKey={pack.renderKey ?? 'standard'}
 								cardCount={pack.nbCards}
 							/>
 						</div>
@@ -63,6 +63,9 @@
 										values: { available: pack.credit.available, max: pack.credit.max }
 									})}
 								</p>
+								{#if pack.credit.bonus > 0}<p class="mt-1 text-xs text-energy">
+										{$_('boosters.bonus_credits', { values: { count: pack.credit.bonus } })}
+									</p>{/if}
 							{:else if pack.status === 'OPEN'}
 								<p class="mt-4 text-sm text-muted-foreground">{$_('boosters.no_credit')}</p>
 							{/if}

@@ -820,6 +820,38 @@ function boosterInventory(userId: string): {
 	};
 }
 
+function mockBoostersPayload(inventory: ReturnType<typeof boosterInventory>) {
+	return {
+		families: [
+			{
+				family: 'NORMAL',
+				available: inventory.available,
+				max: inventory.capacity,
+				bonus: 1,
+				nextAvailableAt: inventory.nextRechargeAt
+			},
+			{ family: 'PREMIUM', available: Math.min(1, inventory.available), max: 1, bonus: 0 },
+			{ family: 'PREMIUM_PLUS', available: 0, max: 1, bonus: 1 }
+		],
+		slots: mockPackCatalogue
+			.filter((pack) => pack.status === 'OPEN')
+			.map((pack) => ({
+				id: pack.slotId,
+				name: `Slot ${pack.slotId}`,
+				pack: {
+					id: pack.id,
+					name: pack.name,
+					description: pack.description,
+					image: '/images/booster.png',
+					renderKey: pack.renderKey,
+					family: pack.family,
+					nbCards: pack.nbCards,
+					openAll: pack.openAll
+				}
+			}))
+	};
+}
+
 export function createMockApiResponse({ path, method = 'GET', body }: MockApiRequest): Response {
 	const requestUrl = new URL(path, 'http://mock-api.local');
 	const routedPath = requestUrl.pathname.replace(/^\/api(?=\/)/, '');
@@ -1002,18 +1034,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	if (normalizedMethod === 'GET' && pathname === '/welcome') {
 		const inventory = boosterInventory('demo-user');
 		return json({
-			packs: [
-				{
-					id: 1,
-					name: 'Pack quotidien',
-					description: 'Cinq cartes WikiForge',
-					image: '/images/booster.png',
-					nbCards: 5,
-					available: inventory.available,
-					max: inventory.capacity,
-					nextAvailableAt: inventory.nextRechargeAt
-				}
-			],
+			boosters: mockBoostersPayload(inventory),
 			collection: {
 				nbCards: mockCards.reduce((total, card) => total + card.ownedCount, 0),
 				rank: 12,
@@ -1969,27 +1990,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	}
 	if (normalizedMethod === 'GET' && pathname === '/boosters') {
 		const inventory = boosterInventory('demo-user');
-		return json([
-			{
-				id: 1,
-				name: 'Pack quotidien',
-				description: 'Cinq cartes WikiForge',
-				image: '/images/booster.png',
-				nbCards: 5,
-				available: inventory.available,
-				max: inventory.capacity,
-				nextAvailableAt: inventory.nextRechargeAt
-			},
-			{
-				id: 3,
-				name: 'nebula',
-				description: 'nebula',
-				nbCards: 5,
-				available: Math.min(1, inventory.available),
-				max: 1,
-				nextAvailableAt: inventory.nextRechargeAt
-			}
-		]);
+		return json(mockBoostersPayload(inventory));
 	}
 	if (normalizedMethod === 'GET' && pathname === '/packs') return json(mockPackCatalogue);
 	const packDetailMatch = /^\/packs\/(\d+)$/.exec(pathname);
@@ -1997,15 +1998,16 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const pack = mockPackCatalogue.find((candidate) => candidate.id === Number(packDetailMatch[1]));
 		return pack ? json(pack) : error(404, 'Pack introuvable.', 'NOT_FOUND');
 	}
-	const boosterOpenMatch = /^\/boosters\/(1|3)\/open$/.exec(pathname);
+	const boosterOpenMatch = /^\/boosters\/(1|3)\/(open|open-all)$/.exec(pathname);
 	if (normalizedMethod === 'POST' && boosterOpenMatch) {
 		const packId = Number(boosterOpenMatch[1]);
 		const userId = 'demo-user';
 		const inventory = boosterInventory(userId);
 		if (!inventory.available) return error(403, 'Aucun paquet disponible.', 'NO_BOOSTER_AVAILABLE');
 		const state = boosterReserve.get(userId)!;
-		state.available -= 1;
-		const cards = Array.from({ length: 5 }, (_, index) => {
+		const openedCount = boosterOpenMatch[2] === 'open-all' ? Math.min(state.available, 100) : 1;
+		state.available -= openedCount;
+		const cards = Array.from({ length: 5 * openedCount }, (_, index) => {
 			const card = mockCards[Math.floor(Math.random() * mockCards.length)];
 			card.ownedCount += 1;
 			return {

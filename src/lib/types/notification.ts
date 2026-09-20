@@ -9,6 +9,12 @@ export type NotificationType =
 	| 'FRIEND_REQUEST'
 	| 'FRIEND_ACCEPTED'
 	| 'ACHIEVEMENT_UNLOCKED'
+	| 'GUILD_INVITE'
+	| 'GUILD_JOINED'
+	| 'GUILD_KICKED'
+	| 'GUILD_PROMOTED'
+	| 'GUILD_OWNER_CHANGED'
+	| 'GUILD_DISBANDED'
 	| (string & {});
 
 export interface AppNotificationActor {

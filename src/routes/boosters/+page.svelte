@@ -11,6 +11,7 @@
 		getWishlists,
 		mergePackCatalogue,
 		openBooster,
+		openAllBoosters,
 		resetPackDetailsCache
 	} from '$lib/api';
 	import { resolvePackDefinition, type ResolvedPackDefinition } from '$lib/api/boosters';
@@ -109,13 +110,15 @@
 		return () => window.clearTimeout(timer);
 	});
 
-	async function open() {
+	async function open(all = false) {
 		if (!selectedPack?.credit?.available || selectedPack.status !== 'OPEN' || opening) return;
 		opening = true;
 		result = null;
 		openingError = null;
 		try {
-			const opened = await openBooster(selectedPack.id);
+			const opened = all
+				? await openAllBoosters(selectedPack.id)
+				: await openBooster(selectedPack.id);
 			result = opened.cards;
 			openingId += 1;
 		} catch (error) {
@@ -219,11 +222,13 @@
 			packName={selectedPackName}
 			packImage={selectedPack.credit?.imageUrl ?? '/images/booster.png'}
 			{opening}
+			canOpenAll={selectedPack.openAll}
 			{openingId}
 			cards={result}
 			error={Boolean(openingError)}
 			suspended={Boolean(selectedCard)}
-			onOpen={open}
+			onOpen={() => void open(false)}
+			onOpenAll={() => void open(true)}
 			onOpenCard={openCardDetail}
 			onReset={() => {
 				result = null;

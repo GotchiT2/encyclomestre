@@ -16,6 +16,7 @@ import {
 	getPacks,
 	mergePackCatalogue,
 	openBooster,
+	openAllBoosters,
 	resetPackDetailsCache,
 	resolvePackDefinition
 } from './boosters';
@@ -57,27 +58,35 @@ describe('booster API', () => {
 		]
 	};
 
-	it('maps every active pack returned by the API', async () => {
-		request.mockResolvedValue([
-			{
-				id: 4,
-				name: 'Chrome annuel',
-				description: 'Cinq cartes',
-				image: '/chrome.png',
-				imageAttribution: { sourceUrl: 'https://example.test/source', author: 'WikiForge' },
-				nbCards: 5,
-				available: 2,
-				max: 3,
-				nextAvailableAt: null
-			}
-		]);
+	it('maps current slots against shared family credits and achievement bonuses', async () => {
+		request.mockResolvedValue({
+			families: [{ family: 'PREMIUM', available: 2, max: 3, bonus: 1, nextAvailableAt: null }],
+			slots: [
+				{
+					id: 7,
+					name: 'Saisonnier',
+					pack: {
+						id: 4,
+						name: 'Chrome annuel',
+						description: 'Cinq cartes',
+						image: '/chrome.png',
+						family: 'PREMIUM',
+						nbCards: 5,
+						openAll: false
+					}
+				},
+				{ id: 8, name: 'Terminé' }
+			]
+		});
 
 		await expect(getBoosters()).resolves.toEqual([
 			expect.objectContaining({
 				id: 4,
+				slotId: 7,
 				imageUrl: '/chrome.png',
-				available: 2,
-				imageAttribution: { sourceUrl: 'https://example.test/source', author: 'WikiForge' }
+				regularAvailable: 2,
+				bonus: 1,
+				available: 3
 			})
 		]);
 		expect(request).toHaveBeenCalledWith('/boosters', { apiTarget: 'wikiforge' });
@@ -116,10 +125,14 @@ describe('booster API', () => {
 		const credits = [
 			{
 				id: 3,
+				slotId: 3,
+				family: 'PREMIUM_PLUS' as const,
 				name: 'Nébuleuse',
 				description: '',
 				imageUrl: '/images/booster.png',
 				nbCards: 5,
+				regularAvailable: 0,
+				bonus: 0,
 				available: 0,
 				max: 3,
 				nextAvailableAt: null
@@ -130,6 +143,15 @@ describe('booster API', () => {
 			{ id: 3, credit: { available: 0 } },
 			{ id: 4, credit: null }
 		]);
+	});
+
+	it('opens every available booster through the dedicated endpoint', async () => {
+		request.mockResolvedValue({ packId: 4, cards: [] });
+		await expect(openAllBoosters(4)).resolves.toEqual({ packId: 4, cards: [] });
+		expect(request).toHaveBeenCalledWith('/boosters/4/open-all', {
+			apiTarget: 'wikiforge',
+			method: 'POST'
+		});
 	});
 
 	it('opens the selected pack and preserves the response order', async () => {

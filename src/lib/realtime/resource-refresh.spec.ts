@@ -30,4 +30,13 @@ describe('targeted realtime refreshes', () => {
 		expect(refreshIncludes(refresh, 'achievements')).toBe(true);
 		expect(refreshIncludes(refresh, 'profile')).toBe(true);
 	});
+
+	it('refreshes guild data after a guild notification', () => {
+		publishNotificationRefresh([
+			{ id: 'guild-1', type: 'GUILD_OWNER_CHANGED', read: false, createdAt: '' }
+		]);
+		const refresh = get(realtimeRefresh);
+		expect(refreshIncludes(refresh, 'guild')).toBe(true);
+		expect(refreshIncludes(refresh, 'profile')).toBe(true);
+	});
 });

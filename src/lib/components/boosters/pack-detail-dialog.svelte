@@ -51,7 +51,11 @@
 		<div class="min-h-0 flex-1 overflow-y-auto p-5 sm:p-8">
 			<div class="grid gap-8 md:grid-cols-[180px_1fr]">
 				<div class="mx-auto w-36 md:w-[180px]">
-					<BoosterPackArt name={displayName} renderKey={pack.renderKey} cardCount={pack.nbCards} />
+					<BoosterPackArt
+						name={displayName}
+						renderKey={pack.renderKey ?? 'standard'}
+						cardCount={pack.nbCards}
+					/>
 				</div>
 				<div class="grid content-start gap-5 sm:grid-cols-2">
 					<div class="border-l border-primary/50 pl-4">
@@ -151,6 +155,13 @@
 														<p class="mt-2 truncate text-xs font-semibold" title={page.title}>
 															{page.title}
 														</p>
+														{#if page.maxCopies != null && page.remainingCopies != null}<p
+																class="mt-1 text-[11px] text-muted-foreground"
+															>
+																{$_('boosters.detail.page_stock', {
+																	values: { remaining: page.remainingCopies, max: page.maxCopies }
+																})}
+															</p>{/if}
 													</div>
 												{/each}
 											</div>

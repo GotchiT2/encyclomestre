@@ -17,7 +17,8 @@
 		{ value: 'TRADE', label: 'settings.mute_trade' },
 		{ value: 'SALE', label: 'settings.mute_sale' },
 		{ value: 'FRIEND', label: 'settings.mute_friend' },
-		{ value: 'GUILD', label: 'settings.mute_guild' }
+		{ value: 'GUILD', label: 'settings.mute_guild' },
+		{ value: 'ACHIEVEMENT', label: 'settings.mute_achievement' }
 	];
 
 	function toggleMuted(category: MutedNotificationCategory) {
@@ -54,7 +55,9 @@
 		<p class="mt-1 text-sm text-muted-foreground">{$_('settings.muted_notifications_hint')}</p>
 		<div class="mt-3 grid gap-2 sm:grid-cols-2">
 			{#each notificationCategories as category (category.value)}
-				<label class="flex min-h-10 items-center gap-3 border border-primary/20 bg-background/35 px-3 text-sm">
+				<label
+					class="flex min-h-10 items-center gap-3 border border-primary/20 bg-background/35 px-3 text-sm"
+				>
 					<Switch
 						checked={mutedNotifications.includes(category.value)}
 						onCheckedChange={() => toggleMuted(category.value)}
@@ -68,8 +71,12 @@
 		<p class="forge-label">{$_('settings.push_title')}</p>
 		<p class="mt-1 text-sm text-muted-foreground">{$_('settings.push_pending')}</p>
 		<div class="mt-3 grid gap-2 sm:grid-cols-2">
-			<button class="h-10 border border-primary/25 text-sm text-muted-foreground" disabled>{$_('settings.push_browser')}</button>
-			<button class="h-10 border border-primary/25 text-sm text-muted-foreground" disabled>{$_('settings.discord_relay')}</button>
+			<button class="h-10 border border-primary/25 text-sm text-muted-foreground" disabled
+				>{$_('settings.push_browser')}</button
+			>
+			<button class="h-10 border border-primary/25 text-sm text-muted-foreground" disabled
+				>{$_('settings.discord_relay')}</button
+			>
 		</div>
 	</section>
 </div>

@@ -18,9 +18,23 @@ describe('WikiForge welcome API', () => {
 
 	it('loads the aggregate welcome payload and maps recent CardDTO cards', async () => {
 		vi.mocked(apiRequest).mockResolvedValueOnce({
-			packs: [
-				{ id: 3, name: 'Quotidien', description: 'Cinq cartes', nbCards: 5, available: 2, max: 10 }
-			],
+			boosters: {
+				families: [{ family: 'NORMAL', available: 2, max: 10, bonus: 1 }],
+				slots: [
+					{
+						id: 1,
+						name: 'Quotidien',
+						pack: {
+							id: 3,
+							name: 'Quotidien',
+							description: 'Cinq cartes',
+							family: 'NORMAL',
+							nbCards: 5,
+							openAll: true
+						}
+					}
+				]
+			},
 			collection: {
 				nbCards: 12,
 				rank: 412,
@@ -34,7 +48,7 @@ describe('WikiForge welcome API', () => {
 		await expect(getWikiForgeWelcome()).resolves.toMatchObject({
 			collection: { uniqueCards: 12 },
 			rank: 412,
-			packs: [expect.objectContaining({ id: 3, available: 2 })],
+			packs: [expect.objectContaining({ id: 3, available: 3, bonus: 1 })],
 			money: 350,
 			recentAcquisitions: [expect.objectContaining({ id: '8', ownedCount: 3, variantId: 1 })]
 		});

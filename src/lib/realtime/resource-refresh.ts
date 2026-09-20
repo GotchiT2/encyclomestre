@@ -5,6 +5,7 @@ export type RealtimeResource =
 	| 'achievements'
 	| 'collection'
 	| 'friends'
+	| 'guild'
 	| 'messages'
 	| 'notifications'
 	| 'profile'
@@ -38,6 +39,9 @@ export function publishNotificationRefresh(notifications: AppNotification[]) {
 			resources.add('profile');
 		} else if (notification.type === 'FRIEND_REQUEST' || notification.type === 'FRIEND_ACCEPTED') {
 			resources.add('friends');
+		} else if (notification.type.startsWith('GUILD_')) {
+			resources.add('guild');
+			resources.add('profile');
 		}
 	}
 	publishRealtimeRefresh(resources);

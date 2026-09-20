@@ -50,15 +50,19 @@ describe('createMockApiResponse', () => {
 		});
 
 		const inventory = createMockApiResponse({ path: '/boosters' });
-		expect(await inventory.json()).toEqual(
-			expect.arrayContaining([
+		expect(await inventory.json()).toMatchObject({
+			families: expect.arrayContaining([
 				expect.objectContaining({
-					id: expect.any(Number),
+					family: 'NORMAL',
 					available: expect.any(Number),
-					max: expect.any(Number)
+					max: expect.any(Number),
+					bonus: expect.any(Number)
 				})
+			]),
+			slots: expect.arrayContaining([
+				expect.objectContaining({ id: expect.any(Number), pack: expect.any(Object) })
 			])
-		);
+		});
 
 		const opening = createMockApiResponse({ path: '/boosters/1/open', method: 'POST' });
 		expect(await opening.json()).toMatchObject({

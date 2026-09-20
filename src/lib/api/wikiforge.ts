@@ -1,6 +1,7 @@
 import { apiRequest, type RequestOptions } from './client';
 import type { CollectionTag, GuildMember, GuildSummary, ProfileVisibility } from '$lib/types';
 import { getVariants } from './variants';
+import { wikiForgeApiErrorCode, wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
 
 interface WikiForgeTagDto {
 	id: number;
@@ -79,16 +80,71 @@ export const removeWikiForgeTag = (
 	options?: RequestOptions
 ) => updateCardsTags('DELETE', tagId, userCardIds, options);
 
-export const getMyGuild = (options?: RequestOptions) =>
-	apiRequest<GuildSummary | Record<string, never>>('/me/guild', {
-		...options,
-		apiTarget: 'wikiforge'
-	});
-export const getGuildMembers = (id: string, options?: RequestOptions) =>
-	apiRequest<GuildMember[]>(`/guilds/${encodeURIComponent(id)}/members`, {
-		...options,
-		apiTarget: 'wikiforge'
-	});
+interface WikiForgeGuildDto {
+	id: number;
+	name: string;
+	image?: string | null;
+	joinPolicy: 'PUBLIC' | 'INVITE';
+	maxMembers: number;
+	nbMembers: number;
+	member: boolean;
+	owned: boolean;
+	permissions?: string[] | null;
+}
+
+interface WikiForgeGuildMemberDto {
+	id: number;
+	name: string;
+	image?: string | null;
+	owner: boolean;
+	permissions?: string[] | null;
+	joinedAt?: string;
+}
+
+const toGuildSummary = (guild: WikiForgeGuildDto): GuildSummary => ({
+	id: String(guild.id),
+	name: guild.name,
+	imageUrl: guild.image ?? null,
+	joinPolicy: guild.joinPolicy,
+	maxMembers: guild.maxMembers,
+	memberCount: guild.nbMembers,
+	member: guild.member,
+	owned: guild.owned,
+	permissions: guild.permissions ?? []
+});
+
+export async function getMyGuild(options?: RequestOptions): Promise<GuildSummary | null> {
+	try {
+		return toGuildSummary(
+			await apiRequest<WikiForgeGuildDto>('/me/guild', {
+				...options,
+				apiTarget: 'wikiforge'
+			})
+		);
+	} catch (error) {
+		if (wikiForgeApiErrorCode(error) === 'NOT_FOUND') return null;
+		throw error;
+	}
+}
+
+export async function getGuildMembers(
+	id: string,
+	options?: RequestOptions
+): Promise<GuildMember[]> {
+	const response = await apiRequest<{ results?: WikiForgeGuildMemberDto[] | null }>(
+		`/guilds/${wikiForgeNumericId(id, 'guilde')}/members`,
+		{ ...options, apiTarget: 'wikiforge' }
+	);
+	return (response.results ?? []).map((member) => ({
+		userId: String(member.id),
+		username: member.name,
+		displayName: member.name,
+		role: member.owner ? 'OWNER' : 'MEMBER',
+		avatarUrl: member.image ?? null,
+		permissions: member.permissions ?? [],
+		...(member.joinedAt ? { joinedAt: wikiForgeUtcDate(member.joinedAt).toISOString() } : {})
+	}));
+}
 export const getWikiForgeGuildWishlistShares = <T = unknown>(
 	id: string,
 	options?: RequestOptions

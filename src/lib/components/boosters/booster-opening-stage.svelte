@@ -26,6 +26,8 @@
 		error = false,
 		suspended = false,
 		onOpen,
+		onOpenAll = () => undefined,
+		canOpenAll = false,
 		onReset,
 		onOpenCard = () => undefined
 	}: {
@@ -40,6 +42,8 @@
 		error?: boolean;
 		suspended?: boolean;
 		onOpen: () => void;
+		onOpenAll?: () => void;
+		canOpenAll?: boolean;
 		onReset: () => void;
 		onOpenCard?: (card: CardRecord) => void;
 	} = $props();
@@ -59,8 +63,9 @@
 	const mobileSceneActive = $derived(
 		mobileViewport && ['dealing', 'revealing', 'complete'].includes(phase)
 	);
+	const bulkOpening = $derived(slots.length > 12);
 	const boosterCarouselOptions = $derived({
-		active: mobileViewport && phase === 'complete',
+		active: (mobileViewport || bulkOpening) && phase === 'complete',
 		align: 'center' as const,
 		containScroll: 'trimSnaps' as const,
 		dragFree: true
@@ -104,6 +109,11 @@
 		handledOpeningId = nextOpeningId;
 		slots = nextCards.map((card) => ({ card, revealed: false }));
 		mobileIndex = 0;
+		if (nextCards.length > 12) {
+			slots = slots.map((slot) => ({ ...slot, revealed: true }));
+			phase = 'complete';
+			return;
+		}
 		phase = 'dealing';
 		if (suspended) return;
 		if (quickOpening) {
@@ -140,10 +150,11 @@
 		if (nextIndex >= 0) setSlotRevealed(nextIndex);
 	}
 
-	function requestOpen() {
+	function requestOpen(all = false) {
 		if (!available || opening || openRequested || suspended) return;
 		openRequested = true;
-		onOpen();
+		if (all) onOpenAll();
+		else onOpen();
 	}
 
 	function advance() {
@@ -324,6 +335,19 @@
 								: $_('boosters.open')}
 					</span>
 				</button>
+				{#if canOpenAll && available > 1}
+					<Button
+						variant="outline"
+						disabled={opening}
+						onclick={(event) => {
+							event.stopPropagation();
+							requestOpen(true);
+						}}
+						data-booster-interactive
+					>
+						{$_('boosters.open_all', { values: { count: available } })}
+					</Button>
+				{/if}
 				{#if !available}<p class="mt-4 text-sm text-muted-foreground">
 						{$_('boosters.emptyReserve')}
 					</p>{/if}
@@ -335,7 +359,7 @@
 				</p>
 				<div
 					bind:this={deckElement}
-					class="booster-deck mt-5"
+					class={cn('booster-deck mt-5', bulkOpening && 'bulk-opening')}
 					data-phase={phase}
 					aria-label={$_('boosters.revealed_title')}
 					use:emblaCarouselSvelte={{ options: boosterCarouselOptions, plugins: [] }}
@@ -390,7 +414,8 @@
 				>
 					{#if phase === 'complete'}
 						<Button variant="outline" onclick={resetStage}>{$_('boosters.close')}</Button>
-						{#if available}<Button onclick={requestOpen}>{$_('boosters.open_next')}</Button>{/if}
+						{#if available}<Button onclick={() => requestOpen()}>{$_('boosters.open_next')}</Button
+							>{/if}
 					{:else if awaitingMobileSummary}
 						<Button onclick={advance}>{$_('boosters.show_summary')}</Button>
 					{:else}
@@ -493,6 +518,21 @@
 		transform: translateY(var(--slot-arc)) rotate(calc(var(--slot-offset) * 3deg));
 		animation: booster-card-deal 620ms cubic-bezier(0.16, 0.82, 0.25, 1.12) both;
 		animation-delay: calc(var(--slot-index) * 90ms);
+	}
+
+	.booster-deck.bulk-opening {
+		justify-content: flex-start;
+		gap: 0.75rem;
+		overflow-x: auto;
+		padding-inline: 1rem;
+		scroll-snap-type: x mandatory;
+	}
+
+	.booster-deck.bulk-opening .booster-slot {
+		margin-inline: 0;
+		transform: none;
+		animation: none;
+		scroll-snap-align: center;
 	}
 
 	@keyframes booster-card-deal {

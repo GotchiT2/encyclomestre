@@ -11,19 +11,37 @@ import type {
 	VariantDefinition
 } from '$lib/types';
 import { apiRequest, type RequestOptions } from './client';
-import { toCardRecord, type ImageAttributionDto, type WikiForgeCardDto } from './cards';
+import { toCardRecord, type WikiForgeCardDto } from './cards';
 import { getVariants } from './variants';
 
-export interface PackSummaryDto {
+export interface BoosterFamilyDto {
+	family: PackFamily;
+	available: number;
+	max: number;
+	bonus?: number;
+	nextAvailableAt?: string | null;
+}
+
+export interface BoosterSlotPackDto {
 	id: number;
 	name: string;
 	description: string;
 	image?: string | null;
-	imageAttribution?: ImageAttributionDto | null;
+	renderKey?: string | null;
+	family: PackFamily;
 	nbCards: number;
-	available: number;
-	max: number;
-	nextAvailableAt?: string | null;
+	openAll: boolean;
+}
+
+export interface BoosterSlotDto {
+	id: number;
+	name: string;
+	pack?: BoosterSlotPackDto | null;
+}
+
+export interface BoostersDto {
+	families?: BoosterFamilyDto[] | null;
+	slots?: BoosterSlotDto[] | null;
 }
 
 interface OpenedBoosterDto {
@@ -46,7 +64,8 @@ export interface PackDefinitionDto {
 	family: PackFamily;
 	name: string;
 	description: string;
-	renderKey: string;
+	image?: string | null;
+	renderKey?: string | null;
 	status: PackStatus;
 	startsAt?: string;
 	endsAt?: string;
@@ -67,40 +86,45 @@ export interface ResolvedPackDefinition extends Omit<PackDefinition, 'drawGroups
 	drawGroups: ResolvedPackDrawGroup[];
 }
 
-export function toPackSummary(pack: PackSummaryDto): PackSummary {
-	return {
-		id: pack.id,
-		name: pack.name,
-		description: pack.description,
-		imageUrl: pack.image?.trim() || '/images/booster.png',
-		...(pack.imageAttribution?.sourceUrl
-			? {
-					imageAttribution: {
-						sourceUrl: pack.imageAttribution.sourceUrl,
-						...(pack.imageAttribution.author ? { author: pack.imageAttribution.author } : {}),
-						...(pack.imageAttribution.license ? { license: pack.imageAttribution.license } : {}),
-						...(pack.imageAttribution.licenseUrl
-							? { licenseUrl: pack.imageAttribution.licenseUrl }
-							: {})
-					}
-				}
-			: {}),
-		nbCards: pack.nbCards,
-		available: pack.available,
-		max: pack.max,
-		nextAvailableAt: pack.nextAvailableAt ?? null
-	};
+export function toPackSummaries(inventory: BoostersDto): PackSummary[] {
+	const families = new Map((inventory.families ?? []).map((entry) => [entry.family, entry]));
+	return (inventory.slots ?? []).flatMap((slot) => {
+		const pack = slot.pack;
+		if (!pack) return [];
+		const credit = families.get(pack.family);
+		const regularAvailable = credit?.available ?? 0;
+		const bonus = credit?.bonus ?? 0;
+		return [
+			{
+				id: pack.id,
+				slotId: slot.id,
+				family: pack.family,
+				name: pack.name,
+				description: pack.description,
+				imageUrl: pack.image?.trim() || '/images/booster.png',
+				nbCards: pack.nbCards,
+				regularAvailable,
+				bonus,
+				available: regularAvailable + bonus,
+				max: credit?.max ?? 0,
+				nextAvailableAt: credit?.nextAvailableAt ?? null
+			}
+		];
+	});
 }
 
 export async function getBoosters(options?: RequestOptions): Promise<PackSummary[]> {
-	return (
-		await apiRequest<PackSummaryDto[]>('/boosters', { ...options, apiTarget: 'wikiforge' })
-	).map(toPackSummary);
+	return toPackSummaries(
+		await apiRequest<BoostersDto>('/boosters', { ...options, apiTarget: 'wikiforge' })
+	);
 }
 
 function toPackDefinition(pack: PackDefinitionDto): PackDefinition {
+	const { image, renderKey, ...definition } = pack;
 	return {
-		...pack,
+		...definition,
+		...(image?.trim() ? { imageUrl: image.trim() } : {}),
+		...(renderKey?.trim() ? { renderKey: renderKey.trim() } : {}),
 		drawGroups: pack.drawGroups.map((group) => ({
 			count: group.count,
 			variants: group.variants.map((variant) => ({
@@ -178,6 +202,24 @@ export async function openBooster(
 ): Promise<BoosterOpenResult> {
 	const [response, variants] = await Promise.all([
 		apiRequest<OpenedBoosterDto>(`/boosters/${packId}/open`, {
+			...options,
+			apiTarget: 'wikiforge',
+			method: 'POST'
+		}),
+		getVariants(options)
+	]);
+	return {
+		packId: response.packId,
+		cards: response.cards.map((card) => toCardRecord(card, variants))
+	};
+}
+
+export async function openAllBoosters(
+	packId: number,
+	options?: RequestOptions
+): Promise<BoosterOpenResult> {
+	const [response, variants] = await Promise.all([
+		apiRequest<OpenedBoosterDto>(`/boosters/${packId}/open-all`, {
 			...options,
 			apiTarget: 'wikiforge',
 			method: 'POST'

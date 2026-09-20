@@ -376,3 +376,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 ## 18. Succès WikiForge
 
 - [x] Ajouter le registre des succès, ses récompenses réclamables, son badge et sa synchronisation SSE — `feat(achievements): add claimable achievement registry`
+
+## 19. Contrats Swagger WikiForge enrichis
+
+- [x] Migrer les inventaires de boosters par famille et emplacement, l’ouverture groupée, l’accueil, les préférences de succès et les notifications de guilde — `feat(api): align enriched WikiForge contracts`

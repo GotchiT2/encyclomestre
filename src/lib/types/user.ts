@@ -1,7 +1,7 @@
 export type UserRole = 'user' | 'moderator' | 'admin';
 export type ProfileVisibility = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
 export type LastConnection = 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'AWAY';
-export type MutedNotificationCategory = 'TRADE' | 'SALE' | 'FRIEND' | 'GUILD';
+export type MutedNotificationCategory = 'TRADE' | 'SALE' | 'FRIEND' | 'GUILD' | 'ACHIEVEMENT';
 
 export interface UserPreferences {
 	language: string;

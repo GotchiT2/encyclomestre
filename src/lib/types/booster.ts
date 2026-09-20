@@ -1,12 +1,14 @@
 import type { CardRecord, ImageAttribution } from './card';
 
-export type PackStatus = 'OPEN' | 'UPCOMING' | 'CLOSED' | 'EXHAUSTED' | (string & {});
+export type PackStatus = 'OPEN' | 'UPCOMING' | 'EXHAUSTED' | 'ENDED' | (string & {});
 export type PackFamily = 'NORMAL' | 'PREMIUM' | 'PREMIUM_PLUS' | (string & {});
 
 export interface PackPageSummary {
 	id: number;
 	title: string;
 	image?: string;
+	maxCopies?: number;
+	remainingCopies?: number;
 }
 
 export interface PackVariantAvailability {
@@ -29,7 +31,8 @@ export interface PackDefinition {
 	family: PackFamily;
 	name: string;
 	description: string;
-	renderKey: string;
+	imageUrl?: string;
+	renderKey?: string;
 	status: PackStatus;
 	startsAt?: string;
 	endsAt?: string;
@@ -40,11 +43,18 @@ export interface PackDefinition {
 
 export interface PackSummary {
 	id: number;
+	slotId: number;
+	family: PackFamily;
 	name: string;
 	description: string;
 	imageUrl: string;
 	imageAttribution?: ImageAttribution;
 	nbCards: number;
+	/** Crédits ordinaires actuellement disponibles. */
+	regularAvailable: number;
+	/** Crédits obtenus via les succès, consommés après les crédits ordinaires. */
+	bonus: number;
+	/** Total ouvrable (`regularAvailable + bonus`). */
 	available: number;
 	max: number;
 	nextAvailableAt: string | null;
