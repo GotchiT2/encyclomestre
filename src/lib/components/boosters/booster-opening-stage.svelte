@@ -3,6 +3,7 @@
 	import emblaCarouselSvelte from 'embla-carousel-svelte';
 	import type { EmblaCarouselType } from 'embla-carousel';
 	import BoosterRevealCard from './booster-reveal-card.svelte';
+	import BoosterPackArt from './booster-pack-art.svelte';
 	import ForgePanel from '$lib/components/layout/forge-panel.svelte';
 	import HudStat from '$lib/components/layout/hud-stat.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -22,6 +23,8 @@
 		openingId = 0,
 		packName,
 		packImage,
+		packRenderKey = 'standard',
+		packCardCount = 5,
 		cards,
 		error = false,
 		suspended = false,
@@ -38,6 +41,8 @@
 		openingId?: number;
 		packName: string;
 		packImage: string;
+		packRenderKey?: string;
+		packCardCount?: number;
 		cards: CardRecord[] | null;
 		error?: boolean;
 		suspended?: boolean;
@@ -51,6 +56,7 @@
 	const quickPreferenceKey = 'wikiforge.booster.quick-opening';
 	let phase = $state<BoosterPhase>('idle');
 	let slots = $state<BoosterSlot[]>([]);
+	let landscapeSlots = $state<Record<string, boolean>>({});
 	let handledOpeningId = $state(-1);
 	let mobileIndex = $state(0);
 	let quickOpening = $state(false);
@@ -108,6 +114,7 @@
 		openRequested = false;
 		handledOpeningId = nextOpeningId;
 		slots = nextCards.map((card) => ({ card, revealed: false }));
+		landscapeSlots = {};
 		mobileIndex = 0;
 		if (nextCards.length > 12) {
 			slots = slots.map((slot) => ({ ...slot, revealed: true }));
@@ -258,9 +265,16 @@
 	function resetStage() {
 		clearTimers();
 		slots = [];
+		landscapeSlots = {};
 		phase = 'idle';
 		openRequested = false;
 		onReset();
+	}
+
+	function setSlotOrientation(index: number, landscape: boolean) {
+		const id = slots[index]?.card.id;
+		if (!id || Boolean(landscapeSlots[id]) === landscape) return;
+		landscapeSlots[id] = landscape;
 	}
 </script>
 
@@ -320,13 +334,18 @@
 							: $_('boosters.open')}
 					data-booster-interactive
 				>
-					<img
-						src={packImage}
-						alt=""
-						class="w-full drop-shadow-[0_0_2rem_rgb(253_121_12_/_38%)]"
+					<span
+						class="block w-full drop-shadow-[0_0_2rem_rgb(253_121_12_/_38%)]"
 						class:forge-booster-idle={phase === 'idle'}
 						class:booster-pack-opening={phase === 'opening'}
-					/>
+					>
+						<BoosterPackArt
+							name={packName}
+							renderKey={packRenderKey}
+							cardCount={packCardCount}
+							imageUrl={packImage}
+						/>
+					</span>
 					<span class="booster-open-label">
 						{phase === 'error'
 							? $_('boosters.retry')
@@ -368,6 +387,7 @@
 					{#each slots as slot, index (slot.card.id)}
 						<div
 							class="booster-slot"
+							class:landscape={landscapeSlots[slot.card.id] && slot.revealed}
 							class:mobile-current={index === mobileIndex}
 							data-slot-index={index}
 							style={`--slot-index:${index};--slot-offset:${index - (slots.length - 1) / 2};--slot-arc:${Math.abs(index - (slots.length - 1) / 2) * 0.75}rem`}
@@ -379,6 +399,7 @@
 								detailsEnabled={!suspended}
 								onReveal={() => setSlotRevealed(index)}
 								onOpenDetail={() => onOpenCard(slot.card)}
+								onOrientationChange={(landscape) => setSlotOrientation(index, landscape)}
 							/>
 						</div>
 					{/each}
@@ -520,6 +541,11 @@
 		animation-delay: calc(var(--slot-index) * 90ms);
 	}
 
+	.booster-slot.landscape {
+		z-index: 2;
+		margin-inline: 0;
+	}
+
 	.booster-deck.bulk-opening {
 		justify-content: flex-start;
 		gap: 0.75rem;
@@ -565,6 +591,9 @@
 		}
 		.booster-slot :global(.booster-reveal-card.is-landscape) {
 			width: 14rem;
+		}
+		.booster-slot.landscape {
+			margin-inline: 0.5rem;
 		}
 	}
 
@@ -622,6 +651,9 @@
 		}
 		.booster-slot :global(.booster-reveal-card.is-landscape) {
 			width: min(86vw, 19rem, calc((100dvh - 15rem) * 1.416));
+		}
+		.booster-slot.landscape {
+			flex-basis: min(86vw, 19rem, calc((100dvh - 15rem) * 1.416));
 		}
 		:global(.booster-mobile-fullscreen) .booster-stage-energy {
 			inset: 0;

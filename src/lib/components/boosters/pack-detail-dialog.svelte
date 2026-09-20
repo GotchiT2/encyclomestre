@@ -5,6 +5,7 @@
 	import type { ResolvedPackDefinition } from '$lib/api/boosters';
 	import type { PackCatalogueItem } from '$lib/types';
 	import BoosterPackArt from './booster-pack-art.svelte';
+	import PackPoolBrowser from './pack-pool-browser.svelte';
 	import { packDescriptionKey, packNameKey } from './pack-labels';
 
 	let {
@@ -34,8 +35,6 @@
 					new Date(value)
 				)
 			: null;
-	const percentage = (rate: number) =>
-		new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 2 }).format(rate);
 </script>
 
 <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
@@ -55,6 +54,7 @@
 						name={displayName}
 						renderKey={pack.renderKey ?? 'standard'}
 						cardCount={pack.nbCards}
+						imageUrl={pack.imageUrl}
 					/>
 				</div>
 				<div class="grid content-start gap-5 sm:grid-cols-2">
@@ -78,7 +78,7 @@
 					<div class="border-l border-primary/50 pl-4">
 						<p class="forge-label">{$_('boosters.detail.credits')}</p>
 						<p class="mt-2">
-							{#if pack.credit}{pack.credit.available} / {pack.credit.max}{:else}—{/if}
+							{#if pack.credit}{pack.credit.regularAvailable} / {pack.credit.max}{:else}—{/if}
 						</p>
 					</div>
 				</div>
@@ -91,87 +91,7 @@
 					{$_('boosters.detail.error')}
 				</div>
 			{:else}
-				<div class="mt-8 space-y-8">
-					{#each details.drawGroups as group, index (index)}
-						<section>
-							<div class="mb-4 flex items-end justify-between gap-4 border-b border-border pb-3">
-								<div>
-									<p class="forge-label">
-										{$_('boosters.detail.draw_group', { values: { number: index + 1 } })}
-									</p>
-									<h3 class="mt-1 font-serif text-xl">
-										{$_('boosters.detail.group_cards', { values: { count: group.count } })}
-									</h3>
-								</div>
-							</div>
-							<div class="grid gap-4 lg:grid-cols-2">
-								{#each group.variants as entry (entry.variantId)}
-									<article
-										class="border border-border bg-card/35 p-4"
-										style={`--variant-color:${entry.variant.color}`}
-									>
-										<div class="flex items-start justify-between gap-4">
-											<div>
-												<p class="font-semibold" style="color:var(--variant-color)">
-													{entry.variant.name}
-												</p>
-												<p class="mt-1 text-sm text-muted-foreground">
-													{$_('boosters.detail.drop_rate', {
-														values: { rate: percentage(entry.dropRate) }
-													})}
-												</p>
-											</div>
-											{#if entry.maxCopies != null}<span
-													class="border border-current px-2 py-1 font-heading text-sm"
-													style="color:var(--variant-color)">X/{entry.maxCopies}</span
-												>{/if}
-										</div>
-										{#if entry.remainingCopies != null}<p class="mt-3 text-sm font-semibold">
-												{$_('boosters.detail.global_stock', {
-													values: { count: entry.remainingCopies }
-												})}
-											</p>
-											<p class="mt-1 text-xs text-muted-foreground">
-												{$_('boosters.detail.per_subject_run', {
-													values: { count: entry.maxCopies ?? 0 }
-												})}
-											</p>{/if}
-										{#if entry.pages?.length}
-											<div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-												{#each entry.pages as page (page.id)}
-													<div class="min-w-0 border border-border/70 bg-background/60 p-2">
-														<div
-															class="grid aspect-[4/3] place-items-center overflow-hidden bg-card"
-														>
-															{#if page.image}<img
-																	src={page.image}
-																	alt=""
-																	class="size-full object-contain"
-																/>{:else}<span
-																	class="px-2 text-center text-xs text-muted-foreground"
-																	>{$_('boosters.detail.image_missing')}</span
-																>{/if}
-														</div>
-														<p class="mt-2 truncate text-xs font-semibold" title={page.title}>
-															{page.title}
-														</p>
-														{#if page.maxCopies != null && page.remainingCopies != null}<p
-																class="mt-1 text-[11px] text-muted-foreground"
-															>
-																{$_('boosters.detail.page_stock', {
-																	values: { remaining: page.remainingCopies, max: page.maxCopies }
-																})}
-															</p>{/if}
-													</div>
-												{/each}
-											</div>
-										{/if}
-									</article>
-								{/each}
-							</div>
-						</section>
-					{/each}
-				</div>
+				<div class="mt-8"><PackPoolBrowser {details} /></div>
 			{/if}
 		</div>
 

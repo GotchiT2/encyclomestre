@@ -547,6 +547,11 @@
 			"global_stock": "{count} exemplaires encore disponibles au total",
 			"per_subject_run": "Tirage maximal : {count} exemplaires par sujet",
 			"page_stock": "{remaining} / {max} restants",
+			"search_card": "Rechercher une carte du pack",
+			"search_card_hint": "Consultez le stock détaillé des cartes présentes dans les pools limités.",
+			"search_card_placeholder": "Titre de la carte…",
+			"search_no_result": "Aucune carte de ce pack ne correspond à la recherche.",
+			"global_pool": "Cette variante tire dans le catalogue global. L’API ne fournit pas de stock par carte.",
 			"image_missing": "Illustration indisponible",
 			"ready": "Ce pack peut être ouvert avec vos crédits disponibles."
 		},

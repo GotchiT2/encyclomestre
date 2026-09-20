@@ -34,6 +34,7 @@ describe('booster API', () => {
 		family: 'PREMIUM_PLUS' as const,
 		name: 'nebula',
 		description: 'nebula',
+		image: 'https://cdn.example.test/nebula.png',
 		renderKey: 'nebula',
 		status: 'OPEN' as const,
 		nbCards: 5,
@@ -106,6 +107,7 @@ describe('booster API', () => {
 				{ id: 5958, title: 'Wikipédia' }
 			]
 		});
+		expect(pack).toMatchObject({ imageUrl: 'https://cdn.example.test/nebula.png', status: 'OPEN' });
 	});
 
 	it('caches pack details and resolves their variant definitions', async () => {

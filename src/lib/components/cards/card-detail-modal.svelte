@@ -59,6 +59,7 @@
 	let tradeDraft = $state<Partial<CreateTradeOfferInput>>({});
 	let sharedWishlistsLoading = $state(false);
 	let sharedWishlistsCardId = $state<string | null>(null);
+	let landscapePreview = $state(false);
 
 	$effect(() => {
 		if (!owned) return;
@@ -192,7 +193,8 @@
 					>
 				</div>
 				<section
-					class="relative grid min-h-0 flex-1 gap-3 overflow-y-auto overscroll-contain px-3 py-3 sm:gap-5 sm:p-0 lg:grid-cols-[minmax(18rem,0.48fr)_minmax(0,1fr)] xl:grid-cols-[minmax(21rem,0.52fr)_minmax(0,1fr)]"
+					class="card-detail-layout relative grid min-h-0 flex-1 gap-3 overflow-y-auto overscroll-contain px-3 py-3 sm:gap-5 sm:p-0 lg:grid-cols-[minmax(18rem,0.48fr)_minmax(0,1fr)] xl:grid-cols-[minmax(21rem,0.52fr)_minmax(0,1fr)]"
+					class:landscape-preview={landscapePreview}
 				>
 					<div class="card-detail-preview mx-auto w-fit lg:sticky lg:top-0 lg:self-start">
 						<CardTile
@@ -201,6 +203,7 @@
 							tags={tags.filter((tag) => (assignments[card.id] ?? []).includes(tag.id))}
 							showFriendOwners
 							tagDisplay="full"
+							onOrientationChange={(landscape) => (landscapePreview = landscape)}
 						/>
 					</div>
 					<div class="flex min-h-0 min-w-0 flex-col gap-3">
@@ -351,10 +354,16 @@
 	.card-detail-preview :global(.wikiforge-card-size) {
 		width: 12rem;
 	}
+	.landscape-preview .card-detail-preview :global(.wikiforge-card-size) {
+		width: min(100%, 28rem);
+	}
 
 	@media (min-width: 640px) {
 		.card-detail-preview :global(.wikiforge-card-size) {
 			width: 15rem;
+		}
+		.landscape-preview .card-detail-preview :global(.wikiforge-card-size) {
+			width: min(28rem, calc(100vw - 5rem));
 		}
 	}
 
@@ -362,11 +371,23 @@
 		.card-detail-preview :global(.wikiforge-card-size) {
 			width: 18rem;
 		}
+		.card-detail-layout.landscape-preview {
+			grid-template-columns: minmax(28rem, 0.75fr) minmax(0, 1fr);
+		}
+		.landscape-preview .card-detail-preview :global(.wikiforge-card-size) {
+			width: 28rem;
+		}
 	}
 
 	@media (min-width: 1280px) {
 		.card-detail-preview :global(.wikiforge-card-size) {
 			width: 21rem;
+		}
+		.card-detail-layout.landscape-preview {
+			grid-template-columns: minmax(34rem, 0.82fr) minmax(0, 1fr);
+		}
+		.landscape-preview .card-detail-preview :global(.wikiforge-card-size) {
+			width: 34rem;
 		}
 	}
 </style>

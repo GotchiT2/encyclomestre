@@ -380,3 +380,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 ## 19. Contrats Swagger WikiForge enrichis
 
 - [x] Migrer les inventaires de boosters par famille et emplacement, l’ouverture groupée, l’accueil, les préférences de succès et les notifications de guilde — `feat(api): align enriched WikiForge contracts`
+
+## 20. Expérience des boosters
+
+- [x] Recomposer le catalogue et le détail des packs, ajouter la recherche de stock et fiabiliser les cartes Full Art portrait/paysage — `feat(boosters): refine pack opening experience`

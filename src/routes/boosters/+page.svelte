@@ -220,7 +220,9 @@
 			maximum={selectedPack.credit?.max ?? 0}
 			{nextDelay}
 			packName={selectedPackName}
-			packImage={selectedPack.credit?.imageUrl ?? '/images/booster.png'}
+			packImage={selectedPack.imageUrl ?? selectedPack.credit?.imageUrl ?? '/images/booster.png'}
+			packRenderKey={selectedPack.renderKey ?? 'standard'}
+			packCardCount={selectedPack.nbCards}
 			{opening}
 			canOpenAll={selectedPack.openAll}
 			{openingId}

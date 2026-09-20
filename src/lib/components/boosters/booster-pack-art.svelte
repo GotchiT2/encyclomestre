@@ -1,8 +1,13 @@
 <script lang="ts">
 	import EditionSigil from './preview/edition-sigil.svelte';
 
-	let { name, renderKey, cardCount }: { name: string; renderKey: string; cardCount: number } =
-		$props();
+	let {
+		name,
+		renderKey,
+		cardCount,
+		imageUrl
+	}: { name: string; renderKey: string; cardCount: number; imageUrl?: string } = $props();
+	let imageFailed = $state(false);
 
 	const colors: Record<string, string> = {
 		standard: '#c88a45',
@@ -13,16 +18,25 @@
 		comics: '#ff857c'
 	};
 	const color = $derived(colors[renderKey] ?? colors.standard);
+	$effect(() => {
+		void imageUrl;
+		imageFailed = false;
+	});
 </script>
 
 <div class="pack" data-theme={renderKey} style={`--pack-color:${color}`} aria-hidden="true">
-	<div class="frame"></div>
-	<div class="texture"></div>
-	<p class="name">{name}</p>
-	<p class="brand">WikiForge</p>
-	<div class="rule"><span></span><i></i><span></span></div>
-	<div class="sigil"><EditionSigil key={renderKey} /></div>
-	<p class="count">{cardCount}</p>
+	{#if imageUrl && !imageFailed}
+		<img src={imageUrl} alt="" onerror={() => (imageFailed = true)} />
+	{:else}
+		<div class="rays"></div>
+		<div class="frame"></div>
+		<div class="texture"></div>
+		<p class="edition">{name}</p>
+		<p class="brand">WikiForge</p>
+		<div class="rule"><span></span><i></i><span></span></div>
+		<div class="sigil"><EditionSigil key={renderKey} /></div>
+		<p class="count"><strong>{cardCount}</strong><span>cartes</span></p>
+	{/if}
 </div>
 
 <style>
@@ -56,6 +70,13 @@
 			0 5%
 		);
 		box-shadow: 0 1rem 2rem rgb(0 0 0 / 45%);
+	}
+	.pack > img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		background: #061526;
 	}
 	.pack::before,
 	.pack::after {
@@ -96,7 +117,17 @@
 			color-mix(in srgb, var(--pack-color) 15%, transparent) 3.2deg 3.5deg
 		);
 	}
-	.name,
+	.rays {
+		position: absolute;
+		inset: 0;
+		background: repeating-conic-gradient(
+			from 12deg at 50% 54%,
+			transparent 0 7deg,
+			color-mix(in srgb, var(--pack-color) 13%, transparent) 7.5deg 8deg
+		);
+		mask-image: radial-gradient(circle, black, transparent 74%);
+	}
+	.edition,
 	.brand,
 	.count,
 	.rule,
@@ -104,21 +135,21 @@
 		position: absolute;
 		z-index: 2;
 	}
-	.name {
+	.edition {
 		top: 8%;
 		right: 10%;
 		left: 10%;
 		text-align: center;
-		font: 700 clamp(0.65rem, 7cqw, 1.3rem)/1 var(--font-title);
+		font: 700 clamp(0.58rem, 6.4cqw, 1.15rem)/1 var(--font-heading);
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 	}
 	.brand {
-		top: 28%;
+		top: 25%;
 		right: 5%;
 		left: 5%;
 		text-align: center;
-		font: 700 clamp(1.1rem, 13cqw, 2.8rem)/0.9 var(--font-heading);
+		font: 700 clamp(1.1rem, 13cqw, 2.8rem)/0.9 var(--font-title);
 		color: #fff0ce;
 		text-shadow:
 			0 3px #682908,
@@ -163,9 +194,16 @@
 		left: 11%;
 		padding: 5% 0;
 		text-align: center;
-		font: 700 10cqw/1 var(--font-heading);
+		font: 700 9cqw/1 var(--font-heading);
 		border: 1px solid currentColor;
 		background: rgb(3 10 19 / 80%);
+	}
+	.count span {
+		display: block;
+		margin-top: 0.18em;
+		font: 700 3.8cqw/1 var(--font-sans);
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
 	}
 	[data-theme='chrome'] {
 		background: linear-gradient(145deg, #31475b, #07111d 58%, #263b50);

@@ -1,10 +1,14 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount, untrack } from 'svelte';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import BoosterCardBack from './booster-card-back.svelte';
 	import { _ } from '$lib/i18n';
 	import { cn } from '$lib/utils';
 	import { cardHasStyle, type CardRecord } from '$lib/types';
+	import {
+		hasUsableCardImage,
+		isLandscapeCardImage
+	} from '$lib/components/cards/card-image-orientation';
 	const particles = Array.from({ length: 8 }, (_, index) => index);
 
 	let {
@@ -14,7 +18,8 @@
 		detailsEnabled = true,
 		class: className,
 		onReveal,
-		onOpenDetail
+		onOpenDetail,
+		onOrientationChange = () => undefined
 	}: {
 		card: CardRecord;
 		revealed: boolean;
@@ -23,6 +28,7 @@
 		class?: string;
 		onReveal: () => void;
 		onOpenDetail: () => void;
+		onOrientationChange?: (landscape: boolean) => void;
 	} = $props();
 
 	let propagating = $state(false);
@@ -30,6 +36,10 @@
 	let propagationTimer: number | undefined;
 	let propagationFrame: number | undefined;
 	let landscape = $state(false);
+	let displayedLandscape = $state(false);
+	let inspectedImageUrl: string | null = null;
+	let orientationTimer: number | undefined;
+	let reducedMotion = $state(false);
 	const fullArt = $derived(cardHasStyle(card, 'FULL_ART'));
 	const actionable = $derived((!revealed && interactive) || (revealed && detailsEnabled));
 
@@ -54,17 +64,49 @@
 	});
 
 	$effect(() => {
-		void card.imageUrl;
+		const imageUrl = card.imageUrl;
+		if (imageUrl === inspectedImageUrl) return;
+		inspectedImageUrl = imageUrl;
 		landscape = false;
-		if (!fullArt || typeof Image === 'undefined') return;
+		untrack(() => onOrientationChange(false));
+		displayedLandscape = false;
+		if (!fullArt || !hasUsableCardImage(imageUrl) || typeof Image === 'undefined') return;
 		const image = new Image();
-		image.onload = () => (landscape = image.naturalWidth / image.naturalHeight >= 1.2);
-		image.src = card.imageUrl;
+		image.onload = () => {
+			landscape = isLandscapeCardImage(image.naturalWidth, image.naturalHeight);
+			onOrientationChange(landscape);
+		};
+		image.onerror = () => {
+			landscape = false;
+			onOrientationChange(false);
+		};
+		image.src = imageUrl;
+	});
+
+	$effect(() => {
+		window.clearTimeout(orientationTimer);
+		if (!revealed || !landscape) {
+			displayedLandscape = false;
+			return;
+		}
+		orientationTimer = window.setTimeout(
+			() => (displayedLandscape = true),
+			reducedMotion ? 0 : 300
+		);
+	});
+
+	onMount(() => {
+		const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+		const update = () => (reducedMotion = media.matches);
+		update();
+		media.addEventListener('change', update);
+		return () => media.removeEventListener('change', update);
 	});
 
 	onDestroy(() => {
 		window.clearTimeout(propagationTimer);
 		window.cancelAnimationFrame(propagationFrame ?? 0);
+		window.clearTimeout(orientationTimer);
 	});
 </script>
 
@@ -72,7 +114,8 @@
 	class={cn('booster-reveal-card', className)}
 	class:is-revealed={revealed}
 	class:is-full-art={fullArt}
-	class:is-landscape={landscape}
+	class:is-landscape={displayedLandscape}
+	data-front-orientation={landscape ? 'landscape' : 'portrait'}
 	class:is-propagating={propagating}
 	style={`--variant-color:${card.variant.color}`}
 	data-render-key={card.variant.renderKey}
@@ -119,6 +162,9 @@
 		aspect-ratio: 862 / 1221;
 		perspective: 1200px;
 		isolation: isolate;
+		transition:
+			width 320ms ease,
+			aspect-ratio 320ms ease;
 	}
 	.booster-reveal-card.is-landscape {
 		width: 19rem;

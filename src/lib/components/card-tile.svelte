@@ -14,7 +14,8 @@
 		tagDisplay = 'bookmark',
 		stateIndicatorsOffset = 0,
 		comparisonOwnership,
-		onOpen
+		onOpen,
+		onOrientationChange
 	}: {
 		card: CardRecord;
 		showFriendOwners?: boolean;
@@ -25,6 +26,7 @@
 		stateIndicatorsOffset?: number;
 		comparisonOwnership?: { count: number; label: string };
 		onOpen?: (card: CardRecord) => void;
+		onOrientationChange?: (landscape: boolean) => void;
 	} = $props();
 
 	function handleOpen() {
@@ -37,7 +39,7 @@
 	data-testid="card-tile"
 	data-variant-id={card.variantId}
 >
-	<VariantCardFace {card} />
+	<VariantCardFace {card} {onOrientationChange} />
 	{#if card.activeSale}
 		<span
 			class="pointer-events-none absolute top-[8%] right-[7%] z-30 bg-primary px-2 py-1 font-mono text-[9px] font-black uppercase tracking-widest text-primary-foreground shadow-[0_0_16px_rgb(0_0_0_/_75%)]"

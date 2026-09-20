@@ -41,16 +41,17 @@
 				</div>
 				<p class="text-sm text-muted-foreground">{entries.length}</p>
 			</div>
-			<div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+			<div class="pack-grid">
 				{#each entries as pack (pack.id)}
 					<article
-						class="forge-panel grid min-h-full grid-cols-[7.5rem_1fr] gap-5 p-5 max-sm:grid-cols-1"
+						class="forge-panel grid min-h-full grid-cols-[6.5rem_minmax(0,1fr)] gap-4 p-4 max-[420px]:grid-cols-1"
 					>
 						<div class="mx-auto w-full max-w-36">
 							<BoosterPackArt
 								name={name(pack)}
 								renderKey={pack.renderKey ?? 'standard'}
 								cardCount={pack.nbCards}
+								imageUrl={pack.imageUrl}
 							/>
 						</div>
 						<div class="flex min-w-0 flex-col">
@@ -60,7 +61,7 @@
 							{#if pack.credit}
 								<p class="mt-4 text-sm font-semibold text-primary">
 									{$_('boosters.credits', {
-										values: { available: pack.credit.available, max: pack.credit.max }
+										values: { available: pack.credit.regularAvailable, max: pack.credit.max }
 									})}
 								</p>
 								{#if pack.credit.bonus > 0}<p class="mt-1 text-xs text-energy">
@@ -86,3 +87,11 @@
 		</section>
 	{/if}
 {/each}
+
+<style>
+	.pack-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
+		gap: 1rem;
+	}
+</style>

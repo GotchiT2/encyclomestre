@@ -1,10 +1,15 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import EditionSigil from '$lib/components/boosters/preview/edition-sigil.svelte';
 	import VariantEffects from '$lib/components/boosters/preview/variant-effects.svelte';
 	import { nsfwFilterSettings, shouldBlurCardIllustration } from '$lib/content/nsfw-filter';
 	import { cardHasStyle, cardNumberLabel, type CardRecord } from '$lib/types';
+	import { hasUsableCardImage, isLandscapeCardImage } from './card-image-orientation';
 
-	let { card }: { card: CardRecord } = $props();
+	let {
+		card,
+		onOrientationChange = () => undefined
+	}: { card: CardRecord; onOrientationChange?: (landscape: boolean) => void } = $props();
 	const fullArt = $derived(cardHasStyle(card, 'FULL_ART'));
 	const chrome = $derived(cardHasStyle(card, 'CHROME'));
 	const effectsEnabled = $derived(fullArt || chrome || card.variant.renderKey !== 'standard');
@@ -12,13 +17,18 @@
 	const illustrationBlurred = $derived(shouldBlurCardIllustration(card, $nsfwFilterSettings));
 	let landscape = $state(false);
 	let failed = $state(false);
+	let inspectedImageUrl: string | null = null;
 	let pointerX = $state(50);
 	let pointerY = $state(50);
 	let active = $state(false);
 
 	function inspect(event: Event) {
 		const image = event.currentTarget as HTMLImageElement;
-		landscape = fullArt && image.naturalWidth / image.naturalHeight >= 1.2;
+		landscape =
+			fullArt &&
+			hasUsableCardImage(card.imageUrl) &&
+			isLandscapeCardImage(image.naturalWidth, image.naturalHeight);
+		onOrientationChange(landscape);
 	}
 
 	function move(event: PointerEvent) {
@@ -35,9 +45,12 @@
 	}
 
 	$effect(() => {
-		void card.imageUrl;
+		const imageUrl = card.imageUrl;
+		if (imageUrl === inspectedImageUrl) return;
+		inspectedImageUrl = imageUrl;
 		landscape = false;
 		failed = false;
+		untrack(() => onOrientationChange(false));
 	});
 </script>
 
@@ -68,7 +81,11 @@
 					alt=""
 					class:blur-xl={illustrationBlurred}
 					onload={inspect}
-					onerror={() => (failed = true)}
+					onerror={() => {
+						failed = true;
+						landscape = false;
+						onOrientationChange(false);
+					}}
 				/>
 			{/if}
 		</div>
@@ -107,7 +124,7 @@
 			),
 			linear-gradient(145deg, #102945, #050c17 62%, #0b2136);
 		border: 1px solid color-mix(in srgb, var(--metal) 82%, #bd6615);
-		clip-path: polygon(6% 0, 94% 0, 100% 4%, 100% 96%, 94% 100%, 6% 100%, 0 96%, 0 4%);
+		clip-path: polygon(4% 0, 96% 0, 100% 3%, 100% 97%, 96% 100%, 4% 100%, 0 97%, 0 3%);
 		transform: rotateX(0) rotateY(0);
 		transition: transform 180ms ease-out;
 	}
@@ -269,45 +286,55 @@
 	}
 	[data-render-key='nebula'] .shell {
 		background:
-			radial-gradient(ellipse at 22% 68%, #633c944f, transparent 45%),
-			linear-gradient(145deg, #171636, #050916 66%);
-		clip-path: polygon(12% 0, 88% 0, 100% 12%, 96% 82%, 86% 100%, 7% 96%, 0 76%, 4% 13%);
+			radial-gradient(circle at 18% 72%, #9a65e954, transparent 32%),
+			radial-gradient(circle at 76% 20%, #5d8cff30, transparent 26%),
+			linear-gradient(145deg, #211b4a, #050916 66%);
+	}
+	[data-render-key='nebula'] .engraving {
+		background:
+			radial-gradient(circle at 18% 22%, #fff 0 0.45%, transparent 0.7%),
+			radial-gradient(circle at 72% 42%, #fff 0 0.35%, transparent 0.65%),
+			radial-gradient(circle at 43% 78%, #cdb9ff 0 0.45%, transparent 0.8%);
+		background-size:
+			19% 23%,
+			27% 31%,
+			31% 29%;
+		opacity: 0.7;
 	}
 	[data-render-key='arcade'] .shell {
 		background:
 			repeating-linear-gradient(0deg, transparent 0 7px, #82ffc90b 7px 8px),
 			linear-gradient(145deg, #0e3a36, #050c19 62%);
-		clip-path: polygon(
-			10% 0,
-			90% 0,
-			90% 3%,
-			97% 3%,
-			97% 10%,
-			100% 10%,
-			100% 90%,
-			97% 90%,
-			97% 97%,
-			90% 97%,
-			90% 100%,
-			10% 100%,
-			10% 97%,
-			3% 97%,
-			3% 90%,
-			0 90%,
-			0 10%,
-			3% 10%,
-			3% 3%,
-			10% 3%
-		);
+	}
+	[data-render-key='arcade'] .engraving {
+		background:
+			linear-gradient(90deg, transparent 48%, #8df5b422 49% 51%, transparent 52%),
+			linear-gradient(0deg, transparent 48%, #8df5b416 49% 51%, transparent 52%);
+		background-size: 18px 18px;
 	}
 	[data-render-key='neon'] .shell {
-		background: linear-gradient(145deg, #24102c, #050a17 52%, #082b36);
-		box-shadow: inset 0 0 20px #f165b938;
+		background:
+			radial-gradient(circle at 82% 18%, #4eeaff38, transparent 34%),
+			linear-gradient(145deg, #35113e, #050a17 52%, #07323b);
+		box-shadow: inset 0 0 28px #f165b94a;
+	}
+	[data-render-key='neon'] .engraving {
+		background: linear-gradient(
+			118deg,
+			transparent 20%,
+			#ed6fa34a 21% 22%,
+			transparent 23% 62%,
+			#50e9ff42 63% 64%,
+			transparent 65%
+		);
 	}
 	[data-render-key='comics'] .shell {
 		background:
 			radial-gradient(#ff8c7424 1px, transparent 1.4px) 0 0/6px 6px,
 			linear-gradient(145deg, #55271f, #0b0b17 66%);
+	}
+	[data-render-key='comics'] .engraving {
+		background: repeating-linear-gradient(135deg, transparent 0 12px, #fff0cf12 12px 14px);
 	}
 	[data-render-key='comics'] .name {
 		color: #151b2c;
