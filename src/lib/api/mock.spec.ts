@@ -2,6 +2,27 @@ import { describe, expect, it } from 'vitest';
 import { createMockApiResponse } from './mock';
 
 describe('createMockApiResponse', () => {
+	it('exposes achievements and makes a claim idempotently conflict after success', async () => {
+		const list = createMockApiResponse({ path: '/me/achievements' });
+		expect(await list.json()).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ code: 'collection_10', unlockedAt: expect.any(String) })
+			])
+		);
+
+		const claimed = createMockApiResponse({
+			path: '/me/achievements/collection_10/claim',
+			method: 'POST'
+		});
+		expect(claimed.status).toBe(204);
+		const repeated = createMockApiResponse({
+			path: '/me/achievements/collection_10/claim',
+			method: 'POST'
+		});
+		expect(repeated.status).toBe(409);
+		expect(await repeated.json()).toMatchObject({ code: 'ACHIEVEMENT_CONFLICT' });
+	});
+
 	it('expose les contrats WikiForge des boosters et des tags', async () => {
 		const catalogue = createMockApiResponse({ path: '/packs' });
 		expect(await catalogue.json()).toEqual(

@@ -13,6 +13,7 @@
 	import UserPlusIcon from '@lucide/svelte/icons/user-plus';
 	import UserRoundIcon from '@lucide/svelte/icons/user-round';
 	import NotificationBell from '$lib/components/notifications/notification-bell.svelte';
+	import AchievementNavBadge from '$lib/components/achievements/achievement-nav-badge.svelte';
 
 	const sidebar = Sidebar.useSidebar();
 
@@ -37,6 +38,7 @@
 								<a href={resolve(item.href)} onclick={closeOnMobile} {...props}>
 									<item.icon />
 									<span>{$_(item.label)}</span>
+									{#if item.href === '/achievements'}<AchievementNavBadge />{/if}
 								</a>
 							{/snippet}
 						</Sidebar.MenuButton>

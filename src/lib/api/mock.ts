@@ -37,6 +37,38 @@ const mockNotifications = [
 	},
 	{ id: 2, type: 'FRIEND_ACCEPTED', read: true, creationDate: '2026-07-10T09:00:00.000Z' }
 ];
+const mockAchievements = [
+	{
+		code: 'collection_10',
+		category: 'COLLECTION',
+		name: 'Premières pages',
+		description: 'Posséder 10 cartes',
+		threshold: 10,
+		progress: 10,
+		rewardMoney: 100,
+		unlockedAt: '2026-09-14T18:22:31'
+	},
+	{
+		code: 'boosters_100',
+		category: 'BOOSTER',
+		name: 'Habitué du kiosque',
+		description: 'Ouvrir 100 boosters',
+		threshold: 100,
+		progress: 32,
+		rewardMoney: 0,
+		rewardBoosters: { PREMIUM: 1 }
+	},
+	{
+		code: 'trades_10',
+		category: 'TRADE',
+		name: 'Négociateur',
+		threshold: 10,
+		progress: 10,
+		rewardMoney: 300,
+		unlockedAt: '2026-09-10T18:22:31',
+		claimedAt: '2026-09-10T18:22:40'
+	}
+];
 
 interface LegacyWishlistEntry {
 	cardId: string;
@@ -797,6 +829,18 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 
 	if (normalizedMethod === 'POST' && pathname === '/oauth2/revoke') return json(undefined);
 	if (normalizedMethod === 'GET' && pathname === '/variants') return json(mockVariants);
+	if (normalizedMethod === 'GET' && pathname === '/me/achievements') return json(mockAchievements);
+	const achievementClaimMatch = /^\/me\/achievements\/([^/]+)\/claim$/.exec(pathname);
+	if (normalizedMethod === 'POST' && achievementClaimMatch) {
+		const achievement = mockAchievements.find(
+			(entry) => entry.code === decodeURIComponent(achievementClaimMatch[1])
+		);
+		if (!achievement) return error(404, 'Succès introuvable.', 'NOT_FOUND');
+		if (!achievement.unlockedAt || achievement.claimedAt)
+			return error(409, 'Succès non réclamable.', 'ACHIEVEMENT_CONFLICT');
+		achievement.claimedAt = new Date().toISOString();
+		return json(undefined, 204);
+	}
 	if (normalizedMethod === 'GET' && pathname === '/notifications') {
 		const unreadOnly = url.searchParams.get('unreadOnly') === 'true';
 		const results = unreadOnly

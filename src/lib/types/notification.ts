@@ -8,6 +8,7 @@ export type NotificationType =
 	| 'SALE_SOLD'
 	| 'FRIEND_REQUEST'
 	| 'FRIEND_ACCEPTED'
+	| 'ACHIEVEMENT_UNLOCKED'
 	| (string & {});
 
 export interface AppNotificationActor {

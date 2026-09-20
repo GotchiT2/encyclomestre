@@ -372,3 +372,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 
 - [x] Remplacer la rareté par le catalogue de variantes, partager le rendu des cartes et brancher les packs actifs — `feat(cards): migrate rarity model to variants and packs`
 - [x] Intégrer le catalogue détaillé des packs, leurs statuts, groupes de tirage et stocks globaux — `feat(boosters): integrate detailed pack catalogue`
+
+## 18. Succès WikiForge
+
+- [x] Ajouter le registre des succès, ses récompenses réclamables, son badge et sa synchronisation SSE — `feat(achievements): add claimable achievement registry`

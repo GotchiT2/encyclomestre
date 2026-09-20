@@ -1,4 +1,6 @@
 export * from './auth';
+
+export * from './achievements';
 export * from './cards';
 
 export * from './card-query';

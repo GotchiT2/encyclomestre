@@ -22,6 +22,7 @@
 		"trades": "Échanges",
 		"boosters": "Paquets",
 		"leaderboard": "Classements",
+		"achievements": "Succès",
 		"profile": "Mon profil",
 		"settings": "Paramètres",
 		"login": "Connexion",
@@ -395,6 +396,7 @@
 		"tab_trades": "Échanges",
 		"tab_sales": "Ventes",
 		"tab_friends": "Amis",
+		"tab_achievements": "Succès",
 		"mark_all": "Tout marquer comme lu",
 		"loading": "Chargement des notifications…",
 		"error": "Les notifications n’ont pas pu être chargées.",
@@ -411,7 +413,42 @@
 			"TRADE_EXPIRED": "Échange expiré",
 			"SALE_SOLD": "Carte vendue",
 			"FRIEND_REQUEST": "Demande d’ami reçue",
-			"FRIEND_ACCEPTED": "Demande d’ami acceptée"
+			"FRIEND_ACCEPTED": "Demande d’ami acceptée",
+			"ACHIEVEMENT_UNLOCKED": "Succès débloqué"
+		}
+	},
+	"achievements": {
+		"eyebrow": "Parcours du collectionneur",
+		"title": "Succès",
+		"description": "Suivez vos paliers et réclamez les récompenses obtenues.",
+		"loading": "Chargement des succès…",
+		"unavailable_title": "Les succès arrivent bientôt",
+		"unavailable_description": "Le registre des succès n’est pas encore disponible.",
+		"error": "Les succès n’ont pas pu être chargés.",
+		"empty_title": "Aucun succès à afficher",
+		"empty_description": "Vos prochains paliers apparaîtront ici.",
+		"progress": "Progression du succès",
+		"claim": "Réclamer",
+		"claiming": "Réclamation…",
+		"claimable_count": "{count} récompense(s) à réclamer",
+		"error": "La récompense n’a pas pu être réclamée.",
+		"refresh_error": "La récompense a été traitée, mais l’actualisation a échoué.",
+		"reward_money": "{amount} pièces",
+		"reward_booster": "{count} booster {family}",
+		"no_reward": "Récompense symbolique",
+		"category_unknown": "Catégorie {category}",
+		"category": {
+			"COLLECTION": "Collection",
+			"BOOSTER": "Boosters",
+			"TRADE": "Échanges",
+			"SALE": "Ventes",
+			"SOCIAL": "Social",
+			"MONEY": "Fortune"
+		},
+		"state": {
+			"LOCKED": "En cours",
+			"CLAIMABLE": "Récompense disponible",
+			"DONE": "Récompense réclamée"
 		}
 	},
 	"leaderboard": {
