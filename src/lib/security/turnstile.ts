@@ -7,7 +7,7 @@ export interface TurnstileRenderOptions {
 	sitekey: string;
 	action: TurnstileAction;
 	appearance: 'interaction-only';
-	execution: 'render';
+	execution: 'execute';
 	theme: 'dark';
 	size: 'flexible';
 	callback: (token: string) => void;
@@ -18,6 +18,7 @@ export interface TurnstileRenderOptions {
 
 export interface TurnstileApi {
 	render(container: HTMLElement, options: TurnstileRenderOptions): string;
+	execute(widgetId: string): void;
 	reset(widgetId: string): void;
 	remove(widgetId: string): void;
 }
