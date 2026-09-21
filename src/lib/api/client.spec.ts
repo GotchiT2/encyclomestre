@@ -31,7 +31,7 @@ describe('apiRequest en mode mock', () => {
 		const fetcher = vi.fn();
 
 		const session = await login(
-			{ email: 'camille@example.test', password: 'secret' },
+			{ email: 'camille@example.test', password: 'secret', turnstileToken: 'mock-token' },
 			{ fetch: fetcher as typeof fetch }
 		);
 

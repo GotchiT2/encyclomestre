@@ -3,12 +3,14 @@ import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 
 export default defineConfig({
 	server: {
-		// Le poste de développement associe dev.wikiforge.fr à 127.0.0.1 :
-		// écouter sur toutes les interfaces évite de tenter de binder son DNS public.
-		host: true,
+		// Turnstile autorise le domaine local dédié, associé à 127.0.0.1 sur le poste.
+		host: 'dev.wikiforge.fr',
+		port: 443,
+		strictPort: true,
 		allowedHosts: ['dev.wikiforge.fr'],
 		proxy: {
 			'/api': {
@@ -26,6 +28,10 @@ export default defineConfig({
 		}
 	},
 	plugins: [
+		{
+			...basicSsl({ name: 'WikiForge local', domains: ['dev.wikiforge.fr'] }),
+			apply: 'serve'
+		},
 		tailwindcss(),
 		sveltekit({
 			compilerOptions: {

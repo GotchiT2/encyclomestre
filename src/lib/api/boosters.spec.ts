@@ -149,10 +149,11 @@ describe('booster API', () => {
 
 	it('opens every available booster through the dedicated endpoint', async () => {
 		request.mockResolvedValue({ packId: 4, cards: [] });
-		await expect(openAllBoosters(4)).resolves.toEqual({ packId: 4, cards: [] });
+		await expect(openAllBoosters(4, 'open-token')).resolves.toEqual({ packId: 4, cards: [] });
 		expect(request).toHaveBeenCalledWith('/boosters/4/open-all', {
 			apiTarget: 'wikiforge',
-			method: 'POST'
+			method: 'POST',
+			headers: { 'X-Turnstile-Token': 'open-token' }
 		});
 	});
 
@@ -173,10 +174,11 @@ describe('booster API', () => {
 			]
 		});
 
-		const result = await openBooster(4);
+		const result = await openBooster(4, 'open-token');
 		expect(request).toHaveBeenCalledWith('/boosters/4/open', {
 			apiTarget: 'wikiforge',
-			method: 'POST'
+			method: 'POST',
+			headers: { 'X-Turnstile-Token': 'open-token' }
 		});
 		expect(result.cards.map((card) => card.id)).toEqual(['9', '3']);
 		expect(result.cards[1]).toMatchObject({ serialNumber: 1, maxCopies: 10 });

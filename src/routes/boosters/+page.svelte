@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { _ } from '$lib/i18n';
 	import {
+		ApiError,
 		addWishlistRegistryCard,
 		getBoosters,
 		getPackDetails,
@@ -25,6 +26,7 @@
 		getBoosterRefreshDelay
 	} from '$lib/components/boosters/booster-countdown';
 	import CardDetailModal from '$lib/components/cards/card-detail-modal.svelte';
+	import TurnstileWidget from '$lib/components/security/turnstile-widget.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import type {
@@ -57,6 +59,7 @@
 	let wishlists = $state<WishlistRegistrySummary[]>([]);
 	let detailDependenciesLoaded = $state(false);
 	let now = $state(Date.now());
+	let turnstile = $state<{ verify: () => Promise<string>; reset: () => void } | null>(null);
 	const packs = $derived(packDefinitions ? mergePackCatalogue(packDefinitions, credits) : null);
 	const selectedPack = $derived(
 		packs?.find((pack) => pack.id === selectedPackId) ??
@@ -116,17 +119,30 @@
 		result = null;
 		openingError = null;
 		try {
+			if (!turnstile) throw new Error('Turnstile unavailable');
+			const turnstileToken = await turnstile.verify();
 			const opened = all
-				? await openAllBoosters(selectedPack.id)
-				: await openBooster(selectedPack.id);
+				? await openAllBoosters(selectedPack.id, turnstileToken)
+				: await openBooster(selectedPack.id, turnstileToken);
 			result = opened.cards;
 			openingId += 1;
 		} catch (error) {
 			const code = wikiForgeApiErrorCode(error);
+			const captchaRejected =
+				code === 'INVALID_CAPTCHA' ||
+				code === 'CAPTCHA_REQUIRED' ||
+				(error instanceof ApiError &&
+					typeof error.payload === 'object' &&
+					error.payload !== null &&
+					'error' in error.payload &&
+					error.payload.error === 'invalid_captcha');
 			openingError = ['NO_BOOSTER_AVAILABLE', 'NOT_FOUND', 'PACK_EXHAUSTED'].includes(code ?? '')
 				? code!
-				: 'UNKNOWN';
+				: captchaRejected || (error instanceof Error && error.message.includes('Turnstile'))
+					? 'CAPTCHA'
+					: 'UNKNOWN';
 		} finally {
+			turnstile?.reset();
 			resetPackDetailsCache();
 			await refreshPacks().catch(() => undefined);
 			opening = false;
@@ -198,6 +214,13 @@
 	{:else if !selectedPack}
 		<PackCatalogue {packs} onDetails={showDetails} onOpen={selectPack} />
 	{:else}
+		<div class="mx-auto w-full max-w-sm">
+			<TurnstileWidget
+				bind:this={turnstile}
+				action="open"
+				onError={() => (openingError = 'CAPTCHA')}
+			/>
+		</div>
 		<div class="flex items-center justify-between gap-4">
 			<Button
 				variant="outline"

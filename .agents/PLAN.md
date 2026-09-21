@@ -384,3 +384,7 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 ## 20. Expérience des boosters
 
 - [x] Recomposer le catalogue et le détail des packs, ajouter la recherche de stock et fiabiliser les cartes Full Art portrait/paysage — `feat(boosters): refine pack opening experience`
+
+## 21. Protection Turnstile
+
+- [x] Protéger la connexion et l'ouverture des boosters avec Turnstile et exposer le frontend local sur HTTPS sans port explicite — `feat(security): add Turnstile verification`

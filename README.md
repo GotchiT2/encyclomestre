@@ -29,6 +29,10 @@ npm run dev
 npm run dev -- --open
 ```
 
+Le serveur local Turnstile est exposé sur `https://dev.wikiforge.fr` (port HTTPS standard,
+sans `:5173`). Le fichier `hosts` du poste doit contenir `127.0.0.1 dev.wikiforge.fr`. Lors de
+la première ouverture, acceptez le certificat de développement auto-signé généré par Vite.
+
 ## API WikiForge
 
 Le frontend utilise l’API WikiForge et ses contrats OpenAPI. Créez un fichier `.env` à la racine du projet avec :

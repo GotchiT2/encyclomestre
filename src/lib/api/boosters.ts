@@ -13,6 +13,7 @@ import type {
 import { apiRequest, type RequestOptions } from './client';
 import { toCardRecord, type WikiForgeCardDto } from './cards';
 import { getVariants } from './variants';
+import { TURNSTILE_TOKEN_HEADER } from '$lib/security/turnstile';
 
 export interface BoosterFamilyDto {
 	family: PackFamily;
@@ -198,13 +199,15 @@ export function resolvePackDefinition(
 
 export async function openBooster(
 	packId: number,
+	turnstileToken: string,
 	options?: RequestOptions
 ): Promise<BoosterOpenResult> {
 	const [response, variants] = await Promise.all([
 		apiRequest<OpenedBoosterDto>(`/boosters/${packId}/open`, {
 			...options,
 			apiTarget: 'wikiforge',
-			method: 'POST'
+			method: 'POST',
+			headers: { ...options?.headers, [TURNSTILE_TOKEN_HEADER]: turnstileToken }
 		}),
 		getVariants(options)
 	]);
@@ -216,13 +219,15 @@ export async function openBooster(
 
 export async function openAllBoosters(
 	packId: number,
+	turnstileToken: string,
 	options?: RequestOptions
 ): Promise<BoosterOpenResult> {
 	const [response, variants] = await Promise.all([
 		apiRequest<OpenedBoosterDto>(`/boosters/${packId}/open-all`, {
 			...options,
 			apiTarget: 'wikiforge',
-			method: 'POST'
+			method: 'POST',
+			headers: { ...options?.headers, [TURNSTILE_TOKEN_HEADER]: turnstileToken }
 		}),
 		getVariants(options)
 	]);

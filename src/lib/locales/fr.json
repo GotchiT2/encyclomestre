@@ -556,6 +556,7 @@
 			"ready": "Ce pack peut être ouvert avec vos crédits disponibles."
 		},
 		"errors": {
+			"CAPTCHA": "La vérification anti-robot a échoué. Réessayez.",
 			"NO_BOOSTER_AVAILABLE": "Aucun crédit n’est disponible pour ce pack.",
 			"NOT_FOUND": "Ce pack n’est plus disponible.",
 			"PACK_EXHAUSTED": "Le dernier exemplaire numéroté vient d’être obtenu.",
@@ -966,7 +967,8 @@
 			"registerLink": "Créer un compte",
 			"submit": "Se connecter",
 			"submitting": "Connexion…",
-			"failure": "La connexion a échoué."
+			"failure": "La connexion a échoué.",
+			"captchaFailure": "La vérification anti-robot a échoué. Réessayez."
 		},
 		"register": {
 			"title": "Créer un compte",

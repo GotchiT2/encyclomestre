@@ -26,7 +26,12 @@ export async function login(input: LoginInput, options?: RequestOptions): Promis
 	const tokens = await apiRequest<OAuth2TokenResponse>('/oauth2/token', {
 		...options,
 		method: 'POST',
-		body: oauthForm({ grant_type: 'password', username: input.email, password: input.password }),
+		body: oauthForm({
+			grant_type: 'password',
+			username: input.email,
+			password: input.password,
+			'cf-turnstile-response': input.turnstileToken
+		}),
 		skipAuth: true,
 		apiTarget: 'wikiforge'
 	});

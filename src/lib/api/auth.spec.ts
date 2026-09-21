@@ -74,7 +74,8 @@ describe('OAuth2 authentication', () => {
 				expect(Object.fromEntries(form)).toEqual({
 					grant_type: 'password',
 					username: 'demo@example.test',
-					password: 'secret'
+					password: 'secret',
+					'cf-turnstile-response': 'login-token'
 				});
 				return Response.json({
 					access_token: 'access',
@@ -90,7 +91,10 @@ describe('OAuth2 authentication', () => {
 		});
 
 		await expect(
-			login({ email: 'demo@example.test', password: 'secret' }, { fetch: fetcher as typeof fetch })
+			login(
+				{ email: 'demo@example.test', password: 'secret', turnstileToken: 'login-token' },
+				{ fetch: fetcher as typeof fetch }
+			)
 		).resolves.toEqual({
 			accessToken: 'access',
 			refreshToken: 'refresh',
