@@ -1,5 +1,5 @@
 export const TURNSTILE_SITE_KEY = '0x4AAAAAAE-vz1m5zVUnCH2j';
-export const TURNSTILE_TOKEN_HEADER = 'X-Turnstile-Token';
+export const TURNSTILE_TOKEN_HEADER = 'CF-Turnstile-Response';
 
 export type TurnstileAction = 'login' | 'open';
 
@@ -10,8 +10,10 @@ export interface TurnstileRenderOptions {
 	execution: 'execute';
 	theme: 'dark';
 	size: 'flexible';
+	retry: 'auto';
+	'refresh-timeout': 'auto';
 	callback: (token: string) => void;
-	'error-callback': (code: string) => void;
+	'error-callback': (code: string) => boolean;
 	'expired-callback': () => void;
 	'timeout-callback': () => void;
 }

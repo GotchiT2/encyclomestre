@@ -15,7 +15,10 @@
 	let widgetId: string | null = null;
 	let token: string | null = null;
 	let executing = false;
+	let errorCount = 0;
 	let pending: Array<{ resolve: (token: string) => void; reject: (error: Error) => void }> = [];
+	const fatalErrorCodes = new Set(['110100', '110110', '110200', '400020', '400070']);
+	const maxRetryableErrors = 3;
 
 	function execute() {
 		if (!api || !widgetId || executing || token || pending.length === 0) return;
@@ -49,7 +52,17 @@
 	export function reset() {
 		token = null;
 		executing = false;
+		errorCount = 0;
 		if (api && widgetId) api.reset(widgetId);
+	}
+
+	function handleError(code: string) {
+		errorCount += 1;
+		if (fatalErrorCodes.has(code) || errorCount >= maxRetryableErrors) {
+			rejectPending('Turnstile verification failed.');
+			return true;
+		}
+		return false;
 	}
 
 	onMount(() => {
@@ -65,18 +78,21 @@
 					execution: 'execute',
 					theme: 'dark',
 					size: 'flexible',
+					retry: 'auto',
+					'refresh-timeout': 'auto',
 					callback: (nextToken) => {
 						executing = false;
+						errorCount = 0;
 						token = nextToken;
 						resolvePending(nextToken);
 					},
-					'error-callback': () => rejectPending('Turnstile verification failed.'),
+					'error-callback': handleError,
 					'expired-callback': () => {
 						token = null;
 						executing = false;
 						execute();
 					},
-					'timeout-callback': () => rejectPending('Turnstile verification timed out.')
+					'timeout-callback': () => undefined
 				});
 				execute();
 			})

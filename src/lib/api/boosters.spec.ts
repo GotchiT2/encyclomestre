@@ -153,7 +153,7 @@ describe('booster API', () => {
 		expect(request).toHaveBeenCalledWith('/boosters/4/open-all', {
 			apiTarget: 'wikiforge',
 			method: 'POST',
-			headers: { 'X-Turnstile-Token': 'open-token' }
+			headers: { 'CF-Turnstile-Response': 'open-token' }
 		});
 	});
 
@@ -178,7 +178,7 @@ describe('booster API', () => {
 		expect(request).toHaveBeenCalledWith('/boosters/4/open', {
 			apiTarget: 'wikiforge',
 			method: 'POST',
-			headers: { 'X-Turnstile-Token': 'open-token' }
+			headers: { 'CF-Turnstile-Response': 'open-token' }
 		});
 		expect(result.cards.map((card) => card.id)).toEqual(['9', '3']);
 		expect(result.cards[1]).toMatchObject({ serialNumber: 1, maxCopies: 10 });
