@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -14,7 +15,8 @@
 	let failed = $state(false);
 
 	$effect(() => {
-		void load(active);
+		const period = active;
+		untrack(() => void load(period));
 	});
 	const cacheKey = $derived(active);
 	async function load(period: LeaderboardPeriod, force = false) {
