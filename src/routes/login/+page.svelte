@@ -4,30 +4,45 @@
 	import { page } from '$app/state';
 	import { getSafeRedirectTarget } from '$lib/auth/redirect';
 	import { markWikiForgeSessionVerified, persistSession } from '$lib/auth/session';
-	import { login } from '$lib/api';
+	import { ApiError, login } from '$lib/api';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
 	import * as Field from '$lib/components/ui/field';
 	import { Input } from '$lib/components/ui/input';
+	import TurnstileWidget from '$lib/components/security/turnstile-widget.svelte';
 	import { _ } from '$lib/i18n';
 
 	let email = $state('');
 	let password = $state('');
 	let error = $state<string>();
 	let isSubmitting = $state(false);
+	let turnstile = $state<{ verify: () => Promise<string>; reset: () => void } | null>(null);
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
 		error = undefined;
 		isSubmitting = true;
 		try {
-			const session = await login({ email, password });
+			if (!turnstile) throw new Error($_('auth.login.captchaFailure'));
+			const turnstileToken = await turnstile.verify();
+			const session = await login({ email, password, turnstileToken });
 			persistSession(localStorage, session);
 			markWikiForgeSessionVerified();
 			await goto(resolve(getSafeRedirectTarget(page.url.searchParams.get('redirectTo')) as '/'));
 		} catch (cause) {
-			error = cause instanceof Error ? cause.message : $_('auth.login.failure');
+			const captchaRejected =
+				cause instanceof ApiError &&
+				typeof cause.payload === 'object' &&
+				cause.payload !== null &&
+				'error' in cause.payload &&
+				cause.payload.error === 'invalid_captcha';
+			error = captchaRejected
+				? $_('auth.login.captchaFailure')
+				: cause instanceof Error
+					? cause.message
+					: $_('auth.login.failure');
 		} finally {
+			turnstile?.reset();
 			isSubmitting = false;
 		}
 	}
@@ -62,6 +77,11 @@
 								bind:value={password}
 							/>
 						</Field.Field>
+						<TurnstileWidget
+							bind:this={turnstile}
+							action="login"
+							onError={() => (error = $_('auth.login.captchaFailure'))}
+						/>
 						{#if error}<Field.Error>{error}</Field.Error>{/if}
 						<Button type="submit" class="w-full" disabled={isSubmitting}
 							>{isSubmitting ? $_('auth.login.submitting') : $_('auth.login.submit')}</Button

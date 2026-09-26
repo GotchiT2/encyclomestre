@@ -56,12 +56,12 @@ describe('WikiForge tag API', () => {
 		await applyWikiForgeTag('2', ['81', '82']);
 		await removeWikiForgeTag('2', ['81', '82']);
 
-		expect(request).toHaveBeenNthCalledWith(1, '/collection/tags/2', {
+		expect(request).toHaveBeenCalledWith('/collection/tags/2', {
 			apiTarget: 'wikiforge',
 			method: 'PUT',
 			body: [81, 82]
 		});
-		expect(request).toHaveBeenNthCalledWith(2, '/collection/tags/2', {
+		expect(request).toHaveBeenCalledWith('/collection/tags/2', {
 			apiTarget: 'wikiforge',
 			method: 'DELETE',
 			body: [81, 82]

@@ -28,12 +28,9 @@
 		unprotectWikiForgeCard,
 		unprotectWikiForgeCards
 	} from '$lib/api';
-	import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 	import { _ } from '$lib/i18n';
 	import { realtimeRefresh, refreshIncludes } from '$lib/realtime/resource-refresh';
 	import type {
-		ActiveSaleSummary,
-		CardRarity,
 		CardRecord,
 		CollectionBooleanFilter,
 		CollectionSort,
@@ -48,7 +45,7 @@
 	let { data }: { data: PageData } = $props();
 	let query = $state('');
 	let sortBy = $state<CollectionSort>('acquiredDate');
-	let selectedRarities = $state<CardRarity[]>([]);
+	let variantIds = $state<number[]>([]);
 	let tagFilterIds = $state<string[]>([]);
 	let duplicate = $state<CollectionBooleanFilter>('all');
 	let protection = $state<CollectionBooleanFilter>('all');
@@ -61,7 +58,6 @@
 	let responsePage = $state(0);
 	let nextCursor = $state<string | null>(null);
 	let hasNext = $state(false);
-	let rarityResults = $state<Partial<Record<CardRecord['rarityInitials'], number>>>({});
 	let loading = $state(true);
 	let loadingMore = $state(false);
 	let failed = $state(false);
@@ -80,7 +76,7 @@
 	let handledRealtimeRevision = 0;
 	const activeFilterCount = $derived(
 		(query ? 1 : 0) +
-			selectedRarities.length +
+			variantIds.length +
 			tagFilterIds.length +
 			(sortBy !== 'acquiredDate' ? 1 : 0) +
 			(duplicate !== 'all' ? 1 : 0) +
@@ -98,7 +94,7 @@
 		JSON.stringify([
 			effectiveCollectionQuery(query) ?? '',
 			sortBy,
-			selectedRarities,
+			variantIds,
 			tagFilterIds,
 			duplicate,
 			protection,
@@ -110,7 +106,7 @@
 		return {
 			query: effectiveCollectionQuery(query),
 			sortBy,
-			rarities: selectedRarities.map((rarity) => cardRarityCodeByName[rarity]),
+			variantIds,
 			tagIds: tagFilterIds,
 			duplicate,
 			protected: protection,
@@ -141,13 +137,12 @@
 		responsePage = response.page;
 		nextCursor = response.nextCursor;
 		hasNext = response.hasNext;
-		if (response.rarityResults !== null) rarityResults = response.rarityResults;
 	}
 
 	onMount(async () => {
 		query = data.filters.query;
 		sortBy = data.filters.sortBy;
-		selectedRarities = data.filters.selectedRarities;
+		variantIds = data.filters.variantIds;
 		tagFilterIds = data.filters.tagFilterIds;
 		duplicate = data.filters.duplicate;
 		protection = data.filters.protection;
@@ -196,7 +191,7 @@
 						buildCollectionFilterTarget({
 							query,
 							sortBy,
-							selectedRarities,
+							variantIds,
 							tagFilterIds,
 							duplicate,
 							protected: protection,
@@ -331,7 +326,7 @@
 	function clearFilters() {
 		query = '';
 		sortBy = 'acquiredDate';
-		selectedRarities = [];
+		variantIds = [];
 		tagFilterIds = [];
 		duplicate = 'all';
 		protection = 'all';
@@ -350,7 +345,7 @@
 			<FilterControls
 				bind:query
 				bind:sortBy
-				bind:selectedRarities
+				bind:variantIds
 				bind:tagFilterIds
 				bind:duplicate
 				bind:protected={protection}
@@ -358,7 +353,6 @@
 				{wishlistOwners}
 				{tags}
 				untaggedOption="-1"
-				rarityCounts={rarityResults}
 				canonical
 				onOpenTagEditor={() => (isTagEditorOpen = true)}
 				onClear={clearFilters}

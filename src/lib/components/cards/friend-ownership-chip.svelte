@@ -29,7 +29,7 @@
 			{#each owners as owner (owner.friendId)}
 				<DropdownMenu.Item class="flex min-h-9 items-center justify-between gap-3" disabled>
 					<span class="truncate">@{owner.username}</span>
-					<span class="shrink-0 font-mono text-[9px] text-energy">{Object.entries(owner.rarityCounts ?? {}).map(([rarity, count]) => `${rarity} ×${count}`).join(' · ')}</span>
+					<span class="shrink-0 font-mono text-[9px] text-energy">×{owner.ownedCount}</span>
 				</DropdownMenu.Item>
 			{/each}
 		</DropdownMenu.Content>

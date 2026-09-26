@@ -2,7 +2,14 @@ import { writable } from 'svelte/store';
 import type { AppNotification } from '$lib/types';
 
 export type RealtimeResource =
-	'collection' | 'friends' | 'messages' | 'notifications' | 'profile' | 'trades';
+	| 'achievements'
+	| 'collection'
+	| 'friends'
+	| 'guild'
+	| 'messages'
+	| 'notifications'
+	| 'profile'
+	| 'trades';
 
 export interface RealtimeRefresh {
 	revision: number;
@@ -20,7 +27,10 @@ export function publishRealtimeRefresh(resources: Iterable<RealtimeResource>) {
 export function publishNotificationRefresh(notifications: AppNotification[]) {
 	const resources = new Set<RealtimeResource>(['notifications']);
 	for (const notification of notifications) {
-		if (notification.type.startsWith('TRADE_')) {
+		if (notification.type === 'ACHIEVEMENT_UNLOCKED') {
+			resources.add('achievements');
+			resources.add('profile');
+		} else if (notification.type.startsWith('TRADE_')) {
 			resources.add('trades');
 			resources.add('collection');
 			resources.add('profile');
@@ -29,6 +39,9 @@ export function publishNotificationRefresh(notifications: AppNotification[]) {
 			resources.add('profile');
 		} else if (notification.type === 'FRIEND_REQUEST' || notification.type === 'FRIEND_ACCEPTED') {
 			resources.add('friends');
+		} else if (notification.type.startsWith('GUILD_')) {
+			resources.add('guild');
+			resources.add('profile');
 		}
 	}
 	publishRealtimeRefresh(resources);

@@ -7,8 +7,7 @@ describe('isPublicAuthenticationRoute', () => {
 		(pathname) => expect(isPublicAuthenticationRoute(pathname)).toBe(true)
 	);
 
-	it.each(['/', '/cards', '/users/42', '/login'])(
-		'protège la route applicative %s',
-		(pathname) => expect(isPublicAuthenticationRoute(pathname)).toBe(false)
+	it.each(['/', '/cards', '/users/42'])('protège la route applicative %s', (pathname) =>
+		expect(isPublicAuthenticationRoute(pathname)).toBe(false)
 	);
 });

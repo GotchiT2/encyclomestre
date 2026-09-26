@@ -2,6 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { apiRequest } = vi.hoisted(() => ({ apiRequest: vi.fn() }));
 vi.mock('./client', () => ({ apiRequest }));
+vi.mock('./variants', async (importOriginal) => ({
+	...(await importOriginal<typeof import('./variants')>()),
+	getVariants: vi
+		.fn()
+		.mockResolvedValue([
+			{ id: 1, name: 'Standard', color: '#b8f2d5', styles: ['NORMAL'], renderKey: 'standard' }
+		])
+}));
 
 import {
 	buyInstantSale,
@@ -21,7 +29,8 @@ const card = {
 	title: 'Rose',
 	description: 'Fleur symbole de passion.',
 	image: 'https://img.test/rose.jpg',
-	rarity: 'SR',
+	variantId: 1,
+	packId: 1,
 	atk: 20,
 	alt: false
 };
@@ -37,7 +46,6 @@ describe('WikiForge player profile contracts', () => {
 			lastConnection: 'THIS_WEEK',
 			full: true,
 			nbCards: 12,
-			nbCardsByRarity: { SR: 2 },
 			tags: [],
 			showcase: [{ title: 'Top', cards: [card] }]
 		});
@@ -45,7 +53,6 @@ describe('WikiForge player profile contracts', () => {
 			id: '7',
 			full: true,
 			lastConnection: 'THIS_WEEK',
-			nbCardsByRarity: { 'Super-Rare': 2 },
 			showcase: [
 				{ cards: [{ id: '12', imageUrl: card.image, shortDescription: card.description }] }
 			]
@@ -127,11 +134,16 @@ describe('WikiForge player profile contracts', () => {
 		}
 	);
 
-	it('passes a single rarity only to the global leaderboard and maps its cache metadata', async () => {
-		apiRequest.mockResolvedValueOnce({ top: [], computedAt: '2026-09-07T10:00:00', refreshAt: '2026-09-07T10:05:00' });
-		await expect(getLeaderboard('global', 'SR')).resolves.toMatchObject({
-			computedAt: '2026-09-07T10:00:00', refreshAt: '2026-09-07T10:05:00'
+	it('maps leaderboard cache metadata without a rarity filter', async () => {
+		apiRequest.mockResolvedValueOnce({
+			top: [],
+			computedAt: '2026-09-07T10:00:00',
+			refreshAt: '2026-09-07T10:05:00'
 		});
-		expect(apiRequest).toHaveBeenCalledWith('/leaderboards/global?rarity=SR', { apiTarget: 'wikiforge' });
+		await expect(getLeaderboard('global')).resolves.toMatchObject({
+			computedAt: '2026-09-07T10:00:00',
+			refreshAt: '2026-09-07T10:05:00'
+		});
+		expect(apiRequest).toHaveBeenCalledWith('/leaderboards/global', { apiTarget: 'wikiforge' });
 	});
 });

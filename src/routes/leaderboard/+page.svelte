@@ -1,26 +1,26 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { getLeaderboard, type LeaderboardPeriod } from '$lib/api';
 	import { currentSession } from '$lib/auth/session';
 	import { _ } from '$lib/i18n';
-	import { cardRarityOptions } from '$lib/domain/cards/rarities';
-	import type { CardRarityInitials, Leaderboard } from '$lib/types';
+	import type { Leaderboard } from '$lib/types';
 
 	const periods: LeaderboardPeriod[] = ['global', 'daily', 'weekly'];
 	let active = $state<LeaderboardPeriod>('global');
-	let rarity = $state<CardRarityInitials | ''>('');
 	let cache = $state<Record<string, Leaderboard>>({});
 	let loading = $state(false);
 	let failed = $state(false);
 
 	$effect(() => {
-		void load(active, active === 'global' ? rarity || undefined : undefined);
+		const period = active;
+		untrack(() => void load(period));
 	});
-	const cacheKey = $derived(active === 'global' && rarity ? `global:${rarity}` : active);
-	async function load(period: LeaderboardPeriod, selectedRarity?: CardRarityInitials, force = false) {
-		const key = period === 'global' && selectedRarity ? `global:${selectedRarity}` : period;
+	const cacheKey = $derived(active);
+	async function load(period: LeaderboardPeriod, force = false) {
+		const key = period;
 		const cached = cache[key];
 		if (
 			cached &&
@@ -31,7 +31,7 @@
 		loading = true;
 		failed = false;
 		try {
-			cache[key] = await getLeaderboard(period, selectedRarity);
+			cache[key] = await getLeaderboard(period);
 		} catch {
 			failed = true;
 		} finally {
@@ -63,22 +63,11 @@
 				onclick={() => (active = period)}>{$_(`leaderboard.${period}`)}</Button
 			>{/each}
 	</div>
-	{#if active === 'global'}
-		<label class="ml-auto flex w-full max-w-xs items-center gap-2 sm:w-auto" for="leaderboard-rarity">
-			<span class="forge-label shrink-0">{$_('leaderboard.rarity')}</span>
-			<select id="leaderboard-rarity" bind:value={rarity} class="h-10 min-w-0 flex-1">
-				<option value="">{$_('leaderboard.all_rarities')}</option>
-				{#each cardRarityOptions as option (option.initials)}
-					<option value={option.initials}>{option.initials} · {option.value}</option>
-				{/each}
-			</select>
-		</label>
-	{/if}
 	{#if loading && !board}<p class="forge-label text-primary">
 			{$_('common.loading')}
 		</p>{:else if failed && !board}<div class="forge-panel-flat p-4">
 			<p class="text-destructive">{$_('leaderboard.error')}</p>
-			<Button class="mt-3" onclick={() => load(active, active === 'global' ? rarity || undefined : undefined, true)}>{$_('common.retry')}</Button>
+			<Button class="mt-3" onclick={() => load(active, true)}>{$_('common.retry')}</Button>
 		</div>{:else if board}
 		<div class="overflow-hidden border border-primary/25 bg-card">
 			{#each board.top as entry (entry.id)}<a
@@ -102,8 +91,21 @@
 		</div>
 		{#if board.computedAt && board.refreshAt}
 			<p class="forge-label text-muted-foreground">
-				{$_('leaderboard.computed_at', { values: { date: new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(board.computedAt)) } })}
-				· {$_('leaderboard.refresh_at', { values: { date: new Intl.DateTimeFormat('fr-FR', { timeStyle: 'short' }).format(new Date(board.refreshAt)) } })}
+				{$_('leaderboard.computed_at', {
+					values: {
+						date: new Intl.DateTimeFormat('fr-FR', {
+							dateStyle: 'short',
+							timeStyle: 'short'
+						}).format(new Date(board.computedAt))
+					}
+				})}
+				· {$_('leaderboard.refresh_at', {
+					values: {
+						date: new Intl.DateTimeFormat('fr-FR', { timeStyle: 'short' }).format(
+							new Date(board.refreshAt)
+						)
+					}
+				})}
 			</p>
 		{/if}
 		{#if !meInTop && board.around.length}<section>

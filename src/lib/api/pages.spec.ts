@@ -1,229 +1,46 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$env/dynamic/public', () => ({
-	env: {
-		PUBLIC_API_MOCK_ENABLED: 'false',
-		PUBLIC_WIKIFORGE_API_BASE_URL: 'https://api.wikiforge.fr'
-	}
+const { request, variants } = vi.hoisted(() => ({
+	request: vi.fn(),
+	variants: [
+		{ id: 8, name: 'Normale', color: '#b8f2d5', styles: ['NORMAL'], renderKey: 'standard' },
+		{ id: 9, name: 'Full art', color: '#ffe144', styles: ['FULL_ART'], renderKey: 'full-art' }
+	]
+}));
+vi.mock('./client', () => ({ apiRequest: request }));
+vi.mock('./variants', async (importOriginal) => ({
+	...(await importOriginal<typeof import('./variants')>()),
+	getVariants: vi.fn().mockResolvedValue(variants)
 }));
 
-import { getWikiForgePublicPage, getWikiForgePublicPages, toPublicPage } from './pages';
+import { getWikiForgePublicPage, getWikiForgePublicPages, toPublicPageCardRecord } from './pages';
 
-afterEach(() => vi.unstubAllGlobals());
+describe('public pages variants', () => {
+	beforeEach(() => request.mockReset());
 
-describe('WikiForge public pages API', () => {
-	it('uses the canonical catalogue contract', async () => {
-		const fetcher = vi.fn(async () =>
-			Response.json({
-				nbResults: 0,
-				page: 0,
-				rarityResults: {},
-				results: [],
-				sortBy: 'RARITY',
-				sortDirection: 'ASC'
-			})
-		);
-
-		await getWikiForgePublicPages(
-			{ q: 'Paris', page: 2, rarity: 'L', sortBy: 'name', sortDirection: 'DESC' },
-			{ fetch: fetcher as typeof fetch }
-		);
-
-		expect(fetcher).toHaveBeenCalledWith(
-			'https://api.wikiforge.fr/pages?page=2&sortBy=NAME&sortDirection=DESC&q=Paris&rarity=L',
-			expect.objectContaining({ credentials: 'include' })
-		);
-	});
-
-	it('uses relevance by default for a textual search', async () => {
-		const fetcher = vi.fn(async () =>
-			Response.json({
-				nbResults: 0,
-				page: 0,
-				rarityResults: {},
-				results: [],
-				sortBy: 'RELEVANCE',
-				sortDirection: 'DESC'
-			})
-		);
-
-		await getWikiForgePublicPages({ q: 'Rose' }, { fetch: fetcher as typeof fetch });
-
-		expect(fetcher).toHaveBeenCalledWith(
-			'https://api.wikiforge.fr/pages?page=0&sortBy=RELEVANCE&sortDirection=DESC&q=Rose',
-			expect.any(Object)
-		);
-	});
-
-	it('loads one public card from its dedicated endpoint', async () => {
-		const fetcher = vi.fn(async () =>
-			Response.json({
-				id: 42,
-				title: 'Paris',
-				atk: 120,
-				length: 50,
-				viewCount: 1000,
-				rarity: 'L',
-				createdAt: '2026-08-18T12:00:00Z',
-				globalCount: 3,
-				ownedCount: 2
-			})
-		);
-
-		await getWikiForgePublicPage('42', { fetch: fetcher as typeof fetch });
-
-		expect(fetcher).toHaveBeenCalledWith(
-			'https://api.wikiforge.fr/pages/42',
-			expect.objectContaining({ credentials: 'include' })
-		);
-	});
-
-	it('forwards the current OAuth access token to WikiForge', async () => {
-		vi.stubGlobal('localStorage', {
-			length: 1,
-			clear: vi.fn(),
-			getItem: () => JSON.stringify({ accessToken: 'cards-access-token', user: { id: '1' } }),
-			key: () => null,
-			setItem: vi.fn(),
-			removeItem: vi.fn()
-		} satisfies Storage);
-		const fetcher = vi.fn(async () =>
-			Response.json({
-				nbResults: 0,
-				page: 0,
-				rarityResults: {},
-				results: [],
-				sortBy: 'RARITY',
-				sortDirection: 'ASC'
-			})
-		);
-
-		await getWikiForgePublicPages({}, { fetch: fetcher as typeof fetch });
-
-		expect(fetcher).toHaveBeenCalledWith(
-			'https://api.wikiforge.fr/pages?page=0&sortBy=RARITY&sortDirection=ASC',
-			expect.objectContaining({
-				headers: expect.objectContaining({ authorization: 'Bearer cards-access-token' })
-			})
-		);
-	});
-
-	it('maps the new public payload to a display card and its pagination', () => {
-		const page = toPublicPage({
-			nbResults: 51,
+	it('loads the variant catalogue with catalogue and detail responses', async () => {
+		request.mockResolvedValueOnce({
+			nbResults: 0,
 			page: 0,
-			rarityResults: { L: 1, UR: 0, SR: 0, R: 0, PC: 0, C: 50 },
-			results: [
-				{
-					id: 42,
-					title: 'Paris',
-					description: 'Capitale française',
-					image: 'https://images.wikiforge.test/Paris.jpg',
-					atk: 120,
-					length: 50,
-					viewCount: 1000,
-					rarity: 'L',
-					createdAt: '2026-08-18T12:00:00Z',
-					globalCount: 3,
-					ownedCount: 2,
-					friends: [
-						{ id: 7, name: 'Alice', rarityCounts: { SR: 1, C: 2 } },
-						{ id: 8, name: 'Bob', rarityCounts: { L: 1 } }
-					]
-				}
-			],
-			sortBy: 'RARITY',
+			results: [],
+			sortBy: 'NAME',
 			sortDirection: 'ASC'
 		});
+		await expect(getWikiForgePublicPages()).resolves.toMatchObject({ _variants: variants });
 
-		expect(page.meta).toEqual({ page: 1, pageSize: 1, total: 51, totalPages: 51 });
-		expect(page.rarityResults).toEqual({ L: 1, UR: 0, SR: 0, R: 0, PC: 0, C: 50 });
-		expect(page.items[0]).toMatchObject({
-			id: '42',
-			title: 'Paris',
-			rarityInitials: 'L',
-			attack: 120,
-			globalSupply: 3,
-			ownedCount: 2,
-			friendsWhoOwn: [
-				{ friendId: '7', username: 'Alice', ownedCount: 3, rarityCounts: { SR: 1, C: 2 } },
-				{ friendId: '8', username: 'Bob', ownedCount: 1, rarityCounts: { L: 1 } }
-			],
-			wikipediaUrl: 'https://fr.wikipedia.org/?curid=42'
+		request.mockResolvedValueOnce({
+			id: 42,
+			title: 'Article',
+			atk: 1,
+			globalCount: 0,
+			defaultVariantId: 9
 		});
-		expect(page.items[0].imageUrl).toBe('https://images.wikiforge.test/Paris.jpg');
+		await expect(getWikiForgePublicPage(42)).resolves.toMatchObject({ _variants: variants });
 	});
 
-	it('maps a successful zero-result payload without treating it as an error', () => {
-		expect(
-			toPublicPage({
-				nbResults: 0,
-				page: 0,
-				results: null,
-				rarityResults: null,
-				sortBy: 'RELEVANCE',
-				sortDirection: 'DESC'
-			})
-		).toEqual({
-			items: [],
-			rarityResults: { L: 0, UR: 0, SR: 0, R: 0, PC: 0, C: 0 },
-			meta: { page: 1, pageSize: 1, total: 0, totalPages: 1 }
-		});
-	});
-
-	it('keeps results visible when optional friend data is malformed', () => {
-		const result = toPublicPage({
-			nbResults: 1,
-			page: 0,
-			results: [
-				{
-					id: 42,
-					title: 'Paris',
-					atk: 120,
-					viewCount: 1000,
-					rarity: 'L',
-					createdAt: '2026-08-18T12:00:00Z',
-					globalCount: 3,
-					friends: {} as never
-				}
-			],
-			sortBy: 'RARITY',
-			sortDirection: 'ASC'
-		});
-
-		expect(result.items).toHaveLength(1);
-		expect(result.items[0].friendsWhoOwn).toEqual([]);
-	});
-
-	it('accepts creationDate and does not reject a card when its date is absent', () => {
-		const result = toPublicPage({
-			nbResults: 2,
-			page: 0,
-			results: [
-				{
-					id: 42,
-					title: 'Avec date récente',
-					atk: 120,
-					viewCount: 1000,
-					rarity: 'L',
-					creationDate: '2026-09-07T10:00:00',
-					globalCount: 3
-				},
-				{
-					id: 43,
-					title: 'Sans date',
-					atk: 10,
-					viewCount: 20,
-					rarity: 'C',
-					globalCount: 1
-				}
-			],
-			sortBy: 'RARITY',
-			sortDirection: 'ASC'
-		});
-
-		expect(result.items).toHaveLength(2);
-		expect(result.items[0].acquiredAt).toBe('2026-09-07T10:00:00.000Z');
-		expect(result.items[1].acquiredAt).toBeUndefined();
+	it('uses the declared default, then the first NORMAL variant', () => {
+		const page = { id: 42, title: 'Article', atk: 1, globalCount: 0 };
+		expect(toPublicPageCardRecord({ ...page, defaultVariantId: 9 }, variants).variantId).toBe(9);
+		expect(toPublicPageCardRecord(page, variants).variantId).toBe(8);
 	});
 });

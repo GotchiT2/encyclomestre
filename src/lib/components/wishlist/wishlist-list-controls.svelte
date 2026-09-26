@@ -1,20 +1,16 @@
 <script lang="ts">
-	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
 	import * as Field from '$lib/components/ui/field';
 	import { Input } from '$lib/components/ui/input';
-	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { _ } from '$lib/i18n';
-	import type { CardRarity, WishlistSort } from '$lib/types';
+	import type { WishlistSort } from '$lib/types';
 
 	let {
 		query = $bindable(''),
-		rarities = $bindable<CardRarity[]>([]),
 		sortBy = $bindable<WishlistSort>('date'),
 		sortDirection = $bindable<'ASC' | 'DESC'>('DESC'),
 		onChange
 	}: {
 		query?: string;
-		rarities?: CardRarity[];
 		sortBy?: WishlistSort;
 		sortDirection?: 'ASC' | 'DESC';
 		onChange?: () => void;
@@ -42,7 +38,6 @@
 			<select id="wishlist-sort" bind:value={sortBy} onchange={onChange} class="w-full">
 				<option value="date">{$_('wishlist.sort_date')}</option>
 				<option value="name">{$_('collection.sortName')}</option>
-				<option value="rarity">{$_('wishlist.sort_rarity')}</option>
 			</select>
 		</Field.Field>
 		<Field.Field>
@@ -60,9 +55,4 @@
 			</select>
 		</Field.Field>
 	</div>
-
-	<Field.FieldSet class="gap-2">
-		<Field.FieldLegend class="forge-label">{$_('codex.rarities')}</Field.FieldLegend>
-		<RaritySelector options={cardRarityOptions} bind:selected={rarities} compact {onChange} />
-	</Field.FieldSet>
 </Field.FieldGroup>

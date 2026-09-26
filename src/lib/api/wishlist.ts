@@ -1,4 +1,3 @@
-import { cardRarityCodeByName } from '$lib/domain/cards/rarities';
 import type {
 	PaginatedResponse,
 	WishlistAccess,
@@ -9,11 +8,8 @@ import type {
 	WishlistRegistrySummary
 } from '$lib/types';
 import { apiRequest, type RequestOptions } from './client';
-import {
-	toPublicPageCardRecord,
-	type WikiForgePublicPageCard,
-	type WikiForgePublicPageRarity
-} from './pages';
+import { toPublicPageCardRecord, type WikiForgePublicPageCard } from './pages';
+import { getVariants } from './variants';
 import { wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
 
 interface ApiWishlistSummary {
@@ -41,7 +37,7 @@ interface ApiWishlistEntry {
 interface ApiWishlistResult {
 	nbResults?: number;
 	page?: number;
-	sortBy?: 'ADDED_AT' | 'NAME' | 'RARITY';
+	sortBy?: 'ADDED_AT' | 'NAME';
 	sortDirection?: 'ASC' | 'DESC';
 	results?: ApiWishlistEntry[] | null;
 	filters?: Record<string, unknown>;
@@ -100,7 +96,7 @@ export async function getWishlists(
 
 export async function getWishlistPage(
 	id: string,
-	{ page = 1, query, rarities = [], sortBy = 'date', sortDirection = 'DESC' }: WishlistQuery = {},
+	{ page = 1, query, sortBy = 'date', sortDirection = 'DESC' }: WishlistQuery = {},
 	options?: RequestOptions
 ): Promise<PaginatedResponse<WishlistPageEntry>> {
 	const parameters = new URLSearchParams({
@@ -109,20 +105,20 @@ export async function getWishlistPage(
 		sortDirection
 	});
 	if ((query?.trim().length ?? 0) >= 3) parameters.set('q', query!.trim());
-	for (const rarity of rarities) {
-		parameters.append('rarity', cardRarityCodeByName[rarity] as WikiForgePublicPageRarity);
-	}
-	const response = await apiRequest<ApiWishlistResult | null | undefined>(
-		`/wishlists/${wikiForgeNumericId(id, 'wishlist')}?${parameters}`,
-		wikiForgeOptions(options)
-	);
+	const [response, variants] = await Promise.all([
+		apiRequest<ApiWishlistResult | null | undefined>(
+			`/wishlists/${wikiForgeNumericId(id, 'wishlist')}?${parameters}`,
+			wikiForgeOptions(options)
+		),
+		getVariants(options)
+	]);
 	const results = response?.results ?? [];
 	const total = Math.max(0, response?.nbResults ?? results.length);
 	if (results.length && !wishlistPageSizes.has(id)) wishlistPageSizes.set(id, results.length);
 	const pageSize = wishlistPageSizes.get(id) ?? Math.max(1, results.length || total || 1);
 	return {
 		items: results.map((entry) => ({
-			card: toPublicPageCardRecord(entry.page),
+			card: toPublicPageCardRecord(entry.page, variants),
 			addedAt: wikiForgeUtcDate(entry.addedAt).toISOString()
 		})),
 		meta: {
@@ -222,7 +218,11 @@ export const addWishlistRegistryCards = (id: string, pageIds: string[], options?
 		body: wishlistPageBatch(pageIds)
 	});
 
-export const removeWishlistRegistryCards = (id: string, pageIds: string[], options?: RequestOptions) =>
+export const removeWishlistRegistryCards = (
+	id: string,
+	pageIds: string[],
+	options?: RequestOptions
+) =>
 	apiRequest<void>(`/wishlists/${wikiForgeNumericId(id, 'wishlist')}/pages`, {
 		...wikiForgeOptions(options),
 		method: 'DELETE',

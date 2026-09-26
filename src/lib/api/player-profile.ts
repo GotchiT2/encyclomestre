@@ -8,22 +8,13 @@ import type {
 	ShowcaseLine,
 	UserProfile
 } from '$lib/types';
-import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/rarities';
 import { apiRequest, type RequestOptions } from './client';
-import { toWikiForgeCollectionCard, type WikiForgeCollectionCardDto } from './collection';
+import { toCardRecord, type WikiForgeCardDto } from './cards';
+import { getVariants } from './variants';
+import type { VariantDefinition } from '$lib/types';
 import { wikiForgeNumericId } from './wikiforge-contract';
 
-export interface ShowcaseCardDto {
-	id: number;
-	pageId: number;
-	title: string;
-	description?: string;
-	image?: string;
-	nsfw?: boolean;
-	rarity: CardRarityCode;
-	atk?: number;
-	alt?: boolean;
-}
+export type ShowcaseCardDto = WikiForgeCardDto;
 
 interface ShowcaseLineDto {
 	title: string;
@@ -47,7 +38,6 @@ interface UserProfileDto {
 	lastConnection?: LastConnection;
 	full: boolean;
 	nbCards: number;
-	nbCardsByRarity?: Partial<Record<CardRarityCode, number>>;
 	tags?: Array<{ name: string; color: string }>;
 	showcase?: ShowcaseLineDto[];
 }
@@ -74,39 +64,35 @@ interface LeaderboardDto {
 
 export type LeaderboardPeriod = 'global' | 'daily' | 'weekly';
 
-function toShowcaseCard(card: ShowcaseCardDto) {
-	return toWikiForgeCollectionCard({
-		id: card.id,
-		pageId: card.pageId,
-		title: card.title,
-		description: card.description,
-		image: card.image,
-		nsfw: card.nsfw,
-		rarity: card.rarity,
-		atk: card.atk,
-		alt: card.alt
-	} satisfies WikiForgeCollectionCardDto);
+function toShowcaseCard(card: ShowcaseCardDto, variants: VariantDefinition[]) {
+	return toCardRecord(card, variants);
 }
 
-function toShowcaseLine(line: ShowcaseLineDto): ShowcaseLine {
-	return { title: line.title, cards: (line.cards ?? []).map(toShowcaseCard) };
+function toShowcaseLine(line: ShowcaseLineDto, variants: VariantDefinition[]): ShowcaseLine {
+	return {
+		title: line.title,
+		cards: (line.cards ?? []).map((card) => toShowcaseCard(card, variants))
+	};
 }
 
-function toShowcase(dto: ShowcaseDto): Showcase {
+function toShowcase(dto: ShowcaseDto, variants: VariantDefinition[]): Showcase {
 	return {
 		slots: dto.slots,
 		maxSlots: dto.maxSlots,
 		usedSlots: dto.usedSlots,
 		slotPrice: dto.slotPrice,
-		lines: (dto.lines ?? []).map(toShowcaseLine)
+		lines: (dto.lines ?? []).map((line) => toShowcaseLine(line, variants))
 	};
 }
 
 export async function getUserProfile(id: string, options?: RequestOptions): Promise<UserProfile> {
-	const dto = await apiRequest<UserProfileDto>(`/users/${wikiForgeNumericId(id, 'utilisateur')}`, {
-		...options,
-		apiTarget: 'wikiforge'
-	});
+	const [dto, variants] = await Promise.all([
+		apiRequest<UserProfileDto>(`/users/${wikiForgeNumericId(id, 'utilisateur')}`, {
+			...options,
+			apiTarget: 'wikiforge'
+		}),
+		getVariants(options)
+	]);
 	return {
 		id: String(dto.id),
 		name: dto.name,
@@ -116,73 +102,101 @@ export async function getUserProfile(id: string, options?: RequestOptions): Prom
 		lastConnection: dto.lastConnection,
 		full: dto.full,
 		nbCards: dto.nbCards,
-		nbCardsByRarity: Object.fromEntries(
-			Object.entries(dto.nbCardsByRarity ?? {}).map(([code, count]) => [
-				cardRarityByCode[code as CardRarityCode].name,
-				count
-			])
-		),
 		tags: dto.tags ?? [],
-		showcase: (dto.showcase ?? []).map(toShowcaseLine)
+		showcase: (dto.showcase ?? []).map((line) => toShowcaseLine(line, variants))
 	};
 }
 
-export const getMyShowcase = (options?: RequestOptions) =>
-	apiRequest<ShowcaseDto>('/me/showcase', { ...options, apiTarget: 'wikiforge' }).then(toShowcase);
+export const getMyShowcase = async (options?: RequestOptions) => {
+	const [showcase, variants] = await Promise.all([
+		apiRequest<ShowcaseDto>('/me/showcase', { ...options, apiTarget: 'wikiforge' }),
+		getVariants(options)
+	]);
+	return toShowcase(showcase, variants);
+};
 
-export const replaceMyShowcase = (
+export const replaceMyShowcase = async (
 	lines: Array<{ title: string; cardIds: string[] }>,
 	options?: RequestOptions
-) =>
-	apiRequest<ShowcaseDto>('/me/showcase', {
-		...options,
-		apiTarget: 'wikiforge',
-		method: 'PUT',
-		body: {
-			lines: lines.map((line) => ({
-				title: line.title.trim(),
-				cardIds: line.cardIds.map((id) => wikiForgeNumericId(id, 'carte'))
-			}))
-		}
-	}).then(toShowcase);
+) => {
+	const [showcase, variants] = await Promise.all([
+		apiRequest<ShowcaseDto>('/me/showcase', {
+			...options,
+			apiTarget: 'wikiforge',
+			method: 'PUT',
+			body: {
+				lines: lines.map((line) => ({
+					title: line.title.trim(),
+					cardIds: line.cardIds.map((id) => wikiForgeNumericId(id, 'carte'))
+				}))
+			}
+		}),
+		getVariants(options)
+	]);
+	return toShowcase(showcase, variants);
+};
 
-export const buyShowcaseSlot = (options?: RequestOptions) =>
-	apiRequest<ShowcaseDto>('/me/showcase/slots', {
-		...options,
-		apiTarget: 'wikiforge',
-		method: 'POST'
-	}).then(toShowcase);
+export const buyShowcaseSlot = async (options?: RequestOptions) => {
+	const [showcase, variants] = await Promise.all([
+		apiRequest<ShowcaseDto>('/me/showcase/slots', {
+			...options,
+			apiTarget: 'wikiforge',
+			method: 'POST'
+		}),
+		getVariants(options)
+	]);
+	return toShowcase(showcase, variants);
+};
 
-function toSales(dto: SalesDto): SalesResult {
+function toSales(dto: SalesDto, variants: VariantDefinition[]): SalesResult {
 	return {
 		instantSales: (dto.instantSales ?? []).map((sale) => ({
 			id: String(sale.id),
 			price: sale.price,
-			card: toShowcaseCard(sale.card)
+			card: toShowcaseCard(sale.card, variants)
 		}))
 	};
 }
 
-export const getUserInstantSales = (userId: string, options?: RequestOptions) =>
-	apiRequest<SalesDto>(`/users/${wikiForgeNumericId(userId, 'utilisateur')}/sales`, {
-		...options,
-		apiTarget: 'wikiforge'
-	}).then(toSales);
+export const getUserInstantSales = async (userId: string, options?: RequestOptions) => {
+	const [sales, variants] = await Promise.all([
+		apiRequest<SalesDto>(`/users/${wikiForgeNumericId(userId, 'utilisateur')}/sales`, {
+			...options,
+			apiTarget: 'wikiforge'
+		}),
+		getVariants(options)
+	]);
+	return toSales(sales, variants);
+};
 
-export const createInstantSale = (cardId: string, price: number, options?: RequestOptions) =>
-	apiRequest<SalesDto>('/me/sales', {
-		...options,
-		apiTarget: 'wikiforge',
-		method: 'POST',
-		body: { cardId: wikiForgeNumericId(cardId, 'carte'), price }
-	}).then(toSales);
+export const createInstantSale = async (
+	cardId: string,
+	price: number,
+	options?: RequestOptions
+) => {
+	const [sales, variants] = await Promise.all([
+		apiRequest<SalesDto>('/me/sales', {
+			...options,
+			apiTarget: 'wikiforge',
+			method: 'POST',
+			body: { cardId: wikiForgeNumericId(cardId, 'carte'), price }
+		}),
+		getVariants(options)
+	]);
+	return toSales(sales, variants);
+};
 
-export const cancelInstantSale = (saleId: string, options?: RequestOptions) =>
-	apiRequest<SalesDto>(`/me/sales/${wikiForgeNumericId(saleId, 'vente')}`, {
-		...options,
-		apiTarget: 'wikiforge',
-		method: 'DELETE'
-	}).then(toSales);
+export const cancelInstantSale = async (saleId: string, options?: RequestOptions) => {
+	const [sales, variants] = await Promise.all([
+		apiRequest<SalesDto>(`/me/sales/${wikiForgeNumericId(saleId, 'vente')}`, {
+			...options,
+			apiTarget: 'wikiforge',
+			method: 'DELETE'
+		}),
+		getVariants(options)
+	]);
+	return toSales(sales, variants);
+};
 
 export const buyInstantSale = (saleId: string, options?: RequestOptions) =>
 	apiRequest<void>(`/sales/${wikiForgeNumericId(saleId, 'vente')}/buy`, {
@@ -202,14 +216,8 @@ function toLeaderboardEntry(entry: LeaderboardEntryDto): LeaderboardEntry {
 	};
 }
 
-export const getLeaderboard = (
-	period: LeaderboardPeriod,
-	rarity?: CardRarityCode,
-	options?: RequestOptions
-) => {
-	const parameters = new URLSearchParams();
-	if (period === 'global' && rarity) parameters.set('rarity', rarity);
-	return apiRequest<LeaderboardDto>(`/leaderboards/${period}${parameters.size ? `?${parameters}` : ''}`, {
+export const getLeaderboard = (period: LeaderboardPeriod, options?: RequestOptions) => {
+	return apiRequest<LeaderboardDto>(`/leaderboards/${period}`, {
 		...options,
 		apiTarget: 'wikiforge'
 	}).then((dto): Leaderboard => ({

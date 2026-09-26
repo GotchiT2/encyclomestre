@@ -1,5 +1,8 @@
 export * from './auth';
 
+export * from './achievements';
+export * from './cards';
+
 export * from './card-query';
 export * from './boosters';
 export * from './collection';
@@ -11,6 +14,7 @@ export * from './pages';
 export * from './player-profile';
 export * from './trades';
 export * from './users';
+export * from './variants';
 export * from './wishlist';
 export * from './wikiforge';
 export * from './wikiforge-contract';

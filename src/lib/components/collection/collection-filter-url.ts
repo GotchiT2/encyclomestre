@@ -1,9 +1,9 @@
-import type { CardRarity, CollectionBooleanFilter, CollectionSort } from '$lib/types';
+import type { CollectionBooleanFilter, CollectionSort } from '$lib/types';
 
 export interface CollectionFilters {
 	query: string;
 	sortBy: CollectionSort;
-	selectedRarities: CardRarity[];
+	variantIds: number[];
 	tagFilterIds: string[];
 	duplicate: CollectionBooleanFilter;
 	protected: CollectionBooleanFilter;
@@ -20,7 +20,7 @@ export function buildCollectionFilterTarget(filters: CollectionFilters) {
 	const query = effectiveCollectionQuery(filters.query);
 	if (query) parameters.set('q', query);
 	if (filters.sortBy !== 'acquiredDate') parameters.set('sortBy', filters.sortBy);
-	filters.selectedRarities.forEach((rarity) => parameters.append('rarity', rarity));
+	filters.variantIds.forEach((variantId) => parameters.append('variant', String(variantId)));
 	filters.tagFilterIds.forEach((tagId) => parameters.append('tag', tagId));
 	if (filters.duplicate !== 'all') parameters.set('duplicate', filters.duplicate);
 	if (filters.protected !== 'all') parameters.set('protected', filters.protected);

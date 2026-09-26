@@ -1,17 +1,20 @@
 <script lang="ts">
 	let {
-		rarityColor,
-		isFullArt = false
+		color,
+		fullArt = false,
+		renderKey = 'standard'
 	}: {
-		rarityColor: string;
-		isFullArt?: boolean;
+		color: string;
+		fullArt?: boolean;
+		renderKey?: string;
 	} = $props();
 </script>
 
 <div
 	class="booster-card-back"
-	class:booster-card-back-full-art={isFullArt}
-	style={`--rarity-color:${rarityColor}`}
+	class:booster-card-back-full-art={fullArt}
+	style={`--variant-color:${color}`}
+	data-render-key={renderKey}
 	aria-hidden="true"
 >
 	<div class="booster-card-back-grid"></div>
@@ -30,7 +33,7 @@
 		background:
 			radial-gradient(
 				circle at 50% 45%,
-				color-mix(in srgb, var(--rarity-color) 20%, transparent),
+				color-mix(in srgb, var(--variant-color) 20%, transparent),
 				transparent 35%
 			),
 			linear-gradient(145deg, #102b3e 0%, #07121f 52%, #0d2030 100%);
@@ -51,7 +54,7 @@
 
 	.booster-card-back::after {
 		inset: 12%;
-		border-color: color-mix(in srgb, var(--rarity-color) 42%, transparent);
+		border-color: color-mix(in srgb, var(--variant-color) 42%, transparent);
 		transform: rotate(180deg);
 	}
 
@@ -73,10 +76,10 @@
 		width: 43%;
 		aspect-ratio: 1;
 		place-items: center;
-		border: 2px solid color-mix(in srgb, var(--rarity-color) 75%, var(--primary));
+		border: 2px solid color-mix(in srgb, var(--variant-color) 75%, var(--primary));
 		background: radial-gradient(circle, #16354a 0 28%, #08131f 30% 58%, #102b3e 60%);
 		box-shadow:
-			0 0 1.5rem color-mix(in srgb, var(--rarity-color) 32%, transparent),
+			0 0 1.5rem color-mix(in srgb, var(--variant-color) 32%, transparent),
 			inset 0 0 1rem rgb(0 0 0 / 75%);
 		transform: translate(-50%, -55%) rotate(45deg);
 	}
@@ -86,7 +89,7 @@
 		font-size: clamp(2rem, 5vw, 4rem);
 		font-weight: 900;
 		color: var(--primary);
-		text-shadow: 0 0 0.8rem color-mix(in srgb, var(--rarity-color) 65%, transparent);
+		text-shadow: 0 0 0.8rem color-mix(in srgb, var(--variant-color) 65%, transparent);
 		transform: rotate(-45deg);
 	}
 

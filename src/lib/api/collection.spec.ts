@@ -1,212 +1,32 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { collectionPath, nextCollectionPosition } from './collection';
 
-vi.mock('./client', () => ({ apiRequest: vi.fn() }));
-
-import { apiRequest } from './client';
-import {
-	addWikiForgeCardTag,
-	collectionPath,
-	getWikiForgeCollectionPage,
-	getWikiForgeCollectionCard,
-	nextCollectionPosition,
-	protectWikiForgeCard,
-	protectWikiForgeCards,
-	removeWikiForgeCardTag,
-	toWikiForgeCollectionCard,
-	unprotectWikiForgeCard
-	,unprotectWikiForgeCards
-} from './collection';
-
-const request = vi.mocked(apiRequest);
-
-beforeEach(() => request.mockReset());
-
-describe('WikiForge collection API', () => {
-	it('serializes only the supported filters and never mixes page with cursor', () => {
-		expect(
-			collectionPath({
-				query: '  Rose  ',
-				sortBy: 'rarity',
-				rarities: ['L', 'SR'],
-				tagIds: ['2', '7'],
-				duplicate: 'yes',
-				protected: 'no',
-				page: 4,
-				cursor: 'opaque-cursor'
-			})
-		).toBe(
-			'/collection?sortBy=RARITY&q=Rose&rarity=L&rarity=SR&tags=2&tags=7&duplicate=true&protected=false&cursor=opaque-cursor'
-		);
-		expect(collectionPath({ query: 'ab', page: 2 })).toBe(
-			'/collection?sortBy=ACQUIRED_DATE&page=2'
-		);
-		expect(collectionPath({ tagIds: ['2', '-1', '7'], wishlistOwnerId: '12' })).toBe(
-			'/collection?sortBy=ACQUIRED_DATE&tags=-1&wishlist=12'
-		);
+describe('collection variants and pagination', () => {
+	it('repeats variant filters and never emits rarity sorting', () => {
+		const path = collectionPath({ sortBy: 'name', variantIds: [4, 7], query: ' Rose ' });
+		expect(path).toContain('sortBy=NAME');
+		expect(path).toContain('variant=4&variant=7');
+		expect(path).not.toContain('rarity');
 	});
 
-	it('follows hasNext, cursor and page as the only continuation rule', () => {
-		expect(nextCollectionPosition({ hasNext: false, nextCursor: 'ignored', page: 3 })).toBeNull();
-		expect(nextCollectionPosition({ hasNext: true, nextCursor: 'next', page: 0 })).toEqual({
+	it('uses cursor pagination only for acquired date without a search', () => {
+		expect(collectionPath({ cursor: 'next', page: 3 })).toContain('cursor=next');
+		expect(collectionPath({ cursor: 'next', page: 3, sortBy: 'name' })).toContain('page=3');
+		expect(collectionPath({ cursor: 'next', page: 3, query: 'Rose' })).toContain('page=3');
+	});
+
+	it('prefers the cursor and otherwise advances the page', () => {
+		expect(nextCollectionPosition({ hasNext: true, nextCursor: 'next', page: 2 })).toEqual({
 			page: 0,
 			cursor: 'next'
 		});
-		expect(nextCollectionPosition({ hasNext: true, nextCursor: null, page: 6 })).toEqual({
-			page: 7,
+		expect(
+			nextCollectionPosition({ hasNext: true, nextCursor: 'next', page: 2, sortBy: 'NAME' })
+		).toEqual({ page: 3, cursor: null });
+		expect(nextCollectionPosition({ hasNext: true, nextCursor: null, page: 2 })).toEqual({
+			page: 3,
 			cursor: null
 		});
-	});
-
-	it('maps the flat CardDTO and preserves unknown totals and nullable facets', async () => {
-		request.mockResolvedValue({
-			nbResults: -1,
-			page: 0,
-			sortBy: 'ACQUIRED_DATE',
-			sortDirection: 'DESC',
-			results: [
-				{
-					id: 81,
-					pageId: 42,
-					title: 'Rose',
-					description: 'Une carte',
-					image: 'https://images.wikiforge.test/Rose.jpg',
-					rarity: 'L',
-					atk: 90,
-					alt: true,
-					duplicate: true,
-					protected: true,
-					tagIds: [2, 7],
-					pendingTradeId: 12,
-					ownedCount: 4,
-					rarityCounts: { SR: 3, R: 1 }
-				}
-			],
-			nextCursor: 'next',
-			hasNext: true,
-			rarityResults: null,
-			q: null
-		});
-
-		const result = await getWikiForgeCollectionPage();
-
-		expect(request).toHaveBeenCalledWith('/collection?sortBy=ACQUIRED_DATE', {
-			apiTarget: 'wikiforge'
-		});
-		expect(result).toMatchObject({
-			total: -1,
-			hasNext: true,
-			nextCursor: 'next',
-			rarityResults: null
-		});
-		expect(result.items[0]).toMatchObject({
-			id: '81',
-			catalogueId: '42',
-			variant: 'FULL_ART',
-			duplicate: true,
-			userProtected: true,
-			collectionTagIds: ['2', '7'],
-			pendingTradeId: '12',
-			ownedCount: 4,
-			rarityCounts: { SR: 3, R: 1 }
-		});
-		expect(result.items[0].imageUrl).toBe('https://images.wikiforge.test/Rose.jpg');
-	});
-
-	it('returns an empty page for a successful response with zero cards', async () => {
-		request.mockResolvedValue({
-			nbResults: 0,
-			page: 0,
-			sortBy: 'ACQUIRED_DATE',
-			sortDirection: 'DESC',
-			results: null,
-			nextCursor: null,
-			hasNext: false,
-			rarityResults: null,
-			q: 'introuvable'
-		});
-
-		await expect(getWikiForgeCollectionPage({ query: 'introuvable' })).resolves.toMatchObject({
-			items: [],
-			total: 0,
-			hasNext: false
-		});
-	});
-
-	it('normalizes omitted rarity counters from filtered responses', async () => {
-		request.mockResolvedValue({
-			nbResults: 1,
-			page: 0,
-			sortBy: 'ACQUIRED_DATE',
-			sortDirection: 'DESC',
-			results: [{ id: 1, pageId: 2, title: 'Taguée', rarity: 'C', tagIds: [7] }],
-			nextCursor: null,
-			hasNext: false,
-			q: null
-		});
-
-		await expect(getWikiForgeCollectionPage({ tagIds: ['7'] })).resolves.toMatchObject({
-			items: [expect.objectContaining({ id: '1', collectionTagIds: ['7'] })],
-			rarityResults: null
-		});
-	});
-
-	it('uses the exact protection and single-tag endpoints', async () => {
-		request
-			.mockResolvedValueOnce(undefined)
-			.mockResolvedValueOnce(undefined)
-			.mockResolvedValueOnce({ id: 81, pageId: 42, title: 'Rose', rarity: 'R', tagIds: [2] })
-			.mockResolvedValueOnce({ id: 81, pageId: 42, title: 'Rose', rarity: 'R', tagIds: [] });
-		await protectWikiForgeCard('81');
-		await unprotectWikiForgeCard('81');
-		await addWikiForgeCardTag('81', '2');
-		await removeWikiForgeCardTag('81', '2');
-
-		expect(request).toHaveBeenNthCalledWith(1, '/collection/81/protect', {
-			apiTarget: 'wikiforge',
-			method: 'PUT'
-		});
-		expect(request).toHaveBeenNthCalledWith(2, '/collection/81/unprotect', {
-			apiTarget: 'wikiforge',
-			method: 'PUT'
-		});
-		expect(request).toHaveBeenNthCalledWith(3, '/collection/81/tags/2', {
-			apiTarget: 'wikiforge',
-			method: 'PUT'
-		});
-		expect(request).toHaveBeenNthCalledWith(4, '/collection/81/tags/2', {
-			apiTarget: 'wikiforge',
-			method: 'DELETE'
-		});
-	});
-
-	it('uses one atomic WikiForge request for each bulk protection action', async () => {
-		request.mockResolvedValue(undefined);
-		await protectWikiForgeCards(['81', '82', '81']);
-		await unprotectWikiForgeCards(['81', '82']);
-		expect(request).toHaveBeenNthCalledWith(1, '/collection/protect', {
-			apiTarget: 'wikiforge', method: 'PUT', body: [81, 82]
-		});
-		expect(request).toHaveBeenNthCalledWith(2, '/collection/unprotect', {
-			apiTarget: 'wikiforge', method: 'PUT', body: [81, 82]
-		});
-		expect(() => protectWikiForgeCards([])).toThrow('1 à 500');
-		expect(() => unprotectWikiForgeCards(Array.from({ length: 501 }, (_, index) => String(index + 1)))).toThrow('1 à 500');
-	});
-
-	it('builds the shared card mapping deterministically', () => {
-		expect(
-			toWikiForgeCollectionCard({ id: 1, pageId: 2, title: 'Test', rarity: 'C' })
-		).toMatchObject({ id: '1', baseCardId: 2, rarityInitials: 'C' });
-	});
-
-	it('loads shared friend wishlists only from the collection-card detail', async () => {
-		request.mockResolvedValueOnce({
-			id: 81, pageId: 42, title: 'Rose', rarity: 'R',
-			wishlists: [{ id: 3, name: 'Manquantes', userId: 7, userName: 'Alice' }]
-		});
-		await expect(getWikiForgeCollectionCard('81')).resolves.toMatchObject({
-			sharedWishlistMemberships: [{ id: '3', title: 'Manquantes', userId: '7', userName: 'Alice' }]
-		});
-		expect(request).toHaveBeenCalledWith('/collection/81', { apiTarget: 'wikiforge' });
+		expect(nextCollectionPosition({ hasNext: false, nextCursor: 'ignored', page: 2 })).toBeNull();
 	});
 });

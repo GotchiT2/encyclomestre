@@ -2,123 +2,180 @@
 	import { onMount } from 'svelte';
 	import { _ } from '$lib/i18n';
 	import {
+		ApiError,
 		addWishlistRegistryCard,
-		getBoosterInventory,
+		getBoosters,
+		getPackDetails,
+		getPacks,
+		getVariants,
 		getWikiForgeTags,
 		getWishlists,
-		openBooster
+		mergePackCatalogue,
+		openBooster,
+		openAllBoosters,
+		resetPackDetailsCache
 	} from '$lib/api';
+	import { resolvePackDefinition, type ResolvedPackDefinition } from '$lib/api/boosters';
 	import { wikiForgeApiErrorCode } from '$lib/api/wikiforge-contract';
 	import BoosterOpeningStage from '$lib/components/boosters/booster-opening-stage.svelte';
+	import PackCatalogue from '$lib/components/boosters/pack-catalogue.svelte';
+	import PackDetailDialog from '$lib/components/boosters/pack-detail-dialog.svelte';
+	import { packNameKey } from '$lib/components/boosters/pack-labels';
 	import {
 		formatBoosterDelay,
 		getBoosterRefreshDelay
 	} from '$lib/components/boosters/booster-countdown';
 	import CardDetailModal from '$lib/components/cards/card-detail-modal.svelte';
+	import TurnstileWidget from '$lib/components/security/turnstile-widget.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
+	import { Button } from '$lib/components/ui/button';
 	import type {
-		BoosterInventory,
 		CardRecord,
 		CollectionTag,
 		CollectionTagAssignments,
+		PackCatalogueItem,
+		PackDefinition,
+		PackSummary,
+		VariantDefinition,
 		WishlistRegistrySummary
 	} from '$lib/types';
 
-	let inventory = $state<BoosterInventory | null>(null);
+	let packDefinitions = $state<PackDefinition[] | null>(null);
+	let credits = $state<PackSummary[]>([]);
+	let variants = $state<VariantDefinition[]>([]);
+	let selectedPackId = $state<number | null>(null);
+	let selectedPackSnapshot = $state<PackCatalogueItem | null>(null);
+	let detailPack = $state<PackCatalogueItem | null>(null);
+	let detail = $state<ResolvedPackDefinition | null>(null);
+	let detailLoading = $state(false);
+	let detailError = $state(false);
 	let result = $state<CardRecord[] | null>(null);
 	let opening = $state(false);
-	let openingError = $state(false);
+	let openingError = $state<string | null>(null);
 	let openingId = $state(0);
 	let selectedCard = $state<CardRecord | null>(null);
 	let tags = $state<CollectionTag[]>([]);
 	let assignments = $state<CollectionTagAssignments>({});
 	let wishlists = $state<WishlistRegistrySummary[]>([]);
 	let detailDependenciesLoaded = $state(false);
-	let detailDependenciesLoading = $state(false);
 	let now = $state(Date.now());
-	let statusRefreshing = $state(false);
-	let inventoryRefreshTimer: number | undefined;
-	let pageActive = false;
-	const nextDelay = $derived(
-		inventory?.nextRechargeAt ? Math.max(0, new Date(inventory.nextRechargeAt).getTime() - now) : 0
+	let turnstile = $state<{ verify: () => Promise<string>; reset: () => void } | null>(null);
+	const packs = $derived(packDefinitions ? mergePackCatalogue(packDefinitions, credits) : null);
+	const selectedPack = $derived(
+		packs?.find((pack) => pack.id === selectedPackId) ??
+			(selectedPackSnapshot?.id === selectedPackId ? selectedPackSnapshot : null)
 	);
-	const nextDelayLabel = $derived(formatBoosterDelay(nextDelay));
+	const nextDelay = $derived(
+		selectedPack?.credit?.nextAvailableAt
+			? formatBoosterDelay(Math.max(0, Date.parse(selectedPack.credit.nextAvailableAt) - now))
+			: undefined
+	);
+	const selectedPackName = $derived.by(() => {
+		if (!selectedPack) return '';
+		const key = packNameKey(selectedPack.name);
+		return key ? $_(key) : selectedPack.credit?.name || selectedPack.name;
+	});
 
-	function scheduleInventoryRefresh(nextAvailableAt: string | null) {
-		if (inventoryRefreshTimer !== undefined) {
-			window.clearTimeout(inventoryRefreshTimer);
-			inventoryRefreshTimer = undefined;
-		}
-		if (!pageActive) return;
-		const delay = getBoosterRefreshDelay(nextAvailableAt);
-		if (delay === null) return;
-		inventoryRefreshTimer = window.setTimeout(() => {
-			inventoryRefreshTimer = undefined;
-			void refreshInventory().catch(() => undefined);
-		}, delay + 250);
-	}
-
-	async function refreshInventory() {
-		if (statusRefreshing) return;
-		statusRefreshing = true;
-		try {
-			inventory = await getBoosterInventory();
-			now = Date.now();
-			scheduleInventoryRefresh(inventory.nextRechargeAt);
-		} finally {
-			statusRefreshing = false;
+	async function refreshPacks() {
+		const [catalogue, inventory, loadedVariants] = await Promise.all([
+			getPacks(),
+			getBoosters(),
+			getVariants()
+		]);
+		packDefinitions = catalogue;
+		credits = inventory;
+		variants = loadedVariants;
+		if (selectedPackId != null) {
+			const refreshed = mergePackCatalogue(catalogue, inventory).find(
+				(pack) => pack.id === selectedPackId
+			);
+			selectedPackSnapshot =
+				refreshed ??
+				(selectedPackSnapshot ? { ...selectedPackSnapshot, credit: null, status: 'CLOSED' } : null);
 		}
 	}
 
 	onMount(() => {
-		pageActive = true;
-		const timer = window.setInterval(() => {
-			now = Date.now();
-		}, 1_000);
-		void refreshInventory().catch(() => undefined);
-		return () => {
-			pageActive = false;
-			window.clearInterval(timer);
-			if (inventoryRefreshTimer !== undefined) window.clearTimeout(inventoryRefreshTimer);
-		};
+		const clock = window.setInterval(() => (now = Date.now()), 1_000);
+		void refreshPacks().catch(() => (packDefinitions = []));
+		return () => window.clearInterval(clock);
 	});
 
-	async function open() {
-		if (!inventory?.available || opening) return;
+	$effect(() => {
+		const delays = credits
+			.map((pack) => getBoosterRefreshDelay(pack.nextAvailableAt))
+			.filter((delay): delay is number => delay != null);
+		if (!delays.length) return;
+		const timer = window.setTimeout(
+			() => void refreshPacks().catch(() => undefined),
+			Math.min(...delays) + 50
+		);
+		return () => window.clearTimeout(timer);
+	});
+
+	async function open(all = false) {
+		if (!selectedPack?.credit?.available || selectedPack.status !== 'OPEN' || opening) return;
 		opening = true;
 		result = null;
-		openingError = false;
+		openingError = null;
 		try {
-			const opened = await openBooster();
-			result = opened.pulls.map((pull) => pull.card);
-			inventory = opened.inventory;
-			scheduleInventoryRefresh(inventory.nextRechargeAt);
+			if (!turnstile) throw new Error('Turnstile unavailable');
+			const turnstileToken = await turnstile.verify();
+			const opened = all
+				? await openAllBoosters(selectedPack.id, turnstileToken)
+				: await openBooster(selectedPack.id, turnstileToken);
+			result = opened.cards;
 			openingId += 1;
 		} catch (error) {
-			if (wikiForgeApiErrorCode(error) === 'NO_BOOSTER_AVAILABLE') {
-				await refreshInventory().catch(() => undefined);
-				result = null;
-			} else {
-				openingError = true;
-			}
+			const code = wikiForgeApiErrorCode(error);
+			const captchaRejected =
+				code === 'INVALID_CAPTCHA' ||
+				code === 'CAPTCHA_REQUIRED' ||
+				(error instanceof ApiError &&
+					typeof error.payload === 'object' &&
+					error.payload !== null &&
+					'error' in error.payload &&
+					error.payload.error === 'invalid_captcha');
+			openingError = ['NO_BOOSTER_AVAILABLE', 'NOT_FOUND', 'PACK_EXHAUSTED'].includes(code ?? '')
+				? code!
+				: captchaRejected || (error instanceof Error && error.message.includes('Turnstile'))
+					? 'CAPTCHA'
+					: 'UNKNOWN';
 		} finally {
+			turnstile?.reset();
+			resetPackDetailsCache();
+			await refreshPacks().catch(() => undefined);
 			opening = false;
 		}
 	}
 
-	async function loadDetailDependencies() {
-		if (detailDependenciesLoaded || detailDependenciesLoading) return;
-		detailDependenciesLoading = true;
+	function selectPack(pack: PackCatalogueItem) {
+		selectedPackId = pack.id;
+		selectedPackSnapshot = pack;
+		openingError = null;
+		result = null;
+	}
+
+	async function showDetails(pack: PackCatalogueItem) {
+		detailPack = pack;
+		detail = null;
+		detailError = false;
+		detailLoading = true;
 		try {
-			const [loadedTags, loadedWishlists] = await Promise.all([getWikiForgeTags(), getWishlists()]);
-			tags = loadedTags;
-			wishlists = loadedWishlists;
-			detailDependenciesLoaded = true;
+			detail = resolvePackDefinition(await getPackDetails(pack.id), variants);
 		} catch {
-			detailDependenciesLoaded = false;
+			detailError = true;
 		} finally {
-			detailDependenciesLoading = false;
+			detailLoading = false;
 		}
+	}
+
+	async function loadDetailDependencies() {
+		if (detailDependenciesLoaded) return;
+		const [loadedTags, loadedWishlists] = await Promise.all([getWikiForgeTags(), getWishlists()]);
+		tags = loadedTags;
+		wishlists = loadedWishlists;
+		detailDependenciesLoaded = true;
 	}
 
 	function openCardDetail(card: CardRecord) {
@@ -127,13 +184,16 @@
 			...assignments,
 			[card.id]: card.collectionTagIds ?? (card.collectionTags ?? []).map((tag) => tag.id)
 		};
-		void loadDetailDependencies();
+		void loadDetailDependencies().catch(() => undefined);
 	}
 
 	async function toggleWishlist(wishlistId: string, card: CardRecord, selected: boolean) {
 		if (!selected) return;
-		const pageId = String(card.baseCardId ?? card.catalogueId ?? card.id);
-		await addWishlistRegistryCard(wishlistId, '', pageId);
+		await addWishlistRegistryCard(
+			wishlistId,
+			'',
+			String(card.baseCardId ?? card.catalogueId ?? card.id)
+		);
 		wishlists = await getWishlists();
 	}
 </script>
@@ -144,25 +204,62 @@
 		title={$_('boosters.title')}
 		description={$_('boosters.description')}
 	/>
-	{#if inventory}
+
+	{#if packs === null}
+		<div class="forge-panel min-h-[24rem] animate-pulse"></div>
+	{:else if !packs.length}
+		<div class="forge-panel grid min-h-64 place-items-center p-8 text-center text-muted-foreground">
+			{$_('boosters.no_active_packs')}
+		</div>
+	{:else if !selectedPack}
+		<PackCatalogue {packs} onDetails={showDetails} onOpen={selectPack} />
+	{:else}
+		<div class="mx-auto w-full max-w-sm">
+			<TurnstileWidget
+				bind:this={turnstile}
+				action="open"
+				onError={() => (openingError = 'CAPTCHA')}
+			/>
+		</div>
+		<div class="flex items-center justify-between gap-4">
+			<Button
+				variant="outline"
+				onclick={() => {
+					selectedPackId = null;
+					selectedPackSnapshot = null;
+					result = null;
+				}}
+			>
+				{$_('boosters.back_to_packs')}
+			</Button>
+			{#if openingError}
+				<p class="text-sm text-destructive" role="alert">
+					{$_(`boosters.errors.${openingError}`)}
+				</p>
+			{/if}
+		</div>
 		<BoosterOpeningStage
-			available={inventory.available}
-			maximum={inventory.capacity}
-			nextDelay={inventory.nextRechargeAt ? nextDelayLabel : undefined}
+			available={selectedPack.credit?.available ?? 0}
+			maximum={selectedPack.credit?.max ?? 0}
+			{nextDelay}
+			packName={selectedPackName}
+			packImage={selectedPack.imageUrl ?? selectedPack.credit?.imageUrl ?? '/images/booster.png'}
+			packRenderKey={selectedPack.renderKey ?? 'standard'}
+			packCardCount={selectedPack.nbCards}
 			{opening}
+			canOpenAll={selectedPack.openAll}
 			{openingId}
 			cards={result}
-			error={openingError}
+			error={Boolean(openingError)}
 			suspended={Boolean(selectedCard)}
-			onOpen={open}
+			onOpen={() => void open(false)}
+			onOpenAll={() => void open(true)}
 			onOpenCard={openCardDetail}
 			onReset={() => {
 				result = null;
-				openingError = false;
+				openingError = null;
 			}}
 		/>
-	{:else}
-		<div class="forge-panel min-h-[34rem] animate-pulse"></div>
 	{/if}
 </section>
 
@@ -176,5 +273,19 @@
 		onToggleWishlist={(wishlistId, selected) =>
 			void toggleWishlist(wishlistId, selectedCard!, selected)}
 		onClose={() => (selectedCard = null)}
+	/>
+{/if}
+
+{#if detailPack}
+	<PackDetailDialog
+		pack={detailPack}
+		details={detail}
+		loading={detailLoading}
+		error={detailError}
+		onClose={() => (detailPack = null)}
+		onOpen={() => {
+			selectPack(detailPack!);
+			detailPack = null;
+		}}
 	/>
 {/if}

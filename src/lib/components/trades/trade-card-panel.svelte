@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import CardTile from '$lib/components/card-tile.svelte';
-	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
-	import { cardRarityOptions } from '$lib/domain/cards/rarities';
+	import VariantSelector from '$lib/components/cards/variant-selector.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import * as Field from '$lib/components/ui/field';
 	import { Input } from '$lib/components/ui/input';
@@ -10,10 +9,8 @@
 	import { onDestroy, untrack } from 'svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import type {
-		CardRarity,
 		CardRecord,
 		CardSearchSort,
-		CardVariant,
 		PaginatedResponse,
 		TradeCardSearchQuery
 	} from '$lib/types';
@@ -47,9 +44,8 @@
 	const uid = $props.id();
 
 	let query = $state('');
-	let rarities = $state<CardRarity[]>([]);
-	let sortBy = $state<CardSearchSort>('rarity');
-	let variant = $state<CardVariant>('all');
+	let variantIds = $state<number[]>([]);
+	let sortBy = $state<CardSearchSort>('name');
 	let page = $state(1);
 	let total = $state(0);
 	let resultCards = $state<CardRecord[]>([]);
@@ -81,9 +77,8 @@
 		}
 		activeScope = scopeKey;
 		query = '';
-		rarities = [];
-		sortBy = 'rarity';
-		variant = 'all';
+		variantIds = [];
+		sortBy = 'name';
 		page = 1;
 		total = 0;
 		resultCards = [];
@@ -142,17 +137,16 @@
 		try {
 			const response = await loadCards({
 				query,
-				rarities,
-				variant,
+				variantIds,
 				sortBy,
 				page: nextPage - 1,
 				pageSize,
 				cursor: query.trim() ? undefined : cursorByPage.get(nextPage)
 			});
 			if (requestId !== requestVersion) return;
-			const variantIds = response.items.map((card) => card.catalogueId ?? card.id);
+			const catalogueIds = response.items.map((card) => card.catalogueId ?? card.id);
 			try {
-				comparisonCounts = loadComparisonCounts ? await loadComparisonCounts(variantIds) : {};
+				comparisonCounts = loadComparisonCounts ? await loadComparisonCounts(catalogueIds) : {};
 			} catch {
 				comparisonCounts = {};
 			}
@@ -209,7 +203,7 @@
 					size="xs"
 					variant="outline"
 					class="h-auto max-w-full whitespace-normal break-words text-left"
-					style={`color:${card.rarityColor};border-color:${card.rarityColor}`}
+					style={`color:${card.variant.color};border-color:${card.variant.color}`}
 					onclick={() => (selectedIds = selectedIds.filter((id) => id !== card.id))}
 				>
 					{card.title}<XIcon data-icon="inline-end" />
@@ -244,39 +238,15 @@
 					</Field.FieldLabel>
 					<select id={`${uid}-sort`} bind:value={sortBy} onchange={changeFilters} class="w-full">
 						<option value="relevance">{$_('collection.sortRelevance')}</option>
-						<option value="rarity">{$_('collection.sortRarity')}</option>
 						<option value="name">{$_('collection.sortName')}</option>
 					</select>
 				</Field.Field>
 			</div>
 
-			<!-- Bloc borné : sur une large modale les pastilles s'étireraient sur toute la largeur. -->
-			<div class="flex flex-col gap-2 @md:flex-row @md:items-end">
-				<Field.FieldSet class="gap-2 @md:max-w-md @md:flex-1">
-					<Field.FieldLegend class="forge-label">{$_('codex.rarities')}</Field.FieldLegend>
-					<RaritySelector
-						options={cardRarityOptions}
-						bind:selected={rarities}
-						compact
-						onChange={changeFilters}
-					/>
-				</Field.FieldSet>
-				<Field.Field class="@md:w-44 @md:shrink-0">
-					<Field.FieldLabel for={`${uid}-variant`} class="forge-label">
-						{$_('cards.variant.label')}
-					</Field.FieldLabel>
-					<select
-						id={`${uid}-variant`}
-						bind:value={variant}
-						onchange={changeFilters}
-						class="w-full"
-					>
-						<option value="all">{$_('cards.variant.all')}</option>
-						<option value="normal">{$_('cards.variant.normal')}</option>
-						<option value="alternative">{$_('cards.variant.alternative')}</option>
-					</select>
-				</Field.Field>
-			</div>
+			<Field.FieldSet class="gap-2">
+				<Field.FieldLegend class="forge-label">{$_('collection.variants')}</Field.FieldLegend>
+				<VariantSelector bind:selected={variantIds} compact onChange={changeFilters} />
+			</Field.FieldSet>
 		</Field.FieldGroup>
 	</div>
 

@@ -1,14 +1,12 @@
 <script lang="ts">
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardSearchPanel from '$lib/components/cards/card-search-panel.svelte';
-	import RaritySelector from '$lib/components/cards/rarity-selector.svelte';
-	import { cardRarityOptions } from '$lib/domain/cards/rarities';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { _ } from '$lib/i18n';
 	import type { CardQuery } from '$lib/api';
-	import type { CardRarity, CardRecord, CardSearchSort, PaginatedResponse } from '$lib/types';
+	import type { CardRecord, CardSearchSort, PaginatedResponse } from '$lib/types';
 
 	let {
 		open = $bindable(false),
@@ -31,8 +29,7 @@
 	const pageSize = 12;
 	let cards = $state<CardRecord[]>([]);
 	let query = $state('');
-	let selectedRarities = $state<CardRarity[]>([]);
-	let sortBy = $state<CardSearchSort>('rarity');
+	let sortBy = $state<CardSearchSort>('name');
 	let page = $state(1);
 	let totalPages = $state(1);
 	let loading = $state(false);
@@ -51,7 +48,6 @@
 			page,
 			pageSize,
 			query: query.trim() || undefined,
-			rarities: selectedRarities,
 			sortBy,
 			sortDirection: sortBy === 'name' ? 'ASC' : 'DESC'
 		};
@@ -91,7 +87,9 @@
 		}
 		const id = String(card.baseCardId ?? card.id);
 		selectedCards = selectedIds.includes(id)
-			? selectedCards.filter((selectedCard) => String(selectedCard.baseCardId ?? selectedCard.id) !== id)
+			? selectedCards.filter(
+					(selectedCard) => String(selectedCard.baseCardId ?? selectedCard.id) !== id
+				)
 			: [...selectedCards, card];
 	}
 
@@ -134,16 +132,8 @@
 						aria-label={$_('collection.sort')}
 					>
 						<option value="relevance">{$_('collection.sortRelevance')}</option>
-						<option value="rarity">{$_('collection.sortRarity')}</option>
 						<option value="name">{$_('collection.sortName')}</option>
 					</select>
-				</div>
-				<div class="mt-3">
-					<RaritySelector
-						options={cardRarityOptions}
-						bind:selected={selectedRarities}
-						onChange={() => (page = 1)}
-					/>
 				</div>
 			</CardSearchPanel>
 			{#if loading}
@@ -164,7 +154,10 @@
 						<div class="relative">
 							<CardTile {card} onOpen={select} />
 							{#if onSelectMany && selectedIds.includes(String(card.baseCardId ?? card.id))}
-								<span class="pointer-events-none absolute inset-0 z-40 border-2 border-energy bg-energy/15" aria-hidden="true"></span>
+								<span
+									class="pointer-events-none absolute inset-0 z-40 border-2 border-energy bg-energy/15"
+									aria-hidden="true"
+								></span>
 							{/if}
 						</div>
 					{/each}
@@ -185,8 +178,8 @@
 				>
 			{:else}
 				<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-				{$_('codex.page')}
-				{page} / {totalPages}
+					{$_('codex.page')}
+					{page} / {totalPages}
 				</p>
 			{/if}
 			<Button size="sm" variant="outline" disabled={page === totalPages} onclick={() => (page += 1)}

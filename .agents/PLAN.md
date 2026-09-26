@@ -367,3 +367,24 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 ## 16. API WikiForge unique
 
 - [x] Aligner les paramètres sur le corps complet de `/me` et retirer les appels de l’API historique sans équivalent WikiForge — `refactor(api): remove legacy API workflows`
+
+## 17. Variantes et packs WikiForge
+
+- [x] Remplacer la rareté par le catalogue de variantes, partager le rendu des cartes et brancher les packs actifs — `feat(cards): migrate rarity model to variants and packs`
+- [x] Intégrer le catalogue détaillé des packs, leurs statuts, groupes de tirage et stocks globaux — `feat(boosters): integrate detailed pack catalogue`
+
+## 18. Succès WikiForge
+
+- [x] Ajouter le registre des succès, ses récompenses réclamables, son badge et sa synchronisation SSE — `feat(achievements): add claimable achievement registry`
+
+## 19. Contrats Swagger WikiForge enrichis
+
+- [x] Migrer les inventaires de boosters par famille et emplacement, l’ouverture groupée, l’accueil, les préférences de succès et les notifications de guilde — `feat(api): align enriched WikiForge contracts`
+
+## 20. Expérience des boosters
+
+- [x] Recomposer le catalogue et le détail des packs, ajouter la recherche de stock et fiabiliser les cartes Full Art portrait/paysage — `feat(boosters): refine pack opening experience`
+
+## 21. Protection Turnstile
+
+- [x] Protéger la connexion et l'ouverture des boosters avec Turnstile et exposer le frontend local sur HTTPS sans port explicite — `feat(security): add Turnstile verification`

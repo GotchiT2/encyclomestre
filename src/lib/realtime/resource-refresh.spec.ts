@@ -21,4 +21,22 @@ describe('targeted realtime refreshes', () => {
 		publishRealtimeRefresh(['friends', 'friends']);
 		expect(get(realtimeRefresh).resources).toEqual(['friends']);
 	});
+
+	it('refreshes achievements after an unlock notification', () => {
+		publishNotificationRefresh([
+			{ id: 'achievement-1', type: 'ACHIEVEMENT_UNLOCKED', read: false, createdAt: '' }
+		]);
+		const refresh = get(realtimeRefresh);
+		expect(refreshIncludes(refresh, 'achievements')).toBe(true);
+		expect(refreshIncludes(refresh, 'profile')).toBe(true);
+	});
+
+	it('refreshes guild data after a guild notification', () => {
+		publishNotificationRefresh([
+			{ id: 'guild-1', type: 'GUILD_OWNER_CHANGED', read: false, createdAt: '' }
+		]);
+		const refresh = get(realtimeRefresh);
+		expect(refreshIncludes(refresh, 'guild')).toBe(true);
+		expect(refreshIncludes(refresh, 'profile')).toBe(true);
+	});
 });

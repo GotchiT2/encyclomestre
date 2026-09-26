@@ -23,6 +23,7 @@
 			publishRealtimeRefresh([
 				'collection',
 				'friends',
+				'guild',
 				'messages',
 				'notifications',
 				'profile',

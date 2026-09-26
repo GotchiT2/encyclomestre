@@ -1,10 +1,9 @@
-import { cardRarityByCode, type CardRarityCode } from '$lib/domain/cards/rarities';
 import { cardSearchSortDirection, defaultCardSearchSort } from '$lib/domain/cards/search';
-import type { CardRecord, CardSearchSort, PaginatedResponse } from '$lib/types';
+import type { CardRecord, CardSearchSort, PaginatedResponse, VariantDefinition } from '$lib/types';
 import { apiRequest } from './client';
+import { wikiForgeImageUrl } from './cards';
+import { defaultPageVariant, getVariants, standardVariant } from './variants';
 import { wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
-
-export type WikiForgePublicPageRarity = CardRarityCode;
 
 export interface WikiForgePublicPageCard {
 	id: number;
@@ -14,8 +13,7 @@ export interface WikiForgePublicPageCard {
 	nsfw?: boolean;
 	atk: number;
 	length?: number;
-	viewCount: number;
-	rarity: WikiForgePublicPageRarity;
+	defaultVariantId?: number;
 	createdAt?: string;
 	/** Champ utilisé par les versions récentes du DTO WikiForge. */
 	creationDate?: string;
@@ -24,24 +22,23 @@ export interface WikiForgePublicPageCard {
 	friends?: Array<{
 		id: number;
 		name: string;
-		rarityCounts?: Partial<Record<WikiForgePublicPageRarity, number>>;
+		nbCards: number;
 	}>;
+	_variants?: VariantDefinition[];
 }
 
 export interface WikiForgePublicPagesResponse {
 	nbResults: number;
 	page: number;
-	rarityResults?: Record<WikiForgePublicPageRarity, number> | null;
 	results?: WikiForgePublicPageCard[] | null;
-	sortBy: 'NAME' | 'RARITY' | 'RELEVANCE';
+	sortBy: 'NAME' | 'RELEVANCE';
 	sortDirection: 'ASC' | 'DESC';
+	_variants?: VariantDefinition[];
 }
 
 export interface WikiForgePublicPagesQuery {
 	q?: string;
 	page?: number;
-	rarity?: WikiForgePublicPageRarity;
-	rarities?: WikiForgePublicPageRarity[];
 	sortBy?: CardSearchSort;
 	sortDirection?: 'ASC' | 'DESC';
 }
@@ -51,23 +48,10 @@ export interface PublicPagesRequestOptions {
 	signal?: AbortSignal;
 }
 
-export interface PublicCataloguePage extends PaginatedResponse<CardRecord> {
-	rarityResults: Record<WikiForgePublicPageRarity, number>;
-}
+export type PublicCataloguePage = PaginatedResponse<CardRecord>;
 
 let publicPagesPageSize: number | null = null;
-const emptyRarityResults: Record<WikiForgePublicPageRarity, number> = {
-	L: 0,
-	UR: 0,
-	SR: 0,
-	R: 0,
-	PC: 0,
-	C: 0
-};
-
-export function wikiForgeImageUrl(image?: string | null): string {
-	return image?.trim() || '/card-placeholder.svg';
-}
+export { wikiForgeImageUrl } from './cards';
 
 function publicPageDate(card: WikiForgePublicPageCard): string | undefined {
 	const value = [card.createdAt, card.creationDate].find(
@@ -87,9 +71,6 @@ function publicPagesPath(query: WikiForgePublicPagesQuery): string {
 			query.sortDirection ?? (query.q?.trim() ? cardSearchSortDirection(sortBy) : 'ASC')
 	});
 	if ((query.q?.trim().length ?? 0) >= 3) parameters.set('q', query.q!.trim());
-	for (const rarity of query.rarities ?? (query.rarity ? [query.rarity] : [])) {
-		parameters.append('rarity', rarity);
-	}
 	return `/pages?${parameters}`;
 }
 
@@ -98,11 +79,15 @@ export async function getWikiForgePublicPages(
 	query: WikiForgePublicPagesQuery = {},
 	options: PublicPagesRequestOptions = {}
 ): Promise<WikiForgePublicPagesResponse> {
-	return apiRequest<WikiForgePublicPagesResponse>(publicPagesPath(query), {
-		fetch: options.fetch,
-		signal: options.signal,
-		apiTarget: 'wikiforge'
-	});
+	const [response, variants] = await Promise.all([
+		apiRequest<WikiForgePublicPagesResponse>(publicPagesPath(query), {
+			fetch: options.fetch,
+			signal: options.signal,
+			apiTarget: 'wikiforge'
+		}),
+		getVariants({ fetch: options.fetch, signal: options.signal })
+	]);
+	return { ...response, _variants: variants };
 }
 
 /**
@@ -113,15 +98,22 @@ export async function getWikiForgePublicPage(
 	id: string | number,
 	options: PublicPagesRequestOptions = {}
 ): Promise<WikiForgePublicPageCard> {
-	return apiRequest<WikiForgePublicPageCard>(`/pages/${wikiForgeNumericId(id, 'page')}`, {
-		fetch: options.fetch,
-		signal: options.signal,
-		apiTarget: 'wikiforge'
-	});
+	const [card, variants] = await Promise.all([
+		apiRequest<WikiForgePublicPageCard>(`/pages/${wikiForgeNumericId(id, 'page')}`, {
+			fetch: options.fetch,
+			signal: options.signal,
+			apiTarget: 'wikiforge'
+		}),
+		getVariants({ fetch: options.fetch, signal: options.signal })
+	]);
+	return { ...card, _variants: variants };
 }
 
-export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecord {
-	const rarity = cardRarityByCode[card.rarity] ?? cardRarityByCode.C;
+export function toPublicPageCardRecord(
+	card: WikiForgePublicPageCard,
+	variants: VariantDefinition[] = card._variants ?? [standardVariant]
+): CardRecord {
+	const variant = defaultPageVariant(variants, card.defaultVariantId);
 	const acquiredAt = publicPageDate(card);
 	// Les données sociales sont optionnelles pendant la migration API : une valeur
 	// incomplète ne doit jamais empêcher le rendu de toute la page catalogue.
@@ -129,14 +121,11 @@ export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecor
 	return {
 		id: String(card.id),
 		baseCardId: card.id,
-		variant: 'NORMAL',
+		variantId: variant.id,
+		variant,
 		title: card.title,
 		shortDescription: card.description ?? '',
 		longDescription: card.description ?? '',
-		rarity: rarity.name,
-		rarityInitials: rarity.initials,
-		rarityColor: rarity.color,
-		viewCount: card.viewCount,
 		imageUrl: wikiForgeImageUrl(card.image),
 		wikipediaUrl: `https://fr.wikipedia.org/?curid=${card.id}`,
 		attack: card.atk,
@@ -144,19 +133,13 @@ export function toPublicPageCardRecord(card: WikiForgePublicPageCard): CardRecor
 		ownedCount: card.ownedCount ?? 0,
 		globalSupply: card.globalCount,
 		friendsWhoOwn: friends.map((friend) => {
-			const rarityCounts = friend.rarityCounts ?? {};
 			return {
 				friendId: String(friend.id),
 				username: friend.name,
 				avatarUrl: '',
-				rarityCounts,
-				ownedCount: Object.values(rarityCounts).reduce(
-					(total, count) => total + (Number.isFinite(count) ? count : 0),
-					0
-				)
+				ownedCount: friend.nbCards
 			};
 		}),
-		isFullArt: false,
 		...(acquiredAt ? { acquiredAt } : {}),
 		nsfw: Boolean(card.nsfw)
 	};
@@ -167,8 +150,9 @@ export function toPublicPage(source: WikiForgePublicPagesResponse): PublicCatalo
 	if (source.page === 0 && resultCount > 0) publicPagesPageSize = resultCount;
 	const pageSize = publicPagesPageSize ?? Math.max(1, resultCount || source.nbResults || 1);
 	return {
-		items: (source.results ?? []).map(toPublicPageCardRecord),
-		rarityResults: source.rarityResults ?? emptyRarityResults,
+		items: (source.results ?? []).map((card) =>
+			toPublicPageCardRecord(card, source._variants ?? [standardVariant])
+		),
 		meta: {
 			page: source.page + 1,
 			pageSize,

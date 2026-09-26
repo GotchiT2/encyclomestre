@@ -2,23 +2,78 @@ import { describe, expect, it } from 'vitest';
 import { createMockApiResponse } from './mock';
 
 describe('createMockApiResponse', () => {
+	it('exposes achievements and makes a claim idempotently conflict after success', async () => {
+		const list = createMockApiResponse({ path: '/me/achievements' });
+		expect(await list.json()).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ code: 'collection_10', unlockedAt: expect.any(String) })
+			])
+		);
+
+		const claimed = createMockApiResponse({
+			path: '/me/achievements/collection_10/claim',
+			method: 'POST'
+		});
+		expect(claimed.status).toBe(204);
+		const repeated = createMockApiResponse({
+			path: '/me/achievements/collection_10/claim',
+			method: 'POST'
+		});
+		expect(repeated.status).toBe(409);
+		expect(await repeated.json()).toMatchObject({ code: 'ACHIEVEMENT_CONFLICT' });
+	});
+
 	it('expose les contrats WikiForge des boosters et des tags', async () => {
-		const inventory = createMockApiResponse({ path: '/boosters' });
-		expect(await inventory.json()).toMatchObject({
-			available: expect.any(Number),
-			max: expect.any(Number)
+		const catalogue = createMockApiResponse({ path: '/packs' });
+		expect(await catalogue.json()).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ id: 1, status: 'OPEN', drawGroups: expect.any(Array) }),
+				expect.objectContaining({ status: 'UPCOMING' }),
+				expect.objectContaining({ status: 'EXHAUSTED' })
+			])
+		);
+		const details = createMockApiResponse({ path: '/packs/3' });
+		expect(await details.json()).toMatchObject({
+			id: 3,
+			drawGroups: [
+				expect.any(Object),
+				expect.objectContaining({
+					variants: [
+						expect.objectContaining({
+							maxCopies: 99,
+							remainingCopies: 198,
+							pages: expect.arrayContaining([expect.objectContaining({ title: 'Wikipédia' })])
+						})
+					]
+				})
+			]
 		});
 
-		const opening = createMockApiResponse({ path: '/boosters/open', method: 'POST' });
+		const inventory = createMockApiResponse({ path: '/boosters' });
+		expect(await inventory.json()).toMatchObject({
+			families: expect.arrayContaining([
+				expect.objectContaining({
+					family: 'NORMAL',
+					available: expect.any(Number),
+					max: expect.any(Number),
+					bonus: expect.any(Number)
+				})
+			]),
+			slots: expect.arrayContaining([
+				expect.objectContaining({ id: expect.any(Number), pack: expect.any(Object) })
+			])
+		});
+
+		const opening = createMockApiResponse({ path: '/boosters/1/open', method: 'POST' });
 		expect(await opening.json()).toMatchObject({
-			available: expect.any(Number),
-			max: expect.any(Number),
+			packId: 1,
 			cards: expect.arrayContaining([
 				expect.objectContaining({
 					id: expect.any(Number),
 					pageId: expect.any(Number),
 					title: expect.any(String),
-					tagIds: expect.any(Array)
+					variantId: expect.any(Number),
+					packId: 1
 				})
 			])
 		});

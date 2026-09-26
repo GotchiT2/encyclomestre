@@ -1,88 +1,186 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$env/dynamic/public', () => ({
-	env: {
-		PUBLIC_API_MOCK_ENABLED: 'false',
-		PUBLIC_WIKIFORGE_API_BASE_URL: 'https://api.wikiforge.fr'
-	}
+const { request, variants } = vi.hoisted(() => ({
+	request: vi.fn(),
+	variants: [{ id: 2, name: 'Chrome', color: '#b1cff2', styles: ['CHROME'], renderKey: 'chrome' }]
+}));
+vi.mock('./client', () => ({ apiRequest: request }));
+vi.mock('./variants', async (importOriginal) => ({
+	...(await importOriginal<typeof import('./variants')>()),
+	getVariants: vi.fn().mockResolvedValue(variants)
 }));
 
-import { getBoosterInventory, openBooster } from './boosters';
+import {
+	getBoosters,
+	getPackDetails,
+	getPacks,
+	mergePackCatalogue,
+	openBooster,
+	openAllBoosters,
+	resetPackDetailsCache,
+	resolvePackDefinition
+} from './boosters';
 
-afterEach(() => vi.unstubAllGlobals());
+describe('booster API', () => {
+	beforeEach(() => {
+		request.mockReset();
+		resetPackDetailsCache();
+	});
 
-describe('WikiForge boosters API', () => {
-	it('loads the inventory from the canonical endpoint', async () => {
-		const fetcher = vi.fn(async () =>
-			Response.json({ available: 3, max: 10, nextAvailableAt: '2026-08-23T12:00:00Z' })
-		);
+	const nebula = {
+		id: 3,
+		slotId: 3,
+		position: 1,
+		family: 'PREMIUM_PLUS' as const,
+		name: 'nebula',
+		description: 'nebula',
+		image: 'https://cdn.example.test/nebula.png',
+		renderKey: 'nebula',
+		status: 'OPEN' as const,
+		nbCards: 5,
+		openAll: false,
+		drawGroups: [
+			{ count: 4, variants: [{ variantId: 1, dropRate: 1 }] },
+			{
+				count: 1,
+				variants: [
+					{
+						variantId: 2,
+						dropRate: 0.85,
+						maxCopies: 99,
+						remainingCopies: 198,
+						pages: [
+							{ id: 5411, title: 'Soleil', image: '/sun.jpg' },
+							{ id: 5958, title: 'Wikipédia' }
+						]
+					}
+				]
+			}
+		]
+	};
 
-		await expect(
-			getBoosterInventory(undefined, { fetch: fetcher as typeof fetch })
-		).resolves.toEqual({
-			available: 3,
-			capacity: 10,
-			nextRechargeAt: '2026-08-23T12:00:00Z'
+	it('maps current slots against shared family credits and achievement bonuses', async () => {
+		request.mockResolvedValue({
+			families: [{ family: 'PREMIUM', available: 2, max: 3, bonus: 1, nextAvailableAt: null }],
+			slots: [
+				{
+					id: 7,
+					name: 'Saisonnier',
+					pack: {
+						id: 4,
+						name: 'Chrome annuel',
+						description: 'Cinq cartes',
+						image: '/chrome.png',
+						family: 'PREMIUM',
+						nbCards: 5,
+						openAll: false
+					}
+				},
+				{ id: 8, name: 'Terminé' }
+			]
 		});
-		expect(fetcher).toHaveBeenCalledWith(
-			'https://api.wikiforge.fr/boosters',
-			expect.objectContaining({ credentials: 'include' })
+
+		await expect(getBoosters()).resolves.toEqual([
+			expect.objectContaining({
+				id: 4,
+				slotId: 7,
+				imageUrl: '/chrome.png',
+				regularAvailable: 2,
+				bonus: 1,
+				available: 3
+			})
+		]);
+		expect(request).toHaveBeenCalledWith('/boosters', { apiTarget: 'wikiforge' });
+	});
+
+	it('maps the pack catalogue and preserves decimal rates and aggregate stock', async () => {
+		request.mockResolvedValue([nebula]);
+
+		const [pack] = await getPacks();
+		expect(request).toHaveBeenCalledWith('/packs', { apiTarget: 'wikiforge' });
+		expect(pack.drawGroups[1].variants[0]).toMatchObject({
+			dropRate: 0.85,
+			maxCopies: 99,
+			remainingCopies: 198,
+			pages: [
+				{ id: 5411, title: 'Soleil', image: '/sun.jpg' },
+				{ id: 5958, title: 'Wikipédia' }
+			]
+		});
+		expect(pack).toMatchObject({ imageUrl: 'https://cdn.example.test/nebula.png', status: 'OPEN' });
+	});
+
+	it('caches pack details and resolves their variant definitions', async () => {
+		request.mockResolvedValue(nebula);
+
+		const first = await getPackDetails(3);
+		const second = await getPackDetails(3);
+		expect(first).toBe(second);
+		expect(request).toHaveBeenCalledTimes(1);
+		expect(resolvePackDefinition(first, variants).drawGroups[1].variants[0].variant).toEqual(
+			variants[0]
 		);
 	});
 
-	it('uses the opening response directly without reloading the inventory', async () => {
-		const fetcher = vi.fn(async () =>
-			Response.json({
-				available: 2,
-				max: 10,
-				nextAvailableAt: '2026-08-23T12:00:00Z',
-				cards: [
-					{
-						id: 8818,
-						pageId: 12208062,
-						title: 'Rose Thisse-Derouette',
-						description: 'Compositrice belge',
-						image: 'https://images.wikiforge.test/Rose%20Thisse%20Derouette.jpg',
-						rarity: 'SR',
-						atk: 70,
-						alt: true,
-						duplicate: true,
-						protected: true,
-						tagIds: [4, 9],
-						acquiredDate: '2026-08-23T11:00:00Z',
-						creationDate: '2026-08-23T11:00:00Z',
-						pendingTradeId: 12,
-						ownedCount: 4,
-						rarityCounts: { SR: 3, R: 1 }
-					}
-				]
-			})
-		);
+	it('merges user credits by pack without making upcoming packs openable', () => {
+		const upcoming = { ...nebula, id: 4, status: 'UPCOMING' as const };
+		const credits = [
+			{
+				id: 3,
+				slotId: 3,
+				family: 'PREMIUM_PLUS' as const,
+				name: 'Nébuleuse',
+				description: '',
+				imageUrl: '/images/booster.png',
+				nbCards: 5,
+				regularAvailable: 0,
+				bonus: 0,
+				available: 0,
+				max: 3,
+				nextAvailableAt: null
+			}
+		];
 
-		const result = await openBooster(undefined, { fetch: fetcher as typeof fetch });
+		expect(mergePackCatalogue([nebula, upcoming], credits)).toMatchObject([
+			{ id: 3, credit: { available: 0 } },
+			{ id: 4, credit: null }
+		]);
+	});
 
-		expect(fetcher).toHaveBeenCalledTimes(1);
-		expect(fetcher).toHaveBeenCalledWith(
-			'https://api.wikiforge.fr/boosters/open',
-			expect.objectContaining({ method: 'POST', credentials: 'include' })
-		);
-		expect(result.inventory).toEqual({
-			available: 2,
-			capacity: 10,
-			nextRechargeAt: '2026-08-23T12:00:00Z'
+	it('opens every available booster through the dedicated endpoint', async () => {
+		request.mockResolvedValue({ packId: 4, cards: [] });
+		await expect(openAllBoosters(4, 'open-token')).resolves.toEqual({ packId: 4, cards: [] });
+		expect(request).toHaveBeenCalledWith('/boosters/4/open-all', {
+			apiTarget: 'wikiforge',
+			method: 'POST',
+			headers: { 'CF-Turnstile-Response': 'open-token' }
 		});
-		expect(result.pulls[0]?.card).toMatchObject({
-			id: '8818',
-			catalogueId: '12208062',
-			variant: 'FULL_ART',
-			title: 'Rose Thisse-Derouette',
-			imageUrl: 'https://images.wikiforge.test/Rose%20Thisse%20Derouette.jpg',
-			collectionTagIds: ['4', '9'],
-			duplicate: true,
-			userProtected: true,
-			pendingTradeId: '12',
-			ownedCount: 4,
-			rarityCounts: { SR: 3, R: 1 }
+	});
+
+	it('opens the selected pack and preserves the response order', async () => {
+		request.mockResolvedValue({
+			packId: 4,
+			cards: [
+				{ id: 9, pageId: 90, title: 'Première', variantId: 2, packId: 4 },
+				{
+					id: 3,
+					pageId: 30,
+					title: 'Spéciale',
+					variantId: 2,
+					packId: 4,
+					serialNumber: 1,
+					maxCopies: 10
+				}
+			]
 		});
+
+		const result = await openBooster(4, 'open-token');
+		expect(request).toHaveBeenCalledWith('/boosters/4/open', {
+			apiTarget: 'wikiforge',
+			method: 'POST',
+			headers: { 'CF-Turnstile-Response': 'open-token' }
+		});
+		expect(result.cards.map((card) => card.id)).toEqual(['9', '3']);
+		expect(result.cards[1]).toMatchObject({ serialNumber: 1, maxCopies: 10 });
 	});
 });

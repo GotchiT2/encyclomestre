@@ -7,20 +7,28 @@ export interface DashboardData {
 		completionRate: number;
 	};
 	pendingTrades: number;
+	pendingFriendRequests?: number;
+	pendingGuildInvitations?: number;
+	unreadNotifications?: number;
+	unreadMessages?: number;
 	activeMarketListings?: number;
 	rank?: number;
 	money: number;
-	boosterStatus: {
-		availableBoosters: number;
-		nextBoosterAvailableAt: string | null;
-	};
+	packs: import('./booster').PackSummary[];
 	recentAcquisitions: CardRecord[];
 }
 
 export interface GuildSummary {
 	id: string;
 	name: string;
-	description: string;
+	description?: string;
+	imageUrl?: string | null;
+	joinPolicy?: 'PUBLIC' | 'INVITE';
+	maxMembers?: number;
+	memberCount?: number;
+	member?: boolean;
+	owned?: boolean;
+	permissions?: string[];
 }
 
 export interface GuildMember {
@@ -28,6 +36,9 @@ export interface GuildMember {
 	username: string;
 	displayName: string;
 	role: string;
+	avatarUrl?: string | null;
+	permissions?: string[];
+	joinedAt?: string;
 }
 
 export interface GuildObjective {

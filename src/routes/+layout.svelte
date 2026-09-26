@@ -15,10 +15,6 @@
 	import { getCurrentUser } from '$lib/api';
 	import { setNsfwFilterSettings } from '$lib/content/nsfw-filter';
 	import AppSidebar from '$lib/components/layout/app-sidebar.svelte';
-	import {
-		cardVisualAssetUrls,
-		preloadCardVisualAssets
-	} from '$lib/components/cards/card-visual-assets';
 	import ForgeStarfield from '$lib/components/layout/forge-starfield.svelte';
 	import MobileTabBar from '$lib/components/layout/mobile-tab-bar.svelte';
 	import MobileTopBar from '$lib/components/layout/mobile-top-bar.svelte';
@@ -52,7 +48,6 @@
 	}
 
 	onMount(() => {
-		preloadCardVisualAssets();
 		const session = hydrateSession(localStorage);
 		if (!session) return;
 		void getCurrentUser()
@@ -94,9 +89,6 @@
 	<link rel="icon" href={favicon} />
 	<meta name="theme-color" content="#071638" />
 	<title>{$_('app.title')}</title>
-	{#each cardVisualAssetUrls as href (href)}
-		<link rel="preload" as="image" {href} />
-	{/each}
 </svelte:head>
 
 <Sidebar.Provider bind:open={sidebarOpen}>

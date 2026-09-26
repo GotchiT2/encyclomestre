@@ -21,7 +21,7 @@ describe('SelectionPanel', () => {
 
 		const selector = page.getByTestId('bulk-tag-selector');
 		expect(selector.element().querySelector('.forge-control')).not.toBeNull();
-		const protect = page.getByRole('button', { name: 'Protéger la sélection' });
+		const protect = page.getByTestId('protect-selection');
 		await expect.element(protect).toHaveClass('sm:h-11');
 		await protect.click();
 		expect(onProtect).toHaveBeenCalledOnce();
@@ -40,8 +40,6 @@ describe('SelectionPanel', () => {
 			onCancel: vi.fn()
 		});
 
-		await expect
-			.element(page.getByRole('button', { name: 'Protéger la sélection' }))
-			.toBeDisabled();
+		await expect.element(page.getByTestId('protect-selection')).toBeDisabled();
 	});
 });

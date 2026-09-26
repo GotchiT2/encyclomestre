@@ -49,8 +49,7 @@ export interface CreateTradeOfferInput {
 
 export interface TradeCardSearchQuery {
 	query?: string;
-	rarities?: import('./card').CardRarity[];
-	variant?: import('./card').CardVariant;
+	variantIds?: number[];
 	sortBy?: import('./card').CardSearchSort;
 	page?: number;
 	pageSize?: number;

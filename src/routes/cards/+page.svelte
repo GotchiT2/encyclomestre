@@ -98,26 +98,13 @@
 			sortBy: data.filters.sortBy,
 			sortDirection: data.filters.sortDirection
 		});
-		data.filters.selectedRarities.forEach((rarity) => parameters.append('rarity', rarity));
 		return `/cards?${parameters}`;
 	}
-	// Les filtres sont rendus hors du bloc {#await} : on y reporte les compteurs de la réponse.
-	let rarityCounts = $state<Record<string, number | undefined>>({});
-	$effect(() => {
-		let stale = false;
-		void data.cards.then((result) => {
-			if (!stale) rarityCounts = result.rarityResults;
-		});
-		return () => {
-			stale = true;
-		};
-	});
 
 	const activeFilterCount = $derived(
 		(data.filters.query ? 1 : 0) +
-			data.filters.selectedRarities.length +
-			(data.filters.sortBy !== 'rarity' ? 1 : 0) +
-			(data.filters.sortDirection === 'ASC' ? 1 : 0)
+			(data.filters.sortBy !== 'name' ? 1 : 0) +
+			(data.filters.sortDirection === 'DESC' ? 1 : 0)
 	);
 </script>
 
@@ -133,8 +120,6 @@
 				query={data.filters.query}
 				sortBy={data.filters.sortBy}
 				sortDirection={data.filters.sortDirection}
-				selectedRarities={data.filters.selectedRarities}
-				{rarityCounts}
 			/>
 		</FilterShell>
 
@@ -158,7 +143,10 @@
 						{wishlists}
 						busy={wishlistAdding}
 						onAdd={addSelectedToWishlist}
-						onCancel={() => { selectionMode = false; selectedCardIds = []; }}
+						onCancel={() => {
+							selectionMode = false;
+							selectedCardIds = [];
+						}}
 						onSelectAll={() => (selectedCardIds = result.items.map((card) => card.id))}
 					/>
 				{/if}
@@ -170,11 +158,16 @@
 								{#if selectionMode}
 									<button
 										class={`absolute inset-0 z-20 flex items-start justify-end bg-primary/10 p-2 outline-none ring-inset ring-energy focus-visible:ring-2 ${selectedCardIds.includes(card.id) ? 'bg-primary/25' : ''}`}
-										aria-label={$_('codex.toggle_card_selection', { values: { title: card.title } })}
+										aria-label={$_('codex.toggle_card_selection', {
+											values: { title: card.title }
+										})}
 										aria-pressed={selectedCardIds.includes(card.id)}
 										onclick={() => openCard(card)}
 									>
-										<span class="flex size-6 items-center justify-center border border-primary bg-background/90 text-xs text-primary">{selectedCardIds.includes(card.id) ? '✓' : ''}</span>
+										<span
+											class="flex size-6 items-center justify-center border border-primary bg-background/90 text-xs text-primary"
+											>{selectedCardIds.includes(card.id) ? '✓' : ''}</span
+										>
 									</button>
 								{/if}
 							</div>

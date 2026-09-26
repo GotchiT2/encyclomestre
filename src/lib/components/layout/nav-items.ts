@@ -18,7 +18,8 @@ export type NavHref =
 	| '/friends'
 	| '/messages'
 	| '/boosters'
-	| '/leaderboard';
+	| '/leaderboard'
+	| '/achievements';
 
 export type NavItem = {
 	href: NavHref;
@@ -40,6 +41,7 @@ export const communityNavigation: NavItem[] = [
 	{ href: '/guild', label: 'navigation.guild', icon: ShieldIcon },
 	{ href: '/friends', label: 'navigation.friends', icon: UsersIcon },
 	{ href: '/messages', label: 'navigation.messages', icon: MessageCircleIcon },
+	{ href: '/achievements', label: 'navigation.achievements', icon: TrophyIcon },
 	{ href: '/leaderboard', label: 'navigation.leaderboard', icon: TrophyIcon }
 ];
 

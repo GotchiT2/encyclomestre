@@ -3,6 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { apiRequest } = vi.hoisted(() => ({ apiRequest: vi.fn() }));
 
 vi.mock('./client', () => ({ apiRequest }));
+vi.mock('./variants', async (importOriginal) => ({
+	...(await importOriginal<typeof import('./variants')>()),
+	getVariants: vi
+		.fn()
+		.mockResolvedValue([
+			{ id: 1, name: 'Standard', color: '#b8f2d5', styles: ['NORMAL'], renderKey: 'standard' }
+		])
+}));
 
 import {
 	blockUser,
@@ -182,10 +190,9 @@ describe('friend collection', () => {
 			.mockResolvedValueOnce({
 				nbResults: 1,
 				page: 0,
-				results: [{ id: 81, pageId: 42, title: 'Rose', rarity: 'R' }],
+				results: [{ id: 81, pageId: 42, title: 'Rose', variantId: 1, packId: 1 }],
 				nextCursor: null,
-				hasNext: false,
-				rarityResults: null
+				hasNext: false
 			})
 			.mockResolvedValueOnce([{ id: 3, name: 'Échange', color: '#abc' }]);
 
