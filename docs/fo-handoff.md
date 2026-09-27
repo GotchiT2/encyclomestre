@@ -82,3 +82,10 @@ Le moteur `src/lib/card-renderer` provient du BO : utiliser son script `sync-car
 Contrat : `docs/card-template-api-contract.md`. Aucun backend n’est modifié et aucun modèle réel n’est publié. En mode mock seulement, `sessionStorage['wikiforge-template-scenario']='published'` ou `'missing'` active les scénarios de démonstration depuis `/cards`. Supprimer cette clé pour revenir aux variantes habituelles. Le parcours automatisé `scripts/check-card-templates.mjs` vérifie ces deux cas à cinq largeurs et interdit les requêtes de production.
 
 Le moteur partagé accepte désormais les définitions v2 (surfaces, finitions séparées, CSS de présentation validé) et migre les anciennes définitions. Aucune zone d’édition BO n’est rendue dans le FO. `RenderData.boosterLogo` est prêt pour un logo optionnel ; le branchement à un DTO réel attend le contrat backend documenté. Les anciennes clés de variante gardent leur rendu historique.
+
+
+## Catalogue mock de modèles full art
+
+La source canonique du BO ajoute `src/lib/card-renderer/presets.ts` : douze définitions graphiques v2 et vingt-quatre styles combinables. Le catalogue mock comprend les douze nouvelles révisions tout en préservant les anciennes clés. La galerie et la bibliothèque sont des outils du BO ; aucun nouveau sélecteur ou écran FO n’est introduit.
+
+Un modèle décrit uniquement une apparence. L’association à une variante réelle n’est pas publiée dans cette étape. Le FO conserve la composition normale/full art, le titre, l’image et la numérotation issus de la carte réelle. Le format v2, les adaptateurs et les replis restent identiques. Pour mettre à jour ces fichiers, lancer le script `scripts/sync-card-renderer.mjs` depuis le BO avec `--target=<dossier-FO>` ; `--check` vérifie leur identité.

@@ -486,3 +486,20 @@ Aucun commit, déploiement ou changement backend effectué.
 - [x] Regroupement des changements validés de l’atelier et du moteur partagé pour publication sur `main`.
 - Sujet Conventional Commit : `feat(fo): render editable versioned card templates`.
 - Publication demandée par l’utilisateur ; aucun déploiement ni changement backend.
+
+
+## Synchronisation de la bibliothèque graphique BO
+
+- [x] Douze modèles et vingt-quatre styles explicites synchronisés depuis le moteur canonique BO ; anciennes révisions mock conservées, données réelles de carte prioritaires.
+- [x] Aucune évolution de DTO, publication réelle ou changement du parcours des cartes FO.
+- [x] Check sans diagnostic, ESLint ciblé, suite de 266 tests Vitest puis 4 tests ciblés du catalogue après le dernier ajustement, build statique, diff et identité des fichiers partagés validés.
+
+Aucun commit, push ou déploiement demandé pour cette étape.
+
+- [x] Catalogue partagé : titres des douze préréglages systématiquement en bas, sans réécriture des compositions personnalisées. Check et tests ciblés du catalogue validés.
+
+## Commit du catalogue partagé
+
+- [x] Livraison des modèles full art et styles partagés synchronisés avec le BO.
+- Sujet Conventional Commit : `feat(cards): sync full-art preset catalogue from backoffice`.
+- Commit local demandé ; aucun push ni déploiement.

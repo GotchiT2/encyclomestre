@@ -1,3 +1,4 @@
+import { modelPresets, galleryDefinition } from "./presets";
 import {
   presetDefinition,
   themes,
@@ -76,6 +77,22 @@ export function createMockCatalogue() {
     published.set(`${theme}@1`, {
       id: theme,
       name: theme,
+      definition: copy(definition),
+      revision: 1,
+    });
+  }
+  for (const preset of modelPresets) {
+    const definition = galleryDefinition(preset.id);
+    drafts.set(preset.id, {
+      id: preset.id,
+      name: preset.id,
+      definition,
+      version: 1,
+      latestRevision: 1,
+    });
+    published.set(`${preset.id}@1`, {
+      id: preset.id,
+      name: preset.id,
       definition: copy(definition),
       revision: 1,
     });
