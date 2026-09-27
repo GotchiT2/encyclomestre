@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
+	import TemplateCard from '$lib/card-renderer/template-card.svelte';
+	import type { PublishedTemplate } from '$lib/card-renderer/catalogue';
 	import { untrack } from 'svelte';
 	import EditionSigil from '$lib/components/boosters/preview/edition-sigil.svelte';
 	import VariantEffects from '$lib/components/boosters/preview/variant-effects.svelte';
@@ -57,55 +60,102 @@
 		failed = false;
 		untrack(() => onOrientationChange(false));
 	});
+
+	let template = $state<PublishedTemplate | null>(null),
+		templateError = $state(false);
+	let templateGeneration = 0;
+	async function loadTemplate(key: string, generation: number) {
+		try {
+			const { getCardTemplate } = await import('$lib/api/card-templates');
+			const value = await getCardTemplate(key);
+			if (generation === templateGeneration) template = value;
+		} catch {
+			if (generation === templateGeneration) templateError = true;
+		}
+	}
+	$effect(() => {
+		const key = card.variant.renderKey;
+		template = null;
+		templateError = false;
+		const generation = ++templateGeneration;
+		if (key.startsWith('tpl:')) untrack(() => void loadTemplate(key, generation));
+		return () => {
+			templateGeneration++;
+		};
+	});
 </script>
 
-<div
-	class="variant-face"
-	class:full-art={fullArt}
-	class:landscape
-	data-render-key={card.variant.renderKey}
-	data-variant-id={card.variantId}
-	data-orientation={landscape ? 'landscape' : 'portrait'}
-	style={`--metal:${card.variant.color};--pointer-x:${pointerX};--pointer-y:${pointerY};--rx:${((pointerY - 50) * -0.045).toFixed(2)}deg;--ry:${((pointerX - 50) * 0.045).toFixed(2)}deg`}
-	onpointermove={move}
-	onpointerleave={reset}
-	onpointerdown={(event) => event.pointerType !== 'mouse' && effectsEnabled && (active = true)}
-	onpointerup={reset}
-	onfocusin={() => effectsEnabled && (active = true)}
-	onfocusout={reset}
-	role="presentation"
->
-	<div class="shell">
-		<div class="engraving" aria-hidden="true"></div>
-		<div class="art">
-			{#if failed}
-				<img src="/card-placeholder.svg" alt="" />
-			{:else}
-				<img
-					loading="lazy"
-					decoding="async"
-					src={card.imageUrl}
-					alt=""
-					class:blur-xl={illustrationBlurred}
-					onload={inspect}
-					onerror={() => {
-						failed = true;
-						landscape = false;
-						onOrientationChange(false);
-					}}
-				/>
+{#if template}
+	<TemplateCard
+		definition={template.definition}
+		data={{
+			title: card.title,
+			image: card.imageUrl,
+			variantName: card.variant.name,
+			fullArt,
+			serial: card.serialNumber,
+			maximum: card.maxCopies,
+			blurred: illustrationBlurred
+		}}
+		labels={{
+			missing: $_('cardTemplates.missing'),
+			untitled: $_('cardTemplates.untitled')
+		}}
+		{onOrientationChange}
+	/>
+{:else}
+	<div
+		class="variant-face"
+		class:full-art={fullArt}
+		class:landscape
+		data-render-key={card.variant.renderKey}
+		data-variant-id={card.variantId}
+		data-orientation={landscape ? 'landscape' : 'portrait'}
+		style={`--metal:${card.variant.color};--pointer-x:${pointerX};--pointer-y:${pointerY};--rx:${((pointerY - 50) * -0.045).toFixed(2)}deg;--ry:${((pointerX - 50) * 0.045).toFixed(2)}deg`}
+		onpointermove={move}
+		onpointerleave={reset}
+		onpointerdown={(event) => event.pointerType !== 'mouse' && effectsEnabled && (active = true)}
+		onpointerup={reset}
+		onfocusin={() => effectsEnabled && (active = true)}
+		onfocusout={reset}
+		role="presentation"
+	>
+		<div class="shell">
+			<div class="engraving" aria-hidden="true"></div>
+			<div class="art">
+				{#if failed}
+					<img src="/card-placeholder.svg" alt="" />
+				{:else}
+					<img
+						loading="lazy"
+						decoding="async"
+						src={card.imageUrl}
+						alt=""
+						class:blur-xl={illustrationBlurred}
+						onload={inspect}
+						onerror={() => {
+							failed = true;
+							landscape = false;
+							onOrientationChange(false);
+						}}
+					/>
+				{/if}
+			</div>
+			<div class="vignette" aria-hidden="true"></div>
+			{#if effectsEnabled}
+				<VariantEffects profile={card.variant.renderKey} {fullArt} {active} />
 			{/if}
+			<div class="name">{card.title}</div>
+			{#if !fullArt && !compact}<p class="description">{card.shortDescription}</p>{/if}
+			<div class="sigil"><EditionSigil key={card.variant.renderKey} /></div>
+			{#if serial}<div class="serial">{serial}</div>{/if}
 		</div>
-		<div class="vignette" aria-hidden="true"></div>
-		{#if effectsEnabled}
-			<VariantEffects profile={card.variant.renderKey} {fullArt} {active} />
-		{/if}
-		<div class="name">{card.title}</div>
-		{#if !fullArt && !compact}<p class="description">{card.shortDescription}</p>{/if}
-		<div class="sigil"><EditionSigil key={card.variant.renderKey} /></div>
-		{#if serial}<div class="serial">{serial}</div>{/if}
 	</div>
-</div>
+
+	{#if templateError}<p class="text-xs text-muted-foreground" role="status">
+			{$_('cardTemplates.fallback')}
+		</p>{/if}
+{/if}
 
 <style>
 	.variant-face {

@@ -32,7 +32,10 @@ function normalizeVariant(variant: VariantDto): VariantDefinition {
 	return {
 		...variant,
 		styles: Array.isArray(variant.styles) ? variant.styles : [],
-		renderKey: requestedKey && knownRenderKeys.has(requestedKey) ? requestedKey : 'standard'
+		renderKey:
+			requestedKey && (knownRenderKeys.has(requestedKey) || requestedKey.startsWith('tpl:'))
+				? requestedKey
+				: 'standard'
 	};
 }
 

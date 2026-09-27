@@ -457,3 +457,32 @@ Validation finale : `npm run check` sans erreur ni avertissement ; ESLint ciblé
 
 Sujet du commit consolidé : `feat(fo): complete player workflows and shared card experience`.
 Les validations de l’étape 25 couvrent les changements de code livrés ; cette dernière étape ajoute uniquement la documentation. Aucun push, déploiement ni changement backend. Le fichier IDE local reste exclu.
+
+## 27. Moteur partagé de modèles de cartes
+
+- [x] Moteur HTML/CSS synchronisé depuis le BO, définition versionnée et données d’exemplaire séparées.
+- [x] Conservation des clés `tpl:`, résolution publique à la demande, cache/coalescence, protection contre les réponses anciennes et repli standard.
+- [x] Modèles mock, tests du catalogue et du composant, parcours navigateur de publication et de modèle absent.
+- [x] Contrat pour Claude et guide de reprise actualisés. Backend, publication réelle et déploiement hors de cette étape.
+
+Sujet prévu pour un futur commit : `feat(fo): render versioned shared card templates`. Aucun commit demandé pour cette étape.
+
+Validation finale : check sans diagnostic, ESLint ciblé, 255 tests dans 79 fichiers, parcours navigateur `check-card-templates.mjs` et `check-ux.mjs` à cinq largeurs, build statique et diff vérifiés. Les lectures de modèles absents sont couvertes par le parcours navigateur mock. Aucune écriture de test en production.
+
+- [x] Rendu des modèles partagé épuré : retrait du logo, des noms de modèle/variante et du libellé de composition ; titre et numérotation conservés. Synchronisation BO/FO. Aucun commit demandé.
+
+## Moteur partagé de l’atelier libre
+
+- [x] Synchronisation du moteur v2 : surfaces éditables, cadres rectangulaires, CSS isolé validé, finitions indépendantes dont néon et logo optionnel dans les données de rendu.
+- [x] Migration des définitions v1 et conservation des anciennes clés/rendus ; les aides BO restent absentes du FO.
+- [x] Contrat Claude et guide de reprise actualisés, branchement réel du logo conditionné au Swagger backend.
+- [x] Check, ESLint ciblé, suite complète de 265 tests puis 14 tests du composant incluant le nouveau test de halo au pointeur ; build statique validé.
+
+Sujet proposé pour un futur commit : `feat(fo): support editable versioned card surfaces`.
+Aucun commit, déploiement ou changement backend effectué.
+
+## Livraison Git — 27 septembre 2026
+
+- [x] Regroupement des changements validés de l’atelier et du moteur partagé pour publication sur `main`.
+- Sujet Conventional Commit : `feat(fo): render editable versioned card templates`.
+- Publication demandée par l’utilisateur ; aucun déploiement ni changement backend.

@@ -8,11 +8,11 @@ Implémente les évolutions ci-dessous dans le backend après vérification de s
 
 Les chemins et noms de champs marqués **proposés** sont des recommandations de contrat, pas des appels disponibles aujourd’hui. Préserve les conventions existantes lorsque le backend possède une solution équivalente. Fournis le contrat définitif et les exemples nécessaires aux deux fronts avant leur branchement. Aucun déploiement ni test d’écriture en production n’est demandé.
 
-Références locales :
+Contexte des applications :
 
-- FO : `D:/Documents/KTD/encyclomestre`, contrat joueur de référence `docs/contracts/api.openapi.json`, analyse `docs/api-auctions-reporting-needs.md`, recommandations `docs/ux-ui-recommendations.md`.
-- BO : `D:/Documents/KTD/wikiforge-bo`, contrats administratifs dans `src/lib/api/types.ts` et `src/lib/api/admin.ts`.
-- Le JSON joueur de référence couvre 117 opérations et ne constitue pas le Swagger administratif complet. Vérifie les DTO admin contre le Swagger du backend. Les constats ci-dessous portent sur ces sources locales ; une évolution serveur plus récente peut les rendre partiellement obsolètes.
+- **Front office (FO)** : application destinée aux joueurs, avec catalogue, collection, enchères, guildes et interactions sociales.
+- **Backoffice (BO)** : application d’administration des boosters, variantes, succès, dons, bannières, enchères et signalements.
+- Les constats ci-dessous proviennent des contrats utilisés par ces applications au moment de la rédaction. Le contrat joueur analysé couvre 117 opérations et ne constitue pas le Swagger administratif complet. Sur ton environnement, prends le Swagger et le code actuels du backend comme sources de vérité, y compris les DTO administratifs. Une évolution serveur plus récente peut avoir déjà couvert certains besoins.
 
 ## Capacités existantes à conserver
 
@@ -160,3 +160,9 @@ Références locales :
 6. Résultats des validations locales, limites restantes et étapes de reprise. Aucune affirmation de fonctionnement en production sans vérification autorisée.
 
 Le branchement des nouveaux endpoints dans les fronts fera ensuite l’objet d’une modification dédiée avec leurs contrats réels. Ce document n’indique pas que ces capacités sont déjà implémentées.
+
+## P1 — Catalogue partagé de modèles de cartes
+
+Nouvelle demande détaillée dans [card-template-api-contract.md](card-template-api-contract.md) : brouillons administratifs, publication de révisions immuables, lecture publique et références versionnées dans `renderKey`. Les mocks existent dans les fronts ; la publication réelle reste bloquée avant livraison du contrat backend.
+
+Le contrat de modèles est désormais en version 2 : surfaces éditables, CSS par zone sur liste blanche, finitions indépendantes et ajout proposé du logo de booster. Voir le document de contrat pour les DTO concernés, règles de validation et critères. Le logo est une donnée de booster ; sa ressource ne doit jamais être embarquée dans la définition du modèle.

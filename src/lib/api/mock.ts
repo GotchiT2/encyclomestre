@@ -906,7 +906,20 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	const auctionResponse = auctionMocks.handle(pathname, normalizedMethod, body, url.searchParams);
 	if (auctionResponse) return auctionResponse;
 	if (normalizedMethod === 'POST' && pathname === '/oauth2/revoke') return json(undefined);
-	if (normalizedMethod === 'GET' && pathname === '/variants') return json(mockVariants);
+	if (normalizedMethod === 'GET' && pathname === '/variants') {
+		const scenario =
+			typeof sessionStorage !== 'undefined'
+				? sessionStorage.getItem('wikiforge-template-scenario')
+				: null;
+		return json(
+			scenario
+				? mockVariants.map((v) => ({
+						...v,
+						renderKey: scenario === 'missing' ? 'tpl:missing@1' : 'tpl:cyberpunk@1'
+					}))
+				: mockVariants
+		);
+	}
 	if (normalizedMethod === 'GET' && pathname === '/me/achievements') return json(mockAchievements);
 	const achievementClaimMatch = /^\/me\/achievements\/([^/]+)\/claim$/.exec(pathname);
 	if (normalizedMethod === 'POST' && achievementClaimMatch) {

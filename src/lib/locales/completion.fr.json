@@ -160,5 +160,12 @@
 		"created": "Créée le {date}",
 		"noGlobalCount": "Le nombre d’exemplaires global n’est pas calculé dans cette vue.",
 		"imageRemoved": "Avatar retiré."
+	},
+	"cardTemplates": {
+		"normal": "Classique",
+		"fullArt": "Illustration complète",
+		"missing": "Image indisponible",
+		"untitled": "Carte sans titre",
+		"fallback": "Modèle indisponible : affichage standard."
 	}
 }

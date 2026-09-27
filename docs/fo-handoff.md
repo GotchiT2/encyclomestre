@@ -72,3 +72,13 @@ Validation de cette étape : check sans diagnostics, ESLint ciblé, 248 tests Vi
 ## Transmission API à Claude
 
 Le document [claude-api-requirements.md](claude-api-requirements.md) décrit les capacités existantes et les évolutions backend nécessaires, avec priorités, contrats proposés et critères d’acceptation. Il inclut la suppression de son propre compte et ses blocages métier. Une copie identique est livrée dans le BO. Aucun nouvel endpoint n’est présenté comme déjà disponible.
+
+## Modèles de cartes publiés
+
+Les clés de variante `tpl:<id>@<revision>` sont préservées par la normalisation et résolues à la demande via le catalogue public proposé. Le composant conserve son rendu historique pour les autres clés et fournit un repli standard explicite si une révision est absente, invalide ou incompatible. Les requêtes concurrentes sont regroupées et les réponses obsolètes ignorées. Les filtres d’images sensibles et les données réelles de l’exemplaire restent prioritaires.
+
+Le moteur `src/lib/card-renderer` provient du BO : utiliser son script `sync-card-renderer.mjs --target=<dossier-FO>` puis `--check`. Ne pas éditer ces fichiers directement ici. Le format des templates est séparé des données de carte et de l’export de comparaison du BO.
+
+Contrat : `docs/card-template-api-contract.md`. Aucun backend n’est modifié et aucun modèle réel n’est publié. En mode mock seulement, `sessionStorage['wikiforge-template-scenario']='published'` ou `'missing'` active les scénarios de démonstration depuis `/cards`. Supprimer cette clé pour revenir aux variantes habituelles. Le parcours automatisé `scripts/check-card-templates.mjs` vérifie ces deux cas à cinq largeurs et interdit les requêtes de production.
+
+Le moteur partagé accepte désormais les définitions v2 (surfaces, finitions séparées, CSS de présentation validé) et migre les anciennes définitions. Aucune zone d’édition BO n’est rendue dans le FO. `RenderData.boosterLogo` est prêt pour un logo optionnel ; le branchement à un DTO réel attend le contrat backend documenté. Les anciennes clés de variante gardent leur rendu historique.
