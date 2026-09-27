@@ -50,6 +50,20 @@ describe('apiRequest authentication recovery', () => {
 
 	afterEach(() => vi.unstubAllGlobals());
 
+	it('does not refresh or replay a forbidden mutation', async () => {
+		const fetcher = vi
+			.fn()
+			.mockResolvedValue(Response.json({ code: 'MISSING_GUILD_PERMISSION' }, { status: 403 }));
+		await expect(
+			apiRequest('/guilds/1', {
+				method: 'PATCH',
+				body: { name: 'Test', joinPolicy: 'PUBLIC' },
+				fetch: fetcher
+			})
+		).rejects.toMatchObject({ status: 403 });
+		expect(fetcher).toHaveBeenCalledTimes(1);
+		expect(restoreSession(storage)?.accessToken).toBe('expired');
+	});
 	it('renouvelle une seule fois les appels simultanés refusés avec un statut 401', async () => {
 		let refreshCalls = 0;
 		const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {

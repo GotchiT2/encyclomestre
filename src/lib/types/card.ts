@@ -58,6 +58,7 @@ export interface Card {
 	category?: string;
 	qScore?: number;
 	acquiredAt?: string;
+	createdAt?: string;
 	collectionTags?: import('./tag').CollectionTag[];
 	collectionTagIds?: string[];
 	duplicate?: boolean;
@@ -65,6 +66,7 @@ export interface Card {
 	pendingTradeId?: string | null;
 	nsfw?: boolean;
 	activeSale?: import('./sales').ActiveSaleSummary | null;
+	activeAuctionId?: string | null;
 }
 
 export interface CardRecord extends Card {

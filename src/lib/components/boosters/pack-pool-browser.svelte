@@ -1,5 +1,9 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
+	import { openCardDetail } from '$lib/components/cards/detail-state';
+	import CardTile from '$lib/components/card-tile.svelte';
+	import { Button } from '$lib/components/ui/button';
+	let poolPage = $state(0);
 	import VariantCardFace from '$lib/components/cards/variant-card-face.svelte';
 	import type { ResolvedPackDefinition, ResolvedPackVariant } from '$lib/api/boosters';
 	import type { CardRecord, PackPageSummary } from '$lib/types';
@@ -16,7 +20,8 @@
 	let query = $state('');
 	let selected = $state<PoolCard | null>(null);
 	let focused = $state(false);
-	const matches = $derived(filterPackPool(pool, query, ({ page }) => page.title).slice(0, 8));
+	const filtered = $derived(filterPackPool(pool, query, ({ page }) => page.title));
+	const matches = $derived(filtered.slice(poolPage * 48, (poolPage + 1) * 48));
 	const percentage = (rate: number) =>
 		new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 2 }).format(rate);
 
@@ -56,10 +61,11 @@
 				id="pack-card-search"
 				type="search"
 				bind:value={query}
+				oninput={() => (poolPage = 0)}
 				class="h-11 w-full border border-primary/35 bg-background px-3"
 				placeholder={$_('boosters.detail.search_card_placeholder')}
 				role="combobox"
-				aria-expanded={focused && matches.length > 0}
+				aria-expanded={matches.length > 0}
 				aria-controls="pack-card-suggestions"
 				onfocus={() => (focused = true)}
 				onkeydown={(event) => {
@@ -69,10 +75,10 @@
 					}
 				}}
 			/>
-			{#if focused && matches.length}
+			{#if matches.length}
 				<ul
 					id="pack-card-suggestions"
-					class="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto border border-primary/40 bg-card shadow-2xl"
+					class="relative mt-1 max-h-72 w-full overflow-y-auto border border-primary/40 bg-card shadow-2xl"
 					role="listbox"
 				>
 					{#each matches as item (`${item.entry.variantId}-${item.page.id}`)}
@@ -112,18 +118,33 @@
 				{$_('boosters.detail.search_no_result')}
 			</p>{/if}
 
+		<div class="mt-3 flex justify-between gap-2">
+			<Button variant="outline" disabled={!poolPage} onclick={() => poolPage--}
+				>{$_('completion.previous')}</Button
+			><Button
+				variant="outline"
+				disabled={(poolPage + 1) * 48 >= filtered.length}
+				onclick={() => poolPage++}>{$_('completion.next')}</Button
+			>
+		</div>
 		{#if selected}
 			<div
 				class="mt-5 grid gap-5 border-t border-primary/20 pt-5 sm:grid-cols-[9rem_1fr] sm:items-center"
 			>
 				<div class="mx-auto w-36">
-					<VariantCardFace card={previewCard(selected.entry, selected.page)} />
+					<CardTile card={previewCard(selected.entry, selected.page)} showCollectionState={false} />
 				</div>
 				<div>
 					<p class="forge-label" style={`color:${selected.entry.variant.color}`}>
 						{selected.entry.variant.name}
 					</p>
-					<h3 class="mt-1 font-serif text-2xl">{selected.page.title}</h3>
+					<h3 class="mt-1 font-serif text-2xl">
+						<button
+							class="underline"
+							onclick={() => selected && openCardDetail(previewCard(selected.entry, selected.page))}
+							>{selected.page.title}</button
+						>
+					</h3>
 					<p class="mt-3 text-sm font-semibold">
 						{$_('boosters.detail.page_stock', {
 							values: {
@@ -151,6 +172,18 @@
 					</h3>
 				</div>
 			</div>
+			<div
+				class="mb-4 flex flex-wrap gap-2"
+				aria-label={$_('ux.draws', { values: { count: group.count } })}
+			>
+				{#each Array.from({ length: Math.max(0, Math.min(50, group.count)) }, (_, index) => index + 1) as slot (slot)}<div
+						class="flex h-16 w-11 items-center justify-center border border-primary/40 bg-card text-primary"
+						aria-hidden="true"
+					>
+						{slot + 1}
+					</div>{/each}
+			</div>
+			<p class="mb-3 text-xs text-muted-foreground">{$_('ux.chance')}</p>
 			<div class="grid gap-4 lg:grid-cols-2">
 				{#each group.variants as entry (entry.variantId)}
 					{@const example =

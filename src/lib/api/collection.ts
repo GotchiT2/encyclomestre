@@ -67,8 +67,7 @@ export function collectionPath(query: CollectionQuery = {}, endpoint = '/collect
 	if (query.protected && query.protected !== 'all') {
 		parameters.set('protected', String(query.protected === 'yes'));
 	}
-	const cursorPagination = (query.sortBy ?? 'acquiredDate') === 'acquiredDate' && text.length < 3;
-	if (query.cursor && cursorPagination) parameters.set('cursor', query.cursor);
+	if (query.cursor) parameters.set('cursor', query.cursor);
 	else if ((query.page ?? 0) > 0) parameters.set('page', String(query.page));
 	if (query.wishlistOwnerId) {
 		parameters.set('wishlist', String(wikiForgeNumericId(query.wishlistOwnerId, 'wishlist')));
@@ -81,9 +80,7 @@ export function nextCollectionPosition(
 		Partial<Pick<WikiForgeCollectionResponse, 'sortBy' | 'q'>>
 ): CollectionPosition | null {
 	if (!response.hasNext) return null;
-	return response.nextCursor &&
-		(response.sortBy ?? 'ACQUIRED_DATE') === 'ACQUIRED_DATE' &&
-		!response.q
+	return response.nextCursor
 		? { page: 0, cursor: response.nextCursor }
 		: { page: response.page + 1, cursor: null };
 }

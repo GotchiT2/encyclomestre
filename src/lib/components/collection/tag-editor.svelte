@@ -80,6 +80,7 @@
 			<div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_4rem_9rem_auto]">
 				<Input
 					bind:value={draftTagName}
+					maxlength={64}
 					placeholder={$_('collection.tagName')}
 					aria-label={$_('collection.tagName')}
 					onkeydown={(event) => event.key === 'Enter' && createTag()}
@@ -103,7 +104,11 @@
 							{#if editingTagId === tag.id}<div
 									class="grid w-full gap-2 sm:grid-cols-[minmax(0,1fr)_4rem_9rem_auto_auto]"
 								>
-									<Input bind:value={editingTagName} aria-label={$_('collection.tagName')} />
+									<Input
+										bind:value={editingTagName}
+										maxlength={64}
+										aria-label={$_('collection.tagName')}
+									/>
 									<input
 										bind:value={editingTagColor}
 										type="color"

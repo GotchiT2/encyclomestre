@@ -15,9 +15,16 @@
 		onOpen: (pack: PackCatalogueItem) => void;
 	} = $props();
 
-	const sections = ['open', 'upcoming', 'past'] as const;
-	const sectionFor = (pack: PackCatalogueItem) =>
-		pack.status === 'OPEN' ? 'open' : pack.status === 'UPCOMING' ? 'upcoming' : 'past';
+	const sections = $derived(
+		[...new Set(packs.map((pack) => pack.slotId))].sort((a, b) => {
+			const left = packs.find((pack) => pack.slotId === a)?.credit?.slotOrder ?? a;
+			const right = packs.find((pack) => pack.slotId === b)?.credit?.slotOrder ?? b;
+			return left - right;
+		})
+	);
+	const slotTitle = (slotId: number) =>
+		packs.find((pack) => pack.slotId === slotId)?.slotName?.trim() ||
+		$_('boosters.catalogue.slot_fallback', { values: { id: slotId } });
 	const name = (pack: PackCatalogueItem) => {
 		const key = packNameKey(pack.name);
 		return key ? $_(key) : pack.name;
@@ -30,14 +37,16 @@
 		pack.status === 'OPEN' && Boolean(pack.credit?.available);
 </script>
 
-{#each sections as section (section)}
-	{@const entries = packs.filter((pack) => sectionFor(pack) === section)}
+{#each sections as slotId (slotId)}
+	{@const entries = packs
+		.filter((pack) => pack.slotId === slotId)
+		.sort((a, b) => a.position - b.position)}
 	{#if entries.length}
-		<section class="space-y-4" data-pack-section={section}>
+		<section class="space-y-4" data-pack-section={slotId}>
 			<div class="flex items-end justify-between gap-4 border-b border-border pb-3">
 				<div>
-					<p class="forge-label">{$_(`boosters.catalogue.${section}_eyebrow`)}</p>
-					<h2 class="mt-1 font-serif text-2xl">{$_(`boosters.catalogue.${section}`)}</h2>
+					<p class="forge-label">{$_('boosters.catalogue.slot')}</p>
+					<h2 class="mt-1 font-serif text-2xl">{slotTitle(slotId)}</h2>
 				</div>
 				<p class="text-sm text-muted-foreground">{entries.length}</p>
 			</div>
@@ -57,6 +66,10 @@
 						<div class="flex min-w-0 flex-col">
 							<p class="forge-label">{$_(`boosters.family.${pack.family}`)}</p>
 							<h3 class="mt-2 font-serif text-2xl">{name(pack)}</h3>
+							<span
+								class="mt-2 w-fit rounded-full border border-primary/50 px-2.5 py-1 text-xs font-medium"
+								>{$_(`boosters.catalogue.status.${pack.status}`, { default: pack.status })}</span
+							>
 							<p class="mt-2 grow text-sm text-muted-foreground">{description(pack)}</p>
 							{#if pack.credit}
 								<p class="mt-4 text-sm font-semibold text-primary">

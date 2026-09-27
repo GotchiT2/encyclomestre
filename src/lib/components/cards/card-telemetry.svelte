@@ -1,12 +1,16 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import { cardNumberLabel, type CardRecord } from '$lib/types';
-	let { card }: { card: CardRecord } = $props();
+	let { card, publicView = false }: { card: CardRecord; publicView?: boolean } = $props();
 	const facts = $derived([
 		{ label: $_('collection.variants'), value: card.variant.name },
-		{ label: $_('codex.owned'), value: card.ownedCount },
-		...(card.packId == null ? [] : [{ label: $_('boosters.title'), value: `#${card.packId}` }]),
-		...(cardNumberLabel(card) ? [{ label: '#', value: cardNumberLabel(card) }] : [])
+		{ label: $_('auctionHub.attack'), value: card.attack },
+		...(!publicView ? [{ label: $_('codex.owned'), value: card.ownedCount }] : []),
+		...(card.packId == null ? [] : [{ label: $_('auctionHub.pack'), value: `#${card.packId}` }]),
+		...(cardNumberLabel(card)
+			? [{ label: $_('auctionHub.number'), value: cardNumberLabel(card) }]
+			: []),
+		...(card.maxCopies != null ? [{ label: $_('auctionHub.copies'), value: card.maxCopies }] : [])
 	]);
 </script>
 
@@ -22,3 +26,13 @@
 		</div>
 	{/each}
 </dl>
+{#if card.acquiredAt}<p class="text-xs text-muted-foreground">
+		{$_('completion.acquired', {
+			values: { date: new Date(card.acquiredAt).toLocaleString('fr-FR') }
+		})}
+	</p>{/if}
+{#if card.createdAt}<p class="text-xs text-muted-foreground">
+		{$_('completion.created', {
+			values: { date: new Date(card.createdAt).toLocaleString('fr-FR') }
+		})}
+	</p>{/if}

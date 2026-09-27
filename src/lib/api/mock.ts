@@ -17,6 +17,8 @@ import type {
 } from '$lib/types';
 import { mockCards, mockVariants } from './mocks/cards';
 import { mockCollectionTags } from './mocks/collection-tags';
+import { createAuctionMocks } from './mocks/auctions';
+import { createCommunityMocks } from './mocks/community';
 
 export interface MockApiRequest {
 	path: string;
@@ -26,6 +28,15 @@ export interface MockApiRequest {
 
 const now = '2026-07-11T09:00:00.000Z';
 const mockNotifications = [
+	{
+		id: 990,
+		type: 'AUCTION_OUTBID',
+		extId: 70,
+		read: false,
+		creationDate: '2026-09-27T10:00:00',
+		actor: { id: 2, name: 'Joueur' },
+		meta: null
+	},
 	{
 		id: 1,
 		type: 'TRADE_RECEIVED',
@@ -80,6 +91,7 @@ interface LegacyWishlistEntry {
 }
 
 interface LegacyWishlistRegistry {
+	sharedWithGuild?: boolean;
 	id: string;
 	userId: string;
 	title: string;
@@ -116,6 +128,7 @@ const publicPage = (card: CardRecord) => ({
 	image: card.imageUrl,
 	atk: card.attack,
 	defaultVariantId: card.variantId,
+	variantIds: [1, 2, 3, 4],
 	createdAt: card.acquiredAt ?? now,
 	globalCount: card.globalSupply,
 	ownedCount: card.ownedCount,
@@ -170,6 +183,7 @@ const showcaseCard = (card: CardRecord, id: number) => ({
 	id,
 	pageId: card.baseCardId ?? id,
 	title: card.title,
+	description: card.longDescription || card.shortDescription,
 	image: card.imageUrl,
 	nsfw: Boolean(card.nsfw),
 	variantId: card.variantId,
@@ -187,6 +201,23 @@ let mockShowcaseLines = [
 ];
 let mockShowcaseSlots = 3;
 let nextInstantSaleId = 50;
+const auctionMocks = createAuctionMocks(
+	mockCards.map((card, index) => showcaseCard(card, index + 1))
+);
+const communityMocks = createCommunityMocks(
+	mockCards.map((card, index) => showcaseCard(card, index + 1)),
+	[...new Map(mockCards.map((card) => [card.baseCardId, publicPage(card)])).values()]
+);
+const mockBanners = [
+	{
+		id: 1,
+		title: 'Actualité',
+		message: 'Les enchères sont maintenant disponibles.',
+		level: 'INFO',
+		link: '/market',
+		startsAt: '2026-09-01T00:00:00'
+	}
+];
 let mockInstantSales = [{ id: 41, price: 500, card: showcaseCard(mockCards[0], 1) }];
 
 const apiRegistry = (registry: LegacyWishlistRegistry) => ({
@@ -339,7 +370,7 @@ const wishlists = new Map<string, LegacyWishlistRegistry[]>([
 		'demo-user',
 		[
 			{
-				id: 'desiderata-priorities',
+				id: '101',
 				userId: 'demo-user',
 				title: 'Cartes prioritaires',
 				description: 'Les cartes à obtenir en priorité.',
@@ -352,7 +383,7 @@ const wishlists = new Map<string, LegacyWishlistRegistry[]>([
 				updatedAt: now
 			},
 			{
-				id: 'desiderata-generation-2',
+				id: '102',
 				userId: 'demo-user',
 				title: 'Génération 2',
 				description: 'Cartes de la seconde génération.',
@@ -370,7 +401,7 @@ const wishlists = new Map<string, LegacyWishlistRegistry[]>([
 		'friend-0',
 		[
 			{
-				id: 'friend-0-public-wishlist',
+				id: '201',
 				userId: 'friend-0',
 				title: 'Cartes recherchées',
 				description: 'Wishlist publique de SoneS9.',
@@ -384,8 +415,8 @@ const wishlists = new Map<string, LegacyWishlistRegistry[]>([
 	]
 ]);
 const wishlistFollowers = new Map<string, Array<{ id: number; name: string; accepted: boolean }>>([
-	['desiderata-priorities', [{ id: 2, name: 'SoneS9', accepted: true }]],
-	['desiderata-generation-2', [{ id: 3, name: 'OnMyGhost', accepted: false }]]
+	['101', [{ id: 2, name: 'SoneS9', accepted: true }]],
+	['102', [{ id: 3, name: 'OnMyGhost', accepted: false }]]
 ]);
 let pendingWishlistState: 'pending' | 'shared' | 'removed' = 'pending';
 let sharedWishlistLeft = false;
@@ -435,7 +466,7 @@ const messages = new Map<string, MessageRecord[]>([
 				readAt: null,
 				reactions: [{ emoji: '❤️', userIds: ['demo-user'] }],
 				wishlistShare: {
-					registryId: 'desiderata-priorities',
+					registryId: '101',
 					title: 'Cartes prioritaires',
 					description: 'Les cartes à obtenir en priorité.',
 					cardCount: 3
@@ -859,7 +890,21 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	const url = new URL(`${routedPath}${requestUrl.search}`, requestUrl.origin);
 	const { pathname } = url;
 	const normalizedMethod = method.toUpperCase();
+	const communityResponse = communityMocks.handle(
+		pathname,
+		normalizedMethod,
+		body,
+		url.searchParams
+	);
+	if (communityResponse) return communityResponse;
+	if (normalizedMethod === 'POST' && pathname === '/me/achievements/claim') {
+		const claimed = mockAchievements.filter((item) => item.unlockedAt && !item.claimedAt);
+		for (const item of claimed) item.claimedAt = new Date().toISOString();
+		return json({ claimed: claimed.map((item) => item.code) });
+	}
 
+	const auctionResponse = auctionMocks.handle(pathname, normalizedMethod, body, url.searchParams);
+	if (auctionResponse) return auctionResponse;
 	if (normalizedMethod === 'POST' && pathname === '/oauth2/revoke') return json(undefined);
 	if (normalizedMethod === 'GET' && pathname === '/variants') return json(mockVariants);
 	if (normalizedMethod === 'GET' && pathname === '/me/achievements') return json(mockAchievements);
@@ -892,6 +937,11 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 	}
 	const notificationReadMatch = /^\/notifications\/(\d+)\/read$/.exec(pathname);
 	if (normalizedMethod === 'PATCH' && notificationReadMatch) {
+		if (
+			typeof sessionStorage !== 'undefined' &&
+			sessionStorage.getItem('wikiforge-ux-scenario') === 'notification-error'
+		)
+			return error(503, 'Lecture indisponible.', 'UNAVAILABLE');
 		const notification = mockNotifications.find(
 			(entry) => entry.id === Number(notificationReadMatch[1])
 		);
@@ -945,6 +995,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 					(category): category is import('$lib/types').MutedNotificationCategory =>
 						category === 'TRADE' ||
 						category === 'SALE' ||
+						category === 'AUCTION' ||
 						category === 'FRIEND' ||
 						category === 'GUILD'
 				);
@@ -964,7 +1015,8 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			createdAt: user.createdAt,
 			visibility: profile.visibility,
 			lastConnection: 'TODAY',
-			rank: 12
+			rank: 12,
+			banners: mockBanners
 		});
 	}
 	if (normalizedMethod === 'PATCH' && pathname === '/me/image') {
@@ -1042,7 +1094,9 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				recent: mockCards.slice(0, 6).map((card, index) => collectionCard(card, index + 1))
 			},
 			pendingTrades: 0,
-			pendingAuction: 0,
+			pendingAuction: auctionMocks.records.filter(
+				(item) => item.status === 'OPEN' && (item.seller.id === 1 || item.leading)
+			).length,
 			money: users.get('demo-user')?.money ?? 350
 		});
 	}
@@ -1397,6 +1451,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			nbCards: registry.cardIds.length,
 			ownerName: ownerName ?? null,
 			invitedAt: ownerName ? now : null,
+			sharedWithGuild: registry.sharedWithGuild ?? false,
 			imagePageId: registry.imagePageId ?? registry.cards[0]?.baseCardId ?? null,
 			image: registry.imageUrl ?? registry.cards[0]?.imageUrl ?? null
 		});
@@ -1438,7 +1493,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
 		const sortBy = (url.searchParams.get('sortBy') ?? 'name').toUpperCase();
 		const sortDirection = url.searchParams.get('sortDirection') === 'DESC' ? 'DESC' : 'ASC';
-		const cards = mockCards
+		const cards = [...new Map(mockCards.map((card) => [card.baseCardId, card])).values()]
 			.filter((card) => !query || card.title.toLocaleLowerCase('fr-FR').includes(query))
 			.toSorted((left, right) => {
 				const comparison = left.title.localeCompare(right.title, 'fr');
@@ -1447,7 +1502,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		return json({
 			nbResults: cards.length,
 			page,
-			results: cards.slice(page * 50, (page + 1) * 50).map(publicPage),
+			results: cards.slice(page * 48, (page + 1) * 48).map(publicPage),
 			sortBy,
 			sortDirection
 		});
@@ -1474,6 +1529,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			cards: [],
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString(),
+			sharedWithGuild: Boolean(input?.sharedWithGuild),
 			imagePageId: typeof input?.imagePageId === 'number' ? input.imagePageId : null,
 			imageUrl:
 				typeof input?.imagePageId === 'number'
@@ -1487,6 +1543,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				name: title,
 				description,
 				nbCards: 0,
+				sharedWithGuild: registry.sharedWithGuild ?? false,
 				imagePageId: registry.imagePageId,
 				image: registry.imageUrl
 			},
@@ -1749,6 +1806,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			const input = asObject(body) ?? {};
 			if (typeof input.name === 'string' && input.name.trim()) registry.title = input.name.trim();
 			if (typeof input.description === 'string') registry.description = input.description;
+			registry.sharedWithGuild = Boolean(input.sharedWithGuild);
 			if (typeof input.imagePageId === 'number' || input.imagePageId === null) {
 				registry.imagePageId = typeof input.imagePageId === 'number' ? input.imagePageId : null;
 				registry.imageUrl =
@@ -1761,6 +1819,7 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 				name: registry.title,
 				description: registry.description,
 				nbCards: registry.cardIds.length,
+				sharedWithGuild: registry.sharedWithGuild ?? false,
 				imagePageId: registry.imagePageId ?? null,
 				image: registry.imageUrl ?? null
 			});

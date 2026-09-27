@@ -26,7 +26,11 @@
 			{$_('settings.identity')}
 		</p>
 		<label class="mt-3 block font-mono text-[10px] uppercase tracking-widest text-primary"
-			>{$_('settings.username')}<Input bind:value={username} class="mt-1 font-bold" /></label
+			>{$_('settings.username')}<Input
+				bind:value={username}
+				maxlength={64}
+				class="mt-1 font-bold"
+			/></label
 		>
 		<div class="mt-4 flex items-center gap-3">
 			{#if avatarUrl}<img

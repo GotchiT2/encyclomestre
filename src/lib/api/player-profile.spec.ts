@@ -141,8 +141,8 @@ describe('WikiForge player profile contracts', () => {
 			refreshAt: '2026-09-07T10:05:00'
 		});
 		await expect(getLeaderboard('global')).resolves.toMatchObject({
-			computedAt: '2026-09-07T10:00:00',
-			refreshAt: '2026-09-07T10:05:00'
+			computedAt: '2026-09-07T10:00:00.000Z',
+			refreshAt: '2026-09-07T10:05:00.000Z'
 		});
 		expect(apiRequest).toHaveBeenCalledWith('/leaderboards/global', { apiTarget: 'wikiforge' });
 	});

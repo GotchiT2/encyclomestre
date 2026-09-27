@@ -60,7 +60,7 @@
 	     ce qui donne au `sticky` de l'aside la place de glisser. -->
 	<div>
 		<aside
-			class="forge-panel sticky top-4 max-h-[calc(100dvh-2rem)] overflow-y-auto p-4"
+			class="forge-panel sticky top-[calc(var(--site-banner-height,0px)+1rem)] max-h-[calc(100dvh-var(--site-banner-height,0px)-2rem)] overflow-y-auto p-4"
 			aria-label={heading}
 		>
 			<p class="forge-label mb-3">{heading}</p>

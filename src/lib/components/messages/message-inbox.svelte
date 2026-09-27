@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { draftKey, writeDraft } from '$lib/drafts/storage';
+	import { operationError } from '$lib/domain/operation-error';
 	import { onDestroy, onMount } from 'svelte';
 	import { Dialog } from 'bits-ui';
 	import { getConversationMessages, getConversations, sendMessage } from '$lib/api';
@@ -26,6 +28,7 @@
 	let thread = $state<MessageRecord[]>([]);
 	let query = $state('');
 	let draft = $state('');
+	let sendError = $state('');
 	let loading = $state(true);
 	let threadLoading = $state(false);
 	let sending = $state(false);
@@ -203,16 +206,21 @@
 		)
 			return;
 		sending = true;
+		sendError = '';
 		try {
 			const message = await sendMessage(selectedConversation.userId, { content: draft });
 			thread = [...thread, message];
+			writeDraft(localStorage, draftKey(userId, `message:${selectedConversation.id}`), '');
 			draft = '';
+		} catch (cause) {
+			sendError = operationError(cause);
 		} finally {
 			sending = false;
 		}
 	}
 </script>
 
+{#if sendError}<p role="alert" class="mb-3 text-destructive">{sendError}</p>{/if}
 <div
 	class="forge-panel-flat min-h-[34rem] overflow-hidden lg:grid lg:h-[calc(100dvh-12rem)] lg:min-h-[38rem] lg:grid-cols-[21rem_minmax(0,1fr)]"
 	data-testid="message-workspace"

@@ -12,7 +12,8 @@ import { apiRequest, type RequestOptions } from './client';
 import { toCardRecord, type WikiForgeCardDto } from './cards';
 import { getVariants } from './variants';
 import type { VariantDefinition } from '$lib/types';
-import { wikiForgeNumericId } from './wikiforge-contract';
+import { wikiForgeUtcDate, wikiForgeNumericId } from './wikiforge-contract';
+import { convertAuction, type AuctionDto } from './auctions';
 
 export type ShowcaseCardDto = WikiForgeCardDto;
 
@@ -30,6 +31,7 @@ interface ShowcaseDto {
 }
 
 interface UserProfileDto {
+	guild?: { id: number; name: string };
 	id: number;
 	name: string;
 	imagePageId?: number;
@@ -44,6 +46,7 @@ interface UserProfileDto {
 
 interface SalesDto {
 	instantSales?: Array<{ id: number; price: number; card: ShowcaseCardDto }>;
+	auctions?: AuctionDto[];
 }
 
 interface LeaderboardEntryDto {
@@ -95,6 +98,7 @@ export async function getUserProfile(id: string, options?: RequestOptions): Prom
 	]);
 	return {
 		id: String(dto.id),
+		...('guild' in dto ? { guild: dto.guild as { id: number; name: string } | undefined } : {}),
 		name: dto.name,
 		imagePageId: dto.imagePageId ?? null,
 		image: dto.image ?? null,
@@ -154,7 +158,8 @@ function toSales(dto: SalesDto, variants: VariantDefinition[]): SalesResult {
 			id: String(sale.id),
 			price: sale.price,
 			card: toShowcaseCard(sale.card, variants)
-		}))
+		})),
+		auctions: (dto.auctions ?? []).map((auction) => convertAuction(auction, variants))
 	};
 }
 
@@ -223,8 +228,8 @@ export const getLeaderboard = (period: LeaderboardPeriod, options?: RequestOptio
 	}).then((dto): Leaderboard => ({
 		top: (dto.top ?? []).map(toLeaderboardEntry),
 		around: (dto.around ?? []).map(toLeaderboardEntry),
-		computedAt: dto.computedAt ?? null,
-		refreshAt: dto.refreshAt ?? null
+		computedAt: dto.computedAt ? wikiForgeUtcDate(dto.computedAt).toISOString() : null,
+		refreshAt: dto.refreshAt ? wikiForgeUtcDate(dto.refreshAt).toISOString() : null
 	}));
 };
 

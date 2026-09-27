@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Button } from '$lib/components/ui/button';
 	import { MediaQuery } from 'svelte/reactivity';
 	import { _ } from '$lib/i18n';
 	import CardTile from '$lib/components/card-tile.svelte';
@@ -79,6 +80,7 @@
 	/** Le clavier n'a pas de clic droit : Entrée ou Espace ouvre le même menu. */
 	function handleKeydown(event: KeyboardEvent, cardId: string, index: number) {
 		if (!onMove && !onRemove) return;
+		if (event.target !== event.currentTarget) return;
 		if (event.key !== 'Enter' && event.key !== ' ') return;
 		event.preventDefault();
 		const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
@@ -138,6 +140,21 @@
 						}}
 					>
 						<CardTile {card} showFriendOwners={false} showCollectionState={false} />
+						{#if onMove}<div class="flex flex-wrap gap-1">
+								<Button
+									variant="outline"
+									size="icon"
+									aria-label={$_('profile.move_left')}
+									disabled={index === 0}
+									onclick={() => onMove?.(card.id, -1)}>←</Button
+								><Button
+									variant="outline"
+									size="icon"
+									aria-label={$_('profile.move_right')}
+									disabled={index === cards.length - 1}
+									onclick={() => onMove?.(card.id, 1)}>→</Button
+								>
+							</div>{/if}
 					</div>
 				{:else}
 					{@const isNextEmpty = slotIndex === row.findIndex((entry) => entry === null)}

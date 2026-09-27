@@ -388,3 +388,72 @@ Avant chaque commit, mettre à jour ce fichier : cocher l’étape réalisée et
 ## 21. Protection Turnstile
 
 - [x] Protéger la connexion et l'ouverture des boosters avec Turnstile et exposer le frontend local sur HTTPS sans port explicite — `feat(security): add Turnstile verification`
+
+## 22. Enchères, bannières et signalements WikiForge
+
+- [x] Regrouper le catalogue de boosters par emplacement et afficher les états dans chaque section.
+- [x] Afficher les bannières actives, suivre leurs mises à jour SSE et respecter leur date UTC de fin.
+- [x] Ajouter la consultation, le suivi, les plafonds, les enchères personnelles et la création/modification/annulation côté joueur.
+- [x] Ajouter les signalements d’articles, les enchères de profils, les soldes bloqués, notifications et succès d’enchères.
+- [x] Aligner les mocks et les tests de contrat pour les parcours joueurs.
+
+Validation terminée (check, ESLint ciblé, tests unitaires, build et diff) : `feat(wikiforge): add auctions banners and reports`.
+
+## 23. Refonte du parcours des enchères et des signalements
+
+- [x] Isoler le contrôleur de détail : lectures regroupées, absence de boucle réactive, renouvellement watch à 60 secondes et nettoyage à la navigation.
+- [x] Distinguer Explorer, Mes ventes, Mes participations et Historique ; conserver les paramètres d’URL et expliciter les filtres limités à la page.
+- [x] Réutiliser la composition des cartes, afficher leurs caractéristiques, ajouter l’agrandissement et les liens de contexte.
+- [x] Extraire les formulaires de création, mise et gestion vendeur ; confirmer les actions, conserver les saisies sur erreur et interdire les doubles envois.
+- [x] Centraliser les listes personnelles, le solde bloqué et l’association exemplaire–enchère dès l’arrivée dans le FO.
+- [x] Partager le dialogue de signalement d’article ; documenter les contrats manquants pour le signalement de joueurs et leurs preuves.
+- [x] Replacer les bannières dans la colonne principale pour que la navigation et la pagination restent accessibles.
+- [x] Étendre les mocks, les tests de cycle réseau et de navigation aux cinq largeurs ; ajouter `scripts/check-auctions.mjs`.
+- [x] Brancher les signalements joueurs et contextuels à partir du Swagger JSON fourni (étape 24).
+- [ ] Recherche serveur globale et favoris persistants : nécessitent une évolution API, détaillée dans `docs/api-auctions-reporting-needs.md`.
+
+Sujet de commit prévu : `fix(auctions): rebuild browsing and stabilize realtime detail`.
+Validation : `npm run check` sans erreur ni avertissement ; ESLint ciblé réussi ; Vitest 69 fichiers / 209 tests réussis ; `scripts/check-auctions.mjs` réussi à 360, 390, 768, 1024 et 1440 px ; build statique et `git diff --check` réussis. Le README contient les instructions de reprise et de lancement des parcours mock.
+Aucun changement backend ni déploiement inclus. Les écritures de validation passent exclusivement par les mocks.
+
+## 24. Couverture du Swagger joueur et intégration communautaire
+
+- [x] Conserver le Swagger JSON fourni, générer les 87 schémas TypeScript et documenter les 117 opérations avec leurs écrans et modules.
+- [x] Ajouter recherche/création/édition de guilde, invitations, adhésion, départ, dissolution, pagination des membres, permissions et transfert de propriété.
+- [x] Ajouter le chat de guilde paginé, ses pièces jointes carte/article, les états indisponibles et les wishlists de guilde en lecture seule.
+- [x] Exposer les cinq cibles et six motifs de signalement dans les profils, vendeurs, échanges, messages, guildes et articles ; conserver le commentaire après conflit.
+- [x] Ajouter les restrictions actives et dossiers de modération ; autoriser la réponse à un dossier ouvert sous MUTE ; intégrer les notifications correspondantes.
+- [x] Préserver le partage de wishlist avec la guilde dans les requêtes complètes, conserver les URL d’images et permettre le retrait de l’illustration.
+- [x] Ajouter encaissement global des succès, retrait des tags en lot, navigation article/édition, variantes d’article et consultation paginée des pools.
+- [x] Compléter accueil/profils/avatars, dates UTC, contraintes DTO, historique des échanges et éligibilité des exemplaires ; conserver le brouillon d’échange après échec.
+- [x] Séparer 401 et 403, borner la récupération SSE, réutiliser la conversion des messages HTTP/SSE et respecter les curseurs serveur.
+- [x] Étendre mocks et tests de contrat ; tester les transitions de guilde, les conflits et réponses de modération dans le navigateur aux cinq largeurs.
+- [x] Livrer `docs/fo-handoff.md`, `docs/api-fo-coverage.md` et `docs/ux-ui-recommendations.md` ; actualiser les besoins API désormais résolus pour les signalements.
+
+Sujet de commit prévu : `feat(community): complete Swagger guilds moderation and player workflows`.
+
+Validation : check sans erreur ni avertissement ; ESLint ciblé ; Vitest 70 fichiers / 226 tests ; parcours Playwright `check-auctions.mjs` et `check-community.mjs` à 360, 390, 768, 1024 et 1440 px ; inspection visuelle mobile ; build statique réussi ; vérification du diff. Aucun commit, push, déploiement ou changement backend dans cette étape. Les recommandations API restent des propositions documentées, pas des opérations fictives du FO.
+
+## 25. UX/UI transverse sans changement backend
+
+- [x] Bannières sticky dans le layout global, fermeture par compte/session et respect des retraits/expirations serveur ; compensation des filtres fixes.
+- [x] Sélecteur compact de variantes, recherche, sélection simple/multiple et clavier ; lectures publiques par carte, aperçus et comparaison de styles.
+- [x] Modale commune depuis les cartes, guildes et enchères ; anciennes URL de carte converties en ouverture du catalogue et de la modale, restauration du focus.
+- [x] Filtres d’enchères repliables, résultats pleine largeur, paginations aux bornes et historique des curseurs dans le sélecteur d’exemplaires.
+- [x] Navigation de notification indépendante du marquage lu ; marges des signalements et confirmations ; remplacement des libellés article par carte.
+- [x] Brouillons opt-in 24 heures par compte/cible, confirmation de restauration et nettoyage ; erreurs de formulaire conservées.
+- [x] Activités pertinentes sur l’accueil, recherche locale des membres, permissions explicites, emplacements visuels des tirages, commandes clavier de vitrine et chargements discrets.
+- [x] Contexte de collection restauré par snapshot, paramètres des wishlists dans l’URL ; mocks et tests de régression complétés.
+- [x] Guide de reprise et recommandations actualisés ; besoins backend conservés séparément.
+
+Sujet de commit prévu : `feat(ux): unify card details and improve player workflows`.
+Validation finale : `npm run check` sans erreur ni avertissement ; ESLint ciblé sur 152 fichiers ; Vitest 77 fichiers / 248 tests réussis ; parcours `check-auctions.mjs`, `check-community.mjs` et `check-ux.mjs` réussis à 360, 390, 768, 1024 et 1440 px ; inspection visuelle mobile ; build statique et `git diff --check` réussis. Écritures exclusivement mock, requêtes de production interdites par les scripts. Aucun commit, push, déploiement ni modification backend.
+
+## 26. Livraison consolidée et besoins API pour Claude
+
+- [x] Regrouper les parcours enchères, communauté et UX/UI validés des étapes précédentes dans la livraison demandée.
+- [x] Documenter les besoins API restants, leurs critères d’acceptation et la suppression de son propre compte dans `docs/claude-api-requirements.md` ; copie identique dans le BO.
+- [x] Relier le document au guide de reprise. Les contrats proposés ne sont pas branchés comme endpoints existants.
+
+Sujet du commit consolidé : `feat(fo): complete player workflows and shared card experience`.
+Les validations de l’étape 25 couvrent les changements de code livrés ; cette dernière étape ajoute uniquement la documentation. Aucun push, déploiement ni changement backend. Le fichier IDE local reste exclu.

@@ -1,5 +1,7 @@
 <script lang="ts">
-	/* eslint-disable svelte/no-navigation-without-resolve -- the resolved notification target may include a dynamic trade identifier */
+	import { SvelteSet } from 'svelte/reactivity';
+	import { notificationTarget } from '$lib/notifications/target';
+	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
@@ -15,7 +17,9 @@
 	let cursor = $state<string | null>(null);
 	let hasNext = $state(false);
 	let unreadOnly = $state(false);
-	let activeTab = $state<'all' | 'trades' | 'sales' | 'friends' | 'guilds' | 'achievements'>('all');
+	let activeTab = $state<
+		'all' | 'trades' | 'sales' | 'auctions' | 'friends' | 'guilds' | 'achievements'
+	>('all');
 	let loading = $state(true);
 	let loadingMore = $state(false);
 	let failed = $state(false);
@@ -28,27 +32,19 @@
 				: activeTab === 'trades'
 					? notification.type.startsWith('TRADE_')
 					: activeTab === 'sales'
-						? notification.type === 'SALE_SOLD'
-						: activeTab === 'friends'
-							? notification.type === 'FRIEND_REQUEST' || notification.type === 'FRIEND_ACCEPTED'
-							: activeTab === 'guilds'
-								? notification.type.startsWith('GUILD_')
-								: notification.type === 'ACHIEVEMENT_UNLOCKED'
+						? notification.type.startsWith('SALE_')
+						: activeTab === 'auctions'
+							? notification.type.startsWith('AUCTION_')
+							: activeTab === 'friends'
+								? notification.type === 'FRIEND_REQUEST' || notification.type === 'FRIEND_ACCEPTED'
+								: activeTab === 'guilds'
+									? notification.type.startsWith('GUILD_')
+									: notification.type === 'ACHIEVEMENT_UNLOCKED'
 		)
 	);
 
-	function target(notification: AppNotification) {
-		if (notification.type === 'ACHIEVEMENT_UNLOCKED') return resolve('/achievements');
-		if (!notification.extId) return null;
-		if (notification.type.startsWith('TRADE_'))
-			return `${resolve('/trades')}?trade=${encodeURIComponent(notification.extId)}`;
-		if (notification.type === 'FRIEND_REQUEST' || notification.type === 'FRIEND_ACCEPTED')
-			return resolve('/friends');
-		if (notification.type === 'SALE_SOLD') return resolve('/profile');
-		if (notification.type.startsWith('GUILD_')) return resolve('/guild');
-		return null;
-	}
 	function label(notification: AppNotification) {
+		if (notification.type.startsWith('MODERATION_')) return $_('completion.moderation.title');
 		const known = new Set([
 			'TRADE_RECEIVED',
 			'TRADE_COUNTERED',
@@ -57,6 +53,12 @@
 			'TRADE_CANCELLED',
 			'TRADE_EXPIRED',
 			'SALE_SOLD',
+			'SALE_CANCELLED',
+			'AUCTION_OUTBID',
+			'AUCTION_WON',
+			'AUCTION_SOLD',
+			'AUCTION_UNSOLD',
+			'AUCTION_CANCELLED',
 			'FRIEND_REQUEST',
 			'FRIEND_ACCEPTED',
 			'ACHIEVEMENT_UNLOCKED',
@@ -88,19 +90,39 @@
 			loadingMore = false;
 		}
 	}
+	const marking = new SvelteSet<string>();
 	async function open(notification: AppNotification) {
-		if (!notification.read) {
-			await markNotificationRead(notification.id);
-			items = items.map((item) => (item.id === notification.id ? { ...item, read: true } : item));
-			unreadNotifications.update((count) => Math.max(0, count - 1));
+		if (!notification.read && !marking.has(notification.id)) {
+			marking.add(notification.id);
+			void markNotificationRead(notification.id)
+				.then(() => {
+					items = items.map((item) =>
+						item.id === notification.id ? { ...item, read: true } : item
+					);
+					unreadNotifications.update((count) => Math.max(0, count - 1));
+				})
+				.catch(() => toast.error($_('ux.readFailed')))
+				.finally(() => marking.delete(notification.id));
 		}
-		const href = target(notification);
-		if (href) await goto(href);
+		const href = notificationTarget(notification);
+		if (notification.type.startsWith('AUCTION_') && href === '/market')
+			toast.info($_('ux.missingAuction'));
+		if (href) await goto(resolve(href as '/market'));
 	}
+
+	let markingAll = $state(false);
 	async function markAll() {
-		await markAllNotificationsRead();
-		items = items.map((item) => ({ ...item, read: true }));
-		unreadNotifications.set(0);
+		if (markingAll) return;
+		markingAll = true;
+		try {
+			await markAllNotificationsRead();
+			items = items.map((item) => ({ ...item, read: true }));
+			unreadNotifications.set(0);
+		} catch {
+			toast.error($_('notifications.error'));
+		} finally {
+			markingAll = false;
+		}
 	}
 	onMount(() => {
 		void load().finally(() => (notificationsReady = true));
@@ -129,8 +151,10 @@
 			><input type="checkbox" bind:checked={unreadOnly} onchange={() => void load(false)} />
 			{$_('notifications.unread_only')}</label
 		>
-		<Button variant="outline" disabled={$unreadNotifications === 0} onclick={() => void markAll()}
-			>{$_('notifications.mark_all')}</Button
+		<Button
+			variant="outline"
+			disabled={markingAll || $unreadNotifications === 0}
+			onclick={() => void markAll()}>{$_('notifications.mark_all')}</Button
 		>
 	</div>
 	<div
@@ -138,7 +162,7 @@
 		role="tablist"
 		aria-label={$_('notifications.tabs')}
 	>
-		{#each ['all', 'trades', 'sales', 'friends', 'guilds', 'achievements'] as tab (tab)}<Button
+		{#each ['all', 'trades', 'sales', 'auctions', 'friends', 'guilds', 'achievements'] as tab (tab)}<Button
 				variant={activeTab === tab ? 'default' : 'ghost'}
 				role="tab"
 				aria-selected={activeTab === tab}
@@ -146,7 +170,7 @@
 				>{$_(`notifications.tab_${tab}`)}</Button
 			>{/each}
 	</div>
-	{#if loading}<p class="forge-label">{$_('notifications.loading')}</p>
+	{#if loading && !items.length}<p class="forge-label">{$_('notifications.loading')}</p>
 	{:else if failed}<div class="forge-panel-flat flex items-center justify-between gap-3 p-4">
 			<p class="text-destructive">{$_('notifications.error')}</p>
 			<Button variant="outline" onclick={() => void load()}>{$_('common.retry')}</Button>

@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { openCardDetail } from '$lib/components/cards/detail-state';
 	import { _ } from '$lib/i18n';
 	import VariantCardFace from '$lib/components/cards/variant-card-face.svelte';
 	import CardStateIndicators from '$lib/components/cards/card-state-indicators.svelte';
 	import FriendOwnershipChip from '$lib/components/cards/friend-ownership-chip.svelte';
 	import type { CardRecord, CollectionTag } from '$lib/types';
 	import LockIcon from '@lucide/svelte/icons/lock';
+	import { activeAuctionCardIds } from '$lib/auctions/store';
 
 	let {
 		card,
@@ -14,6 +16,7 @@
 		tagDisplay = 'bookmark',
 		stateIndicatorsOffset = 0,
 		comparisonOwnership,
+		interactive = true,
 		onOpen,
 		onOrientationChange
 	}: {
@@ -25,12 +28,13 @@
 		tagDisplay?: 'bookmark' | 'full';
 		stateIndicatorsOffset?: number;
 		comparisonOwnership?: { count: number; label: string };
+		interactive?: boolean;
 		onOpen?: (card: CardRecord) => void;
 		onOrientationChange?: (landscape: boolean) => void;
 	} = $props();
 
 	function handleOpen() {
-		onOpen?.(card);
+		(onOpen ?? openCardDetail)(card);
 	}
 </script>
 
@@ -39,7 +43,7 @@
 	data-testid="card-tile"
 	data-variant-id={card.variantId}
 >
-	<VariantCardFace {card} {onOrientationChange} />
+	<VariantCardFace {card} compact={interactive} {onOrientationChange} />
 	{#if card.activeSale}
 		<span
 			class="pointer-events-none absolute top-[8%] right-[7%] z-30 bg-primary px-2 py-1 font-mono text-[9px] font-black uppercase tracking-widest text-primary-foreground shadow-[0_0_16px_rgb(0_0_0_/_75%)]"
@@ -48,7 +52,13 @@
 			{$_('collection.on_sale')}
 		</span>
 	{/if}
-	{#if onOpen}
+	{#if card.activeAuctionId || (card.packId != null && $activeAuctionCardIds.has(card.id))}
+		<span
+			class="pointer-events-none absolute top-[17%] right-[7%] z-30 border border-energy bg-background/95 px-2 py-1 font-mono text-[8px] font-bold uppercase tracking-wider text-energy shadow-lg"
+			data-testid="card-active-auction">{$_('collection.on_auction')}</span
+		>
+	{/if}
+	{#if interactive}
 		<button
 			type="button"
 			class="absolute inset-0 z-30 size-auto cursor-pointer rounded-none bg-transparent transition-colors hover:bg-primary/20 focus-visible:bg-primary/15 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[-4px]"

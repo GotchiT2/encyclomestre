@@ -1,7 +1,8 @@
 export type UserRole = 'user' | 'moderator' | 'admin';
 export type ProfileVisibility = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
 export type LastConnection = 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'AWAY';
-export type MutedNotificationCategory = 'TRADE' | 'SALE' | 'FRIEND' | 'GUILD' | 'ACHIEVEMENT';
+export type MutedNotificationCategory =
+	'TRADE' | 'SALE' | 'AUCTION' | 'FRIEND' | 'GUILD' | 'ACHIEVEMENT';
 
 export interface UserPreferences {
 	language: string;
@@ -31,6 +32,7 @@ export interface User {
 	preferences?: UserPreferences;
 	createdAt: string;
 	updatedAt: string;
+	banners?: import('./banner').Banner[];
 }
 
 export interface CreateUserInput {

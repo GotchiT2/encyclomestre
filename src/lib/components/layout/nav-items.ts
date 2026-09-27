@@ -1,5 +1,6 @@
 import BookOpenIcon from '@lucide/svelte/icons/book-open';
 import GalleryVerticalEndIcon from '@lucide/svelte/icons/gallery-vertical-end';
+import GavelIcon from '@lucide/svelte/icons/gavel';
 import HandshakeIcon from '@lucide/svelte/icons/handshake';
 import HeartIcon from '@lucide/svelte/icons/heart';
 import LibraryBigIcon from '@lucide/svelte/icons/library-big';
@@ -12,9 +13,11 @@ export type NavHref =
 	| '/'
 	| '/cards'
 	| '/collection'
+	| '/market'
 	| '/trades'
 	| '/wishlists'
 	| '/guild'
+	| '/moderation'
 	| '/friends'
 	| '/messages'
 	| '/boosters'
@@ -36,9 +39,11 @@ export const exploreNavigation: NavItem[] = [
 
 /** Destinations sociales : sidebar uniquement, accessibles sur mobile via le tiroir. */
 export const communityNavigation: NavItem[] = [
+	{ href: '/market', label: 'navigation.auctions', icon: GavelIcon },
 	{ href: '/trades', label: 'navigation.trades', icon: HandshakeIcon },
 	{ href: '/wishlists', label: 'navigation.wishlist', icon: HeartIcon },
 	{ href: '/guild', label: 'navigation.guild', icon: ShieldIcon },
+	{ href: '/moderation', label: 'completion.moderation.title', icon: ShieldIcon },
 	{ href: '/friends', label: 'navigation.friends', icon: UsersIcon },
 	{ href: '/messages', label: 'navigation.messages', icon: MessageCircleIcon },
 	{ href: '/achievements', label: 'navigation.achievements', icon: TrophyIcon },

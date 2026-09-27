@@ -1,5 +1,9 @@
 <script lang="ts">
+	import LocalDraft from '$lib/components/layout/local-draft.svelte';
 	import { tick } from 'svelte';
+	import { activeRestrictions } from '$lib/moderation/state';
+	import ReportDialog from '$lib/components/reports/report-dialog.svelte';
+	import SanctionNotice from '$lib/components/moderation/sanction-notice.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
@@ -67,7 +71,13 @@
 			</p>
 			<h2 class="truncate text-lg font-bold">{conversation.title}</h2>
 		</div>
+		{#if conversation.userId}<ReportDialog
+				target={{ type: 'USER', id: Number(conversation.userId) }}
+				title={conversation.title}
+				userId={Number(conversation.userId)}
+			/>{/if}
 	</header>
+	<SanctionNotice kind="MUTE" />
 
 	<div
 		bind:this={scrollArea}
@@ -117,6 +127,8 @@
 						{:else}
 							<p class="mt-2 text-xs text-muted-foreground">{$_('messages.trade_invalid')}</p>
 						{/if}
+					{:else if message.type === 'unknown'}
+						<p>{message.content || $_('completion.guild.unavailable')}</p>
 					{:else}
 						<p class="wrap-break-word whitespace-pre-wrap text-sm leading-relaxed">
 							{message.content}
@@ -125,16 +137,26 @@
 					<time class="mt-1 block text-right font-mono text-[8px] text-muted-foreground">
 						{new Date(message.createdAt).toLocaleString('fr-FR')}
 					</time>
+					{#if message.senderId !== userId}<ReportDialog
+							target={{ type: 'MESSAGE', id: Number(message.id) }}
+							title={message.content}
+							userId={Number(message.senderId)}
+						/>{/if}
 				</article>
 			{/each}
 		{/if}
 	</div>
 
+	<LocalDraft
+		target={`message:${conversation.id}`}
+		value={draft}
+		onRestore={(value) => (draft = value.slice(0, 2000))}
+	/>
 	<form
 		class="shrink-0 border-t border-primary/20 bg-card p-2.5 sm:p-3"
 		onsubmit={(event) => {
 			event.preventDefault();
-			onSubmit();
+			if (!$activeRestrictions.includes('MUTE')) onSubmit();
 		}}
 	>
 		{#if !canSend}
@@ -148,14 +170,18 @@
 				id={`message-draft-${conversation.id}`}
 				bind:value={draft}
 				maxlength="2000"
-				disabled={!canSend}
+				disabled={!canSend || $activeRestrictions.includes('MUTE')}
 				placeholder={$_('messages.compose_placeholder')}
 				class="max-h-28 min-h-11 min-w-0 flex-1 resize-none border border-primary/40 bg-background px-3 py-2 text-sm outline-none focus:border-primary disabled:opacity-60"
 				rows="1"></textarea>
 			<Button
 				type="submit"
 				size="sm"
-				disabled={!canSend || !draft.trim() || draft.length > 2_000 || sending}
+				disabled={!canSend ||
+					$activeRestrictions.includes('MUTE') ||
+					!draft.trim() ||
+					draft.length > 2_000 ||
+					sending}
 			>
 				{$_('messages.send')}
 			</Button>

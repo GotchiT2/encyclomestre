@@ -46,7 +46,7 @@ describe('WikiForge welcome API', () => {
 		});
 
 		await expect(getWikiForgeWelcome()).resolves.toMatchObject({
-			collection: { uniqueCards: 12 },
+			collection: { totalCopies: 12 },
 			rank: 412,
 			packs: [expect.objectContaining({ id: 3, available: 3, bonus: 1 })],
 			money: 350,

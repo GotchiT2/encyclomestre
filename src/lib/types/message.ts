@@ -1,4 +1,4 @@
-export type MessageKind = 'text' | 'trade';
+export type MessageKind = 'text' | 'trade' | 'unknown';
 
 export interface TradeMessageEvent {
 	tradeId: string;

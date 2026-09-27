@@ -3,6 +3,8 @@
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
 	import type { WishlistRegistrySummary } from '$lib/types';
+	import { createModalLayer, modalZIndex } from '$lib/components/ui/dialog/modal-layer';
+	import { operationError } from '$lib/domain/operation-error';
 	import { toast } from 'svelte-sonner';
 
 	let {
@@ -15,6 +17,7 @@
 		onToggle: (wishlistId: string, selected: boolean) => void | Promise<void>;
 	} = $props();
 
+	const layer = createModalLayer();
 	let pendingIds = $state<string[]>([]);
 
 	async function add(wishlist: WishlistRegistrySummary) {
@@ -27,6 +30,8 @@
 					values: { card: cardTitle, wishlist: wishlist.title }
 				})
 			);
+		} catch (cause) {
+			toast.error(operationError(cause));
 		} finally {
 			pendingIds = pendingIds.filter((id) => id !== wishlist.id);
 		}
@@ -39,7 +44,12 @@
 			<Button {...props}>{$_('cardDetail.add_wishlist')}</Button>
 		{/snippet}
 	</DropdownMenu.Trigger>
-	<DropdownMenu.Content preventScroll={false} align="start" class="min-w-64" style="z-index:120">
+	<DropdownMenu.Content
+		preventScroll={false}
+		align="start"
+		class="min-w-64"
+		style={modalZIndex(layer + 1)}
+	>
 		<DropdownMenu.Group>
 			{#each wishlists as wishlist (wishlist.id)}
 				<DropdownMenu.Item

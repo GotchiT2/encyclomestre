@@ -1,5 +1,8 @@
 <script lang="ts">
+	import SanctionNotice from '$lib/components/moderation/sanction-notice.svelte';
+	import { activeRestrictions } from '$lib/moderation/state';
 	import { _ } from '$lib/i18n';
+	import ReportDialog from '$lib/components/reports/report-dialog.svelte';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import ContextualCardRail from '$lib/components/cards/contextual-card-rail.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -98,7 +101,13 @@
 					</p>
 				{/if}
 			{/if}
+			{#if offer}<ReportDialog
+					target={{ type: 'USER', id: Number(isIncoming ? offer.initiatorId : offer.recipientId) }}
+					title={isIncoming ? initiatorName : recipientName}
+					userId={Number(isIncoming ? offer.initiatorId : offer.recipientId)}
+				/>{/if}
 		</header>
+		<SanctionNotice kind="TRADE" />
 		{#if offer}
 			<div
 				class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4"
@@ -194,11 +203,16 @@
 				data-testid="trade-detail-actions"
 			>
 				{#if isIncoming && isOpen}
-					<Button class="w-full sm:w-auto" onclick={() => onRespond(offer.id, 'accepted')}
-						>{$_('trades.accept')}</Button
+					<Button
+						class="w-full sm:w-auto"
+						disabled={$activeRestrictions.includes('TRADE')}
+						onclick={() => onRespond(offer.id, 'accepted')}>{$_('trades.accept')}</Button
 					>
-					<Button class="w-full sm:w-auto" variant="outline" onclick={() => onCounterOffer(offer)}
-						>{$_('trades.counter_offer')}</Button
+					<Button
+						class="w-full sm:w-auto"
+						variant="outline"
+						disabled={$activeRestrictions.includes('TRADE')}
+						onclick={() => onCounterOffer(offer)}>{$_('trades.counter_offer')}</Button
 					>
 					<Button
 						class="w-full sm:w-auto"

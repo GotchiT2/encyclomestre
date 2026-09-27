@@ -1,3 +1,4 @@
+import { clearDrafts } from '$lib/drafts/storage';
 import { writable } from 'svelte/store';
 import type { AuthSession } from '$lib/types';
 
@@ -36,6 +37,7 @@ export function markWikiForgeSessionVerified() {
 }
 
 export function clearSession(storage: Storage) {
+	clearDrafts(storage);
 	storage.removeItem(sessionStorageKey);
 	currentSession.set(null);
 	verifiedWikiForgeSession.set(false);

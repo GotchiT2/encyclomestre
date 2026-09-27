@@ -125,7 +125,7 @@ export async function getTradeRegistry(
 	done = 20,
 	options?: RequestOptions
 ): Promise<TradeRegistry> {
-	const safeDone = Math.max(0, Math.trunc(done));
+	const safeDone = Math.min(50, Math.max(1, Math.trunc(done)));
 	const [response, variants] = await Promise.all([
 		apiRequest<WikiForgeTradesDto>(`/trades?done=${safeDone}`, {
 			...options,
@@ -171,15 +171,15 @@ export const getTradeCards = async (
 ): Promise<TradeCardDetail[]> => (await getTradeOffer(id, options)).cards ?? [];
 
 function tradeBody(input: CreateTradeOfferInput, includeRecipient: boolean) {
+	if (input.offeredCardIds.length > 20 || input.requestedCardIds.length > 20)
+		throw new RangeError('TRADE_CARD_LIMIT');
 	return {
 		...(includeRecipient
 			? { recipientId: wikiForgeNumericId(input.recipientId, 'utilisateur') }
 			: {}),
 		message: input.message?.trim() || '',
-		offeredCardIds: input.offeredCardIds.slice(0, 20).map((id) => wikiForgeNumericId(id, 'carte')),
-		requestedCardIds: input.requestedCardIds
-			.slice(0, 20)
-			.map((id) => wikiForgeNumericId(id, 'carte')),
+		offeredCardIds: input.offeredCardIds.map((id) => wikiForgeNumericId(id, 'carte')),
+		requestedCardIds: input.requestedCardIds.map((id) => wikiForgeNumericId(id, 'carte')),
 		offeredMoney: Math.max(0, Math.trunc(input.offeredMoney ?? 0)),
 		requestedMoney: Math.max(0, Math.trunc(input.requestedMoney ?? 0))
 	};

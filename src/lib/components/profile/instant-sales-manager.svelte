@@ -1,5 +1,8 @@
 <script lang="ts">
+	import SanctionNotice from '$lib/components/moderation/sanction-notice.svelte';
+	import { activeRestrictions } from '$lib/moderation/state';
 	import CardPicker from './card-picker.svelte';
+	import { activeAuctionCardIds } from '$lib/auctions/store';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -30,12 +33,19 @@
 	let price = $state('');
 	const unavailableIds = $derived(new Set(sales.instantSales.map((sale) => sale.card.id)));
 	const candidates = $derived(
-		collection.filter((card) => !card.userProtected && !unavailableIds.has(card.id))
+		collection.filter(
+			(card) =>
+				!card.userProtected &&
+				!card.pendingTradeId &&
+				!$activeAuctionCardIds.has(card.id) &&
+				!unavailableIds.has(card.id)
+		)
 	);
 	const validPrice = $derived(Number.isSafeInteger(Number(price)) && Number(price) > 0);
 </script>
 
 <section class="flex flex-col gap-4">
+	<SanctionNotice kind="TRADE" />
 	<div class="forge-panel-flat flex flex-wrap items-end gap-3 p-4">
 		<div class="min-w-48 flex-1">
 			<p class="forge-label">
@@ -60,7 +70,11 @@
 			aria-label={$_('profile.sale_price')}
 		/>
 		<Button
-			disabled={!selected || !validPrice || busy || sales.instantSales.length >= 3}
+			disabled={!selected ||
+				!validPrice ||
+				busy ||
+				sales.instantSales.length >= 3 ||
+				$activeRestrictions.includes('TRADE')}
 			onclick={() => selected && onCreate(selected.id, Number(price))}
 			>{$_('profile.create_instant_sale')}</Button
 		>

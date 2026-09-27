@@ -7,6 +7,7 @@ export type RealtimeResource =
 	| 'friends'
 	| 'guild'
 	| 'messages'
+	| 'moderation'
 	| 'notifications'
 	| 'profile'
 	| 'trades';
@@ -27,6 +28,7 @@ export function publishRealtimeRefresh(resources: Iterable<RealtimeResource>) {
 export function publishNotificationRefresh(notifications: AppNotification[]) {
 	const resources = new Set<RealtimeResource>(['notifications']);
 	for (const notification of notifications) {
+		if (notification.type.startsWith('MODERATION_')) resources.add('moderation');
 		if (notification.type === 'ACHIEVEMENT_UNLOCKED') {
 			resources.add('achievements');
 			resources.add('profile');
@@ -35,6 +37,9 @@ export function publishNotificationRefresh(notifications: AppNotification[]) {
 			resources.add('collection');
 			resources.add('profile');
 		} else if (notification.type === 'SALE_SOLD') {
+			resources.add('collection');
+			resources.add('profile');
+		} else if (notification.type.startsWith('AUCTION_') || notification.type === 'SALE_CANCELLED') {
 			resources.add('collection');
 			resources.add('profile');
 		} else if (notification.type === 'FRIEND_REQUEST' || notification.type === 'FRIEND_ACCEPTED') {

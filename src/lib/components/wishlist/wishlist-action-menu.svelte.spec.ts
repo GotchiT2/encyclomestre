@@ -2,12 +2,13 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import '$lib/i18n';
+vi.mock('$env/dynamic/public', () => ({ env: {} }));
 import WishlistActionMenu from './wishlist-action-menu.svelte';
 
 const { toastSuccess } = vi.hoisted(() => ({ toastSuccess: vi.fn() }));
 
 vi.mock('svelte-sonner', () => ({
-	toast: { success: toastSuccess }
+	toast: { success: toastSuccess, error: vi.fn() }
 }));
 
 describe('WishlistActionMenu', () => {
@@ -31,9 +32,12 @@ describe('WishlistActionMenu', () => {
 
 		await page.getByRole('button', { name: 'Ajouter à une wishlist' }).click();
 		const destination = page.getByRole('menuitem', { name: 'Cartes recherchées' });
-		expect(destination.element().closest('[data-slot="dropdown-menu-content"]')).toHaveStyle({
-			zIndex: '120'
-		});
+		expect(
+			Number(
+				getComputedStyle(destination.element().closest('[data-slot="dropdown-menu-content"]')!)
+					.zIndex
+			)
+		).toBeGreaterThan(50);
 		await destination.click();
 		await vi.waitFor(() => expect(onToggle).toHaveBeenCalledWith('wishlist-1', true));
 		expect(toastSuccess).toHaveBeenCalledWith(

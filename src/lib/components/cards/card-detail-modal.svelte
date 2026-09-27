@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
+	import CardVariantPreviews from './card-variant-previews.svelte';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardActions from './card-actions.svelte';
 	import CardTagControls from './card-tag-controls.svelte';
@@ -16,6 +18,8 @@
 	} from '$lib/api';
 	import { currentSession } from '$lib/auth/session';
 	import { toast } from 'svelte-sonner';
+	import AuctionCreatePanel from '$lib/components/market/auction-create-panel.svelte';
+	import ReportDialog from '$lib/components/reports/report-dialog.svelte';
 	import XIcon from '@lucide/svelte/icons/x';
 	import LockIcon from '@lucide/svelte/icons/lock';
 	import LockOpenIcon from '@lucide/svelte/icons/lock-open';
@@ -34,6 +38,7 @@
 	let {
 		card,
 		owned = false,
+		modalLayer = 100,
 		wishlists = [],
 		tags = $bindable<CollectionTag[]>([]),
 		assignments = $bindable<CollectionTagAssignments>({}),
@@ -43,6 +48,7 @@
 	}: {
 		card: CardRecord;
 		owned?: boolean;
+		modalLayer?: number;
 		wishlists?: WishlistRegistrySummary[];
 		tags?: CollectionTag[];
 		assignments?: CollectionTagAssignments;
@@ -51,7 +57,10 @@
 		onClose: () => void;
 	} = $props();
 
-	const detailLayer = createModalLayer(100);
+	const origin = untrack(() =>
+		document.activeElement instanceof HTMLElement ? document.activeElement : null
+	);
+	const detailLayer = createModalLayer(untrack(() => modalLayer));
 	let activeTab = $state<'data' | 'social'>('data');
 	let tradeEditorOpen = $state(false);
 	let tradePartner = $state<User | null>(null);
@@ -127,17 +136,14 @@
 		const requestedPageId = String(card.baseCardId ?? card.catalogueId ?? card.id);
 		try {
 			const result = await getFriendCollectionPage(owner.friendId, {
-				variantIds: [card.variantId]
+				variantIds: [card.variantId],
+				query: card.title
 			});
 			const requestedCard = result.items.find(
 				(copy) =>
 					String(copy.baseCardId ?? copy.catalogueId ?? copy.id) === requestedPageId &&
 					copy.variantId === card.variantId
 			);
-			if (!requestedCard) {
-				toast.error($_('cardDetail.trade_card_unavailable'));
-				return;
-			}
 			tradePartner = {
 				id: owner.friendId,
 				username: owner.username,
@@ -147,8 +153,11 @@
 				createdAt: '',
 				updatedAt: ''
 			};
-			tradePartnerCards = [requestedCard];
-			tradeDraft = { recipientId: owner.friendId, requestedCardIds: [requestedCard.id] };
+			tradePartnerCards = requestedCard ? [requestedCard] : result.items;
+			tradeDraft = {
+				recipientId: owner.friendId,
+				requestedCardIds: requestedCard ? [requestedCard.id] : []
+			};
 			tradeEditorOpen = true;
 		} catch {
 			toast.error($_('cardDetail.trade_card_unavailable'));
@@ -161,6 +170,7 @@
 			toast.success($_('trades.offer_sent'));
 		} catch {
 			toast.error($_('common.error'));
+			throw new Error('TRADE_SUBMIT_FAILED');
 		}
 	}
 </script>
@@ -173,7 +183,11 @@
 			data-testid="card-detail-overlay"
 		/>
 		<Dialog.Content
-			preventScroll={false}
+			preventScroll={true}
+			onCloseAutoFocus={(event) => {
+				event.preventDefault();
+				origin?.focus({ preventScroll: true });
+			}}
 			class="fixed inset-2 h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-none overflow-hidden border border-primary/35 bg-card p-0 text-foreground shadow-2xl outline-none sm:top-1/2 sm:right-auto sm:bottom-auto sm:left-1/2 sm:h-auto sm:max-h-[calc(100dvh-2.5rem)] sm:w-[calc(100%-2.5rem)] sm:max-w-screen-xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:p-4"
 			style={`z-index:${detailLayer + 1}`}
 			data-testid="card-detail-modal"
@@ -198,6 +212,7 @@
 				>
 					<div class="card-detail-preview mx-auto w-fit lg:sticky lg:top-0 lg:self-start">
 						<CardTile
+							interactive={false}
 							{card}
 							stateIndicatorsOffset={10}
 							tags={tags.filter((tag) => (assignments[card.id] ?? []).includes(tag.id))}
@@ -262,6 +277,19 @@
 									/>
 								{/if}
 								<div class:mt-3={owned}><CardTelemetry {card} /></div>
+								<CardVariantPreviews
+									{card}
+									onResolved={(detail) => {
+										card = {
+											...card,
+											longDescription: detail.longDescription,
+											shortDescription: detail.shortDescription,
+											imageUrl: detail.imageUrl,
+											nsfw: detail.nsfw,
+											wikipediaUrl: detail.wikipediaUrl
+										};
+									}}
+								/>
 								{#if card.imageAttribution}
 									<p class="mt-3 text-xs text-muted-foreground">
 										<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
@@ -275,6 +303,10 @@
 								{#if card.wikipediaUrl}<Button href={card.wikipediaUrl} target="_blank" class="mt-3"
 										>{$_('codex.wikipedia')}</Button
 									>{/if}
+								{#if owned}<div class="mt-4"><AuctionCreatePanel {card} /></div>{/if}
+								{#if card.baseCardId}<div class="mt-4">
+										<ReportDialog pageId={card.baseCardId} title={card.title} />
+									</div>{/if}
 							{:else}
 								<FriendOwnerLedger
 									friends={card.friendsWhoOwn}
@@ -346,7 +378,7 @@
 		loadOwnedCards={loadOwnedTradeCards}
 		loadPartnerCards={loadPartnerTradeCards}
 		bind:draft={tradeDraft}
-		onSubmit={(input) => void submitTrade(input)}
+		onSubmit={submitTrade}
 	/>
 {/if}
 

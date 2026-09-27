@@ -1,11 +1,13 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import ShowcaseEditor from './showcase-editor.svelte';
-	import CardPicker from './card-picker.svelte';
+	import ArticlePicker from '$lib/components/selectors/article-picker.svelte';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import InstantSalesManager from './instant-sales-manager.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import {
 		buyShowcaseSlot,
+		getCurrentUserMoney,
 		cancelInstantSale,
 		createInstantSale,
 		getWikiForgeCollectionPage,
@@ -49,6 +51,8 @@
 	let money = $state(untrack(() => user.money ?? 0));
 	let saving = $state(false);
 	let buyingSlot = $state(false);
+	let buySlotOpen = $state(false);
+	let avatarPageId = $state<number | undefined>(untrack(() => user.imagePageId ?? undefined));
 	let salesBusy = $state(false);
 	let avatarPickerOpen = $state(false);
 	let avatarBusy = $state(false);
@@ -75,20 +79,18 @@
 			toast.success($_('profile.showcase_saved'));
 		} catch (error) {
 			toast.error(errorMessage(error, 'showcase'));
+			throw error;
 		} finally {
 			saving = false;
 		}
 	}
 	async function buySlot() {
-		if (
-			!confirm($_('profile.buy_showcase_slot_confirm', { values: { price: showcase.slotPrice } }))
-		)
-			return;
-		const price = showcase.slotPrice;
+		if (buyingSlot) return;
 		buyingSlot = true;
 		try {
 			showcase = await buyShowcaseSlot();
-			money = Math.max(0, money - price);
+			buySlotOpen = false;
+			money = await getCurrentUserMoney();
 			const session = $currentSession;
 			if (session) persistSession(localStorage, { ...session, user: { ...session.user, money } });
 			toast.success($_('profile.showcase_slot_bought'));
@@ -181,10 +183,11 @@
 			collectionLoading = false;
 		}
 	}
-	async function updateAvatar(card: import('$lib/types').CardRecord) {
+	async function updateAvatar() {
+		if (avatarBusy) return;
 		avatarBusy = true;
 		try {
-			const next = await updateWikiForgeImage(Number(card.baseCardId ?? card.id));
+			const next = await updateWikiForgeImage(avatarPageId ?? null);
 			avatarUrl = next.avatarUrl;
 			const session = $currentSession;
 			if (session)
@@ -285,7 +288,7 @@
 			{saving}
 			buying={buyingSlot}
 			onSave={saveShowcase}
-			onBuySlot={buySlot}
+			onBuySlot={() => (buySlotOpen = true)}
 			hasMoreCards={collectionHasNext}
 			loadingMoreCards={collectionLoading}
 			onLoadMoreCards={loadMoreCollection}
@@ -302,14 +305,27 @@
 		/>{/if}
 </section>
 
-<CardPicker
-	bind:open={avatarPickerOpen}
-	cards={collection}
-	{tags}
-	title={$_('settings.choose_avatar')}
-	onSelect={updateAvatar}
-	hasMore={collectionHasNext}
-	loadingMore={collectionLoading || avatarBusy}
-	onLoadMore={loadMoreCollection}
-	onFiltersChange={refreshPickerCollection}
-/>
+<Dialog.Root bind:open={avatarPickerOpen}
+	><Dialog.Content class="p-5"
+		><Dialog.Title>{$_('settings.choose_avatar')}</Dialog.Title><ArticlePicker
+			bind:value={avatarPageId}
+		/><Button disabled={avatarBusy} onclick={updateAvatar}>{$_('completion.save')}</Button
+		></Dialog.Content
+	></Dialog.Root
+>
+<Dialog.Root bind:open={buySlotOpen}
+	><Dialog.Content class="p-5"
+		><Dialog.Title
+			>{$_('profile.buy_showcase_slot', { values: { price: showcase.slotPrice } })}</Dialog.Title
+		><Dialog.Description
+			>{$_('profile.buy_showcase_slot_confirm', {
+				values: { price: showcase.slotPrice }
+			})}</Dialog.Description
+		>
+		<div class="flex gap-3">
+			<Button variant="outline" disabled={buyingSlot} onclick={() => (buySlotOpen = false)}
+				>{$_('completion.cancel')}</Button
+			><Button disabled={buyingSlot} onclick={buySlot}>{$_('completion.confirm')}</Button>
+		</div></Dialog.Content
+	></Dialog.Root
+>

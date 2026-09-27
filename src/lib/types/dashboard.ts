@@ -1,12 +1,14 @@
 import type { CardRecord } from './card';
 
 export interface DashboardData {
+	guild?: { id: number; name: string };
 	collection: {
-		uniqueCards: number;
+		uniqueCards?: number;
 		totalCopies: number;
-		completionRate: number;
+		completionRate?: number;
 	};
 	pendingTrades: number;
+	pendingAuction?: number;
 	pendingFriendRequests?: number;
 	pendingGuildInvitations?: number;
 	unreadNotifications?: number;

@@ -7,6 +7,7 @@
 	import CollectionResultSummary from '$lib/components/collection/collection-result-summary.svelte';
 	import FilterControls from '$lib/components/collection/filter-controls.svelte';
 	import FilterShell from '$lib/components/layout/filter-shell.svelte';
+	import { removeWikiForgeTag } from '$lib/api/wikiforge';
 	import SelectionPanel from '$lib/components/collection/selection-panel.svelte';
 	import TagEditor from '$lib/components/collection/tag-editor.svelte';
 	import {
@@ -150,7 +151,7 @@
 		const dependencies = Promise.allSettled([data.tags, getWishlists()]);
 		try {
 			const collection = await data.collection;
-			applyResponse(collection, false);
+			if (!restoredSnapshot) applyResponse(collection, false);
 		} catch {
 			failed = true;
 		} finally {
@@ -262,10 +263,12 @@
 		selectedCardIds = allSelected ? [] : visibleCardIds;
 	}
 
-	async function applyTagToSelection() {
+	async function applyTagToSelection(remove = false) {
 		if (!bulkTagIds.length || !selectedCardIds.length) return;
 		const responses = await Promise.all(
-			bulkTagIds.map((tagId) => applyWikiForgeTag(tagId, selectedCardIds))
+			bulkTagIds.map((tagId) =>
+				(remove ? removeWikiForgeTag : applyWikiForgeTag)(tagId, selectedCardIds)
+			)
 		);
 		const updatedCards = responses.flat();
 		cards = mergeCards(cards, updatedCards);
@@ -332,6 +335,56 @@
 		protection = 'all';
 		wishlistOwnerId = '';
 	}
+	let restoredSnapshot = false;
+	export const snapshot = {
+		capture: () => ({
+			cards,
+			total,
+			responsePage,
+			nextCursor,
+			hasNext,
+			query,
+			sortBy,
+			variantIds,
+			tagFilterIds,
+			duplicate,
+			protection,
+			wishlistOwnerId,
+			assignments
+		}),
+		restore: (value: {
+			cards: CardRecord[];
+			total: number;
+			responsePage: number;
+			nextCursor: string | null;
+			hasNext: boolean;
+			query: string;
+			sortBy: typeof sortBy;
+			variantIds: number[];
+			tagFilterIds: string[];
+			duplicate: typeof duplicate;
+			protection: typeof protection;
+			wishlistOwnerId: string;
+			assignments: typeof assignments;
+		}) => {
+			restoredSnapshot = true;
+			cards = value.cards;
+			total = value.total;
+			responsePage = value.responsePage;
+			nextCursor = value.nextCursor;
+			hasNext = value.hasNext;
+			query = value.query;
+			sortBy = value.sortBy;
+			variantIds = value.variantIds;
+			tagFilterIds = value.tagFilterIds;
+			duplicate = value.duplicate;
+			protection = value.protection;
+			wishlistOwnerId = value.wishlistOwnerId;
+			assignments = value.assignments;
+			previousFilterKey = filterKey;
+			loading = false;
+		}
+	};
 </script>
 
 <section class="flex flex-col gap-6 pb-28 sm:gap-8">
@@ -379,7 +432,7 @@
 			</div>
 
 			<CollectionResultSummary {total} loaded={cards.length} {hasNext} />
-			{#if loading}
+			{#if loading && !cards.length}
 				<p class="forge-label">{$_('collection.loading')}</p>
 			{:else if failed}
 				<div class="forge-panel-flat flex flex-wrap items-center justify-between gap-3 p-4">
@@ -423,7 +476,8 @@
 			canProtect={selectedUnprotectedCount > 0}
 			canUnprotect={selectedProtectedCount > 0}
 			onSelectAll={toggleSelectAll}
-			onApply={applyTagToSelection}
+			onApply={() => applyTagToSelection()}
+			onRemove={() => applyTagToSelection(true)}
 			onProtect={protectSelection}
 			onUnprotect={unprotectSelection}
 			onOpenTagEditor={() => (isTagEditorOpen = true)}

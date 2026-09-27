@@ -6,7 +6,8 @@
 	let value = $state('');
 	function add() {
 		const keyword = value.trim();
-		if (keyword && !keywords.includes(keyword)) keywords = [...keywords, keyword];
+		if (keyword && keyword.length <= 64 && keywords.length < 128 && !keywords.includes(keyword))
+			keywords = [...keywords, keyword];
 		value = '';
 	}
 </script>
@@ -20,10 +21,13 @@
 	</p>
 	<div class="mt-3 flex gap-2">
 		<Input
+			maxlength={64}
 			bind:value
 			onkeydown={(event) => event.key === 'Enter' && add()}
 			placeholder={$_('settings.keyword_placeholder')}
-		/><Button onclick={add}>{$_('common.add')}</Button>
+		/><Button disabled={keywords.length >= 128 || !value.trim()} onclick={add}
+			>{$_('common.add')}</Button
+		>
 	</div>
 	<div class="mt-3 flex flex-wrap gap-1.5">
 		{#each keywords as keyword (keyword)}<Button

@@ -1,12 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { claimAllAchievements } from '$lib/api/achievements';
 	import { _ } from '$lib/i18n';
 	import { claimAchievement, getBoosters, getCurrentUser } from '$lib/api';
 	import { currentSession, persistSession } from '$lib/auth/session';
-	import {
-		achievementAvailability,
-		refreshAchievementSummary
-	} from '$lib/achievements/store';
+	import { achievementAvailability, refreshAchievementSummary } from '$lib/achievements/store';
 	import AchievementList from '$lib/components/achievements/achievement-list.svelte';
 	import EmptyState from '$lib/components/layout/empty-state.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
@@ -32,11 +30,13 @@
 		}
 	}
 
-	async function claim(achievement: Achievement) {
-		claimingCode = achievement.code;
+	async function claim(achievement?: Achievement) {
+		if (claimingCode) return;
+		claimingCode = achievement?.code ?? '*';
 		claimError = null;
 		try {
-			await claimAchievement(achievement.code);
+			if (achievement) await claimAchievement(achievement.code);
+			else await claimAllAchievements();
 		} catch (error) {
 			if (wikiForgeApiErrorCode(error) !== 'ACHIEVEMENT_CONFLICT') {
 				claimError = 'error';
@@ -72,16 +72,29 @@
 	{#if loading}
 		<p class="forge-label">{$_('achievements.loading')}</p>
 	{:else if $achievementAvailability === 'unavailable'}
-		<EmptyState title={$_('achievements.unavailable_title')} description={$_('achievements.unavailable_description')} />
+		<EmptyState
+			title={$_('achievements.unavailable_title')}
+			description={$_('achievements.unavailable_description')}
+		/>
 	{:else if failed}
 		<div class="forge-panel-flat flex items-center justify-between gap-3 p-4">
 			<p class="text-destructive">{$_('achievements.error')}</p>
 			<Button variant="outline" onclick={() => void load(true)}>{$_('common.retry')}</Button>
 		</div>
 	{:else if achievements.length}
-		{#if claimError}<p class="text-sm text-destructive" role="alert">{$_(`achievements.${claimError}`)}</p>{/if}
+		{#if claimError}<p class="text-sm text-destructive" role="alert">
+				{$_(`achievements.${claimError}`)}
+			</p>{/if}
 		<AchievementList {achievements} {claimingCode} onClaim={claim} />
+		<Button
+			disabled={Boolean(claimingCode) ||
+				!achievements.some((item) => item.unlockedAt && !item.claimedAt)}
+			onclick={() => claim()}>{$_('completion.claimAll')}</Button
+		>
 	{:else}
-		<EmptyState title={$_('achievements.empty_title')} description={$_('achievements.empty_description')} />
+		<EmptyState
+			title={$_('achievements.empty_title')}
+			description={$_('achievements.empty_description')}
+		/>
 	{/if}
 </section>

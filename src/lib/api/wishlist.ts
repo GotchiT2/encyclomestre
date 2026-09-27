@@ -13,6 +13,7 @@ import { getVariants } from './variants';
 import { wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
 
 interface ApiWishlistSummary {
+	sharedWithGuild?: boolean;
 	id: number;
 	name: string;
 	description?: string | null;
@@ -55,12 +56,14 @@ const wishlistPageSizes = new Map<string, number>();
 
 function wishlistImageUrl(image?: string | null): string | null {
 	if (!image?.trim()) return null;
+	if (/^https?:\/\//.test(image) || image.startsWith('/')) return image;
 	return `https://fr.wikipedia.org/wiki/Special:FilePath/${encodeURIComponent(image)}?width=250`;
 }
 
 function toSummary(wishlist: ApiWishlistSummary, access: WishlistAccess): WishlistRegistrySummary {
 	return {
 		id: String(wishlist.id),
+		sharedWithGuild: wishlist.sharedWithGuild ?? false,
 		title: wishlist.name,
 		description: wishlist.description ?? '',
 		cardCount: wishlist.nbCards ?? null,
@@ -132,7 +135,12 @@ export async function getWishlistPage(
 
 export async function createWishlistRegistry(
 	_userId: string,
-	input: { title: string; description: string; imagePageId?: string | null },
+	input: {
+		title: string;
+		description: string;
+		imagePageId?: string | null;
+		sharedWithGuild?: boolean;
+	},
 	options?: RequestOptions
 ): Promise<WishlistRegistrySummary> {
 	const response = await apiRequest<ApiWishlistSummary>('/wishlists', {
@@ -140,6 +148,7 @@ export async function createWishlistRegistry(
 		method: 'POST',
 		body: {
 			name: input.title,
+			sharedWithGuild: input.sharedWithGuild ?? false,
 			description: input.description,
 			...(input.imagePageId
 				? { imagePageId: wikiForgeNumericId(input.imagePageId, 'illustration') }
@@ -151,7 +160,12 @@ export async function createWishlistRegistry(
 
 export async function updateWishlistRegistry(
 	id: string,
-	input: { title: string; description: string; imagePageId?: string | null },
+	input: {
+		title: string;
+		description: string;
+		imagePageId?: string | null;
+		sharedWithGuild?: boolean;
+	},
 	options?: RequestOptions
 ): Promise<WishlistRegistrySummary> {
 	const response = await apiRequest<ApiWishlistSummary>(
@@ -161,6 +175,7 @@ export async function updateWishlistRegistry(
 			method: 'PATCH',
 			body: {
 				name: input.title,
+				sharedWithGuild: input.sharedWithGuild ?? false,
 				description: input.description,
 				imagePageId: input.imagePageId
 					? wikiForgeNumericId(input.imagePageId, 'illustration')

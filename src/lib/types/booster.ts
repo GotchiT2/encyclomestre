@@ -44,6 +44,8 @@ export interface PackDefinition {
 export interface PackSummary {
 	id: number;
 	slotId: number;
+	slotName?: string;
+	slotOrder?: number;
 	family: PackFamily;
 	name: string;
 	description: string;
@@ -62,6 +64,7 @@ export interface PackSummary {
 
 export interface PackCatalogueItem extends PackDefinition {
 	credit: PackSummary | null;
+	slotName?: string;
 }
 
 export interface BoosterOpenResult {

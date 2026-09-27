@@ -6,6 +6,7 @@ import type {
 	UserRole
 } from '$lib/types';
 import { wikiForgeUtcDate } from './wikiforge-contract';
+import type { Banner } from '$lib/types/banner';
 
 export interface OAuthCurrentUserResponse {
 	id: string | number;
@@ -22,6 +23,7 @@ export interface OAuthCurrentUserResponse {
 	rank?: number;
 	lastConnection?: LastConnection;
 	createdAt: string;
+	banners?: Banner[];
 }
 
 function toUserRole(roles: string[]): UserRole {
@@ -48,6 +50,7 @@ export function toCurrentUser(profile: OAuthCurrentUserResponse): User {
 		lastConnection: profile.lastConnection,
 		role: toUserRole(profile.roles),
 		createdAt: wikiForgeUtcDate(profile.createdAt).toISOString(),
-		updatedAt: wikiForgeUtcDate(profile.createdAt).toISOString()
+		updatedAt: wikiForgeUtcDate(profile.createdAt).toISOString(),
+		...(profile.banners ? { banners: profile.banners } : {})
 	};
 }

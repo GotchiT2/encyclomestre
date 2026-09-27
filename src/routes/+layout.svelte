@@ -20,6 +20,10 @@
 	import MobileTopBar from '$lib/components/layout/mobile-top-bar.svelte';
 	import NotificationStream from '$lib/components/notifications/notification-stream.svelte';
 	import PlayerMoney from '$lib/components/layout/player-money.svelte';
+	import AuctionSession from '$lib/components/market/auction-session.svelte';
+	import CardDetailHost from '$lib/components/cards/card-detail-host.svelte';
+	import GlobalBanners from '$lib/components/layout/global-banners.svelte';
+	import { replaceBanners } from '$lib/banners/store';
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import { SIDEBAR_COOKIE_NAME } from '$lib/components/ui/sidebar/constants';
 	import { Toaster } from '$lib/components/ui/sonner';
@@ -52,6 +56,7 @@
 		if (!session) return;
 		void getCurrentUser()
 			.then((user) => {
+				replaceBanners(user.banners);
 				persistSession(localStorage, { ...session, user });
 				markWikiForgeSessionVerified();
 				setNsfwFilterSettings({ enabled: user.nsfwEnabled, keywords: user.safeWords });
@@ -61,6 +66,7 @@
 
 	$effect(() => {
 		if (!$currentSession || !$verifiedWikiForgeSession) {
+			replaceBanners([]);
 			clearCurrentWelcome();
 			welcomeLoadedForUserId = null;
 			return;
@@ -92,12 +98,14 @@
 </svelte:head>
 
 <Sidebar.Provider bind:open={sidebarOpen}>
+	<AuctionSession />
 	{#if $currentSession}<AppSidebar />{/if}
 	{#if $currentSession}<NotificationStream />{/if}
 	<MobileTopBar />
 
 	<Sidebar.Inset class="forge-scene bg-transparent">
 		<ForgeStarfield />
+		<GlobalBanners />
 		<div class="pointer-events-none fixed top-4 right-5 z-30 hidden md:block lg:right-8">
 			<div class="pointer-events-auto"><PlayerMoney /></div>
 		</div>
@@ -109,4 +117,5 @@
 	{#if $currentSession}<MobileTabBar />{/if}
 </Sidebar.Provider>
 
+<CardDetailHost />
 <Toaster richColors />

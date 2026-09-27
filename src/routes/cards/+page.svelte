@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { page } from '$app/state';
+	import { replaceState } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import CardTile from '$lib/components/card-tile.svelte';
@@ -33,6 +35,18 @@
 	let wishlistAdding = $state(false);
 
 	onMount(async () => {
+		const detail = page.url.searchParams.get('detail');
+		if (detail && /^\d+$/.test(detail)) {
+			const url = new URL(page.url);
+			url.searchParams.delete('detail');
+			// eslint-disable-next-line svelte/no-navigation-without-resolve -- same resolved route, removing only the legacy detail parameter
+			replaceState(url, page.state);
+			void getWikiForgePublicPage(detail)
+				.then((record) => {
+					selectedCard = toPublicPageCardRecord(record);
+				})
+				.catch(() => toast.error($_('common.error')));
+		}
 		if (!restoreSession(localStorage)?.accessToken) return;
 		wishlists = await getWishlists();
 	});
@@ -188,7 +202,7 @@
 						>
 						<Button
 							href={pageHref(Math.min(result.meta.totalPages, result.meta.page + 1))}
-							disabled={result.meta.page === result.meta.totalPages}>{$_('codex.next')}</Button
+							disabled={result.meta.page >= result.meta.totalPages}>{$_('codex.next')}</Button
 						>
 					</nav>{/if}
 			{:catch}

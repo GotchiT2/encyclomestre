@@ -16,6 +16,7 @@
 	const notificationCategories: Array<{ value: MutedNotificationCategory; label: string }> = [
 		{ value: 'TRADE', label: 'settings.mute_trade' },
 		{ value: 'SALE', label: 'settings.mute_sale' },
+		{ value: 'AUCTION', label: 'settings.mute_auction' },
 		{ value: 'FRIEND', label: 'settings.mute_friend' },
 		{ value: 'GUILD', label: 'settings.mute_guild' },
 		{ value: 'ACHIEVEMENT', label: 'settings.mute_achievement' }

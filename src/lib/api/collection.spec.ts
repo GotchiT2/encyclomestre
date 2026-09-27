@@ -9,10 +9,10 @@ describe('collection variants and pagination', () => {
 		expect(path).not.toContain('rarity');
 	});
 
-	it('uses cursor pagination only for acquired date without a search', () => {
+	it('always follows an explicit server cursor, without a competing page', () => {
 		expect(collectionPath({ cursor: 'next', page: 3 })).toContain('cursor=next');
-		expect(collectionPath({ cursor: 'next', page: 3, sortBy: 'name' })).toContain('page=3');
-		expect(collectionPath({ cursor: 'next', page: 3, query: 'Rose' })).toContain('page=3');
+		expect(collectionPath({ cursor: 'next', page: 3, sortBy: 'name' })).toContain('cursor=next');
+		expect(collectionPath({ cursor: 'next', page: 3, query: 'Rose' })).toContain('cursor=next');
 	});
 
 	it('prefers the cursor and otherwise advances the page', () => {
@@ -22,7 +22,7 @@ describe('collection variants and pagination', () => {
 		});
 		expect(
 			nextCollectionPosition({ hasNext: true, nextCursor: 'next', page: 2, sortBy: 'NAME' })
-		).toEqual({ page: 3, cursor: null });
+		).toEqual({ page: 0, cursor: 'next' });
 		expect(nextCollectionPosition({ hasNext: true, nextCursor: null, page: 2 })).toEqual({
 			page: 3,
 			cursor: null

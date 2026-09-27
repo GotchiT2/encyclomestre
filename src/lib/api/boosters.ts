@@ -37,6 +37,7 @@ export interface BoosterSlotPackDto {
 export interface BoosterSlotDto {
 	id: number;
 	name: string;
+	position?: number;
 	pack?: BoosterSlotPackDto | null;
 }
 
@@ -89,7 +90,7 @@ export interface ResolvedPackDefinition extends Omit<PackDefinition, 'drawGroups
 
 export function toPackSummaries(inventory: BoostersDto): PackSummary[] {
 	const families = new Map((inventory.families ?? []).map((entry) => [entry.family, entry]));
-	return (inventory.slots ?? []).flatMap((slot) => {
+	return (inventory.slots ?? []).flatMap((slot, slotOrder) => {
 		const pack = slot.pack;
 		if (!pack) return [];
 		const credit = families.get(pack.family);
@@ -99,6 +100,8 @@ export function toPackSummaries(inventory: BoostersDto): PackSummary[] {
 			{
 				id: pack.id,
 				slotId: slot.id,
+				slotName: slot.name,
+				slotOrder: slot.position ?? slotOrder,
 				family: pack.family,
 				name: pack.name,
 				description: pack.description,
@@ -172,7 +175,10 @@ export function mergePackCatalogue(
 	credits: PackSummary[]
 ): PackCatalogueItem[] {
 	const byId = new Map(credits.map((credit) => [credit.id, credit]));
-	return packs.map((pack) => ({ ...pack, credit: byId.get(pack.id) ?? null }));
+	return packs.map((pack) => {
+		const credit = byId.get(pack.id) ?? null;
+		return { ...pack, credit, slotName: credit?.slotName };
+	});
 }
 
 export function resolvePackDefinition(

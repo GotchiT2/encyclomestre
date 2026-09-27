@@ -1,4 +1,6 @@
 <script lang="ts">
+	import ActivityShortcuts from './activity-shortcuts.svelte';
+	import { resolve } from '$app/paths';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import ForgePanel from '$lib/components/layout/forge-panel.svelte';
@@ -26,20 +28,30 @@
 			</h1>
 			<p class="mt-3 text-muted-foreground">{$_('dashboard.description')}</p>
 		</div>
-		<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+		<div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
 			<HudStat
 				label={$_('dashboard.cards')}
-				value={String(dashboard?.collection.uniqueCards ?? 0)}
+				value={String(dashboard?.collection.totalCopies ?? 0)}
 				accent
 			/>
 			<HudStat
 				label={$_('dashboard.trades')}
 				value={String(dashboard?.pendingTrades ?? 0).padStart(2, '0')}
 			/>
+			<HudStat
+				label={$_('dashboard.auctions')}
+				value={String(dashboard?.pendingAuction ?? 0).padStart(2, '0')}
+			/>
 			<HudStat label={$_('dashboard.money')} value={String(dashboard?.money ?? 0)} />
 			<HudStat label={$_('dashboard.rank')} value={rank} />
 		</div>
 	</header>
+	<ActivityShortcuts {dashboard} />
+	{#if dashboard?.guild}<Button
+			variant="outline"
+			href={resolve('/guilds/[id]', { id: String(dashboard.guild.id) })}
+			>{dashboard.guild.name}</Button
+		>{/if}
 
 	<div class="grid gap-5 xl:grid-cols-[minmax(22rem,0.8fr)_minmax(0,1.2fr)]">
 		<ForgePanel class="relative min-h-[28rem] min-w-0 overflow-hidden p-6">
@@ -79,15 +91,27 @@
 	</div>
 
 	<div class="grid gap-4">
-		<ForgePanel class="flex items-center justify-between gap-4 p-5"
-			><div>
-				<p class="forge-label">{$_('dashboard.tradeSignal')}</p>
-				<p class="mt-2 text-xl font-bold">
-					{$_('dashboard.tradeTitle', { values: { count: dashboard?.pendingTrades ?? 0 } })}
-				</p>
-			</div>
-			<Button href="/trades" variant="outline"><HandshakeIcon />{$_('dashboard.openTrades')}</Button
-			></ForgePanel
-		>
+		{#if (dashboard?.pendingTrades ?? 0) > 0}<ForgePanel
+				class="flex items-center justify-between gap-4 p-5"
+				><div>
+					<p class="forge-label">{$_('dashboard.tradeSignal')}</p>
+					<p class="mt-2 text-xl font-bold">
+						{$_('dashboard.tradeTitle', { values: { count: dashboard?.pendingTrades ?? 0 } })}
+					</p>
+				</div>
+				<Button href="/trades" variant="outline"
+					><HandshakeIcon />{$_('dashboard.openTrades')}</Button
+				></ForgePanel
+			>{/if}
+		{#if (dashboard?.pendingAuction ?? 0) > 0}<ForgePanel
+				class="flex items-center justify-between gap-4 p-5"
+				><div>
+					<p class="forge-label">{$_('dashboard.auctionSignal')}</p>
+					<p class="mt-2 text-xl font-bold">
+						{$_('dashboard.auctionTitle', { values: { count: dashboard?.pendingAuction ?? 0 } })}
+					</p>
+				</div>
+				<Button href="/market" variant="outline">{$_('dashboard.openAuctions')}</Button></ForgePanel
+			>{/if}
 	</div>
 </section>

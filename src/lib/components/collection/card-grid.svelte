@@ -39,6 +39,7 @@
 <div class="wikiforge-card-grid">
 	{#each cards as card (card.id)}<div class="wikiforge-card-size group relative isolate">
 			<CardTile
+				interactive={!isSelectionMode}
 				{card}
 				tags={cardTags(card.id)}
 				showFriendOwners

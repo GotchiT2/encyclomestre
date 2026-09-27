@@ -23,7 +23,7 @@
 	}
 
 	function categoryLabel(category: string) {
-		const known = new Set(['COLLECTION', 'BOOSTER', 'TRADE', 'SALE', 'SOCIAL', 'MONEY']);
+		const known = new Set(['COLLECTION', 'BOOSTER', 'TRADE', 'SALE', 'AUCTION', 'SOCIAL', 'MONEY']);
 		return known.has(category)
 			? $_(`achievements.category.${category}`)
 			: $_('achievements.category_unknown', { values: { category } });
@@ -38,7 +38,9 @@
 			class="forge-panel-flat relative overflow-hidden p-4"
 		>
 			<div class="flex items-start gap-3">
-				<span class="grid size-10 shrink-0 place-items-center border border-primary/35 bg-background text-primary">
+				<span
+					class="grid size-10 shrink-0 place-items-center border border-primary/35 bg-background text-primary"
+				>
 					{#if state === 'DONE'}<CheckCircle2Icon class="size-5" />
 					{:else if state === 'LOCKED'}<LockKeyholeIcon class="size-5" />
 					{:else}<TrophyIcon class="size-5" />{/if}
@@ -46,7 +48,9 @@
 				<div class="min-w-0 flex-1">
 					<p class="forge-label">{categoryLabel(achievement.category)}</p>
 					<h2 class="mt-1 font-title text-lg leading-tight">{achievement.name}</h2>
-					{#if achievement.description}<p class="mt-1 text-sm text-muted-foreground">{achievement.description}</p>{/if}
+					{#if achievement.description}<p class="mt-1 text-sm text-muted-foreground">
+							{achievement.description}
+						</p>{/if}
 				</div>
 			</div>
 
@@ -63,13 +67,20 @@
 					aria-valuemax={achievement.threshold}
 					aria-valuenow={achievement.progress}
 				>
-					<div class="h-full bg-primary transition-[width]" style={`width: ${progress(achievement)}%`}></div>
+					<div
+						class="h-full bg-primary transition-[width]"
+						style={`width: ${progress(achievement)}%`}
+					></div>
 				</div>
 			</div>
 
 			<div class="mt-4 flex flex-wrap items-center gap-2 text-sm">
 				<GiftIcon class="size-4 text-primary" />
-				{#if achievement.rewardMoney > 0}<span>{$_('achievements.reward_money', { values: { amount: achievement.rewardMoney } })}</span>{/if}
+				{#if achievement.rewardMoney > 0}<span
+						>{$_('achievements.reward_money', {
+							values: { amount: achievement.rewardMoney }
+						})}</span
+					>{/if}
 				{#each Object.entries(achievement.rewardBoosters ?? {}) as [family, amount] (family)}
 					<span class="border border-energy/40 bg-energy/10 px-2 py-0.5 text-energy-soft">
 						{$_('achievements.reward_booster', { values: { count: amount, family } })}
@@ -81,10 +92,12 @@
 				{#if state === 'CLAIMABLE'}
 					<button
 						class="ml-auto min-h-9 border border-primary bg-primary px-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
-						disabled={claimingCode === achievement.code}
+						disabled={Boolean(claimingCode)}
 						onclick={() => onClaim(achievement)}
 					>
-						{claimingCode === achievement.code ? $_('achievements.claiming') : $_('achievements.claim')}
+						{claimingCode === achievement.code
+							? $_('achievements.claiming')
+							: $_('achievements.claim')}
 					</button>
 				{/if}
 			</div>

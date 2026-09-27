@@ -2,6 +2,7 @@ export type WishlistAccess = 'owned' | 'shared' | 'pending';
 export type WishlistSort = 'date' | 'name';
 
 export interface WishlistRegistrySummary {
+	sharedWithGuild?: boolean;
 	id: string;
 	title: string;
 	description: string;

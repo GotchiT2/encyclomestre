@@ -75,6 +75,7 @@ export function toCardRecord(card: WikiForgeCardDto, variants: VariantDefinition
 		globalSupply: 0,
 		friendsWhoOwn: [],
 		acquiredAt: card.acquiredDate ? wikiForgeUtcDate(card.acquiredDate).toISOString() : undefined,
+		createdAt: card.creationDate ? wikiForgeUtcDate(card.creationDate).toISOString() : undefined,
 		collectionTagIds: (card.tagIds ?? []).map(String),
 		duplicate: Boolean(card.duplicate),
 		userProtected: Boolean(card.protected),

@@ -145,7 +145,7 @@
 	>
 		<span class="booster-card-flipper">
 			<span class="booster-card-face booster-card-front" aria-hidden={!revealed}>
-				<CardTile {card} showFriendOwners={false} />
+				<CardTile {card} interactive={false} showFriendOwners={false} />
 			</span>
 			<span class="booster-card-face booster-card-reverse">
 				<BoosterCardBack color={card.variant.color} {fullArt} renderKey={card.variant.renderKey} />

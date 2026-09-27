@@ -42,3 +42,9 @@ export const claimAchievement = (code: string, options?: RequestOptions) =>
 		apiTarget: 'wikiforge',
 		method: 'POST'
 	});
+
+export const claimAllAchievements = (options?: RequestOptions) =>
+	apiRequest<import('./schema').ApiSchemas['ClaimedAchievementsDTO']>('/me/achievements/claim', {
+		...options,
+		method: 'POST'
+	});

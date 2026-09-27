@@ -15,6 +15,8 @@ const api = vi.hoisted(() => ({
 }));
 
 vi.mock('$lib/api', () => api);
+vi.mock('$env/dynamic/public', () => ({ env: {} }));
+vi.mock('$lib/api/moderation', () => ({ getSanctions: vi.fn().mockResolvedValue([]) }));
 
 import MessageInbox from './message-inbox.svelte';
 

@@ -1,6 +1,8 @@
 export * from './auth';
 
 export * from './achievements';
+export * from './auctions';
+export * from './reports';
 export * from './cards';
 
 export * from './card-query';

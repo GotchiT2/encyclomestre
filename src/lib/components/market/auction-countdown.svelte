@@ -3,7 +3,7 @@
 	import { auctionCountdown } from '$lib/domain/market/auction-display';
 	import { _ } from '$lib/i18n';
 
-	let { endsAt }: { endsAt?: string | null } = $props();
+	let { endsAt, mode = 'end' }: { endsAt?: string | null; mode?: 'start' | 'end' } = $props();
 	let now = $state(Date.now());
 	const countdown = $derived(auctionCountdown(endsAt, now));
 	const exactDate = $derived(
@@ -33,11 +33,15 @@
 		title={exactDate}
 		data-testid="auction-countdown"
 	>
-		{$_('market.ends_in', { values: { delay: countdown.relative } })}
+		{$_(mode === 'start' ? 'auctionHub.startsIn' : 'market.ends_in', {
+			values: { delay: countdown.relative }
+		})}
 	</span>
 {/if}
 {#if exactDate}
 	<p class="mt-1 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-		{$_('market.ends_local', { values: { date: exactDate } })}
+		{$_(mode === 'start' ? 'auctionHub.startsLocal' : 'market.ends_local', {
+			values: { date: exactDate }
+		})}
 	</p>
 {/if}

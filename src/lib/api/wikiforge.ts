@@ -115,12 +115,11 @@ const toGuildSummary = (guild: WikiForgeGuildDto): GuildSummary => ({
 
 export async function getMyGuild(options?: RequestOptions): Promise<GuildSummary | null> {
 	try {
-		return toGuildSummary(
-			await apiRequest<WikiForgeGuildDto>('/me/guild', {
-				...options,
-				apiTarget: 'wikiforge'
-			})
-		);
+		const guild = await apiRequest<WikiForgeGuildDto | undefined>('/me/guild', {
+			...options,
+			apiTarget: 'wikiforge'
+		});
+		return guild ? toGuildSummary(guild) : null;
 	} catch (error) {
 		if (wikiForgeApiErrorCode(error) === 'NOT_FOUND') return null;
 		throw error;

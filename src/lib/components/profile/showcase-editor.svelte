@@ -1,4 +1,8 @@
 <script lang="ts">
+	import LocalDraft from '$lib/components/layout/local-draft.svelte';
+	import { draftKey, writeDraft } from '$lib/drafts/storage';
+	import { currentSession } from '$lib/auth/session';
+	import { operationError } from '$lib/domain/operation-error';
 	import CardPicker from './card-picker.svelte';
 	import CollectionVitrine from './collection-vitrine.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -19,8 +23,8 @@
 		onBuySlot,
 		hasMoreCards = false,
 		loadingMoreCards = false,
-		onLoadMoreCards
-		,onFiltersChange
+		onLoadMoreCards,
+		onFiltersChange
 	}: {
 		showcase: Showcase;
 		collection: CardRecord[];
@@ -28,7 +32,7 @@
 		money: number;
 		saving?: boolean;
 		buying?: boolean;
-		onSave: (lines: Array<{ title: string; cardIds: string[] }>) => void;
+		onSave: (lines: Array<{ title: string; cardIds: string[] }>) => void | Promise<void>;
 		onBuySlot: () => void;
 		hasMoreCards?: boolean;
 		loadingMoreCards?: boolean;
@@ -53,6 +57,7 @@
 	const usedCount = $derived(usedIds.size);
 
 	function addLine() {
+		if (lines.length >= 50) return;
 		lines = [...lines, { key: `line-${nextKey++}`, title: '', cards: [] }];
 	}
 	function openPicker(key: string) {
@@ -81,6 +86,9 @@
 			const index = line.cards.findIndex((card) => card.id === cardId);
 			const target = index + delta;
 			if (target < 0 || target >= line.cards.length) return line;
+			announcement = $_('ux.position', {
+				values: { position: target + 1, total: line.cards.length }
+			});
 			const cards = [...line.cards];
 			[cards[index], cards[target]] = [cards[target], cards[index]];
 			return { ...line, cards };
@@ -118,16 +126,55 @@
 		});
 		lines = next;
 	}
-	function save() {
-		onSave(
-			lines
-				.filter((line) => line.cards.length)
-				.map((line) => ({ title: line.title.trim(), cardIds: line.cards.map((card) => card.id) }))
-		);
+	let error = $state('');
+	let savingLocal = $state(false);
+	let announcement = $state('');
+	async function save() {
+		if (savingLocal || saving) return;
+		savingLocal = true;
+		error = '';
+		try {
+			await onSave(
+				lines
+					.filter((line) => line.cards.length)
+					.map((line) => ({ title: line.title.trim(), cardIds: line.cards.map((card) => card.id) }))
+			);
+			writeDraft(localStorage, draftKey($currentSession?.user.id ?? '', 'showcase'), '');
+		} catch (cause) {
+			error = operationError(cause);
+		} finally {
+			savingLocal = false;
+		}
 	}
 </script>
 
 <section class="flex flex-col gap-4">
+	<LocalDraft
+		target="showcase"
+		value={JSON.stringify(lines)}
+		onRestore={(value) => {
+			try {
+				const parsed = JSON.parse(value);
+				if (
+					Array.isArray(parsed) &&
+					parsed.length <= 50 &&
+					parsed.every(
+						(line) =>
+							typeof line.title === 'string' &&
+							Array.isArray(line.cards) &&
+							line.cards.every((card: CardRecord) => typeof card.id === 'string' && card.variant)
+					)
+				) {
+					lines = parsed.map((line, index) => ({ ...line, key: `line-${index}` }));
+					nextKey = lines.length;
+				}
+			} catch {
+				error = $_('common.error');
+			}
+		}}
+	/>
+	{#if error}<p role="alert" class="text-destructive">{error}</p>{/if}
+	<p class="sr-only" aria-live="polite">{announcement}</p>
 	<div class="forge-panel-flat flex flex-wrap items-center justify-between gap-3 p-4">
 		<div>
 			<p class="forge-label">
@@ -138,13 +185,16 @@
 			</p>
 		</div>
 		<div class="flex flex-wrap gap-2">
-			<Button variant="outline" onclick={addLine}>{$_('profile.add_showcase_line')}</Button><Button
+			<Button variant="outline" disabled={lines.length >= 50} onclick={addLine}
+				>{$_('profile.add_showcase_line')}</Button
+			><Button
 				variant="outline"
 				disabled={buying || showcase.slots >= showcase.maxSlots || money < showcase.slotPrice}
 				onclick={onBuySlot}
 				>{$_('profile.buy_showcase_slot', { values: { price: showcase.slotPrice } })}</Button
 			><Button
 				disabled={saving ||
+					savingLocal ||
 					usedCount > showcase.slots ||
 					lines.some((line) => line.cards.length && !line.title.trim())}
 				onclick={save}>{saving ? $_('common.loading') : $_('common.save')}</Button
@@ -153,23 +203,48 @@
 	</div>
 
 	<div class="flex flex-col gap-0">
-	{#each lines as line (line.key)}
-		<section>
-			<CollectionVitrine
-				title={line.title || $_('profile.showcase_line_title')}
-				cards={line.cards}
-				perRow={5}
-				maxPerRow={5}
-				onMove={(cardId, delta) => moveCard(line.key, cardId, delta)}
-				onRemove={(cardId) => removeCard(line.key, cardId)}
-				onRename={(title) => renameLine(line.key, title)}
-				onAddAt={() => openPicker(line.key)}
-				onDragStart={(cardId) => (dragged = { lineKey: line.key, cardId })}
-				onDragEnd={() => (dragged = null)}
-				onDropAt={(index) => dropCard(line.key, index)}
-			/>
-		</section>
-	{/each}
+		{#each lines as line, lineIndex (line.key)}
+			<section>
+				<div class="flex gap-2">
+					<Button
+						variant="outline"
+						disabled={lineIndex === 0}
+						onclick={() => {
+							const next = [...lines];
+							[next[lineIndex - 1], next[lineIndex]] = [next[lineIndex], next[lineIndex - 1]];
+							lines = next;
+							announcement = $_('ux.position', {
+								values: { position: lineIndex, total: lines.length }
+							});
+						}}>{$_('ux.moveLineUp')}</Button
+					><Button
+						variant="outline"
+						disabled={lineIndex === lines.length - 1}
+						onclick={() => {
+							const next = [...lines];
+							[next[lineIndex + 1], next[lineIndex]] = [next[lineIndex], next[lineIndex + 1]];
+							lines = next;
+							announcement = $_('ux.position', {
+								values: { position: lineIndex + 2, total: lines.length }
+							});
+						}}>{$_('ux.moveLineDown')}</Button
+					>
+				</div>
+				<CollectionVitrine
+					title={line.title || $_('profile.showcase_line_title')}
+					cards={line.cards}
+					perRow={5}
+					maxPerRow={5}
+					onMove={(cardId, delta) => moveCard(line.key, cardId, delta)}
+					onRemove={(cardId) => removeCard(line.key, cardId)}
+					onRename={(title) => renameLine(line.key, title)}
+					onAddAt={() => openPicker(line.key)}
+					onDragStart={(cardId) => (dragged = { lineKey: line.key, cardId })}
+					onDragEnd={() => (dragged = null)}
+					onDropAt={(index) => dropCard(line.key, index)}
+				/>
+			</section>
+		{/each}
 	</div>
 	{#if !lines.length}<button
 			class="forge-panel-flat min-h-32 border-dashed text-primary"

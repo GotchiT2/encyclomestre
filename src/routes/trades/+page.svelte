@@ -6,7 +6,11 @@
 	import { SvelteMap } from 'svelte/reactivity';
 	import { page } from '$app/state';
 	import { _ } from '$lib/i18n';
-	import { realtimeRefresh, refreshIncludes } from '$lib/realtime/resource-refresh';
+	import {
+		realtimeRefresh,
+		refreshIncludes,
+		publishRealtimeRefresh
+	} from '$lib/realtime/resource-refresh';
 	import { currentSession, persistSession } from '$lib/auth/session';
 	import {
 		acceptTradeOfferWithRetry,
@@ -14,10 +18,9 @@
 		counterTradeOffer,
 		createTradeOffer,
 		getFriendCollectionPage,
-		getConversations,
 		getCurrentUserMoney,
 		getTradeOffer,
-		getTradeOffers,
+		getTradeRegistry,
 		getTradePartners,
 		getWikiForgeCollectionPage,
 		respondToTradeOffer,
@@ -38,6 +41,7 @@
 		User
 	} from '$lib/types';
 
+	let historyCount = $state(20);
 	let offers = $state<TradeOffer[]>([]);
 	let ownedCards = $state<CardRecord[]>([]);
 	let partnerCards = $state<CardRecord[]>([]);
@@ -114,7 +118,8 @@
 
 	async function loadTrades() {
 		try {
-			const result = await getTradeOffers();
+			const registry = await getTradeRegistry(historyCount);
+			const result = [...registry.received, ...registry.sent, ...registry.done];
 			offers = result;
 			result.forEach((offer) => tradeCardsByOffer.set(offer.id, offer.cards ?? []));
 			loadFailed = false;
@@ -271,9 +276,9 @@
 			? await counterTradeOffer(counteringOfferId, input)
 			: await createTradeOffer(input);
 		tradeCardsByOffer.set(created.id, created.cards ?? []);
-		if (counteringOfferId) await loadTrades();
+		if (counteringOfferId) await loadTrades().catch(() => undefined);
 		else offers = [created, ...offers];
-		await Promise.all([getWikiForgeCollectionPage(), getConversations()]);
+		publishRealtimeRefresh(['collection', 'messages']);
 		counteringOfferId = null;
 	}
 
@@ -337,6 +342,14 @@
 </script>
 
 <section class="flex flex-col gap-6 sm:gap-8">
+	<label class="flex flex-wrap items-center gap-3"
+		>{$_('completion.historyCount')}<select
+			class="min-h-11 border border-border bg-background px-3"
+			bind:value={historyCount}
+			onchange={() => void retryTrades()}
+			>{#each [10, 20, 50] as count (count)}<option value={count}>{count}</option>{/each}</select
+		></label
+	>
 	<PageHeader
 		eyebrow={$_('trades.eyebrow')}
 		title={$_('trades.title')}

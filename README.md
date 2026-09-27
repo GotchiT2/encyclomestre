@@ -68,6 +68,26 @@ Le proxy du NAS doit envoyer le domaine du frontend vers le port `3000` du conte
 
 Utilisez `docker-compose.truenas.yml` si Portainer échoue avant la lecture du Dockerfile. Cette stack n'utilise pas `build:` : elle récupère ce dépôt au démarrage, exécute `npm ci`, construit SvelteKit puis démarre le serveur Node avec le port NAS `32000`.
 
+## Reprendre les enchères du FO
+
+Le parcours est orchestré par `src/routes/market`, avec les composants dans `src/lib/components/market` et le cycle réseau dans `src/lib/auctions/detail-controller.ts`. Les limites du contrat et les besoins backend sont décrits dans [le rapport API](docs/api-auctions-reporting-needs.md). L’avancement est consigné dans `.agents/PLAN.md`.
+
+Pour reproduire les parcours sans écriture réelle, lancer dans un terminal PowerShell dédié :
+
+```powershell
+$env:PUBLIC_API_MOCK_ENABLED = 'true'
+$env:PUBLIC_API_MOCK_DELAY_MS = '10'
+npm run dev -- --host 127.0.0.1 --port 5180
+```
+
+Puis, dans un autre terminal :
+
+```powershell
+node scripts/check-auctions.mjs https://127.0.0.1:5180
+```
+
+Ce script initialise une session fictive, bloque les appels vers l’API de production et vérifie les parcours à cinq largeurs. Les captures sont enregistrées dans le dossier temporaire `wikiforge-auctions`. Les tests unitaires et composants se lancent avec `npm test` ; compléter par `npm run check` et `npm run build` après l’arrêt du serveur de test.
+
 ## DA
 
 ### Colors
@@ -88,3 +108,7 @@ Utilisez `docker-compose.truenas.yml` si Portainer échoue avant la lecture du D
 - Logo : DBacks Regular
 - Titles : Palatino Linotype Bold
 - Texts : Lato Regular
+
+# Reprise de la couverture Swagger du FO
+
+Le guide de reprise de cette évolution est dans [docs/fo-handoff.md](docs/fo-handoff.md). La [matrice des 117 opérations](docs/api-fo-coverage.md) relie le contrat aux écrans et modules ; les [recommandations UX/UI](docs/ux-ui-recommendations.md) séparent les améliorations front des évolutions API nécessaires.

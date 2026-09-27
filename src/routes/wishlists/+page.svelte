@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { page as route } from '$app/state';
+	import { replaceState } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import {
 		acceptWishlistInvitation,
@@ -121,6 +123,19 @@
 	$effect(() => {
 		if (!ready) return;
 		void filterKey;
+		const url = new URL(window.location.href);
+		for (const [key, value] of Object.entries({
+			list: activeWishlist?.id ?? '',
+			q: query,
+			sort: sortBy,
+			direction: sortDirection,
+			page: String(page)
+		})) {
+			if (value) url.searchParams.set(key, value);
+			else url.searchParams.delete(key);
+		}
+		// eslint-disable-next-line svelte/no-navigation-without-resolve -- updating filters on the current URL
+		replaceState(url, route.state);
 		window.clearTimeout(debounceTimer);
 		debounceTimer = window.setTimeout(() => void loadEntries(), query.trim() ? 500 : 0);
 		return () => window.clearTimeout(debounceTimer);
@@ -130,7 +145,12 @@
 		loading = true;
 		groupsFailed = false;
 		try {
-			await refreshGroups();
+			await refreshGroups(route.url.searchParams.get('list') ?? undefined);
+			query = route.url.searchParams.get('q') ?? '';
+			sortBy = route.url.searchParams.get('sort') === 'name' ? 'name' : 'date';
+			sortDirection = route.url.searchParams.get('direction') === 'ASC' ? 'ASC' : 'DESC';
+			page = Math.max(1, Math.trunc(Number(route.url.searchParams.get('page'))) || 1);
+			previousFilterKey = JSON.stringify([activeWishlist?.id, query, sortBy, sortDirection]);
 		} catch {
 			groupsFailed = true;
 		} finally {
@@ -157,18 +177,34 @@
 		}
 	}
 
-	async function create(title: string, description: string, imagePageId: string | null) {
-		const created = await createWishlistRegistry('', { title, description, imagePageId });
+	async function create(
+		title: string,
+		description: string,
+		imagePageId: string | null,
+		sharedWithGuild = false
+	) {
+		const created = await createWishlistRegistry('', {
+			title,
+			description,
+			imagePageId,
+			sharedWithGuild
+		});
 		createImage = null;
 		await refreshGroups(created.id);
 	}
 
-	async function update(title: string, description: string, imagePageId: string | null) {
+	async function update(
+		title: string,
+		description: string,
+		imagePageId: string | null,
+		sharedWithGuild = false
+	) {
 		if (!editingWishlist) return;
 		const updated = await updateWishlistRegistry(editingWishlist.id, {
 			title,
 			description,
-			imagePageId
+			imagePageId,
+			sharedWithGuild
 		});
 		editImage = null;
 		editingWishlist = null;
@@ -433,7 +469,7 @@
 
 					<div class="flex min-w-0 flex-col gap-4">
 						<p class="forge-label">{$_('wishlist.results_count', { values: { count: total } })}</p>
-						{#if listLoading}
+						{#if listLoading && !entries.length}
 							<p class="forge-label">{$_('wishlist.loading')}</p>
 						{:else if entriesFailed}
 							<div class="forge-panel-flat flex flex-wrap items-center justify-between gap-3 p-4">
@@ -470,12 +506,16 @@
 								class="flex items-center justify-between border-t border-primary/20 pt-4"
 								aria-label={$_('wishlist.page')}
 							>
-								<Button variant="outline" disabled={page <= 1} onclick={() => (page -= 1)}
-									>{$_('common.previous')}</Button
+								<Button
+									variant="outline"
+									disabled={listLoading || page <= 1}
+									onclick={() => (page -= 1)}>{$_('common.previous')}</Button
 								>
 								<span class="forge-label">{page} / {totalPages}</span>
-								<Button variant="outline" disabled={page >= totalPages} onclick={() => (page += 1)}
-									>{$_('common.next')}</Button
+								<Button
+									variant="outline"
+									disabled={listLoading || page >= totalPages}
+									onclick={() => (page += 1)}>{$_('common.next')}</Button
 								>
 							</nav>
 						{/if}

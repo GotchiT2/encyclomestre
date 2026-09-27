@@ -113,7 +113,7 @@ function tokenNeedsRefresh(session: ReturnType<typeof restoreSession>) {
 	);
 }
 
-async function refreshSession(fetcher: Fetcher): Promise<boolean> {
+export async function refreshSession(fetcher: Fetcher = fetch): Promise<boolean> {
 	if (refreshDisabled) return false;
 	if (refreshSessionPromise) return refreshSessionPromise;
 
@@ -237,7 +237,7 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 				...init
 			});
 
-	const isAuthenticationFailure = response.status === 401 || response.status === 403;
+	const isAuthenticationFailure = response.status === 401;
 	const canRefresh =
 		!didRefresh &&
 		!skipAuth &&
@@ -274,6 +274,18 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 					  typeof payload.error === 'string'
 					? payload.error
 					: `Erreur API (${response.status})`;
+		if (
+			response.status === 403 &&
+			payload &&
+			typeof payload === 'object' &&
+			'code' in payload &&
+			payload.code === 'SANCTIONED' &&
+			'meta' in payload
+		) {
+			void import('$lib/moderation/state').then(({ acceptSanction }) =>
+				acceptSanction(payload.meta)
+			);
+		}
 		throw new ApiError(response.status, payload, message);
 	}
 

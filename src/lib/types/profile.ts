@@ -40,6 +40,7 @@ export interface Showcase {
 }
 
 export interface UserProfile {
+	guild?: { id: number; name: string };
 	id: string;
 	name: string;
 	imagePageId: number | null;
@@ -60,6 +61,7 @@ export interface InstantSale {
 
 export interface SalesResult {
 	instantSales: InstantSale[];
+	auctions?: import('./auction').Auction[];
 }
 
 export interface LeaderboardEntry {

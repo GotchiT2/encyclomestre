@@ -5,6 +5,7 @@ import { toPackSummaries, type BoostersDto } from './boosters';
 import { getVariants } from './variants';
 
 export interface WikiForgeWelcomeResponse {
+	guild?: { id: number; name: string };
 	boosters: BoostersDto;
 	collection: {
 		nbCards: number;
@@ -31,11 +32,11 @@ export async function getWikiForgeWelcome(options?: RequestOptions): Promise<Das
 	]);
 	return {
 		collection: {
-			uniqueCards: response.collection.nbCards,
-			totalCopies: response.collection.nbCards,
-			completionRate: 0
+			totalCopies: response.collection.nbCards
 		},
+		guild: response.guild,
 		pendingTrades: response.pendingTrades,
+		pendingAuction: response.pendingAuction ?? 0,
 		pendingFriendRequests: response.pendingFriendRequests ?? 0,
 		pendingGuildInvitations: response.pendingGuildInvitations ?? 0,
 		unreadNotifications: response.unreadNotifications ?? 0,

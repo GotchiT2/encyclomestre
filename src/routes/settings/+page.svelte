@@ -6,7 +6,8 @@
 	import { clearSession, currentSession, persistSession } from '$lib/auth/session';
 	import {
 		getCurrentUser,
-		getWikiForgeCollectionPage,
+		getWikiForgePublicPages,
+		toPublicPageCardRecord,
 		logout,
 		logoutAll,
 		updateWikiForgeMe,
@@ -61,17 +62,18 @@
 	}
 
 	async function loadAvatarCards(cardQuery: CardQuery) {
-		const result = await getWikiForgeCollectionPage({
+		const result = await getWikiForgePublicPages({
 			page: Math.max(0, (cardQuery.page ?? 1) - 1),
-			query: cardQuery.query,
-			variantIds: cardQuery.variantIds,
-			sortBy: cardQuery.sortBy === 'name' ? 'name' : 'acquiredDate'
+			q: cardQuery.query,
+			sortBy: cardQuery.query?.trim() ? 'relevance' : 'name'
 		});
 		const page = result.page + 1;
-		const pageSize = Math.max(1, result.items.length);
-		const total = Math.max(0, result.total);
+		const pageSize = 48;
+		const total = result.nbResults;
 		return {
-			items: result.items,
+			items: (result.results ?? []).map((item) =>
+				toPublicPageCardRecord({ ...item, _variants: result._variants })
+			),
 			meta: {
 				page,
 				pageSize,

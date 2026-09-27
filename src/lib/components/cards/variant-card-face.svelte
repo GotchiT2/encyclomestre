@@ -8,8 +8,13 @@
 
 	let {
 		card,
+		compact = false,
 		onOrientationChange = () => undefined
-	}: { card: CardRecord; onOrientationChange?: (landscape: boolean) => void } = $props();
+	}: {
+		card: CardRecord;
+		compact?: boolean;
+		onOrientationChange?: (landscape: boolean) => void;
+	} = $props();
 	const fullArt = $derived(cardHasStyle(card, 'FULL_ART'));
 	const chrome = $derived(cardHasStyle(card, 'CHROME'));
 	const effectsEnabled = $derived(fullArt || chrome || card.variant.renderKey !== 'standard');
@@ -77,6 +82,8 @@
 				<img src="/card-placeholder.svg" alt="" />
 			{:else}
 				<img
+					loading="lazy"
+					decoding="async"
 					src={card.imageUrl}
 					alt=""
 					class:blur-xl={illustrationBlurred}
@@ -94,7 +101,7 @@
 			<VariantEffects profile={card.variant.renderKey} {fullArt} {active} />
 		{/if}
 		<div class="name">{card.title}</div>
-		{#if !fullArt}<p class="description">{card.shortDescription}</p>{/if}
+		{#if !fullArt && !compact}<p class="description">{card.shortDescription}</p>{/if}
 		<div class="sigil"><EditionSigil key={card.variant.renderKey} /></div>
 		{#if serial}<div class="serial">{serial}</div>{/if}
 	</div>

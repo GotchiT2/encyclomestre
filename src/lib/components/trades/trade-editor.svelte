@@ -1,5 +1,10 @@
 <script lang="ts">
+	import LocalDraft from '$lib/components/layout/local-draft.svelte';
+	import { draftKey, writeDraft } from '$lib/drafts/storage';
 	import { _ } from '$lib/i18n';
+	import { operationError } from '$lib/domain/operation-error';
+	import SanctionNotice from '$lib/components/moderation/sanction-notice.svelte';
+	import { activeRestrictions } from '$lib/moderation/state';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import CoinsIcon from '@lucide/svelte/icons/coins';
@@ -38,7 +43,7 @@
 		loadOwnedCards: (query: TradeCardSearchQuery) => Promise<PaginatedResponse<CardRecord>>;
 		loadPartnerCards: (query: TradeCardSearchQuery) => Promise<PaginatedResponse<CardRecord>>;
 		draft?: Partial<CreateTradeOfferInput>;
-		onSubmit: (input: CreateTradeOfferInput) => void;
+		onSubmit: (input: CreateTradeOfferInput) => void | Promise<void>;
 	} = $props();
 	let offeredIds = $state<string[]>([]);
 	let requestedIds = $state<string[]>([]);
@@ -46,6 +51,7 @@
 	let offeredMoney = $state(0);
 	let requestedMoney = $state(0);
 	let error = $state('');
+	let submitting = $state(false);
 	let activeSide = $state<TradeSide>('offered');
 	let termsExpanded = $state(false);
 	const offeredMoneyTooHigh = $derived(offeredMoney > availableMoney);
@@ -60,7 +66,12 @@
 			error = '';
 		}
 	});
-	function submit() {
+	async function submit() {
+		if (submitting) return;
+		if ($activeRestrictions.includes('TRADE')) {
+			error = $_('completion.errors.SANCTIONED');
+			return;
+		}
 		if (
 			!partner ||
 			offeredIds.length > 20 ||
@@ -71,21 +82,71 @@
 			error = $_('trades.editor_validation');
 			return;
 		}
-		onSubmit({
-			initiatorId: currentUserId,
-			recipientId: partner.id,
-			offeredCardIds: offeredIds,
-			requestedCardIds: requestedIds,
-			offeredMoney: Math.max(0, Math.trunc(offeredMoney)),
-			requestedMoney: Math.max(0, Math.trunc(requestedMoney)),
-			message
-		});
-		open = false;
+		submitting = true;
+		try {
+			await onSubmit({
+				initiatorId: currentUserId,
+				recipientId: partner.id,
+				offeredCardIds: offeredIds,
+				requestedCardIds: requestedIds,
+				offeredMoney: Math.max(0, Math.trunc(offeredMoney)),
+				requestedMoney: Math.max(0, Math.trunc(requestedMoney)),
+				message: $activeRestrictions.includes('MUTE') ? '' : message
+			});
+			writeDraft(localStorage, draftKey(currentUserId, `trade:${partner.id}`), '');
+			open = false;
+		} catch (cause) {
+			error = operationError(cause);
+		} finally {
+			submitting = false;
+		}
 	}
 </script>
 
-<TradeModal bind:open {modalLayer} title={$_('trades.exchange_with', { values: { user: partnerName } })}>
+<TradeModal
+	bind:open
+	{modalLayer}
+	title={$_('trades.exchange_with', { values: { user: partnerName } })}
+>
 	<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+		<SanctionNotice kind="TRADE" />
+		{#if partner && open}<LocalDraft
+				target={`trade:${partner.id}`}
+				value={JSON.stringify({
+					offeredCardIds: offeredIds,
+					requestedCardIds: requestedIds,
+					message,
+					offeredMoney,
+					requestedMoney
+				})}
+				onRestore={(value) => {
+					try {
+						const parsed = JSON.parse(value);
+						if (
+							Array.isArray(parsed.offeredCardIds) &&
+							Array.isArray(parsed.requestedCardIds) &&
+							typeof parsed.message === 'string' &&
+							Number.isFinite(parsed.offeredMoney) &&
+							Number.isFinite(parsed.requestedMoney)
+						) {
+							offeredIds = parsed.offeredCardIds
+								.filter((id: unknown) => typeof id === 'string')
+								.slice(0, 20);
+							requestedIds = parsed.requestedCardIds
+								.filter((id: unknown) => typeof id === 'string')
+								.slice(0, 20);
+							message = parsed.message;
+							offeredMoney = parsed.offeredMoney;
+							requestedMoney = parsed.requestedMoney;
+						}
+					} catch {
+						error = $_('common.error');
+					}
+				}}
+			/>{/if}
+		{#if $activeRestrictions.includes('MUTE')}<p class="p-3">
+				{$_('completion.moderation.muteTrade')}
+			</p>{/if}
 		<div
 			class="shrink-0 border-b border-primary/20 bg-background/55 px-3 py-2 text-center font-mono text-[10px] uppercase tracking-wider text-muted-foreground sm:px-4"
 		>
@@ -190,7 +251,9 @@
 			</p>{/if}
 		<footer class="grid shrink-0 grid-cols-2 gap-2 border-t border-primary/25 bg-card p-3 sm:p-4">
 			<Button variant="outline" onclick={() => (open = false)}>{$_('common.cancel')}</Button>
-			<Button onclick={submit}>{$_('trades.send_offer')}</Button>
+			<Button disabled={submitting || $activeRestrictions.includes('TRADE')} onclick={submit}
+				>{$_('trades.send_offer')}</Button
+			>
 		</footer>
 	</div>
 </TradeModal>

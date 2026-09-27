@@ -120,12 +120,12 @@ describe('WikiForge wishlist API', () => {
 		expect(mockedRequest).toHaveBeenNthCalledWith(1, '/wishlists', {
 			apiTarget: 'wikiforge',
 			method: 'POST',
-			body: { name: 'Nouvelle', description: 'Test' }
+			body: { name: 'Nouvelle', description: 'Test', sharedWithGuild: false }
 		});
 		expect(mockedRequest).toHaveBeenNthCalledWith(2, '/wishlists/4', {
 			apiTarget: 'wikiforge',
 			method: 'PATCH',
-			body: { name: 'Modifiée', description: '', imagePageId: null }
+			body: { name: 'Modifiée', description: '', imagePageId: null, sharedWithGuild: false }
 		});
 		expect(mockedRequest).toHaveBeenNthCalledWith(3, '/wishlists/4', {
 			apiTarget: 'wikiforge',

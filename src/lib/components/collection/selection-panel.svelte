@@ -13,6 +13,7 @@
 		canUnprotect = false,
 		onSelectAll,
 		onApply,
+		onRemove,
 		onProtect,
 		onUnprotect = () => undefined,
 		onOpenTagEditor,
@@ -25,6 +26,7 @@
 		canUnprotect?: boolean;
 		onSelectAll: () => void;
 		onApply: () => void | Promise<void>;
+		onRemove?: () => void | Promise<void>;
 		onProtect: () => void | Promise<void>;
 		onUnprotect?: () => void | Promise<void>;
 		onOpenTagEditor: () => void;
@@ -34,10 +36,16 @@
 	let protecting = $state(false);
 	let unprotecting = $state(false);
 
-	async function applyTags() {
+	let error = $state('');
+	async function applyTags(remove = false) {
+		if (applying) return;
+		error = '';
 		applying = true;
 		try {
-			await onApply();
+			if (remove) await onRemove?.();
+			else await onApply();
+		} catch {
+			error = $_('completion.errors.generic');
 		} finally {
 			applying = false;
 		}
@@ -66,6 +74,7 @@
 	class="fixed inset-x-0 bottom-0 z-40 border-4 border-double border-primary/30 bg-card p-3 shadow-2xl"
 	aria-label={$_('collection.bulkActions')}
 >
+	{#if error}<p role="alert">{error}</p>{/if}
 	<div class="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:items-center">
 		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('collection.selectedCards', { values: { count: selectedCount } })}
@@ -77,11 +86,18 @@
 			<div class="min-w-0 flex-1 sm:max-w-xs" data-testid="bulk-tag-selector">
 				<TagFilterSelector bind:values={bulkTagIds} {tags} onCreate={onOpenTagEditor} />
 			</div>
+			{#if onRemove}<Button
+					size="sm"
+					class="sm:h-11"
+					variant="outline"
+					disabled={!bulkTagIds.length || !selectedCount || applying}
+					onclick={() => applyTags(true)}>{$_('completion.removeTags')}</Button
+				>{/if}
 			<Button
 				size="sm"
 				class="sm:h-11"
 				disabled={!bulkTagIds.length || !selectedCount || applying}
-				onclick={applyTags}>{$_('collection.apply_selected_tags')}</Button
+				onclick={() => applyTags()}>{$_('collection.apply_selected_tags')}</Button
 			><Button
 				size="sm"
 				class="sm:h-11"

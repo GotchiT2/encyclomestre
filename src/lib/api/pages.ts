@@ -1,3 +1,5 @@
+import { get } from 'svelte/store';
+import { currentSession } from '$lib/auth/session';
 import { cardSearchSortDirection, defaultCardSearchSort } from '$lib/domain/cards/search';
 import type { CardRecord, CardSearchSort, PaginatedResponse, VariantDefinition } from '$lib/types';
 import { apiRequest } from './client';
@@ -14,6 +16,7 @@ export interface WikiForgePublicPageCard {
 	atk: number;
 	length?: number;
 	defaultVariantId?: number;
+	variantIds?: number[];
 	createdAt?: string;
 	/** Champ utilisé par les versions récentes du DTO WikiForge. */
 	creationDate?: string;
@@ -94,7 +97,7 @@ export async function getWikiForgePublicPages(
  * Public card detail source. The API returns the same card shape as an item
  * from the paginated catalogue, so both views share one display mapping.
  */
-export async function getWikiForgePublicPage(
+async function readPublicPage(
 	id: string | number,
 	options: PublicPagesRequestOptions = {}
 ): Promise<WikiForgePublicPageCard> {
@@ -140,7 +143,7 @@ export function toPublicPageCardRecord(
 				ownedCount: friend.nbCards
 			};
 		}),
-		...(acquiredAt ? { acquiredAt } : {}),
+		...(acquiredAt ? { createdAt: acquiredAt } : {}),
 		nsfw: Boolean(card.nsfw)
 	};
 }
@@ -160,4 +163,18 @@ export function toPublicPage(source: WikiForgePublicPagesResponse): PublicCatalo
 			totalPages: Math.max(1, Math.ceil(source.nbResults / pageSize))
 		}
 	};
+}
+
+const pendingDetails = new Map<string, Promise<WikiForgePublicPageCard>>();
+export function getWikiForgePublicPage(
+	id: string | number,
+	options: PublicPagesRequestOptions = {}
+): Promise<WikiForgePublicPageCard> {
+	if (options.signal || options.fetch) return readPublicPage(id, options);
+	const key = `${get(currentSession)?.user.id ?? 'anonymous'}:${id}`;
+	const pending = pendingDetails.get(key);
+	if (pending) return pending;
+	const request = readPublicPage(id, options).finally(() => pendingDetails.delete(key));
+	pendingDetails.set(key, request);
+	return request;
 }

@@ -14,7 +14,7 @@ export interface WikiForgeMessageDto {
 	id: number;
 	conversationId: number;
 	fromUserId: number;
-	type: 'TEXT' | 'TRADE';
+	type: 'TEXT' | 'TRADE' | 'CARD' | 'PAGE' | (string & {});
 	content?: string | null;
 	meta?: string | null;
 	creationDate: string;
@@ -57,7 +57,7 @@ export function toWikiForgeMessage(message: WikiForgeMessageDto): MessageRecord 
 		id: String(message.id),
 		conversationId: String(message.conversationId),
 		senderId: String(message.fromUserId),
-		type: message.type === 'TRADE' ? 'trade' : 'text',
+		type: message.type === 'TRADE' ? 'trade' : message.type === 'TEXT' ? 'text' : 'unknown',
 		content: message.content ?? '',
 		createdAt: wikiForgeUtcDate(message.creationDate).toISOString(),
 		readAt: null,

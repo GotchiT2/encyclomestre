@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import type { WikiForgeMessageDto } from '$lib/api/messages';
+import { toWikiForgeMessage, type WikiForgeMessageDto } from '$lib/api/messages';
 import type { MessageRecord } from '$lib/types';
 
 export interface ChatStreamEvent {
@@ -45,20 +45,7 @@ export function toChatStreamEvent(value: unknown): ChatStreamEvent | null {
 }
 
 export function toChatStreamMessage(event: ChatStreamEvent): MessageRecord {
-	const message = event.message;
-	const normalizedDate = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(message.creationDate)
-		? message.creationDate
-		: `${message.creationDate}Z`;
-	return {
-		id: String(message.id),
-		conversationId: String(message.conversationId),
-		senderId: String(message.fromUserId),
-		type: message.type === 'TRADE' ? 'trade' : 'text',
-		content: message.content ?? '',
-		createdAt: new Date(normalizedDate).toISOString(),
-		readAt: null,
-		reactions: []
-	};
+	return toWikiForgeMessage(event.message);
 }
 
 export const chatStreamEvent = writable<ChatStreamEvent | null>(null);

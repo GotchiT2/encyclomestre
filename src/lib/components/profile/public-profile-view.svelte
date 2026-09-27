@@ -1,6 +1,11 @@
 <script lang="ts">
+	import SanctionNotice from '$lib/components/moderation/sanction-notice.svelte';
+	import { activeRestrictions } from '$lib/moderation/state';
 	import { onMount, untrack } from 'svelte';
+	import { resolve } from '$app/paths';
+	import ReportDialog from '$lib/components/reports/report-dialog.svelte';
 	import { invalidateAll } from '$app/navigation';
+
 	import CardTile from '$lib/components/card-tile.svelte';
 	import ContextualCardRail from '$lib/components/cards/contextual-card-rail.svelte';
 	import CollectionVitrine from './collection-vitrine.svelte';
@@ -10,6 +15,7 @@
 	import PlayerRelationshipControl from '$lib/components/friends/player-relationship-control.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import UserAvatar from '$lib/components/users/user-avatar.svelte';
+	import AuctionCardList from '$lib/components/market/auction-card-list.svelte';
 	import {
 		buyInstantSale,
 		createFriendRequest,
@@ -146,7 +152,7 @@
 	}
 
 	async function buy(saleId: string) {
-		if (buyingId) return;
+		if (buyingId || $activeRestrictions.includes('TRADE')) return;
 		buyingId = saleId;
 		try {
 			await buyInstantSale(saleId);
@@ -170,6 +176,8 @@
 	}
 </script>
 
+<SanctionNotice kind="TRADE" />
+
 <section class="flex flex-col gap-6 pb-12">
 	<header
 		class="forge-panel flex flex-col gap-5 overflow-hidden p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6"
@@ -185,6 +193,10 @@
 		<div class="min-w-0 flex-1">
 			<p class="forge-label text-primary">{$_('friends.profile')}</p>
 			<h1 class="mt-1 truncate font-serif text-3xl font-bold sm:text-4xl">{profile.name}</h1>
+			{#if profile.guild}<a
+					class="underline text-primary"
+					href={resolve('/guilds/[id]', { id: String(profile.guild.id) })}>{profile.guild.name}</a
+				>{/if}
 			<div class="mt-4 grid grid-cols-2 gap-2 sm:max-w-md">
 				<div class="border border-primary/25 bg-background/40 px-3 py-2">
 					<p class="forge-label">{$_('profile.cards_owned')}</p>
@@ -212,6 +224,11 @@
 				</div>{/if}
 		</div>
 		<PlayerRelationshipControl status={relationship} busy={inviting} onInvite={invite} />
+		<ReportDialog
+			target={{ type: 'USER', id: Number(profile.id) }}
+			title={profile.name}
+			userId={Number(profile.id)}
+		/>
 	</header>
 
 	<div
@@ -272,12 +289,22 @@
 							<div class="mt-2 flex items-center justify-between gap-2">
 								<strong>{sale.price} ◈</strong><Button
 									size="sm"
-									disabled={buyingId !== null || profile.id === $currentSession?.user.id}
+									disabled={buyingId !== null ||
+										profile.id === $currentSession?.user.id ||
+										$activeRestrictions.includes('TRADE')}
 									onclick={() => buy(sale.id)}>{$_('profile.buy_action')}</Button
 								>
 							</div>
 						</article>{/snippet}</ContextualCardRail
 				>{:else}<p class="mt-3 text-sm text-muted-foreground">{$_('friends.empty_sales')}</p>{/if}
+		</section>{/if}
+	{#if activeTab === 'sales' && sales.auctions?.length}<section class="mt-8 space-y-4">
+			<h2 class="font-serif text-2xl font-bold">{$_('profile.auctions_title')}</h2>
+			<AuctionCardList
+				items={sales.auctions}
+				userId={$currentSession?.user.id}
+				from={'/users/' + profile.id}
+			/>
 		</section>{/if}
 
 	{#if relationship === 'friend' && activeTab === 'collection'}
