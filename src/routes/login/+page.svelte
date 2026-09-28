@@ -1,4 +1,6 @@
 <script lang="ts">
+	import PasskeyLogin from '$lib/components/security/passkey-login.svelte';
+	import type { AuthSession } from '$lib/types';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -18,17 +20,21 @@
 	let isSubmitting = $state(false);
 	let turnstile = $state<{ verify: () => Promise<string>; reset: () => void } | null>(null);
 
+	async function acceptSession(session: AuthSession) {
+		persistSession(localStorage, session);
+		markWikiForgeSessionVerified();
+		await goto(resolve(getSafeRedirectTarget(page.url.searchParams.get('redirectTo')) as '/'));
+	}
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
+		if (isSubmitting) return;
 		error = undefined;
 		isSubmitting = true;
 		try {
 			if (!turnstile) throw new Error($_('auth.login.captchaFailure'));
 			const turnstileToken = await turnstile.verify();
 			const session = await login({ email, password, turnstileToken });
-			persistSession(localStorage, session);
-			markWikiForgeSessionVerified();
-			await goto(resolve(getSafeRedirectTarget(page.url.searchParams.get('redirectTo')) as '/'));
+			await acceptSession(session);
 		} catch (cause) {
 			const captchaRejected =
 				cause instanceof ApiError &&
@@ -88,6 +94,7 @@
 						>
 					</Field.Group>
 				</form>
+				<PasskeyLogin bind:busy={isSubmitting} onSuccess={acceptSession} />
 			</Card.Content>
 		</Card.Root>
 	</div>

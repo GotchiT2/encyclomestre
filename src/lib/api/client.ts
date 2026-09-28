@@ -15,6 +15,7 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
 	body?: unknown;
 	fetch?: Fetcher;
 	skipAuth?: boolean;
+	retryAuth?: boolean;
 	/** All endpoints are served by the WikiForge public API. */
 	apiTarget?: ApiTarget;
 }
@@ -196,6 +197,7 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 		fetch: fetcher = fetch,
 		headers,
 		skipAuth = false,
+		retryAuth = true,
 		apiTarget = 'wikiforge',
 		...init
 	} = options;
@@ -214,7 +216,7 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 		? await withApiTimeout(async () => {
 				const delay = mockDelay();
 				if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
-				return createMockApiResponse({ path, method: init.method, body });
+				return createMockApiResponse({ path, method: init.method, body, headers });
 			}, init.signal)
 		: await fetchWithTimeout(fetcher, apiUrl(path, apiTarget), {
 				credentials: 'include',
@@ -239,6 +241,7 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 
 	const isAuthenticationFailure = response.status === 401;
 	const canRefresh =
+		retryAuth &&
 		!didRefresh &&
 		!skipAuth &&
 		apiTarget === 'wikiforge' &&
@@ -259,6 +262,10 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 	}
 
 	if (response.status === 204) return undefined as T;
+	if (path === '/me/passkeys' && response.ok) {
+		const raw = await response.text();
+		return (raw ? JSON.parse(raw) : undefined) as T;
+	}
 
 	const payload: unknown = await response.json().catch(() => undefined);
 	if (!response.ok) {

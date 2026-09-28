@@ -96,3 +96,11 @@ Un modèle décrit uniquement une apparence. L’association à une variante ré
 Intégration livrée des contrats des messages (4)/(5) et de la limite de pseudo. FO : recherche serveur et historiques paginés, favoris persistants, devis de frais, fermeture de compte, engagements des cartes, progression et SSE de guilde. BO : dossier joueur, renommage forcé, purge et journal, corrections des DTO enchères/signalements. Les APIs ont été annoncées vérifiées en local ; pas de bascule automatique vers les mocks ni d’écriture de test sur la production.
 
 Les besoins backend précédemment listés pour la recherche, les favoris, l’historique, le devis, les engagements et la suppression sont désormais couverts par le contrat. La publication des templates et le logo de booster restent indisponibles. Voir l’audit administratif `docs/admin-api-coverage.md` dans le BO pour les outils absents.
+
+
+## Passkeys — branche passkey
+
+Connexion explicite et gestion des passkeys livrées dans les deux applications. Voir [le guide passkeys](passkeys.md) pour les contrats, mocks, validation et prérequis HTTPS/RP serveur. Aucun changement backend, commit, push ou déploiement.
+
+
+Le bouton de connexion précise qu’une passkey doit d’abord être ajoutée dans les paramètres ; l’erreur de cérémonie guide vers la vérification de la passkey enregistrée sur l’appareil.

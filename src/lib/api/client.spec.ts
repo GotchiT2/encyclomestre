@@ -43,6 +43,17 @@ describe('apiRequest en mode mock', () => {
 		expect(fetcher).not.toHaveBeenCalled();
 	});
 
+	it('conserve les erreurs HTTP sur les réponses passkeys', async () => {
+		await expect(
+			apiRequest('/me/passkeys', {
+				method: 'POST',
+				headers: { 'CF-Turnstile-Response': 'mock-token' },
+				body: { password: 'wrong', label: 'Test', credential: {} },
+				retryAuth: false
+			})
+		).rejects.toMatchObject({ status: 403 });
+	});
+
 	it('interrompt une requête qui dépasse 12 secondes', async () => {
 		vi.useFakeTimers();
 		apiEnv.PUBLIC_API_MOCK_DELAY_MS = String(API_TIMEOUT_MS + 1);

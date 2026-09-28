@@ -1,3 +1,4 @@
+import { passkeyMock } from '$lib/passkeys/mock';
 import type {
 	AuthSession,
 	CardRecord,
@@ -24,6 +25,7 @@ export interface MockApiRequest {
 	path: string;
 	method?: string;
 	body?: unknown;
+	headers?: HeadersInit;
 }
 
 const now = '2026-07-11T09:00:00.000Z';
@@ -886,12 +888,22 @@ function mockBoostersPayload(inventory: ReturnType<typeof boosterInventory>) {
 
 let mockAccountDeleted = false;
 let mockNameChangeAvailableAt: string | undefined;
-export function createMockApiResponse({ path, method = 'GET', body }: MockApiRequest): Response {
+export function createMockApiResponse({
+	path,
+	method = 'GET',
+	body,
+	headers
+}: MockApiRequest): Response {
 	const requestUrl = new URL(path, 'http://mock-api.local');
 	const routedPath = requestUrl.pathname.replace(/^\/api(?=\/)/, '');
 	const url = new URL(`${routedPath}${requestUrl.search}`, requestUrl.origin);
 	const { pathname } = url;
 	const normalizedMethod = method.toUpperCase();
+	const passkeyResponse = passkeyMock(pathname, normalizedMethod, body, headers);
+	if (passkeyResponse)
+		return passkeyResponse.body === undefined
+			? new Response(null, { status: passkeyResponse.status })
+			: Response.json(passkeyResponse.body, { status: passkeyResponse.status });
 	const communityResponse = communityMocks.handle(
 		pathname,
 		normalizedMethod,

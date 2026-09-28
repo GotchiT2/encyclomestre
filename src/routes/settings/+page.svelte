@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PasskeyManager from '$lib/components/security/passkey-manager.svelte';
 	import { nameChangeLocked, nameChangeRefusal } from '$lib/domain/name-change';
 	import { operationError } from '$lib/domain/operation-error';
 	import { onMount } from 'svelte';
@@ -194,6 +195,7 @@
 			onLogout={logoutFromSettings}
 			onLogoutAll={logoutFromAllDevices}
 		/>
+		<PasskeyManager onLogoutAll={logoutFromAllDevices} />
 	{/if}
 </section>
 
