@@ -27,7 +27,7 @@ export function validAuctionPeriod(start: number, end: number, now = Date.now(),
 		end - start <= 86_400_000
 	);
 }
-export const auctionTabs = ['explore', 'sales', 'bids', 'history'] as const;
+export const auctionTabs = ['explore', 'sales', 'bids', 'favorites', 'history'] as const;
 export type AuctionTab = (typeof auctionTabs)[number];
 export function marketQuery(params: URLSearchParams) {
 	const tab = params.get('tab') as AuctionTab;
@@ -41,7 +41,17 @@ export function marketQuery(params: URLSearchParams) {
 		min: params.get('min') ?? '',
 		max: params.get('max') ?? '',
 		phase: params.get('phase') ?? '',
-		history: params.get('history') ?? ''
+		history: params.get('history') ?? '',
+		source: params.get('source') === 'sales' ? 'sales' : 'bids',
+		status: ['OPEN', 'SOLD', 'UNSOLD', 'CANCELLED'].includes(params.get('status') ?? '')
+			? params.get('status')!
+			: tab === 'history'
+				? 'SOLD'
+				: '',
+		pageId: params.get('pageId') ?? '',
+		wishlist: params.get('wishlist') ?? '',
+		sortBy: params.get('sortBy') ?? 'ENDS_AT',
+		sortDirection: params.get('sortDirection') ?? 'ASC'
 	};
 }
 export type MarketQuery = ReturnType<typeof marketQuery>;
@@ -64,17 +74,16 @@ export function filterAuctions(items: Auction[], query: MarketQuery, now = Date.
 	});
 }
 export function historyKind(auction: Auction, userId: string) {
-	if (auction.status === 'OPEN') return null;
-	if (auction.status === 'CANCELLED') return 'cancelled';
-	if (auction.seller.id === userId)
-		return auction.status === 'SOLD' ? 'sold' : auction.status === 'UNSOLD' ? 'unsold' : 'unknown';
-	if (auction.status === 'SOLD')
-		return auction.leading || auction.leader?.id === userId
-			? 'won'
-			: auction.leader
-				? 'lost'
-				: 'unknown';
-	return 'unknown';
+	void userId;
+	const kinds: Record<string, string> = {
+		WON: 'won',
+		WON_PENDING: 'won',
+		SOLD: 'sold',
+		UNSOLD: 'unsold',
+		CANCELLED: 'cancelled',
+		LOST: 'lost'
+	};
+	return kinds[auction.viewerOutcome ?? ''] ?? 'unknown';
 }
 export function marketBackTarget(raw: string | null) {
 	return raw && /^\/(?:market|collection|boosters|profile|users\/\d+)(?:\?[^#]*)?$/.test(raw)

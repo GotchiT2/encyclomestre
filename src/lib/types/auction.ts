@@ -34,14 +34,24 @@ export interface Auction {
 	endsAt: string;
 	nbExtensions: number;
 	closedAt?: string;
+	favorite?: boolean;
+	viewerOutcome?: string;
+	listingFee?: number;
+	finalFee?: number;
 	bids?: AuctionBid[];
 }
 export interface AuctionPage {
+	pageSize?: number;
+	hasNext?: boolean;
 	nbResults: number;
 	page: number;
 	results: Auction[];
 }
 export interface MyBids {
+	nbResults: number;
+	page: number;
+	pageSize: number;
+	hasNext: boolean;
 	escrowed: number;
 	auctions: Auction[];
 }

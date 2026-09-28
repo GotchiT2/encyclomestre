@@ -275,7 +275,7 @@
 			{$_('trades.filtered_card_count', { values: { count: total } })}
 		</p>
 		<div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-			{#each resultCards.filter((card) => !selectedIds.includes(card.id)) as card (card.id)}
+			{#each resultCards.filter((card) => !selectedIds.includes(card.id) && !card.userProtected && !card.pendingTradeId && !card.activeAuctionId) as card (card.id)}
 				<div class="relative min-w-0">
 					<CardTile
 						{card}

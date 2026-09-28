@@ -89,3 +89,10 @@ Le moteur partagé accepte désormais les définitions v2 (surfaces, finitions s
 La source canonique du BO ajoute `src/lib/card-renderer/presets.ts` : douze définitions graphiques v2 et vingt-quatre styles combinables. Le catalogue mock comprend les douze nouvelles révisions tout en préservant les anciennes clés. La galerie et la bibliothèque sont des outils du BO ; aucun nouveau sélecteur ou écran FO n’est introduit.
 
 Un modèle décrit uniquement une apparence. L’association à une variante réelle n’est pas publiée dans cette étape. Le FO conserve la composition normale/full art, le titre, l’image et la numérotation issus de la carte réelle. Le format v2, les adaptateurs et les replis restent identiques. Pour mettre à jour ces fichiers, lancer le script `scripts/sync-card-renderer.mjs` depuis le BO avec `--target=<dossier-FO>` ; `--check` vérifie leur identité.
+
+
+## Évolution API du 28 septembre 2026
+
+Intégration livrée des contrats des messages (4)/(5) et de la limite de pseudo. FO : recherche serveur et historiques paginés, favoris persistants, devis de frais, fermeture de compte, engagements des cartes, progression et SSE de guilde. BO : dossier joueur, renommage forcé, purge et journal, corrections des DTO enchères/signalements. Les APIs ont été annoncées vérifiées en local ; pas de bascule automatique vers les mocks ni d’écriture de test sur la production.
+
+Les besoins backend précédemment listés pour la recherche, les favoris, l’historique, le devis, les engagements et la suppression sont désormais couverts par le contrat. La publication des templates et le logo de booster restent indisponibles. Voir l’audit administratif `docs/admin-api-coverage.md` dans le BO pour les outils absents.

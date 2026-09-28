@@ -108,6 +108,20 @@
 				return;
 			}
 		});
+		stream.addEventListener('guild.message', (event) => {
+			try {
+				const payload = JSON.parse((event as MessageEvent<string>).data);
+				if (
+					Number.isSafeInteger(payload?.message?.guildId) &&
+					Number.isSafeInteger(payload?.message?.id)
+				)
+					window.dispatchEvent(
+						new CustomEvent('wikiforge:guild-message', { detail: payload.message })
+					);
+			} catch {
+				/* Invalid events do not interrupt other domains. */
+			}
+		});
 		stream.addEventListener('chat.message', (event) => {
 			try {
 				const payload = toChatStreamEvent(JSON.parse((event as MessageEvent<string>).data));

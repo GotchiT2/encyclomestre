@@ -1,3 +1,5 @@
+> Mise à jour du 28 septembre 2026 : les contrats des messages (4)/(5) remplacent les limites historiques décrites ci-dessous. La recherche combinable serveur, les listes personnelles paginées, les favoris persistants, `viewerOutcome`, le devis de frais et les engagements `auctionId`/`saleId`/`pendingTradeId` sont intégrés au FO. La suppression de compte et son contrôle préalable sont également intégrés. Les endpoints ont été annoncés vérifiés localement, sans déploiement : les validations utilisent les mocks, sans repli automatique de production. Restent notamment le catalogue publié de modèles, le logo du booster, l’historique des signalements envoyés et la progression par variante.
+
 # Enchères et signalements : capacités et besoins API
 
 ## Source actualisée

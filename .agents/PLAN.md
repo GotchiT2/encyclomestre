@@ -503,3 +503,13 @@ Aucun commit, push ou déploiement demandé pour cette étape.
 - [x] Livraison des modèles full art et styles partagés synchronisés avec le BO.
 - Sujet Conventional Commit : `feat(cards): sync full-art preset catalogue from backoffice`.
 - Commit local demandé ; aucun push ni déploiement.
+
+
+## Évolution API — 28 septembre 2026
+
+- [x] Recherche serveur des enchères, pagination et filtres dans l’URL ; vues personnelles, résultats explicites, favoris persistants et devis avant confirmation.
+- [x] Fermeture de compte avec conséquences, mot de passe, bloqueurs et vérification après erreur réseau sans répétition automatique.
+- [x] Délai du pseudo via nameChangeAvailableAt et erreur 429 atomique ; autres préférences modifiables et brouillon conservé.
+- [x] Engagements DTO des exemplaires, bornes du catalogue, progression à la demande, recherche membres serveur, révocation des invitations et chat SSE avec rattrapage.
+
+Validation : check et ESLint, tests unitaires et build ; parcours navigateur mock aux cinq largeurs 360, 390, 768, 1024 et 1440 px. Aucun appel d’écriture en production, changement backend, déploiement, commit ou push.

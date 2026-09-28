@@ -18,7 +18,7 @@ describe('personal auction state', () => {
 		bids.mockReset().mockResolvedValue({ escrowed: 0, auctions: [] });
 	});
 	it('shares concurrent loads and clears account-specific associations on logout', async () => {
-		sales.mockResolvedValue([{ id: '7', status: 'OPEN', card: { id: '12' } }]);
+		sales.mockResolvedValue({ results: [{ id: '7', status: 'OPEN', card: { id: '12' } }] });
 		await Promise.all([refreshPersonalAuctions('1'), refreshPersonalAuctions('1')]);
 		expect(sales).toHaveBeenCalledTimes(1);
 		expect(get(activeAuctionByCard).get('12')).toBe('7');
@@ -27,12 +27,14 @@ describe('personal auction state', () => {
 		expect(get(auctionEscrowed)).toBe(0);
 	});
 	it('does not let a read started before a mutation overwrite its result', async () => {
-		let finish!: (value: Auction[]) => void;
-		sales.mockImplementationOnce(() => new Promise<Auction[]>((resolve) => (finish = resolve)));
+		let finish!: (value: { results: Auction[] }) => void;
+		sales.mockImplementationOnce(
+			() => new Promise<{ results: Auction[] }>((resolve) => (finish = resolve))
+		);
 		const pending = refreshPersonalAuctions('1');
 		await vi.waitFor(() => expect(sales).toHaveBeenCalledTimes(1));
 		recordOwnAuction({ id: '8', status: 'OPEN', card: { id: '12' } } as Auction);
-		finish([]);
+		finish({ results: [] });
 		await pending;
 		expect(get(activeAuctionByCard).get('12')).toBe('8');
 		expect(get(personalAuctions).sales.map((item) => item.id)).toEqual(['8']);

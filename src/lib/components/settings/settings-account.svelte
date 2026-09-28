@@ -1,10 +1,13 @@
 <script lang="ts">
+	import AccountDeletion from './account-deletion.svelte';
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 
 	let {
 		username = $bindable(''),
+		nameLocked = false,
+		nameChangeAvailableAt,
 		avatarUrl,
 		onChooseAvatar = () => undefined,
 		onRemoveAvatar = () => undefined,
@@ -12,6 +15,8 @@
 		onLogoutAll
 	}: {
 		username?: string;
+		nameLocked?: boolean;
+		nameChangeAvailableAt?: string;
 		avatarUrl?: string | null;
 		onChooseAvatar?: () => void;
 		onRemoveAvatar?: () => void;
@@ -28,10 +33,20 @@
 		<label class="mt-3 block font-mono text-[10px] uppercase tracking-widest text-primary"
 			>{$_('settings.username')}<Input
 				bind:value={username}
+				disabled={nameLocked}
+				aria-describedby={nameLocked ? 'name-change-available' : undefined}
 				maxlength={64}
 				class="mt-1 font-bold"
 			/></label
 		>
+		{#if nameLocked && nameChangeAvailableAt}<p
+				id="name-change-available"
+				class="mt-2 text-sm text-muted-foreground"
+			>
+				{$_('settings.name_change_available', {
+					values: { date: new Date(nameChangeAvailableAt).toLocaleString('fr-FR') }
+				})}
+			</p>{/if}
 		<div class="mt-4 flex items-center gap-3">
 			{#if avatarUrl}<img
 					src={avatarUrl}
@@ -57,3 +72,5 @@
 		</div>
 	</section>
 </div>
+
+<AccountDeletion />

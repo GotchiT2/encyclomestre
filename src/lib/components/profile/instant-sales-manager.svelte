@@ -36,7 +36,8 @@
 		collection.filter(
 			(card) =>
 				!card.userProtected &&
-				!card.pendingTradeId &&
+				!card.saleId &&
+				!card.activeAuctionId &&
 				!$activeAuctionCardIds.has(card.id) &&
 				!unavailableIds.has(card.id)
 		)

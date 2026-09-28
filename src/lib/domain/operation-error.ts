@@ -5,6 +5,11 @@ import { acceptSanction } from '$lib/moderation/state';
 
 const known = new Set([
 	'SANCTIONED',
+	'ACCOUNT_CONFLICT',
+	'INVALID_CREDENTIALS',
+	'AUCTION_CONFLICT',
+	'SALE_CONFLICT',
+	'TRADE_CONFLICT',
 	'MISSING_GUILD_PERMISSION',
 	'GUILD_CONFLICT',
 	'MODERATION_CASE_CONFLICT',
@@ -19,8 +24,8 @@ const known = new Set([
 export function operationError(error: unknown): string {
 	let code = '';
 	if (error instanceof ApiError && error.payload && typeof error.payload === 'object') {
-		const payload = error.payload as { code?: string; meta?: unknown };
-		code = payload.code ?? '';
+		const payload = error.payload as { error?: string; code?: string; meta?: unknown };
+		code = payload.error ?? payload.code ?? '';
 		if (code === 'SANCTIONED') acceptSanction(payload.meta);
 	}
 	return get(_)(`completion.errors.${known.has(code) ? code : 'generic'}`);

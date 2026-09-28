@@ -80,8 +80,38 @@ export function createAuctionMocks(cards: AuctionDto['card'][]) {
 	const response = (body?: unknown, status = 200) =>
 		body === undefined ? new Response(null, { status }) : Response.json(body, { status });
 	const fail = (status: number, code: string) => response({ error: code }, status);
+	const favorites = new Set<number>();
 	const transport = (item: AuctionDto, detail = false) => ({
 		...item,
+		favorite: favorites.has(item.id),
+		listingFee:
+			item.seller.id === 1 ? (item.listingFee ?? creationFee(item.startPrice)) : undefined,
+		finalFee:
+			item.seller.id === 1 && item.status === 'SOLD'
+				? Math.ceil((item.price ?? item.startPrice) * 0.05)
+				: undefined,
+		viewerOutcome:
+			item.seller.id === 1
+				? item.status !== 'OPEN'
+					? item.status
+					: Date.now() >= Date.parse(item.endsAt)
+						? 'SETTLING'
+						: Date.now() < Date.parse(item.startsAt)
+							? 'SCHEDULED'
+							: 'RUNNING'
+				: item.leading
+					? item.status === 'SOLD'
+						? 'WON'
+						: Date.now() >= Date.parse(item.endsAt)
+							? 'WON_PENDING'
+							: 'LEADING'
+					: item.bids?.some((bid) => bid.user?.id === 1)
+						? item.status === 'SOLD'
+							? 'LOST'
+							: item.status === 'CANCELLED'
+								? 'CANCELLED'
+								: 'OUTBID'
+						: undefined,
 		bids: detail && item.bids?.length ? item.bids : undefined,
 		myMax: item.leading && item.status === 'OPEN' ? item.myMax : undefined
 	});
@@ -112,30 +142,112 @@ export function createAuctionMocks(cards: AuctionDto['card'][]) {
 				return fail(403, 'SANCTIONED');
 			if (scenario === 'empty' && path === '/auctions' && method === 'GET')
 				return response({ nbResults: 0, page: 0 });
+			const page = Math.max(0, Number(params.get('page')) || 0);
+			const paged = (items: AuctionDto[]) => ({
+				nbResults: items.length,
+				page,
+				pageSize: 48,
+				hasNext: (page + 1) * 48 < items.length,
+				results: items.slice(page * 48, (page + 1) * 48).map((item) => transport(item))
+			});
+			if (path === '/me/auctions/fee' && method === 'GET') {
+				const price = Number(params.get('startPrice'));
+				if (!validAmount(price)) return fail(400, 'INVALID_PARAMETER');
+				const item = records.find(
+					(item) => item.id === Number(params.get('auctionId')) && item.seller.id === 1
+				);
+				if (params.has('auctionId') && !item) return fail(404, 'NOT_FOUND');
+				const paid = item ? (item.listingFee ?? creationFee(item.startPrice)) : 0;
+				return response({
+					startPrice: price,
+					feePercent: price <= 10 ? 0 : 1,
+					fee: creationFee(price),
+					alreadyPaid: paid,
+					due: Math.max(0, creationFee(price) - paid)
+				});
+			}
+			const favorite = /^\/me\/auction-favorites\/(\d+)$/.exec(path);
+			if (favorite) {
+				const id = Number(favorite[1]);
+				if (method === 'PUT') {
+					if (!records.some((item) => item.id === id)) return fail(404, 'NOT_FOUND');
+					favorites.add(id);
+				} else if (method === 'DELETE') favorites.delete(id);
+				else return fail(400, 'INVALID_PARAMETER');
+				return response(undefined, 204);
+			}
+			if (path === '/me/auction-favorites' && method === 'GET')
+				return response(paged(records.filter((item) => favorites.has(item.id))));
 			if (path === '/auctions' && method === 'GET') {
-				const page = Math.max(0, Number(params.get('page')) || 0);
+				const q = params.get('q') ?? '';
+				const fold = (value: string) =>
+					value
+						.normalize('NFD')
+						.replace(/[\u0300-\u036f]/g, '')
+						.toLowerCase();
+				const variants = params.getAll('variant').map(Number);
+				const min = Number(params.get('minPrice') ?? 0),
+					max = Number(params.get('maxPrice') ?? Infinity);
+				const phase = params.get('phase'),
+					sort = params.get('sortBy') ?? 'ENDS_AT',
+					direction = params.get('sortDirection') ?? 'ASC';
+				if (
+					min < 0 ||
+					max < min ||
+					(phase && !['RUNNING', 'UPCOMING'].includes(phase)) ||
+					!['ENDS_AT', 'PRICE', 'CREATION_DATE'].includes(sort) ||
+					!['ASC', 'DESC'].includes(direction)
+				)
+					return fail(400, 'INVALID_PARAMETER');
 				const active = records
 					.filter(open)
-					.sort((a, b) => Date.parse(a.endsAt) - Date.parse(b.endsAt));
-				return response({
-					nbResults: active.length,
-					page,
-					results: active.slice(page * 48, page * 48 + 48).map((item) => transport(item))
-				});
+					.filter(
+						(item) =>
+							(!q || (q.length >= 3 && fold(item.card.title).includes(fold(q)))) &&
+							(!variants.length || variants.includes(item.card.variantId)) &&
+							(!params.has('pageId') || item.card.pageId === Number(params.get('pageId'))) &&
+							(!params.has('sellerId') || item.seller.id === Number(params.get('sellerId'))) &&
+							(item.price ?? item.startPrice) >= min &&
+							(item.price ?? item.startPrice) <= max &&
+							(!phase ||
+								(Date.parse(item.startsAt) > Date.now() ? 'UPCOMING' : 'RUNNING') === phase)
+					);
+				active.sort(
+					(a, b) =>
+						((sort === 'PRICE'
+							? (a.price ?? a.startPrice) - (b.price ?? b.startPrice)
+							: sort === 'CREATION_DATE'
+								? a.id - b.id
+								: Date.parse(a.endsAt) - Date.parse(b.endsAt)) || a.id - b.id) *
+						(direction === 'DESC' ? -1 : 1)
+				);
+				return response(paged(active));
 			}
 			if (path === '/me/auctions' && method === 'GET')
 				return response(
-					records.filter((item) => item.seller.id === 1).map((item) => transport(item))
+					paged(
+						records.filter(
+							(item) =>
+								item.seller.id === 1 &&
+								(!params.has('status') || item.status === params.get('status'))
+						)
+					)
 				);
 			if (path === '/me/bids' && method === 'GET') {
 				const participated = records.filter(
 					(item) => item.leading || item.bids?.some((bid) => bid.user?.id === 1)
 				);
+				const { results, ...metadata } = paged(
+					participated.filter(
+						(item) => !params.has('status') || item.status === params.get('status')
+					)
+				);
 				return response({
+					...metadata,
+					auctions: results,
 					escrowed: participated
 						.filter((item) => item.status === 'OPEN' && item.leading)
-						.reduce((sum, item) => sum + (item.myMax ?? item.price ?? 0), 0),
-					...(participated.length ? { auctions: participated.map((item) => transport(item)) } : {})
+						.reduce((sum, item) => sum + (item.myMax ?? item.price ?? 0), 0)
 				});
 			}
 			if (path === '/me/auctions' && method === 'POST') {
@@ -198,6 +310,10 @@ export function createAuctionMocks(cards: AuctionDto['card'][]) {
 					}
 					const price = Number(input.startPrice);
 					if (!validAmount(price)) return fail(400, 'INVALID_PARAMETER');
+					item.listingFee = Math.max(
+						item.listingFee ?? creationFee(item.startPrice),
+						creationFee(price)
+					);
 					item.startPrice = item.minBid = price;
 					return response(transport(item));
 				}

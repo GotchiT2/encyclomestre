@@ -4,7 +4,7 @@
 	import { activeRestrictions } from '$lib/moderation/state';
 	import { page } from '$app/state';
 	import type { CardRecord } from '$lib/types';
-	import { createAuction } from '$lib/api/auctions';
+	import { createAuction, getAuctionFee, type AuctionFee } from '$lib/api/auctions';
 	import { activeAuctionByCard, personalAuctions, recordOwnAuction } from '$lib/auctions/store';
 	import { publishRealtimeRefresh } from '$lib/realtime/resource-refresh';
 	import { validAmount, validAuctionPeriod, creationFee } from '$lib/auctions/presentation';
@@ -18,6 +18,7 @@
 	let endsAt = $state('');
 	let busy = $state(false);
 	let confirm = $state(false);
+	let quote = $state<AuctionFee>();
 	let error = $state('');
 	const existing = $derived(card.activeAuctionId ?? $activeAuctionByCard.get(card.id));
 	const available = $derived(
@@ -27,6 +28,7 @@
 			!card.userProtected &&
 			!card.pendingTradeId &&
 			!card.activeSale &&
+			!card.saleId &&
 			$personalAuctions.sales.filter((item) => item.status === 'OPEN').length < 3
 	);
 	function valid() {
@@ -42,13 +44,22 @@
 			)
 		);
 	}
-	function prepare() {
+	async function prepare() {
+		if (busy) return;
 		error = '';
 		if (!valid()) {
 			error = $_('auctionHub.periodError');
 			return;
 		}
-		confirm = true;
+		busy = true;
+		try {
+			quote = await getAuctionFee(price!);
+			confirm = true;
+		} catch (cause) {
+			error = $_(auctionErrorKey(cause));
+		} finally {
+			busy = false;
+		}
 	}
 	async function submit() {
 		if ($activeRestrictions.includes('TRADE')) return;
@@ -64,8 +75,8 @@
 			const auction = await createAuction({
 				cardId: Number(card.id),
 				startPrice: price!,
-				...(startsAt ? { startsAt: new Date(startsAt).toISOString().slice(0, 19) } : {}),
-				endsAt: new Date(endsAt).toISOString().slice(0, 19)
+				...(startsAt ? { startsAt: new Date(startsAt).toISOString() } : {}),
+				endsAt: new Date(endsAt).toISOString()
 			});
 			recordOwnAuction(auction);
 			publishRealtimeRefresh(['profile', 'collection']);
@@ -159,7 +170,7 @@
 		' : ' +
 		price +
 		'\n' +
-		$_('auctionHub.fee', { values: { amount: creationFee(price ?? 0) } }) +
+		$_('auctionHub.fee', { values: { amount: quote?.due ?? 0 } }) +
 		' ' +
 		$_('auctionHub.settlementFee')}
 	onConfirm={() => void submit()}

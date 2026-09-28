@@ -23,6 +23,9 @@
 	let members = $state<GuildMember[]>([]);
 	let page = $state(0);
 	let total = $state(0);
+	let nbMembers = $state(0);
+	let hasNext = $state(false);
+	let generation = 0;
 	let busy = $state(false);
 	let error = $state('');
 	let editing = $state<number>();
@@ -30,24 +33,30 @@
 	const all: GuildPermission[] = ['INVITE', 'KICK', 'GRANT', 'EDIT'];
 	const self = $derived(Number($currentSession?.user.id));
 	async function load() {
+		const own = ++generation;
 		busy = true;
 		error = '';
 		try {
-			const result = await readGuildMembers(guild.id, page);
+			const result = await readGuildMembers(guild.id, page, undefined, query);
+			if (own !== generation) return;
+			nbMembers = result.nbMembers;
+			hasNext = result.hasNext;
 			members = result.results;
 			total = result.nbResults;
 		} catch (cause) {
-			error = operationError(cause);
+			if (own === generation) error = operationError(cause);
 		} finally {
-			busy = false;
+			if (own === generation) busy = false;
 		}
 	}
 	$effect(() => {
 		const id = guild.id;
 		const index = page;
+		const search = query;
 		untrack(() => {
 			void id;
 			void index;
+			void search;
 			void load();
 		});
 	});
@@ -64,17 +73,18 @@
 		>{$_('ux.memberSearch')}<input
 			type="search"
 			bind:value={query}
+			oninput={() => (page = 0)}
 			class="h-11 border border-border bg-background px-3"
 		/></label
 	>
-	<p class="text-sm text-muted-foreground">{$_('ux.permissionHelp')}</p>
+	<p class="text-sm text-muted-foreground">
+		{$_('ux.permissionHelp')} · {$_('apiEvolution.members', {
+			values: { total: nbMembers, matches: total }
+		})}
+	</p>
 	{#if error}<p role="alert" class="text-destructive">{error}</p>
 		<Button onclick={() => void load()}>{$_('completion.retry')}</Button>{/if}
-	{#each members.filter((member) => member.name
-			.toLocaleLowerCase()
-			.includes(query.toLocaleLowerCase())) as member (member.id)}<article
-			class="forge-panel flex flex-col gap-3 p-4"
-		>
+	{#each members as member (member.id)}<article class="forge-panel flex flex-col gap-3 p-4">
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<a
 					class="flex min-w-0 items-center gap-3 underline"
@@ -145,7 +155,7 @@
 			>{$_('completion.previous')}</Button
 		><span>{$_('completion.page', { values: { page: page + 1, total } })}</span><Button
 			variant="outline"
-			disabled={(page + 1) * 20 >= total || busy}
+			disabled={!hasNext || busy}
 			onclick={() => page++}>{$_('completion.next')}</Button
 		>
 	</div>

@@ -12,6 +12,7 @@ export interface UserPreferences {
 }
 
 export interface User {
+	nameChangeAvailableAt?: string;
 	id: string;
 	username: string;
 	displayName: string;

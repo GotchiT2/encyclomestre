@@ -74,7 +74,8 @@ try {
 	await page.locator('[data-auction-id="74"]').waitFor();
 	await page.getByRole('button', { name: 'Historique', exact: true }).click();
 	await page.locator('[data-auction-id="75"]').waitFor();
-	await page.locator('[data-auction-id="76"]').waitFor();
+	await page.getByLabel('Historique de').selectOption('sales');
+ await page.locator('[data-auction-id="76"]').waitFor();
 	await page.getByRole('button', { name: 'Mes ventes', exact: true }).click();
 	await page.locator('[data-auction-id="71"] a').first().click();
 	await page.getByRole('heading', { name: 'Gérer ma vente' }).waitFor();
@@ -162,7 +163,7 @@ try {
 		.first()
 		.getByRole('button')
 		.first()
-		.click();
+		.press('Enter');
 	await page.getByRole('dialog').getByRole('link', { name: 'Voir l’enchère' }).waitFor();
 	await page.keyboard.press('Escape');
 	await page.locator('[data-testid="card-detail-modal"]').waitFor({ state: 'hidden' });
@@ -171,7 +172,7 @@ try {
 			'[data-testid="card-tile"]:not(:has([data-testid="card-protected-indicator"])):not(:has([data-testid="card-active-sale"])):not(:has([data-testid="card-active-auction"]))'
 		)
 		.first();
-	await eligible.getByRole('button').first().click();
+	await eligible.getByRole('button').first().press('Enter');
 	const cardDialog = page.getByRole('dialog');
 	await cardDialog.getByLabel('Prix de départ', { exact: true }).fill('200');
 	const localEnd = await page.evaluate(() =>

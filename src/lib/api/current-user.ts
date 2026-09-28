@@ -9,6 +9,7 @@ import { wikiForgeUtcDate } from './wikiforge-contract';
 import type { Banner } from '$lib/types/banner';
 
 export interface OAuthCurrentUserResponse {
+	nameChangeAvailableAt?: string;
 	id: string | number;
 	name: string;
 	email: string;
@@ -37,6 +38,9 @@ export function toCurrentUser(profile: OAuthCurrentUserResponse): User {
 	return {
 		id: String(profile.id),
 		username: profile.name,
+		...(profile.nameChangeAvailableAt
+			? { nameChangeAvailableAt: profile.nameChangeAvailableAt }
+			: {}),
 		displayName: profile.name,
 		email: profile.email,
 		avatarUrl: profile.image ?? null,

@@ -5,7 +5,7 @@ type Member = ApiSchemas['GuildMemberDTO'];
 type Case = ApiSchemas['ModerationCaseDTO'];
 const json = (value?: unknown, status = 200) =>
 	value === undefined ? new Response(null, { status: 204 }) : Response.json(value, { status });
-const fail = (status: number, code: string) => json({ code, message: code }, status);
+const fail = (status: number, code: string) => json({ error: code, message: code }, status);
 const stamp = () => new Date().toISOString();
 
 /** Isolated fixtures. No request reaches the real API while mock mode is enabled. */
@@ -277,11 +277,22 @@ export function createCommunityMocks(
 				return json();
 			}
 			if (suffix === '/members' && method === 'GET') {
-				const list = members.get(id) ?? [];
+				const all = members.get(id) ?? [];
+				const fold = (s: string) =>
+					s
+						.normalize('NFD')
+						.replace(/[\u0300-\u036f]/g, '')
+						.toLowerCase();
+				const list = all.filter((member) =>
+					fold(member.name ?? '').includes(fold(params.get('q') ?? ''))
+				);
 				const page = Number(params.get('page') ?? 0);
 				return json({
 					results: list.slice(page * 20, (page + 1) * 20),
 					nbResults: list.length,
+					nbMembers: all.length,
+					pageSize: 20,
+					hasNext: (page + 1) * 20 < list.length,
 					page
 				});
 			}
@@ -352,6 +363,14 @@ export function createCommunityMocks(
 				if (!guild.permissions?.includes('INVITE')) return fail(403, 'MISSING_GUILD_PERMISSION');
 				const list = invited.get(id) ?? [];
 				const userId = Number(invitation[1]);
+				if (method === 'DELETE') {
+					if (!list.some((u) => u.id === userId)) return fail(404, 'NOT_FOUND');
+					invited.set(
+						id,
+						list.filter((u) => u.id !== userId)
+					);
+					return json();
+				}
 				if (!list.some((u) => u.id === userId))
 					list.push({ id: userId, name: 'Joueur #' + userId, invitedAt: stamp() });
 				invited.set(id, list);

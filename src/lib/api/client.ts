@@ -278,8 +278,8 @@ async function request<T>(path: string, options: RequestOptions, didRefresh: boo
 			response.status === 403 &&
 			payload &&
 			typeof payload === 'object' &&
-			'code' in payload &&
-			payload.code === 'SANCTIONED' &&
+			(('error' in payload && payload.error === 'SANCTIONED') ||
+				('code' in payload && payload.code === 'SANCTIONED')) &&
 			'meta' in payload
 		) {
 			void import('$lib/moderation/state').then(({ acceptSanction }) =>

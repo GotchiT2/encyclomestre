@@ -18,7 +18,9 @@
 	let query = $state('');
 	let page = $state(0);
 	let results = $state<WikiForgePublicPageCard[]>([]);
-	let total = $state(0);
+	let hasNext = $state(false);
+	let truncated = $state(false);
+	let maximum = $state(10000);
 	let selected = $state<WikiForgePublicPageCard>();
 	let busy = $state(false);
 	let error = $state('');
@@ -33,7 +35,7 @@
 						busy = false;
 						error = '';
 						results = [];
-						total = 0;
+						hasNext = false;
 						return;
 					}
 					busy = true;
@@ -45,7 +47,9 @@
 						);
 						if (!abort.signal.aborted) {
 							results = result.results ?? [];
-							total = result.nbResults;
+							hasNext = result.hasNext ?? (index + 1) * 48 < result.nbResults;
+							truncated = Boolean(result.truncated);
+							maximum = result.maxResults ?? 10000;
 						}
 					} catch (cause) {
 						if (!abort.signal.aborted) error = operationError(cause);
@@ -86,6 +90,9 @@
 				}}>{$_('completion.clearImage')}</Button
 			>
 		</div>{/if}
+	{#if truncated}<p class="text-sm text-muted-foreground">
+			{$_('apiEvolution.truncated', { values: { max: maximum } })}
+		</p>{/if}
 	{#if error}<p role="alert" class="text-destructive">{error}</p>{/if}
 	{#if busy}<p role="status">{$_('completion.loading')}</p>{/if}
 	{#if results.length}<div class="max-h-64 overflow-auto border border-border">
@@ -105,10 +112,8 @@
 		<div class="flex justify-between gap-2">
 			<Button variant="outline" disabled={page === 0 || busy} onclick={() => page--}
 				>{$_('completion.previous')}</Button
-			><Button
-				variant="outline"
-				disabled={(page + 1) * 48 >= total || busy || !results.length}
-				onclick={() => page++}>{$_('completion.next')}</Button
+			><Button variant="outline" disabled={!hasNext || busy} onclick={() => page++}
+				>{$_('completion.next')}</Button
 			>
 		</div>{/if}
 </Field.Field>

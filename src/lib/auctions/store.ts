@@ -44,13 +44,24 @@ export function refreshPersonalAuctions(userId: string): Promise<void> {
 	if (pending) return pending;
 	const own = generation;
 	pending = import('$lib/api/auctions')
-		.then(({ getMyAuctions, getMyBids }) => Promise.all([getMyAuctions(), getMyBids()]))
+		.then(({ getMyAuctions, getMyBids }) =>
+			Promise.all([
+				getMyAuctions(undefined, { status: 'OPEN' }),
+				getMyBids(undefined, { status: 'OPEN' })
+			])
+		)
 		.then(([sales, bids]) => {
 			if (own !== generation) return;
-			personalAuctions.set({ userId, sales, bids: bids.auctions, loaded: true, error: false });
+			personalAuctions.set({
+				userId,
+				sales: sales.results,
+				bids: bids.auctions,
+				loaded: true,
+				error: false
+			});
 			activeAuctionByCard.set(
 				new Map(
-					sales
+					sales.results
 						.filter((auction) => auction.status === 'OPEN')
 						.map((auction) => [auction.card.id, auction.id])
 				)

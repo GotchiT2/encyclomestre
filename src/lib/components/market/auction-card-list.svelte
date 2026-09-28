@@ -1,4 +1,5 @@
 <script lang="ts">
+	import AuctionFavorite from './auction-favorite.svelte';
 	import { resolve } from '$app/paths';
 	import { _ } from '$lib/i18n';
 	import type { Auction } from '$lib/types';
@@ -26,7 +27,11 @@
 			<CardTile card={auction.card} showCollectionState={false} showFriendOwners={false} />
 			<div class="min-w-0 space-y-2">
 				<div class="flex flex-wrap gap-2">
-					<AuctionStatus {auction} {now} />{#if auction.seller.id === userId}<span
+					<AuctionStatus {auction} {now} />
+					{#if userId}<AuctionFavorite
+							id={auction.id}
+							favorite={auction.favorite}
+						/>{/if}{#if auction.seller.id === userId}<span
 							class="self-center text-xs text-muted-foreground">{$_('auctionHub.own')}</span
 						>{/if}
 				</div>

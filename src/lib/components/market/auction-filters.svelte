@@ -7,6 +7,8 @@
 
 	import type { MarketQuery } from '$lib/auctions/presentation';
 
+	import { onMount } from 'svelte';
+	import { getVariants } from '$lib/api/variants';
 	import type { Auction } from '$lib/types';
 
 	let {
@@ -20,13 +22,31 @@
 
 	let expanded = $state(false);
 
-	let selectedVariants = $derived(query.variant ? [Number(query.variant)] : []);
-	const variants = $derived([
-		...new Map(items.map((item) => [item.card.variantId, item.card.variant])).values()
-	]);
+	let selectedVariants = $derived(query.variant.split(',').filter(Boolean).map(Number));
+	let variants = $state<Auction['card']['variant'][]>([]);
+	onMount(() => {
+		void getVariants()
+			.then((value) => {
+				variants = value;
+			})
+			.catch(() => {
+				variants = items.map((item) => item.card.variant);
+			});
+	});
 
 	const active = $derived(
-		[query.q, query.variant, query.seller, query.min, query.max, query.phase].filter(Boolean)
+		[
+			query.q,
+			query.variant,
+			query.seller,
+			query.min,
+			query.max,
+			query.phase,
+			query.pageId,
+			query.wishlist,
+			query.sortBy === 'ENDS_AT' ? '' : query.sortBy,
+			query.sortDirection === 'ASC' ? '' : query.sortDirection
+		].filter(Boolean)
 	);
 
 	function submit(event: SubmitEvent) {
@@ -34,7 +54,8 @@
 
 		const fields = new FormData(event.currentTarget as HTMLFormElement);
 
-		fields.set('variant', String(selectedVariants[0] ?? ''));
+		fields.set('variant', selectedVariants.join(','));
+		fields.set('page', '0');
 
 		onChange(Object.fromEntries([...fields].map(([key, value]) => [key, String(value)])));
 	}
@@ -64,6 +85,7 @@
 			<label class="grid gap-1 text-sm"
 				>{$_('auctionHub.search')}<input
 					name="q"
+					maxlength="50"
 					value={query.q}
 					type="search"
 					class="h-11 min-w-0 border border-primary/25 bg-background px-3"
@@ -74,17 +96,18 @@
 				>{$_('auctionHub.variant')}<VariantSelector
 					options={variants}
 					bind:selected={selectedVariants}
-					multiple={false}
+					multiple={true}
 					name="variant"
 					onChange={() => {}}
 				/></label
 			>
 
 			<label class="grid gap-1 text-sm"
-				>{$_('auctionHub.seller')}<input
+				>{$_('apiEvolution.sellerId')}<input
 					name="seller"
 					value={query.seller}
-					type="search"
+					type="number"
+					min="1"
 					class="h-11 min-w-0 border border-primary/25 bg-background px-3"
 				/></label
 			>
@@ -117,9 +140,38 @@
 					value={query.phase}
 					class="h-11 min-w-0 border border-primary/25 bg-background px-3"
 					><option value="">{$_('auctionHub.all')}</option
-					>{#each ['open', 'upcoming', 'settling'] as phase (phase)}<option value={phase}
-							>{$_('auctionHub.phase.' + phase)}</option
+					>{#each ['RUNNING', 'UPCOMING'] as phase (phase)}<option value={phase}
+							>{$_('apiEvolution.phase.' + phase)}</option
 						>{/each}</select
+				></label
+			>
+			{#each ['pageId', 'wishlist'] as key (key)}<label class="grid gap-1 text-sm"
+					>{$_('apiEvolution.' + key)}<input
+						class="h-11 min-w-0 border border-primary/25 bg-background px-3"
+						type="number"
+						min="1"
+						name={key}
+						value={key === 'pageId' ? query.pageId : query.wishlist}
+					/></label
+				>{/each}
+			<label class="grid gap-1 text-sm"
+				>{$_('apiEvolution.sortBy')}<select
+					name="sortBy"
+					value={query.sortBy}
+					class="h-11 border border-primary/25 bg-background px-3"
+					>{#each ['ENDS_AT', 'PRICE', 'CREATION_DATE'] as sort (sort)}<option value={sort}
+							>{$_('apiEvolution.sort.' + sort)}</option
+						>{/each}</select
+				></label
+			>
+			<label class="grid gap-1 text-sm"
+				>{$_('apiEvolution.sortDirection')}<select
+					name="sortDirection"
+					value={query.sortDirection}
+					class="h-11 border border-primary/25 bg-background px-3"
+					><option value="ASC">{$_('apiEvolution.ascending')}</option><option value="DESC"
+						>{$_('apiEvolution.descending')}</option
+					></select
 				></label
 			>
 		</div>
@@ -127,8 +179,20 @@
 		<div class="flex flex-wrap gap-2">
 			<Button type="submit">{$_('auctionHub.applyFilters')}</Button><Button
 				variant="ghost"
-				onclick={() => onChange({ q: '', variant: '', seller: '', min: '', max: '', phase: '' })}
-				>{$_('auctionHub.reset')}</Button
+				onclick={() =>
+					onChange({
+						q: '',
+						variant: '',
+						seller: '',
+						min: '',
+						max: '',
+						phase: '',
+						pageId: '',
+						wishlist: '',
+						sortBy: '',
+						sortDirection: '',
+						page: '0'
+					})}>{$_('auctionHub.reset')}</Button
 			>
 		</div>
 	</form>

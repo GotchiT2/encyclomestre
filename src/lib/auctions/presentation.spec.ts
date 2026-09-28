@@ -31,8 +31,10 @@ describe('auction views and constraints', () => {
 		expect(historyKind({ ...item, status: 'SOLD', leading: false, leader: null }, '1')).toBe(
 			'unknown'
 		);
-		expect(historyKind({ ...item, status: 'SOLD', leading: true }, '1')).toBe('won');
-		expect(historyKind({ ...item, status: 'SOLD' }, '2')).toBe('sold');
+		expect(
+			historyKind({ ...item, status: 'SOLD', leading: false, viewerOutcome: 'WON' }, '1')
+		).toBe('won');
+		expect(historyKind({ ...item, status: 'SOLD', viewerOutcome: 'SOLD' }, '2')).toBe('sold');
 	});
 	it('combines filters over only the supplied page and safely restores navigation', () => {
 		const query = marketQuery(

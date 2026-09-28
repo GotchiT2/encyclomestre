@@ -11,7 +11,8 @@
 			"explore": "Explorer",
 			"sales": "Mes ventes",
 			"bids": "Mes participations",
-			"history": "Historique"
+			"history": "Historique",
+			"favorites": "Favoris"
 		},
 		"refresh": "Actualiser",
 		"refreshing": "Actualisation…",
@@ -43,10 +44,10 @@
 		"maximum": "Prix maximum",
 		"phaseLabel": "État",
 		"reset": "Effacer les filtres",
-		"filterScope": "Ces filtres s’appliquent uniquement aux 48 résultats de la page chargée. Le catalogue est classé par fin la plus proche.",
+		"filterScope": "Recherche globale des enchères ouvertes. Filtres cumulables ; au moins 3 caractères pour le titre.",
 		"applyFilters": "Appliquer les filtres",
 		"page": "Page {page} sur {total}",
-		"visibleResults": "{visible} résultat(s) affiché(s) sur {loaded} chargé(s)",
+		"visibleResults": "{visible} enchères affichées sur {loaded} résultats",
 		"noResults": "Aucune enchère dans cette vue.",
 		"noResultsHelp": "Essayez d’autres filtres ou une autre page.",
 		"create": "Mettre une carte aux enchères",
@@ -58,7 +59,7 @@
 		"escrow": "Argent bloqué",
 		"openBids": "Participations en cours",
 		"own": "Votre enchère",
-		"historyHelp": "L’historique disponible contient au plus 100 ventes et 100 participations. Vos ventes closes disparaissent après 30 jours. Le résultat reste indéterminé lorsque le gagnant est masqué.",
+		"historyHelp": "Historiques paginés par ventes ou participations, conservés 30 jours après clôture. Le résultat est confirmé par le serveur.",
 		"personalError": "Vos enchères personnelles n’ont pas pu être actualisées.",
 		"readError": "Impossible de charger cette enchère.",
 		"notFound": "Enchère introuvable ou inaccessible.",
@@ -106,7 +107,7 @@
 		"manage": "Gérer ma vente",
 		"editPrice": "Modifier le prix de départ",
 		"editConfirm": "Confirmer le nouveau prix",
-		"editFee": "Le serveur calcule un éventuel complément de frais. Une baisse ne rembourse pas les frais déjà payés.",
+		"editFee": "Un devis précis sera présenté avant confirmation. Baisser le prix ne rembourse pas les frais.",
 		"cancelAuction": "Annuler mon enchère",
 		"cancelConfirm": "Annuler cette vente ?",
 		"cancelHelp": "La carte sera libérée. Les frais de création ne sont pas remboursés.",
@@ -518,7 +519,10 @@
 		"push_title": "Notifications navigateur et Discord",
 		"push_pending": "Ces relais seront disponibles quand le backend sécurisé prendra en charge les abonnements push.",
 		"push_browser": "Notifications navigateur — bientôt",
-		"discord_relay": "Relais Discord — bientôt"
+		"discord_relay": "Relais Discord — bientôt",
+		"name_change_available": "Prochain changement de pseudo possible le {date}. Vos autres réglages restent modifiables.",
+		"name_change_refused": "Changement de pseudo disponible le {date}. Aucun réglage n’a été enregistré. Votre saisie est conservée : enregistrez de nouveau pour appliquer les autres réglages avec votre pseudo actuel.",
+		"saved": "Profil enregistré."
 	},
 	"notifications": {
 		"eyebrow": "Flux personnel",
@@ -1327,7 +1331,7 @@
 		"dismissBanner": "Fermer cette annonce",
 		"readFailed": "La notification a été ouverte, mais son marquage comme lue a échoué.",
 		"missingAuction": "Cette notification ne précise pas l’enchère concernée.",
-		"memberSearch": "Rechercher parmi les membres de cette page",
+		"memberSearch": "Rechercher dans tous les membres",
 		"permissionHelp": "Les actions disponibles dépendent de vos permissions et du rôle du membre.",
 		"filtersSummary": "{count} filtres actifs",
 		"draftEnable": "Conserver mon brouillon sur cet appareil pendant 24 heures",
@@ -1343,5 +1347,84 @@
 		"activity": "Votre activité",
 		"moveLineUp": "Monter la ligne",
 		"moveLineDown": "Descendre la ligne"
+	},
+	"apiEvolution": {
+		"addFavorite": "Ajouter aux favoris",
+		"removeFavorite": "Retirer des favoris",
+		"historySource": "Historique de",
+		"sellerId": "Identifiant du vendeur",
+		"pageId": "Identifiant de la carte",
+		"wishlist": "Souhaits du joueur (identifiant)",
+		"sortBy": "Trier par",
+		"sortDirection": "Ordre",
+		"ascending": "Croissant",
+		"descending": "Décroissant",
+		"sort": {
+			"ENDS_AT": "Fin de l’enchère",
+			"PRICE": "Prix courant",
+			"CREATION_DATE": "Date de création"
+		},
+		"phase": {
+			"RUNNING": "En cours",
+			"UPCOMING": "À venir"
+		},
+		"status": {
+			"OPEN": "Ouvertes",
+			"SOLD": "Vendues",
+			"UNSOLD": "Invendues",
+			"CANCELLED": "Annulées"
+		},
+		"outcomeLabel": "Votre résultat",
+		"outcome": {
+			"SCHEDULED": "Programmée",
+			"RUNNING": "En cours",
+			"SETTLING": "Règlement en cours",
+			"SOLD": "Vendue",
+			"UNSOLD": "Invendue",
+			"CANCELLED": "Annulée",
+			"LEADING": "Vous menez",
+			"OUTBID": "Vous avez été dépassé",
+			"WON_PENDING": "Gagnée · livraison en cours",
+			"WON": "Gagnée",
+			"LOST": "Perdue"
+		},
+		"listingFee": "Frais de mise en vente cumulés",
+		"finalFee": "Commission au règlement",
+		"quote": "À payer : {due} ◈ · Déjà payé : {paid} ◈. Une baisse ne rembourse pas les frais.",
+		"members": "{matches} résultats · {total} membres au total",
+		"revokeInvite": "Révoquer l’invitation",
+		"truncated": "Plus de {max} résultats : affinez votre recherche.",
+		"progress": {
+			"title": "Progression de la collection",
+			"help": "Couverture des cartes actives, toutes variantes confondues. Les cartes engagées restent comptées.",
+			"counts": "{cards} exemplaires · {distinct} cartes actives différentes sur {total}"
+		},
+		"deletion": {
+			"title": "Fermer mon compte",
+			"help": "Fermeture irréversible : engagements annulés, relations retirées et identité effacée. Cartes et solde restent figés sans transfert. Certains historiques sont conservés jusqu’à une éventuelle purge administrative.",
+			"preview": "Voir les conséquences",
+			"password": "Mot de passe actuel",
+			"confirm": "Je confirme la fermeture définitive de mon compte et ses conséquences.",
+			"delete": "Supprimer mon compte",
+			"done": "Votre compte a été fermé et vos sessions révoquées.",
+			"guildOwner": "Transmettez ou dissolvez votre guilde avant la fermeture :",
+			"blocked": "Fermeture bloquée :",
+			"unknown": "Résultat incertain. Vérifiez l’état du compte avant toute nouvelle tentative.",
+			"present": "Le compte existe toujours. La suppression n’a pas abouti.",
+			"verify": "Vérifier le résultat",
+			"consequences": {
+				"openTrades": "Échanges annulés",
+				"openSales": "Ventes annulées",
+				"openAuctions": "Enchères annulées",
+				"leadingAuctions": "Enchères menées",
+				"refundedAmount": "Argent débloqué",
+				"friends": "Amis retirés",
+				"friendRequests": "Demandes retirées",
+				"wishlists": "Listes supprimées",
+				"guildId": "Guilde quittée (ID)",
+				"nbCards": "Exemplaires figés",
+				"money": "Solde figé"
+			}
+		}
 	}
 }

@@ -28,6 +28,8 @@ export interface WikiForgeCardDto {
 	acquiredDate?: string | null;
 	creationDate?: string | null;
 	pendingTradeId?: number | null;
+	saleId?: number;
+	auctionId?: number;
 	ownedCount?: number;
 	wishlists?: Array<{
 		id: number;
@@ -80,6 +82,8 @@ export function toCardRecord(card: WikiForgeCardDto, variants: VariantDefinition
 		duplicate: Boolean(card.duplicate),
 		userProtected: Boolean(card.protected),
 		pendingTradeId: card.pendingTradeId == null ? null : String(card.pendingTradeId),
+		saleId: card.saleId == null ? null : String(card.saleId),
+		activeAuctionId: card.auctionId == null ? null : String(card.auctionId),
 		nsfw: Boolean(card.nsfw),
 		sharedWishlistMemberships: (card.wishlists ?? []).map((wishlist) => ({
 			id: String(wishlist.id),

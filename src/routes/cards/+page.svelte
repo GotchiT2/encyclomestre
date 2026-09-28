@@ -198,11 +198,15 @@
 							disabled={result.meta.page === 1}>{$_('codex.previous')}</Button
 						>
 						<span class="font-mono text-xs text-primary"
-							>{result.meta.page} / {result.meta.totalPages}</span
+							>{result.meta.page} / {result.meta.totalPages}{#if result.meta.truncated}
+								· {$_('apiEvolution.truncated', {
+									values: { max: result.meta.maxResults ?? 10000 }
+								})}{/if}</span
 						>
 						<Button
 							href={pageHref(Math.min(result.meta.totalPages, result.meta.page + 1))}
-							disabled={result.meta.page >= result.meta.totalPages}>{$_('codex.next')}</Button
+							disabled={!(result.meta.hasNext ?? result.meta.page < result.meta.totalPages)}
+							>{$_('codex.next')}</Button
 						>
 					</nav>{/if}
 			{:catch}

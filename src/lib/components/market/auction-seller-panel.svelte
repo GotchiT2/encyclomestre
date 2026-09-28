@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import type { Auction } from '$lib/types';
-	import { updateAuction, cancelMyAuction } from '$lib/api/auctions';
+	import {
+		updateAuction,
+		cancelMyAuction,
+		getAuctionFee,
+		type AuctionFee
+	} from '$lib/api/auctions';
 	import { ApiError } from '$lib/api/client';
 	import { auctionErrorKey } from '$lib/auctions/errors';
 	import { canEditAuction, validAmount } from '$lib/auctions/presentation';
@@ -23,6 +28,21 @@
 	let busy = $state(false);
 	let error = $state('');
 	let confirm = $state(false);
+	let quote = $state<AuctionFee>();
+	async function preparePrice() {
+		if (busy || !price || !validAmount(price)) return;
+		busy = true;
+		error = '';
+		try {
+			quote = await getAuctionFee(price, auction.id);
+			action = 'price';
+			confirm = true;
+		} catch (cause) {
+			error = $_(auctionErrorKey(cause));
+		} finally {
+			busy = false;
+		}
+	}
 	let action = $state<'price' | 'cancel'>('price');
 	const editable = $derived(canEditAuction(auction, now));
 	async function submit() {
@@ -68,10 +88,7 @@
 		<div class="flex flex-wrap gap-2">
 			<Button
 				disabled={busy || !price || !validAmount(price) || price === auction.startPrice}
-				onclick={() => {
-					action = 'price';
-					confirm = true;
-				}}>{$_('auctionHub.save')}</Button
+				onclick={preparePrice}>{$_('auctionHub.save')}</Button
 			>
 			<Button
 				variant="destructive"
@@ -90,7 +107,11 @@
 	{busy}
 	title={$_(action === 'price' ? 'auctionHub.editConfirm' : 'auctionHub.cancelConfirm')}
 	description={action === 'price'
-		? $_('auctionHub.startPrice') + ' : ' + price + '. ' + $_('auctionHub.editFee')
+		? $_('auctionHub.startPrice') +
+			' : ' +
+			price +
+			'. ' +
+			$_('apiEvolution.quote', { values: { due: quote?.due ?? 0, paid: quote?.alreadyPaid ?? 0 } })
 		: $_('auctionHub.cancelHelp')}
 	onConfirm={() => void submit()}
 />

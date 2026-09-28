@@ -38,7 +38,9 @@ export interface AuctionDto extends Omit<
 interface AuctionPageDto {
 	nbResults: number;
 	page: number;
-	results: AuctionDto[];
+	results?: AuctionDto[];
+	pageSize: number;
+	hasNext: boolean;
 }
 const user = (value?: { id: number; name: string } | null): AuctionUser | null =>
 	value ? { id: String(value.id), name: value.name } : null;
@@ -69,17 +71,63 @@ export function convertAuction(
 		}))
 	};
 }
-export async function getAuctions(page = 0, options?: RequestOptions): Promise<AuctionPage> {
-	const result = await apiRequest<AuctionPageDto>(`/auctions?page=${Math.max(0, page)}`, {
-		...options,
-		apiTarget: 'wikiforge'
-	});
-	const variants = await getVariants(options);
+export interface AuctionSearch {
+	page?: number;
+	q?: string;
+	pageId?: string;
+	variant?: string[];
+	sellerId?: string;
+	wishlist?: string;
+	phase?: string;
+	minPrice?: string;
+	maxPrice?: string;
+	sortBy?: string;
+	sortDirection?: string;
+	status?: string;
+}
+export function auctionSearchParams(input: AuctionSearch) {
+	const params = new URLSearchParams({ page: String(Math.max(0, input.page ?? 0)) });
+	for (const [key, value] of Object.entries(input)) {
+		if (key === 'page' || value === undefined || value === '') continue;
+		if (Array.isArray(value)) for (const item of value) params.append(key, item);
+		else params.set(key, String(value));
+	}
+	return params.toString();
+}
+async function auctionPage(path: string, options?: RequestOptions): Promise<AuctionPage> {
+	const [result, variants] = await Promise.all([
+		apiRequest<AuctionPageDto>(path, { ...options, apiTarget: 'wikiforge' }),
+		getVariants(options)
+	]);
 	return {
 		...result,
 		results: (result.results ?? []).map((item) => convertAuction(item, variants))
 	};
 }
+export const getAuctions = (search: number | AuctionSearch = 0, options?: RequestOptions) =>
+	auctionPage(
+		'/auctions?' + auctionSearchParams(typeof search === 'number' ? { page: search } : search),
+		options
+	);
+export const getAuctionFavorites = (page = 0, options?: RequestOptions) =>
+	auctionPage('/me/auction-favorites?' + auctionSearchParams({ page }), options);
+export const setAuctionFavorite = (id: string, favorite: boolean, options?: RequestOptions) =>
+	apiRequest<void>(`/me/auction-favorites/${wikiForgeNumericId(id, 'auction')}`, {
+		...options,
+		method: favorite ? 'PUT' : 'DELETE'
+	});
+export interface AuctionFee {
+	startPrice: number;
+	feePercent: number;
+	fee: number;
+	alreadyPaid: number;
+	due: number;
+}
+export const getAuctionFee = (startPrice: number, auctionId?: string, options?: RequestOptions) =>
+	apiRequest<AuctionFee>(
+		`/me/auctions/fee?startPrice=${startPrice}${auctionId ? '&auctionId=' + wikiForgeNumericId(auctionId, 'auction') : ''}`,
+		options
+	);
 export async function getAuction(id: string | number, options?: RequestOptions) {
 	const [dto, variants] = await Promise.all([
 		apiRequest<AuctionDto>(`/auctions/${wikiForgeNumericId(id, 'enchère')}`, {
@@ -125,22 +173,23 @@ export const unwatchAuction = (id: string | number, options?: RequestOptions) =>
 		method: 'DELETE',
 		apiTarget: 'wikiforge'
 	});
-export async function getMyAuctions(options?: RequestOptions) {
+export const getMyAuctions = (
+	options?: RequestOptions,
+	search: Pick<AuctionSearch, 'page' | 'status'> = {}
+) => auctionPage('/me/auctions?' + auctionSearchParams(search), options);
+export async function getMyBids(
+	options?: RequestOptions,
+	search: Pick<AuctionSearch, 'page' | 'status'> = {}
+): Promise<MyBids> {
 	const [data, variants] = await Promise.all([
-		apiRequest<AuctionDto[]>('/me/auctions', { ...options, apiTarget: 'wikiforge' }),
-		getVariants(options)
-	]);
-	return (data ?? []).map((item) => convertAuction(item, variants));
-}
-export async function getMyBids(options?: RequestOptions): Promise<MyBids> {
-	const [data, variants] = await Promise.all([
-		apiRequest<{ escrowed: number; auctions: AuctionDto[] }>('/me/bids', {
-			...options,
-			apiTarget: 'wikiforge'
-		}),
+		apiRequest<Omit<MyBids, 'auctions'> & { auctions?: AuctionDto[] }>(
+			'/me/bids?' + auctionSearchParams(search),
+			options
+		),
 		getVariants(options)
 	]);
 	return {
+		...data,
 		escrowed: data.escrowed ?? 0,
 		auctions: (data.auctions ?? []).map((item) => convertAuction(item, variants))
 	};

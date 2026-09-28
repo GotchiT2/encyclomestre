@@ -1,7 +1,10 @@
 <script lang="ts">
+	import { getNotifications } from '$lib/api';
+	import { unreadNotifications } from '$lib/notifications/store';
 	import { onMount } from 'svelte';
 	import {
 		readGuildInvitations,
+		revokeGuildInvitation,
 		inviteGuildMember,
 		type Guild,
 		type GuildInvitee
@@ -54,6 +57,17 @@
 				{invitation.name} · {invitation.invitedAt
 					? wikiForgeUtcDate(invitation.invitedAt).toLocaleDateString('fr-FR')
 					: ''}
-			</p>{:else}<p>{$_('completion.empty')}</p>{/each}
+			</p>
+			{#if guild.permissions.includes('INVITE')}<ConfirmAction
+					destructive
+					label={$_('apiEvolution.revokeInvite')}
+					description={invitation.name ?? ''}
+					onConfirm={async () => {
+						await revokeGuildInvitation(guild.id, invitation.id!);
+						await load();
+						const notifications = await getNotifications();
+						unreadNotifications.set(notifications.unread);
+					}}
+				/>{/if}{:else}<p>{$_('completion.empty')}</p>{/each}
 	</section>
 </div>

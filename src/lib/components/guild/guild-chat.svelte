@@ -2,7 +2,7 @@
 	import { draftKey, writeDraft } from '$lib/drafts/storage';
 	import LocalDraft from '$lib/components/layout/local-draft.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { currentSession } from '$lib/auth/session';
 	import { readGuildMessages, sendGuildMessage, type GuildMessage } from '$lib/api/guilds';
@@ -11,6 +11,7 @@
 	import { toPublicPageCardRecord } from '$lib/api/pages';
 	import type { VariantDefinition, CardRecord } from '$lib/types';
 	import { wikiForgeUtcDate } from '$lib/api/wikiforge-contract';
+	import { ApiError } from '$lib/api/client';
 	import { operationError } from '$lib/domain/operation-error';
 	import { currentSanctions, sanctions } from '$lib/moderation/state';
 	import SanctionNotice from '$lib/components/moderation/sanction-notice.svelte';
@@ -37,27 +38,73 @@
 	let now = $state(Date.now());
 	let alive = true;
 	const muted = $derived(currentSanctions($sanctions, now).some((item) => item.type === 'MUTE'));
+	let reloadPending = false;
+	function merge(incoming: GuildMessage[]) {
+		const map = new SvelteMap(messages.map((message) => [message.id, message]));
+		incoming.forEach((message) => map.set(message.id, message));
+		messages = [...map.values()].sort(
+			(a, b) =>
+				wikiForgeUtcDate(a.creationDate).getTime() - wikiForgeUtcDate(b.creationDate).getTime() ||
+				a.id - b.id
+		);
+	}
 	async function load(older = false) {
-		if (loading) return;
+		if (loading) {
+			if (!older) reloadPending = true;
+			return;
+		}
 		loading = true;
+		const target = guildId;
+		const known = new Set(messages.map((message) => message.id));
 		try {
-			const result = await readGuildMessages(guildId, older ? cursor : undefined);
-			if (!alive) return;
-			const first = !messages.length;
-			const map = new SvelteMap(messages.map((message) => [message.id, message]));
-			result.results.forEach((message) => map.set(message.id, message));
-			messages = [...map.values()].sort((a, b) => a.id - b.id);
-			if (older || first) {
-				cursor = result.nextCursor;
-				hasNext = result.hasNext;
-			}
+			let next = older ? cursor : undefined;
+			do {
+				const result = await readGuildMessages(target, next);
+				if (!alive || guildId !== target) return;
+				const overlap = result.results.some((message) => known.has(message.id));
+				const first = !messages.length;
+				merge(result.results);
+				if (older || first) {
+					cursor = result.nextCursor;
+					hasNext = result.hasNext;
+				}
+				next = result.nextCursor;
+				if (older || !known.size || overlap || !result.hasNext) break;
+			} while (next);
 			error = '';
 		} catch (cause) {
-			if (alive) error = operationError(cause);
+			if (alive && target === guildId) {
+				error = operationError(cause);
+				if (cause instanceof ApiError && [403, 404].includes(cause.status)) {
+					messages = [];
+					cursor = undefined;
+					hasNext = false;
+				}
+			}
 		} finally {
 			loading = false;
+			if (reloadPending && alive) {
+				reloadPending = false;
+				void load();
+			}
 		}
 	}
+	let currentGuild = untrack(() => guildId);
+	$effect(() => {
+		const target = guildId;
+		untrack(() => {
+			if (target === currentGuild) return;
+			currentGuild = target;
+			messages = [];
+			cursor = undefined;
+			hasNext = false;
+			content = '';
+			card = undefined;
+			pageId = undefined;
+			void load();
+		});
+	});
+
 	async function send() {
 		if (sending || muted || (!content.trim() && mode === 'text')) return;
 		sending = true;
@@ -68,7 +115,8 @@
 				...(mode === 'card' ? { cardId: Number(card?.id) } : {}),
 				...(mode === 'article' ? { pageId } : {})
 			});
-			messages = [...messages.filter((message) => message.id !== created.id), created];
+			if (!alive || created.guildId !== guildId) return;
+			merge([created]);
 			content = '';
 			writeDraft(
 				localStorage,
@@ -93,12 +141,20 @@
 		const refresh = () => {
 			if (!document.hidden) void load();
 		};
-		const timer = setInterval(refresh, 15000);
+		const receive = (event: Event) => {
+			const message = (event as CustomEvent<GuildMessage>).detail;
+			if (!message || message.guildId !== guildId) return;
+			if (message.type === 'TEXT' && message.creationDate && message.fromUserId) merge([message]);
+			else void load();
+		};
+		window.addEventListener('wikiforge:guild-message', receive);
+		window.addEventListener('wikiforge:stream-ready', refresh);
 		const clock = setInterval(() => (now = Date.now()), 1000);
 		window.addEventListener('focus', refresh);
 		return () => {
 			alive = false;
-			clearInterval(timer);
+			window.removeEventListener('wikiforge:guild-message', receive);
+			window.removeEventListener('wikiforge:stream-ready', refresh);
 			clearInterval(clock);
 			window.removeEventListener('focus', refresh);
 		};

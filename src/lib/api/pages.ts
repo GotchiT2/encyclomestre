@@ -31,6 +31,10 @@ export interface WikiForgePublicPageCard {
 }
 
 export interface WikiForgePublicPagesResponse {
+	pageSize?: number;
+	hasNext?: boolean;
+	maxResults?: number;
+	truncated?: boolean;
 	nbResults: number;
 	page: number;
 	results?: WikiForgePublicPageCard[] | null;
@@ -151,7 +155,8 @@ export function toPublicPageCardRecord(
 export function toPublicPage(source: WikiForgePublicPagesResponse): PublicCataloguePage {
 	const resultCount = source.results?.length ?? 0;
 	if (source.page === 0 && resultCount > 0) publicPagesPageSize = resultCount;
-	const pageSize = publicPagesPageSize ?? Math.max(1, resultCount || source.nbResults || 1);
+	const pageSize =
+		source.pageSize ?? publicPagesPageSize ?? Math.max(1, resultCount || source.nbResults || 1);
 	return {
 		items: (source.results ?? []).map((card) =>
 			toPublicPageCardRecord(card, source._variants ?? [standardVariant])
@@ -160,7 +165,13 @@ export function toPublicPage(source: WikiForgePublicPagesResponse): PublicCatalo
 			page: source.page + 1,
 			pageSize,
 			total: source.nbResults,
-			totalPages: Math.max(1, Math.ceil(source.nbResults / pageSize))
+			totalPages: Math.max(
+				1,
+				Math.ceil(Math.min(source.nbResults, source.maxResults ?? Infinity) / pageSize)
+			),
+			hasNext: source.hasNext,
+			truncated: source.truncated,
+			maxResults: source.maxResults
 		}
 	};
 }

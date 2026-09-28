@@ -66,17 +66,24 @@ export const grantGuildPermissions = (
 		method: 'PUT',
 		body: { permissions }
 	});
-export async function readGuildMembers(guildId: number, page = 0, options?: RequestOptions) {
-	const value = await apiRequest<ApiSchemas['GuildMembersResult']>(
-		`${path(guildId)}/members?page=${page}`,
-		options
-	);
+export async function readGuildMembers(
+	guildId: number,
+	page = 0,
+	options?: RequestOptions,
+	q = ''
+) {
+	const value = await apiRequest<
+		ApiSchemas['GuildMembersResult'] & { nbMembers: number; pageSize: number; hasNext: boolean }
+	>(`${path(guildId)}/members?${new URLSearchParams({ page: String(page), q })}`, options);
 	return {
 		results: (value.results ?? []).map(
 			(member) => ({ ...member, permissions: member.permissions ?? [] }) as GuildMember
 		),
 		page: value.page ?? 0,
-		nbResults: value.nbResults ?? 0
+		nbResults: value.nbResults ?? 0,
+		nbMembers: value.nbMembers,
+		pageSize: value.pageSize,
+		hasNext: value.hasNext
 	};
 }
 export const readGuildInvitations = async (guildId: number) =>
@@ -123,3 +130,6 @@ export function canManageMember(
 		member.permissions.every((value) => guild.permissions.includes(value))
 	);
 }
+
+export const revokeGuildInvitation = (guildId: number, invitedId: number) =>
+	apiRequest<void>(`${path(guildId)}/invitations/${id(invitedId, 'user')}`, { method: 'DELETE' });

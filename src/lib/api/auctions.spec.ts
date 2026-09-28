@@ -15,6 +15,9 @@ import {
 	cancelMyAuction,
 	createAuction,
 	getAuctions,
+	getAuctionFee,
+	getAuctionFavorites,
+	setAuctionFavorite,
 	getMyAuctions,
 	getMyBids,
 	retractAuctionMax,
@@ -90,7 +93,13 @@ describe('WikiForge auction and report contracts', () => {
 			.mockResolvedValueOnce(dto)
 			.mockResolvedValueOnce(dto)
 			.mockResolvedValueOnce(undefined)
-			.mockResolvedValueOnce([dto])
+			.mockResolvedValueOnce({
+				nbResults: 1,
+				page: 0,
+				pageSize: 48,
+				hasNext: false,
+				results: [dto]
+			})
 			.mockResolvedValueOnce({ escrowed: 500, auctions: [dto] });
 		const input = {
 			cardId: 44,
@@ -117,8 +126,10 @@ describe('WikiForge auction and report contracts', () => {
 			method: 'DELETE',
 			apiTarget: 'wikiforge'
 		});
-		expect(apiRequest).toHaveBeenNthCalledWith(4, '/me/auctions', { apiTarget: 'wikiforge' });
-		expect(apiRequest).toHaveBeenNthCalledWith(5, '/me/bids', { apiTarget: 'wikiforge' });
+		expect(apiRequest).toHaveBeenNthCalledWith(4, '/me/auctions?page=0', {
+			apiTarget: 'wikiforge'
+		});
+		expect(apiRequest).toHaveBeenNthCalledWith(5, '/me/bids?page=0', undefined);
 	});
 	it('reports article content with an optional trimmed comment', async () => {
 		apiRequest.mockResolvedValue(undefined);
@@ -135,5 +146,70 @@ describe('WikiForge auction and report contracts', () => {
 			.mockResolvedValueOnce({ escrowed: 0 });
 		expect((await getAuctions()).results).toEqual([]);
 		expect(await getMyBids()).toEqual({ escrowed: 0, auctions: [] });
+	});
+});
+
+describe('updated auction contracts', () => {
+	it('sends every global filter including repeated variants and preserves paging metadata', async () => {
+		apiRequest.mockResolvedValue({ page: 2, pageSize: 48, hasNext: false, nbResults: 98 });
+		const result = await getAuctions({
+			page: 2,
+			q: 'étoile',
+			pageId: '12',
+			variant: ['4', '5'],
+			sellerId: '8',
+			wishlist: '9',
+			phase: 'RUNNING',
+			minPrice: '0',
+			maxPrice: '800',
+			sortBy: 'PRICE',
+			sortDirection: 'DESC'
+		});
+		expect(apiRequest).toHaveBeenLastCalledWith(
+			'/auctions?page=2&q=%C3%A9toile&pageId=12&variant=4&variant=5&sellerId=8&wishlist=9&phase=RUNNING&minPrice=0&maxPrice=800&sortBy=PRICE&sortDirection=DESC',
+			{ apiTarget: 'wikiforge' }
+		);
+		expect(result).toMatchObject({ hasNext: false, pageSize: 48, results: [] });
+	});
+	it('keeps favorites separate from temporary watches and reads a fee quote', async () => {
+		apiRequest.mockResolvedValue({ nbResults: 0, page: 0, pageSize: 48, hasNext: false });
+		await getAuctionFavorites(3);
+		expect(apiRequest).toHaveBeenLastCalledWith('/me/auction-favorites?page=3', {
+			apiTarget: 'wikiforge'
+		});
+		await setAuctionFavorite('7', true);
+		expect(apiRequest).toHaveBeenLastCalledWith('/me/auction-favorites/7', { method: 'PUT' });
+		await setAuctionFavorite('7', false);
+		expect(apiRequest).toHaveBeenLastCalledWith('/me/auction-favorites/7', { method: 'DELETE' });
+		apiRequest.mockResolvedValue({
+			startPrice: 1000,
+			feePercent: 1,
+			fee: 10,
+			alreadyPaid: 8,
+			due: 2
+		});
+		expect((await getAuctionFee(1000, '7')).due).toBe(2);
+		expect(apiRequest).toHaveBeenLastCalledWith(
+			'/me/auctions/fee?startPrice=1000&auctionId=7',
+			undefined
+		);
+	});
+	it('uses status and pagination independently for sales and bids', async () => {
+		apiRequest.mockResolvedValue({
+			page: 2,
+			pageSize: 48,
+			hasNext: true,
+			nbResults: 160,
+			escrowed: 1500
+		});
+		expect((await getMyAuctions(undefined, { page: 2, status: 'SOLD' })).results).toEqual([]);
+		expect(apiRequest).toHaveBeenLastCalledWith('/me/auctions?page=2&status=SOLD', {
+			apiTarget: 'wikiforge'
+		});
+		expect(await getMyBids(undefined, { page: 2, status: 'OPEN' })).toMatchObject({
+			escrowed: 1500,
+			hasNext: true,
+			auctions: []
+		});
 	});
 });

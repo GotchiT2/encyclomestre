@@ -4,7 +4,6 @@
 	import {
 		auctionTabs,
 		auctionPhase,
-		filterAuctions,
 		historyKind,
 		type MarketQuery
 	} from '$lib/auctions/presentation';
@@ -38,15 +37,13 @@
 			? $personalAuctions
 			: { sales: [], bids: [], loaded: false, error: false }
 	);
-	const sales = $derived(personal.sales.filter((item) => item.status === 'OPEN'));
-	const bids = $derived(personal.bids.filter((item) => item.status === 'OPEN'));
-	const history = $derived(
-		[
-			...new Map([...personal.bids, ...personal.sales].map((item) => [item.id, item])).values()
-		].filter((item) => item.status !== 'OPEN')
+	const sales = $derived(catalogue.results.filter((item) => item.status === 'OPEN'));
+	const bids = $derived(catalogue.results.filter((item) => item.status === 'OPEN'));
+	const history = $derived(catalogue.results);
+	const filtered = $derived(catalogue.results);
+	const pageCount = $derived(
+		Math.max(1, Math.ceil(catalogue.nbResults / (catalogue.pageSize ?? 48)))
 	);
-	const filtered = $derived(filterAuctions(catalogue.results, query, now));
-	const pageCount = $derived(Math.max(1, Math.ceil(catalogue.nbResults / 48)));
 </script>
 
 <main class="w-full min-w-0 space-y-5">
@@ -66,10 +63,16 @@
 					{$_('auctionHub.escrow')} :
 					<strong class="text-primary">{$auctionEscrowed.toLocaleString('fr')} ◈</strong>
 				</p>
-				<p>{$_('auctionHub.slots', { values: { count: Math.max(0, 3 - sales.length) } })}</p>
+				<p>
+					{$_('auctionHub.slots', {
+						values: {
+							count: Math.max(0, 3 - personal.sales.filter((item) => item.status === 'OPEN').length)
+						}
+					})}
+				</p>
 			</div>{/if}
 	</header>
-	<nav class="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label={$_('auctionHub.title')}>
+	<nav class="grid grid-cols-2 gap-2 sm:grid-cols-5" aria-label={$_('auctionHub.title')}>
 		{#each auctionTabs as tab (tab)}
 			<Button
 				variant="outline"
@@ -79,20 +82,21 @@
 			>
 		{/each}
 	</nav>
-	{#if error || (query.tab !== 'explore' && personal.error)}<div
-			role="alert"
-			class="forge-panel p-4 text-sm"
-		>
+	{#if error}<div role="alert" class="forge-panel p-4 text-sm">
 			<p>{$_(error || 'auctionHub.personalError')}</p>
 			<Button variant="outline" class="mt-3" disabled={busy} onclick={onRefresh}
 				>{$_('auctionHub.retry')}</Button
 			>
 		</div>{/if}
-	{#if query.tab === 'explore'}
-		<AuctionFilters {query} items={catalogue.results} {onChange} />
+	{#if query.tab === 'explore' || query.tab === 'favorites'}
+		{#if query.tab === 'explore'}<AuctionFilters
+				{query}
+				items={catalogue.results}
+				{onChange}
+			/>{/if}
 		<p class="text-xs text-muted-foreground">
 			{$_('auctionHub.visibleResults', {
-				values: { visible: filtered.length, loaded: catalogue.results.length }
+				values: { visible: filtered.length, loaded: catalogue.nbResults }
 			})}
 		</p>
 		{#if busy && !catalogue.results.length}<p
@@ -101,23 +105,7 @@
 			>
 				{$_('auctionHub.loading')}
 			</p>{:else}<AuctionCardList items={filtered} {from} {now} {userId} />{/if}
-		<div class="flex flex-wrap items-center justify-between gap-3">
-			<p class="text-sm">
-				{$_('auctionHub.page', { values: { page: query.page + 1, total: pageCount } })}
-			</p>
-			<div class="flex gap-2">
-				<Button
-					variant="outline"
-					disabled={busy || query.page === 0}
-					onclick={() => onChange({ page: String(query.page - 1) })}>{$_('codex.previous')}</Button
-				><Button
-					variant="outline"
-					disabled={busy || query.page + 1 >= pageCount}
-					onclick={() => onChange({ page: String(query.page + 1) })}>{$_('codex.next')}</Button
-				>
-			</div>
-		</div>
-	{:else if !personal.loaded && !personal.error}
+	{:else if busy && !catalogue.results.length}
 		<p aria-busy="true" class="forge-panel min-h-48 animate-pulse p-6">
 			{$_('auctionHub.loading')}
 		</p>
@@ -149,19 +137,35 @@
 			</section>{/each}
 	{:else}
 		<p class="forge-panel-flat p-4 text-sm text-muted-foreground">{$_('auctionHub.historyHelp')}</p>
-		<label class="grid max-w-sm gap-2 text-sm"
-			>{$_('auctionHub.phaseLabel')}<select
-				class="h-11 min-w-0 border border-primary/25 bg-background px-3"
-				value={query.history}
-				onchange={(event) => onChange({ history: event.currentTarget.value })}
-				><option value="">{$_('auctionHub.all')}</option
-				>{#each ['won', 'sold', 'unsold', 'cancelled', 'lost', 'unknown'] as kind (kind)}<option
-						value={kind}>{$_('auctionHub.historyKind.' + kind)}</option
-					>{/each}</select
-			></label
-		>
+		<div class="flex flex-wrap gap-3">
+			<label class="grid gap-2 text-sm"
+				>{$_('apiEvolution.historySource')}<select
+					class="h-11 border border-primary/25 bg-background px-3"
+					value={query.source}
+					onchange={(e) => onChange({ source: e.currentTarget.value, page: '0' })}
+				>
+					<option value="bids">{$_('auctionHub.tabs.bids')}</option><option value="sales"
+						>{$_('auctionHub.tabs.sales')}</option
+					>
+				</select></label
+			>
+			<label class="grid gap-2 text-sm"
+				>{$_('auctionHub.phaseLabel')}<select
+					class="h-11 border border-primary/25 bg-background px-3"
+					value={query.status}
+					onchange={(e) => onChange({ status: e.currentTarget.value, page: '0' })}
+				>
+					<option value="">{$_('auctionHub.all')}</option
+					>{#each ['OPEN', 'SOLD', 'UNSOLD', 'CANCELLED'] as status (status)}<option value={status}
+							>{$_('apiEvolution.status.' + status)}</option
+						>{/each}
+				</select></label
+			>
+		</div>
 		{#each ['won', 'sold', 'unsold', 'cancelled', 'lost', 'unknown'] as kind (kind)}
-			{#if !query.history || query.history === kind}<section class="space-y-3">
+			{#if history.some((item) => historyKind(item, userId ?? '') === kind)}<section
+					class="space-y-3"
+				>
 					<h2 class="font-serif text-xl">{$_('auctionHub.historyKind.' + kind)}</h2>
 					<AuctionCardList
 						items={history.filter((item) => historyKind(item, userId ?? '') === kind)}
@@ -172,4 +176,20 @@
 				</section>{/if}
 		{/each}
 	{/if}
+	<div class="flex flex-wrap items-center justify-between gap-3">
+		<p class="text-sm">
+			{$_('auctionHub.page', { values: { page: query.page + 1, total: pageCount } })}
+		</p>
+		<div class="flex gap-2">
+			<Button
+				variant="outline"
+				disabled={busy || query.page === 0}
+				onclick={() => onChange({ page: String(query.page - 1) })}>{$_('codex.previous')}</Button
+			><Button
+				variant="outline"
+				disabled={busy || !(catalogue.hasNext ?? query.page + 1 < pageCount)}
+				onclick={() => onChange({ page: String(query.page + 1) })}>{$_('codex.next')}</Button
+			>
+		</div>
+	</div>
 </main>

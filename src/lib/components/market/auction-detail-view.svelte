@@ -1,4 +1,5 @@
 <script lang="ts">
+	import AuctionFavorite from './auction-favorite.svelte';
 	import { _ } from '$lib/i18n';
 	import ReportDialog from '$lib/components/reports/report-dialog.svelte';
 	import { resolve } from '$app/paths';
@@ -33,6 +34,7 @@
 	<div class="flex flex-wrap items-center gap-3">
 		<p class="forge-label">{$_('market.auction_details')} · #{auction.id}</p>
 		<AuctionStatus {auction} {now} />
+		{#if userId}<AuctionFavorite id={auction.id} favorite={auction.favorite} />{/if}
 	</div>
 	<h1 class="break-words font-serif text-3xl sm:text-4xl">{auction.card.title}</h1>
 	<p class="text-sm text-muted-foreground">
@@ -68,6 +70,21 @@
 					/>{/if}
 			</div>
 			<dl class="grid gap-3 text-sm sm:grid-cols-2">
+				{#if auction.viewerOutcome}<div>
+						<dt>{$_('apiEvolution.outcomeLabel')}</dt>
+						<dd>
+							{$_('apiEvolution.outcome.' + auction.viewerOutcome, {
+								default: auction.viewerOutcome
+							})}
+						</dd>
+					</div>{/if}
+				{#each ['listingFee', 'finalFee'] as field (field)}{@const amount =
+						field === 'listingFee'
+							? auction.listingFee
+							: auction.finalFee}{#if amount !== undefined}<div>
+							<dt>{$_('apiEvolution.' + field)}</dt>
+							<dd>{amount} ◈</dd>
+						</div>{/if}{/each}
 				<div>
 					<dt class="text-muted-foreground">{$_('auctionHub.starts')}</dt>
 					<dd>{date(auction.startsAt)}</dd>

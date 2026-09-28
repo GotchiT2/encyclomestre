@@ -884,6 +884,8 @@ function mockBoostersPayload(inventory: ReturnType<typeof boosterInventory>) {
 	};
 }
 
+let mockAccountDeleted = false;
+let mockNameChangeAvailableAt: string | undefined;
 export function createMockApiResponse({ path, method = 'GET', body }: MockApiRequest): Response {
 	const requestUrl = new URL(path, 'http://mock-api.local');
 	const routedPath = requestUrl.pathname.replace(/^\/api(?=\/)/, '');
@@ -897,6 +899,36 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		url.searchParams
 	);
 	if (communityResponse) return communityResponse;
+	if (pathname === '/me/deletion')
+		return json({
+			canDelete: true,
+			consequences: {
+				openTrades: 2,
+				openSales: 1,
+				openAuctions: 2,
+				leadingAuctions: 1,
+				refundedAmount: 500,
+				friends: 3,
+				friendRequests: 1,
+				wishlists: 2,
+				nbCards: mockCards.length,
+				money: 3200
+			}
+		});
+	if (pathname === '/me' && normalizedMethod === 'DELETE') {
+		if ((body as { password?: string })?.password !== 'demo-password')
+			return json({ error: 'INVALID_CREDENTIALS' }, 403);
+		mockAccountDeleted = true;
+		return new Response(null, { status: 204 });
+	}
+	if (pathname === '/me' && mockAccountDeleted) return json({ error: 'INVALID_CREDENTIALS' }, 401);
+	if (pathname === '/collection/stats')
+		return json({
+			nbCards: mockCards.length,
+			nbDistinctPages: new Set(mockCards.map((card) => card.baseCardId)).size,
+			nbActivePages: 1200
+		});
+
 	if (normalizedMethod === 'POST' && pathname === '/me/achievements/claim') {
 		const claimed = mockAchievements.filter((item) => item.unlockedAt && !item.claimedAt);
 		for (const item of claimed) item.claimedAt = new Date().toISOString();
@@ -981,6 +1013,19 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		const profile = profileSettings.get('demo-user')!;
 		if (normalizedMethod === 'PATCH') {
 			const input = asObject(body);
+			const changesName = typeof input?.name === 'string' && input.name !== user.username;
+			if (
+				changesName &&
+				user.role !== 'admin' &&
+				mockNameChangeAvailableAt &&
+				Date.parse(mockNameChangeAvailableAt) > Date.now()
+			)
+				return json(
+					{ error: 'NAME_CHANGE_TOO_SOON', meta: { availableAt: mockNameChangeAvailableAt } },
+					429
+				);
+			if (changesName && user.role !== 'admin')
+				mockNameChangeAvailableAt = new Date(Date.now() + 86400000).toISOString();
 			if (typeof input?.name === 'string') {
 				user.username = input.name;
 				user.displayName = input.name;
@@ -1017,6 +1062,9 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		return json({
 			id: wikiForgeUserId(user.id),
 			name: user.username,
+			...(user.role !== 'admin' && mockNameChangeAvailableAt
+				? { nameChangeAvailableAt: mockNameChangeAvailableAt }
+				: {}),
 			email: user.email,
 			roles: [user.role.toUpperCase()],
 			imagePageId: user.imagePageId ?? null,
@@ -1044,6 +1092,9 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 		return json({
 			id: 1,
 			name: user.username,
+			...(user.role !== 'admin' && mockNameChangeAvailableAt
+				? { nameChangeAvailableAt: mockNameChangeAvailableAt }
+				: {}),
 			email: user.email,
 			roles: ['USER'],
 			imagePageId: user.imagePageId,
@@ -1514,6 +1565,10 @@ export function createMockApiResponse({ path, method = 'GET', body }: MockApiReq
 			});
 		return json({
 			nbResults: cards.length,
+			pageSize: 48,
+			hasNext: (page + 1) * 48 < cards.length,
+			maxResults: 10000,
+			truncated: false,
 			page,
 			results: cards.slice(page * 48, (page + 1) * 48).map(publicPage),
 			sortBy,

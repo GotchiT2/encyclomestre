@@ -35,7 +35,12 @@
 			"FORBIDDEN_NAME": "Un nom, titre ou texte contient un terme interdit. Modifiez votre saisie.",
 			"ALREADY_EXISTS": "Ce nom est déjà utilisé.",
 			"WISHLIST_FULL": "La liste ne peut pas dépasser 1 000 cartes.",
-			"NOT_ENOUGH_MONEY": "Votre solde disponible est insuffisant."
+			"NOT_ENOUGH_MONEY": "Votre solde disponible est insuffisant.",
+			"ACCOUNT_CONFLICT": "Une opération concurrente empêche la fermeture. Actualisez avant de réessayer.",
+			"INVALID_CREDENTIALS": "Mot de passe incorrect.",
+			"AUCTION_CONFLICT": "L’enchère a changé. Actualisez.",
+			"SALE_CONFLICT": "Carte indisponible pour la vente.",
+			"TRADE_CONFLICT": "Carte indisponible pour cet échange."
 		},
 		"guild": {
 			"title": "Guildes",
@@ -82,7 +87,7 @@
 			"share": "Partager avec ma guilde",
 			"shared": "Partagée avec la guilde",
 			"sharedHelp": "Tous les membres de votre guilde pourront lire cette liste. Les invitations individuelles restent indépendantes.",
-			"chatHelp": "Historique limité à 14 jours. Actualisation automatique tant que cet onglet est visible.",
+			"chatHelp": "Discussion en temps réel ; les messages manqués sont récupérés à la reconnexion.",
 			"older": "Messages précédents",
 			"message": "Votre message",
 			"send": "Envoyer",

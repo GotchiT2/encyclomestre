@@ -6,8 +6,8 @@
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { _ } from '$lib/i18n';
 	import { currentSession } from '$lib/auth/session';
-	import { getAuctions } from '$lib/api/auctions';
-	import { refreshPersonalAuctions } from '$lib/auctions/store';
+	import { getAuctions, getMyAuctions, getMyBids, getAuctionFavorites } from '$lib/api/auctions';
+	import { auctionEscrowed } from '$lib/auctions/store';
 	import { marketQuery } from '$lib/auctions/presentation';
 	import type { AuctionPage } from '$lib/types';
 	import AuctionWorkspace from '$lib/components/market/auction-workspace.svelte';
@@ -16,18 +16,56 @@
 	let error = $state('');
 	let now = $state(Date.now());
 	let generation = 0;
+	let loadedScope = '';
 	let abort: AbortController | undefined;
 	const query = $derived(marketQuery(page.url.searchParams));
 	const userId = $derived($currentSession?.user.id);
-	const publicPage = $derived(query.tab === 'explore' ? query.page : -1);
+
 	async function loadCatalogue(index: number) {
 		const own = ++generation;
 		abort?.abort();
 		abort = new AbortController();
+		const scope = `${userId ?? ''}:${query.tab}:${query.source}`;
+		if (scope !== loadedScope) {
+			catalogue = { nbResults: 0, page: index, hasNext: false, results: [] };
+			loadedScope = scope;
+		}
 		busy = true;
 		error = '';
 		try {
-			const result = await getAuctions(index, { signal: abort.signal });
+			const options = { signal: abort.signal };
+			let result: AuctionPage;
+			if (query.tab === 'explore')
+				result = await getAuctions(
+					{
+						page: index,
+						q: query.q,
+						variant: query.variant.split(',').filter(Boolean),
+						sellerId: query.seller,
+						pageId: query.pageId,
+						wishlist: query.wishlist,
+						phase: query.phase,
+						minPrice: query.min,
+						maxPrice: query.max,
+						sortBy: query.sortBy,
+						sortDirection: query.sortDirection
+					},
+					options
+				);
+			else if (query.tab === 'favorites') result = await getAuctionFavorites(index, options);
+			else {
+				const search = {
+					page: index,
+					status: query.tab === 'history' ? query.status || undefined : 'OPEN'
+				};
+				if (query.tab === 'sales' || (query.tab === 'history' && query.source === 'sales'))
+					result = await getMyAuctions(options, search);
+				else {
+					const bids = await getMyBids(options, search);
+					result = { ...bids, results: bids.auctions };
+					if (own === generation) auctionEscrowed.set(bids.escrowed);
+				}
+			}
 			if (own === generation) catalogue = result;
 		} catch {
 			if (own === generation) {
@@ -39,15 +77,10 @@
 		}
 	}
 	$effect(() => {
-		const index = publicPage;
+		const snapshot = query;
+		const account = userId;
 		untrack(() => {
-			if (index >= 0) void loadCatalogue(index);
-			else {
-				generation++;
-				abort?.abort();
-				busy = false;
-				error = '';
-			}
+			if (snapshot.tab === 'explore' || account) void loadCatalogue(snapshot.page);
 		});
 	});
 	onMount(() => {
@@ -70,19 +103,7 @@
 		});
 	}
 	async function refresh() {
-		if (busy) return;
-		if (query.tab === 'explore') await loadCatalogue(query.page);
-		else if (userId) {
-			busy = true;
-			error = '';
-			try {
-				await refreshPersonalAuctions(userId);
-			} catch {
-				error = 'auctionHub.personalError';
-			} finally {
-				busy = false;
-			}
-		}
+		if (!busy) await loadCatalogue(query.page);
 	}
 </script>
 

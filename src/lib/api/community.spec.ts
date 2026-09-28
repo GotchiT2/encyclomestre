@@ -15,7 +15,7 @@ describe('Swagger community operations', () => {
 		await guild.searchGuilds('les archives', 2);
 		expect(apiRequest).toHaveBeenLastCalledWith('/guilds?q=les+archives&page=2', undefined);
 		await guild.readGuildMembers(4, 3);
-		expect(apiRequest).toHaveBeenLastCalledWith('/guilds/4/members?page=3', undefined);
+		expect(apiRequest).toHaveBeenLastCalledWith('/guilds/4/members?page=3&q=', undefined);
 		await guild.readGuildMessages(4, 'opaque /cursor');
 		expect(apiRequest).toHaveBeenLastCalledWith(
 			'/guilds/4/messages?cursor=opaque+%2Fcursor',
@@ -43,6 +43,7 @@ describe('Swagger community operations', () => {
 		['dissolveGuild', [4], '/guilds/4', 'DELETE'],
 		['transferGuild', [4, 2], '/guilds/4/owner/2', 'POST'],
 		['kickGuildMember', [4, 2], '/guilds/4/members/2', 'DELETE'],
+		['revokeGuildInvitation', [4, 2], '/guilds/4/invitations/2', 'DELETE'],
 		['inviteGuildMember', [4, 2], '/guilds/4/invitations/2', 'POST'],
 		['answerGuildInvitation', [4, true], '/me/guild-invitations/4', 'POST'],
 		['answerGuildInvitation', [4, false], '/me/guild-invitations/4', 'DELETE']

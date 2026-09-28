@@ -65,6 +65,7 @@ export interface Card {
 	userProtected?: boolean;
 	pendingTradeId?: string | null;
 	nsfw?: boolean;
+	saleId?: string | null;
 	activeSale?: import('./sales').ActiveSaleSummary | null;
 	activeAuctionId?: string | null;
 }

@@ -1,4 +1,7 @@
 export interface PaginationMeta {
+	hasNext?: boolean;
+	truncated?: boolean;
+	maxResults?: number;
 	page: number;
 	pageSize: number;
 	total: number;

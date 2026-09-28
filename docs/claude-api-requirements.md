@@ -2,6 +2,12 @@
 
 Date : 27 septembre 2026. Destinataire : agent Claude travaillant sur le backend WikiForge.
 
+## État après la réponse backend du 28 septembre 2026
+
+Les messages (4)/(5) fournissent les contrats définitifs P1/P2 et une partie de P3, vérifiés localement mais non déployés. Le FO intègre désormais recherche/pagination serveur, favoris persistants, résultats personnels, devis de frais, fermeture de compte, engagements des cartes, progression globale et évolutions de guildes. Le BO intègre dossier joueur, renommage forcé sans délai, purge et journal. Le délai du pseudo via `nameChangeAvailableAt` et `NAME_CHANGE_TOO_SOON` est pris en charge. Ces capacités ne sont plus des demandes à recréer.
+
+Les sections suivantes conservent la demande historique ; confronter les besoins restants au contrat reçu avant intervention. Les modèles graphiques publiés et le logo du booster restent des besoins backend. L’audit BO `docs/admin-api-coverage.md` distingue les fonctionnalités API existantes dont l’interface reste à construire.
+
 ## Mission
 
 Implémente les évolutions ci-dessous dans le backend après vérification de son code et de son Swagger actuel. Elles doivent permettre au front office et au backoffice de terminer leurs parcours sans simuler des capacités serveur. Commence par dresser une matrice « déjà disponible / à compléter / absent », puis traite les priorités P1, P2 et P3. Une capacité déjà présente doit être documentée et testée, pas recréée sous un autre endpoint.
