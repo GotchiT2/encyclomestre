@@ -165,7 +165,7 @@
 					/>
 				{/if}
 				{#if result.items.length}
-					<div class="wikiforge-card-grid">
+					<div class="wikiforge-card-grid xl:grid-cols-6">
 						{#each result.items as card (card.id)}
 							<div class="relative w-full">
 								<CardTile {card} onOpen={openCard} />

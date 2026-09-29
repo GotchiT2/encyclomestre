@@ -151,7 +151,7 @@
 			{:else}
 				<div class="wikiforge-card-grid mt-4">
 					{#each visibleCards as card (card.id)}
-						<div class="relative">
+						<div class="wikiforge-card-size relative">
 							<CardTile {card} onOpen={select} />
 							{#if onSelectMany && selectedIds.includes(String(card.baseCardId ?? card.id))}
 								<span

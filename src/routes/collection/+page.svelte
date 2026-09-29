@@ -1,5 +1,4 @@
 <script lang="ts">
-	import CollectionProgress from '$lib/components/collection/collection-progress.svelte';
 	import { replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { currentSession } from '$lib/auth/session';
@@ -395,7 +394,6 @@
 		description={$_('collection.description')}
 	/>
 	<div class="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
-		<CollectionProgress />
 		<FilterShell activeCount={activeFilterCount} description={$_('collection.filtersDescription')}>
 			<FilterControls
 				bind:query

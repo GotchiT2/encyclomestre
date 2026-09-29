@@ -58,7 +58,7 @@
 		items={cards}
 		label={gallery.title}
 		itemKey={(card) => card.id}
-		desktopGridClass="lg:grid-cols-3 xl:grid-cols-6"
+		desktopGridClass="lg:grid-cols-3 xl:grid-cols-4"
 	>
 		{#snippet children(card)}
 			<div class="wikiforge-card-size relative">
