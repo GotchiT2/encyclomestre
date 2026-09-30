@@ -2,7 +2,7 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import '$lib/i18n';
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
+vi.mock('$lib/api/public-env', () => ({ env: {} }));
 import WishlistActionMenu from './wishlist-action-menu.svelte';
 
 const { toastSuccess } = vi.hoisted(() => ({ toastSuccess: vi.fn() }));

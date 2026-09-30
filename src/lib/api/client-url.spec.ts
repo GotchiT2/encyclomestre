@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('$env/dynamic/public', () => ({
+vi.mock('$lib/api/public-env', () => ({
 		env: {
 			PUBLIC_API_MOCK_ENABLED: 'false',
 			PUBLIC_WIKIFORGE_API_BASE_URL: 'https://api.wikiforge.fr'

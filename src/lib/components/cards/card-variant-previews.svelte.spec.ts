@@ -5,7 +5,7 @@ import '$lib/i18n';
 import { mockCards } from '$lib/api/mocks/cards';
 import CardVariantPreviews from './card-variant-previews.svelte';
 const { read } = vi.hoisted(() => ({ read: vi.fn() }));
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
+vi.mock('$lib/api/public-env', () => ({ env: {} }));
 vi.mock('$lib/api/pages', () => ({
 	getWikiForgePublicPage: read,
 	toPublicPageCardRecord: () => mockCards[0]

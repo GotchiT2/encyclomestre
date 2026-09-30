@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const { apiEnv } = vi.hoisted(() => ({
 	apiEnv: { PUBLIC_API_MOCK_ENABLED: 'true' } as Record<string, string>
 }));
-vi.mock('$env/dynamic/public', () => ({
+vi.mock('$lib/api/public-env', () => ({
 	env: apiEnv
 }));
 

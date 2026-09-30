@@ -6,7 +6,7 @@ import type { Auction } from '$lib/types';
 import { mockCards } from '$lib/api/mocks/cards';
 import AuctionBidPanel from './auction-bid-panel.svelte';
 const { bid } = vi.hoisted(() => ({ bid: vi.fn() }));
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
+vi.mock('$lib/api/public-env', () => ({ env: {} }));
 vi.mock('$lib/api/auctions', () => ({ bidAuction: bid, retractAuctionMax: vi.fn() }));
 const auction = {
 	id: '1',

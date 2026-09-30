@@ -5,7 +5,7 @@ import '$lib/i18n';
 import { currentBanners } from '$lib/banners/store';
 import { currentSession } from '$lib/auth/session';
 import GlobalBanners from './global-banners.svelte';
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
+vi.mock('$lib/api/public-env', () => ({ env: {} }));
 const banner = {
 	id: 981,
 	message: 'Annonce persistante',

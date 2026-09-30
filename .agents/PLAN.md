@@ -533,3 +533,11 @@ Validation finale : check sans erreur ni avertissement, ESLint ciblé, 282 tests
 - [x] Précise qu’une passkey doit d’abord être enregistrée dans les paramètres du compte.
 - [x] Remplace le message d’annulation WebAuthn par une aide pour vérifier la passkey disponible sur l’appareil.
 - Sujet Conventional Commit : `feat(auth): add passkey login and management`.
+
+## Déploiement sûr et variables publiques figées — 30 septembre 2026
+
+- [x] Variables publiques lues via `$env/static/public` (module `src/lib/api/public-env.ts`) : valeurs intégrées aux fichiers hashés, plus de `_app/env.js` mis en cache un an.
+- [x] `deploy.ps1` : arrêt sur tout code de sortie non nul (build, ssh, scp), refus d’un `.env` sans `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH` ou `SSH_KEY_PATH`, et d’un `DEPLOY_PATH` racine ou personnel ; `build/index.html` exigé avant tout geste distant. Script identique BO/FO.
+
+Validation : check, ESLint, 282 tests (84 fichiers, composants navigateur compris), build sans `_app/env.js`, garde-fous du script testés avec un `.env` factice sans action distante.
+Sujet Conventional Commit proposé : `fix(deploy): inline public env at build time and harden deploy script`.

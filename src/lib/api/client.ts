@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/public';
+import { env } from '$lib/api/public-env';
 import { createMockApiResponse } from './mock';
 import { clearSession, restoreSession, persistSession } from '$lib/auth/session';
 import { _ } from '$lib/i18n';
