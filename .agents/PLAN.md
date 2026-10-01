@@ -513,3 +513,31 @@ Aucun commit, push ou déploiement demandé pour cette étape.
 - [x] Engagements DTO des exemplaires, bornes du catalogue, progression à la demande, recherche membres serveur, révocation des invitations et chat SSE avec rattrapage.
 
 Validation : check et ESLint, tests unitaires et build ; parcours navigateur mock aux cinq largeurs 360, 390, 768, 1024 et 1440 px. Aucun appel d’écriture en production, changement backend, déploiement, commit ou push.
+
+
+## Passkeys — API 1.2.0
+
+- [x] Branche `passkey` créée depuis le `main` courant, connexion explicite et finalisation OAuth partagée.
+- [x] Gestion dans les paramètres FO et `/security` BO ; contrôle ADMIN avant stockage.
+- [x] Ajout, liste, suppression, déconnexion globale, erreurs traduites et conservation temporaire du défi sans stockage sensible.
+- [x] Turnstile action passkey et jeton unique ; aucune répétition automatique d’écriture.
+- [x] Mocks, contrats et authentificateur virtuel aux cinq largeurs ; voir `docs/passkeys.md`.
+
+Aucun commit, push, déploiement ou changement backend dans cette étape.
+
+Validation finale : check sans erreur ni avertissement, ESLint ciblé, 282 tests FO, build statique et diff validés. Parcours Playwright WebAuthn virtuel en mock aux cinq largeurs ; action Turnstile et jetons renouvelés couverts par test de composant FO.
+
+
+## Aide de connexion passkey FO
+
+- [x] Précise qu’une passkey doit d’abord être enregistrée dans les paramètres du compte.
+- [x] Remplace le message d’annulation WebAuthn par une aide pour vérifier la passkey disponible sur l’appareil.
+- Sujet Conventional Commit : `feat(auth): add passkey login and management`.
+
+## Déploiement sûr et variables publiques figées — 30 septembre 2026
+
+- [x] Variables publiques lues via `$env/static/public` (module `src/lib/api/public-env.ts`) : valeurs intégrées aux fichiers hashés, plus de `_app/env.js` mis en cache un an.
+- [x] `deploy.ps1` : arrêt sur tout code de sortie non nul (build, ssh, scp), refus d’un `.env` sans `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH` ou `SSH_KEY_PATH`, et d’un `DEPLOY_PATH` racine ou personnel ; `build/index.html` exigé avant tout geste distant. Script identique BO/FO.
+
+Validation : check, ESLint, 282 tests (84 fichiers, composants navigateur compris), build sans `_app/env.js`, garde-fous du script testés avec un `.env` factice sans action distante.
+Sujet Conventional Commit proposé : `fix(deploy): inline public env at build time and harden deploy script`.

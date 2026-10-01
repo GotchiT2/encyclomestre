@@ -1426,5 +1426,46 @@
 				"money": "Solde figé"
 			}
 		}
+	},
+	"passkeys": {
+		"security": "Sécurité du compte",
+		"title": "Passkeys",
+		"description": "Connectez-vous avec votre empreinte, votre visage ou le code de votre appareil. Le mot de passe reste disponible.",
+		"login": "Se connecter avec une passkey",
+		"add": "Ajouter une passkey",
+		"addDescription": "Choisissez un nom et confirmez votre mot de passe actuel, puis suivez les instructions de votre appareil.",
+		"label": "Nom de la passkey",
+		"password": "Mot de passe actuel",
+		"synced": "Synchronisée entre vos appareils",
+		"device": "Liée à un appareil",
+		"dates": "Créée le {created} · Dernière utilisation le {used}",
+		"empty": "Aucune passkey enregistrée.",
+		"limit": "Vous avez atteint la limite de 10 passkeys.",
+		"remove": "Supprimer",
+		"removeTitle": "Supprimer « {label} » ?",
+		"removalInfo": "La suppression sur WikiForge ne retire pas la passkey de votre appareil : supprimez-la aussi dans ses réglages. Les sessions déjà ouvertes restent actives.",
+		"logoutAll": "Déconnecter tous les appareils",
+		"loading": "Chargement des passkeys…",
+		"waiting": "Suivez les instructions de votre appareil…",
+		"cancel": "Annuler",
+		"retry": "Réessayer",
+		"added": "Passkey enregistrée.",
+		"removed": "Passkey supprimée.",
+		"errors": {
+			"unsupported": "Les passkeys ne sont pas disponibles dans ce navigateur. Utilisez votre mot de passe.",
+			"insecure": "Les passkeys nécessitent une connexion HTTPS.",
+			"cancelled": "Le navigateur n’a pas utilisé de passkey. Vérifiez qu’une passkey WikiForge est enregistrée sur cet appareil, ou relancez la fenêtre si vous l’avez fermée.",
+			"origin": "Le serveur ne reconnaît pas ce domaine pour les passkeys. Vérifiez la configuration des origines autorisées.",
+			"CAPTCHA_FAILED": "La vérification de sécurité a échoué. Réessayez avec un nouveau jeton.",
+			"INVALID_CREDENTIALS": "Mot de passe incorrect. Corrigez-le pour terminer l’enregistrement.",
+			"PASSKEY_REJECTED": "Le challenge a expiré ou a été refusé. Recommencez l’ajout.",
+			"PASSKEY_CONFLICT": "Cette passkey existe déjà ou la limite de 10 passkeys est atteinte. La liste a été actualisée.",
+			"invalid_grant": "La connexion a été refusée. Réessayez avec une nouvelle demande ou utilisez votre mot de passe.",
+			"denied": "Ce compte n’a pas accès au backoffice.",
+			"failed": "La demande a échoué. Réessayez explicitement.",
+			"uncertain": "Le résultat de l’enregistrement n’est pas confirmé. Vérifiez la liste actualisée avant de recommencer.",
+			"sessionExpired": "Votre session a expiré. Reconnectez-vous avant de gérer vos passkeys."
+		},
+		"loginHint": "Cette option fonctionne après avoir enregistré une passkey depuis les paramètres du compte."
 	}
 }

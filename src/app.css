@@ -160,8 +160,7 @@
 }
 
 @utility wikiforge-card-grid {
-	/* Les pages API contiennent au plus 48 cartes : 2, 3, 4 et 6 conservent des lignes complètes. */
-	@apply grid min-w-0 grid-cols-2 justify-items-center gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6;
+	@apply grid min-w-0 grid-cols-2 justify-items-center gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4;
 }
 
 @utility wikiforge-card-size {
@@ -198,7 +197,6 @@ article {
 		inset 0 1px rgb(255 255 255 / 4%),
 		inset 0 0 30px rgb(25 167 170 / 5%),
 		0 18px 55px rgb(0 0 0 / 26%);
-	
 }
 
 @utility forge-panel-flat {

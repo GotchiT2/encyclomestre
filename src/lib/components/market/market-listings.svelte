@@ -23,10 +23,7 @@
 	const cardsById = $derived(new Map(cards.map((card) => [card.id, card])));
 </script>
 
-<div
-	class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
-	data-testid="market-listings"
->
+<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" data-testid="market-listings">
 	{#each listings as listing (listing.id)}
 		{@const card = cardsById.get(listing.cardId)}
 		{@const price = salePricePresentation(listing)}

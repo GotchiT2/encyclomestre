@@ -283,7 +283,7 @@
 					items={sales.instantSales}
 					label={$_('profile.buy_now_title')}
 					itemKey={(sale) => sale.id}
-					desktopGridClass="lg:grid-cols-4 xl:grid-cols-6"
+					desktopGridClass="lg:grid-cols-4"
 					>{#snippet children(sale)}<article class="forge-panel-flat p-2">
 							<CardTile card={sale.card} showFriendOwners={false} />
 							<div class="mt-2 flex items-center justify-between gap-2">

@@ -35,6 +35,14 @@ export async function login(input: LoginInput, options?: RequestOptions): Promis
 		skipAuth: true,
 		apiTarget: 'wikiforge'
 	});
+	return finalizeOAuthLogin(tokens, options);
+}
+
+export async function finalizeOAuthLogin(
+	tokens: OAuth2TokenResponse,
+	options?: RequestOptions
+): Promise<AuthSession> {
+	enableWikiForgeSessionRefresh();
 	const profile = await apiRequest<OAuthCurrentUserResponse>('/me', {
 		...options,
 		headers: { ...options?.headers, authorization: bearerAuthorization(tokens) },

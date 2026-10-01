@@ -6,7 +6,7 @@ import { currentSession } from '$lib/auth/session';
 import type { AuthSession } from '$lib/types';
 import { draftKey, readDraft, writeDraft } from '$lib/drafts/storage';
 import LocalDraft from './local-draft.svelte';
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
+vi.mock('$lib/api/public-env', () => ({ env: {} }));
 const session = { accessToken: 'mock-only', user: { id: 'draft-test' } } as AuthSession;
 describe('Local draft consent and restoration', () => {
 	it('does not save until enabled and removes storage when disabled', async () => {

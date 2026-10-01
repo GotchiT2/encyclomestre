@@ -3,7 +3,7 @@ import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import '$lib/i18n';
 import VariantSelector from './variant-selector.svelte';
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
+vi.mock('$lib/api/public-env', () => ({ env: {} }));
 const options = [
 	{ id: 1, name: 'Standard', color: '#ffffff', styles: ['NORMAL'], renderKey: 'standard' },
 	{ id: 2, name: 'Chrome', color: '#ffffff', styles: ['CHROME'], renderKey: 'chrome' }

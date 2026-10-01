@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
-import basicSsl from '@vitejs/plugin-basic-ssl';
+import fs from 'node:fs';
 
 export default defineConfig({
 	server: {
@@ -17,6 +17,10 @@ export default defineConfig({
 				target: 'http://localhost:8080',
 				changeOrigin: true
 			}
+		},
+		https: {
+			key: fs.readFileSync('dev.wikiforge.fr+1-key.pem'),
+			cert: fs.readFileSync('dev.wikiforge.fr+1.pem')
 		}
 	},
 	preview: {
@@ -28,10 +32,6 @@ export default defineConfig({
 		}
 	},
 	plugins: [
-		{
-			...basicSsl({ name: 'WikiForge local', domains: ['dev.wikiforge.fr'] }),
-			apply: 'serve'
-		},
 		tailwindcss(),
 		sveltekit({
 			compilerOptions: {

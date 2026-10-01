@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const { apiEnv } = vi.hoisted(() => ({
 	apiEnv: { PUBLIC_API_MOCK_ENABLED: 'true' } as Record<string, string>
 }));
-vi.mock('$env/dynamic/public', () => ({
+vi.mock('$lib/api/public-env', () => ({
 	env: apiEnv
 }));
 
@@ -41,6 +41,17 @@ describe('apiRequest en mode mock', () => {
 			user: { id: '1' }
 		});
 		expect(fetcher).not.toHaveBeenCalled();
+	});
+
+	it('conserve les erreurs HTTP sur les réponses passkeys', async () => {
+		await expect(
+			apiRequest('/me/passkeys', {
+				method: 'POST',
+				headers: { 'CF-Turnstile-Response': 'mock-token' },
+				body: { password: 'wrong', label: 'Test', credential: {} },
+				retryAuth: false
+			})
+		).rejects.toMatchObject({ status: 403 });
 	});
 
 	it('interrompt une requête qui dépasse 12 secondes', async () => {

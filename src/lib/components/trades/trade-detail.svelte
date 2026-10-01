@@ -134,7 +134,7 @@
 							items={offeredCards}
 							label={$_('trades.offered')}
 							itemKey={(card) => card.id}
-							desktopGridClass="lg:grid-cols-4 xl:grid-cols-6"
+							desktopGridClass="lg:grid-cols-4"
 						>
 							{#snippet children(card)}
 								<div class:opacity-45={removedCardIds.includes(card.id)}>
@@ -175,7 +175,7 @@
 							items={requestedCards}
 							label={$_('trades.requested')}
 							itemKey={(card) => card.id}
-							desktopGridClass="lg:grid-cols-4 xl:grid-cols-6"
+							desktopGridClass="lg:grid-cols-4"
 						>
 							{#snippet children(card)}
 								<div class:opacity-45={removedCardIds.includes(card.id)}>
