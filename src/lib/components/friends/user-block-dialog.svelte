@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { operationError } from '$lib/domain/operation-error';
 	import { Button } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { _ } from '$lib/i18n';
@@ -17,13 +18,17 @@
 	} = $props();
 
 	let submitting = $state(false);
+	let error = $state('');
 
 	async function confirm() {
 		if (!user || submitting) return;
 		submitting = true;
+		error = '';
 		try {
 			await onConfirm();
 			open = false;
+		} catch (cause) {
+			error = operationError(cause);
 		} finally {
 			submitting = false;
 		}
@@ -42,7 +47,9 @@
 					: $_('friends.block_description', { values: { user: user?.username ?? '' } })}
 			</Dialog.Description>
 		</Dialog.Header>
-		<Dialog.Footer class="border-t border-primary/20 p-4">
+		{#if error}<p role="alert" class="px-4 text-destructive">{error}</p>{/if}<Dialog.Footer
+			class="border-t border-primary/20 p-4"
+		>
 			<Button variant="outline" onclick={() => (open = false)}>{$_('common.cancel')}</Button>
 			<Button variant={blocked ? 'default' : 'destructive'} disabled={submitting} onclick={confirm}>
 				{blocked ? $_('friends.unblock') : $_('friends.block')}

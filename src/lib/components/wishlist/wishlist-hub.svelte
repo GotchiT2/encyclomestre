@@ -98,9 +98,9 @@
 	</article>
 {/snippet}
 
-<section class="grid gap-4" data-testid="wishlist-hub">
-	<div class="border-4 border-double border-primary/30 bg-card p-3">
-		<div class="flex items-center justify-between gap-3">
+<section class="grid min-w-0 grid-cols-1 gap-4" data-testid="wishlist-hub">
+	<div class="min-w-0 border-4 border-double border-primary/30 bg-card p-3">
+		<div class="flex flex-wrap items-center justify-between gap-3">
 			<p class="forge-label">{$_('wishlist.owned_lists')}</p>
 			<Button size="sm" onclick={onCreate}>{$_('wishlist.create_btn')}</Button>
 		</div>
@@ -113,8 +113,8 @@
 		{/if}
 	</div>
 
-	<div class="grid gap-4 lg:grid-cols-2">
-		<section class="border border-primary/25 bg-card p-3">
+	<div class="grid min-w-0 gap-4 lg:grid-cols-2">
+		<section class="min-w-0 border border-primary/25 bg-card p-3">
 			<p class="forge-label">{$_('wishlist.shared_lists')}</p>
 			{#if groups.shared.length}
 				<div class="mt-3 flex snap-x gap-2 overflow-x-auto pb-1">
@@ -125,7 +125,7 @@
 			{/if}
 		</section>
 
-		<section class="border border-primary/25 bg-card p-3">
+		<section class="min-w-0 border border-primary/25 bg-card p-3">
 			<p class="forge-label">{$_('wishlist.pending_invitations')}</p>
 			{#if groups.pending.length}
 				<ul class="mt-3 grid gap-2">

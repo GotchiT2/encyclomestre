@@ -53,6 +53,12 @@ function imageAttribution(source?: ImageAttributionDto | null): ImageAttribution
 	};
 }
 
+function optionalDate(value?: string | null) {
+	if (!value) return undefined;
+	const date = wikiForgeUtcDate(value);
+	return Number.isFinite(date.getTime()) ? date.toISOString() : undefined;
+}
+
 export function toCardRecord(card: WikiForgeCardDto, variants: VariantDefinition[]): CardRecord {
 	const variant = resolveVariant(variants, card.variantId);
 	const attribution = imageAttribution(card.imageAttribution);
@@ -76,8 +82,8 @@ export function toCardRecord(card: WikiForgeCardDto, variants: VariantDefinition
 		ownedCount: card.ownedCount ?? 0,
 		globalSupply: 0,
 		friendsWhoOwn: [],
-		acquiredAt: card.acquiredDate ? wikiForgeUtcDate(card.acquiredDate).toISOString() : undefined,
-		createdAt: card.creationDate ? wikiForgeUtcDate(card.creationDate).toISOString() : undefined,
+		acquiredAt: optionalDate(card.acquiredDate),
+		createdAt: optionalDate(card.creationDate),
 		collectionTagIds: (card.tagIds ?? []).map(String),
 		duplicate: Boolean(card.duplicate),
 		userProtected: Boolean(card.protected),

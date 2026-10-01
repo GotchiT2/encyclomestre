@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { activeAuctionCardIds } from '$lib/auctions/store';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import { _ } from '$lib/i18n';
 	import { cn } from '$lib/utils';
@@ -54,16 +55,35 @@
 					<button
 						type="button"
 						class="flex w-full min-w-0 items-center justify-center gap-1 border border-primary/60 bg-background/90 px-1 py-1.5 text-[9px] font-bold tracking-wider text-primary uppercase backdrop-blur-sm transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-						aria-label={$_('collection.quick_protect_card', { values: { title: card.title } })}
+						aria-label={$_(
+							card.userProtected ? 'plan.cards.quickUnprotect' : 'collection.quick_protect_card',
+							{ values: { title: card.title } }
+						)}
+						disabled={!onProtect ||
+							Boolean(
+								card.pendingTradeId ||
+								card.saleId ||
+								card.activeAuctionId ||
+								$activeAuctionCardIds.has(card.id)
+							)}
 						onclick={() => onProtect?.(card)}
 					>
 						<ShieldIcon class="size-3 shrink-0" />
-						<span class="truncate">{$_('collection.quick_protect')}</span>
+						<span class="truncate"
+							>{$_(card.userProtected ? 'collection.unprotect' : 'collection.quick_protect')}</span
+						>
 					</button>
 					<button
 						type="button"
 						class="flex w-full min-w-0 items-center justify-center gap-1 border border-primary/60 bg-background/90 px-1 py-1.5 text-[9px] font-bold tracking-wider text-primary uppercase backdrop-blur-sm transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 						aria-label={$_('collection.quick_sell_card', { values: { title: card.title } })}
+						disabled={!onSell ||
+							Boolean(
+								card.userProtected ||
+								card.saleId ||
+								card.activeAuctionId ||
+								$activeAuctionCardIds.has(card.id)
+							)}
 						onclick={() => onSell?.(card)}
 					>
 						<TagIcon class="size-3 shrink-0" />

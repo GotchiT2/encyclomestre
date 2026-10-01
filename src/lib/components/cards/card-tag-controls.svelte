@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { operationError } from '$lib/domain/operation-error';
 	import TagEditor from '$lib/components/collection/tag-editor.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
@@ -18,26 +19,45 @@
 	} = $props();
 	let editorOpen = $state(false);
 	let tagToAdd = $state('');
+	let busy = $state(false);
+	let error = $state('');
 	const assignedTags = $derived(tags.filter((tag) => (assignments[cardId] ?? []).includes(tag.id)));
 
 	async function addTag() {
-		if (!tagToAdd) return;
-		const updated = await addWikiForgeCardTag(cardId, tagToAdd);
-		assignments = {
-			...assignments,
-			[cardId]: updated.collectionTagIds ?? []
-		};
-		onCardUpdated?.(updated);
-		tagToAdd = '';
+		if (!tagToAdd || busy) return;
+		busy = true;
+		error = '';
+		try {
+			const updated = await addWikiForgeCardTag(cardId, tagToAdd);
+			assignments = {
+				...assignments,
+				[cardId]: updated.collectionTagIds ?? []
+			};
+			onCardUpdated?.(updated);
+			tagToAdd = '';
+		} catch (cause) {
+			error = operationError(cause);
+		} finally {
+			busy = false;
+		}
 	}
 
 	async function removeTag(tagId: string) {
-		const updated = await removeWikiForgeCardTag(cardId, tagId);
-		assignments = {
-			...assignments,
-			[cardId]: updated.collectionTagIds ?? []
-		};
-		onCardUpdated?.(updated);
+		if (busy) return;
+		busy = true;
+		error = '';
+		try {
+			const updated = await removeWikiForgeCardTag(cardId, tagId);
+			assignments = {
+				...assignments,
+				[cardId]: updated.collectionTagIds ?? []
+			};
+			onCardUpdated?.(updated);
+		} catch (cause) {
+			error = operationError(cause);
+		} finally {
+			busy = false;
+		}
 	}
 </script>
 
@@ -48,12 +68,14 @@
 		</p>
 		<TagEditor bind:open={editorOpen} bind:tags bind:assignments />
 	</div>
+	{#if error}<p role="alert">{error}</p>{/if}
 	<div class="mt-2 flex flex-wrap gap-1.5">
 		{#each assignedTags as tag (tag.id)}
 			<Button
 				size="xs"
 				variant="outline"
 				style={`background-color:${tag.color};border-color:${tag.color};color:#080A09`}
+				disabled={busy}
 				onclick={() => removeTag(tag.id)}>{tag.name} ×</Button
 			>
 		{/each}
@@ -68,6 +90,8 @@
 				<option value={tag.id}>{tag.name}</option>
 			{/each}
 		</select>
-		<Button size="sm" variant="outline" onclick={addTag}>{$_('cardDetail.add_tag')}</Button>
+		<Button size="sm" variant="outline" disabled={busy || !tagToAdd} onclick={addTag}
+			>{$_('cardDetail.add_tag')}</Button
+		>
 	</div>
 </section>

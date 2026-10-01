@@ -44,6 +44,7 @@ export interface UserProfile {
 	id: string;
 	name: string;
 	imagePageId: number | null;
+	imageCrop?: import('$lib/types/user').ImageCrop;
 	image: string | null;
 	joinedAt: string;
 	lastConnection?: import('./user').LastConnection;
@@ -69,6 +70,7 @@ export interface LeaderboardEntry {
 	id: string;
 	name: string;
 	imagePageId: number | null;
+	imageCrop?: import('$lib/types/user').ImageCrop;
 	image: string | null;
 	nbCards: number;
 }

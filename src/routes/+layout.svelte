@@ -41,10 +41,11 @@
 	let handledWelcomeRevision = 0;
 	let welcomeLoadedForUserId: string | null = null;
 
-	async function refreshWelcomeForSession() {
-		const welcome = await refreshCurrentWelcome();
+	async function refreshWelcomeForSession(force = false) {
+		const account = $currentSession?.user.id;
+		const welcome = await refreshCurrentWelcome(force);
 		const session = $currentSession;
-		if (!session) return;
+		if (!session || session.user.id !== account) return;
 		persistSession(localStorage, {
 			...session,
 			user: { ...session.user, money: welcome.money, rank: welcome.rank }
@@ -87,7 +88,7 @@
 		)
 			return;
 		handledWelcomeRevision = refresh.revision;
-		void refreshWelcomeForSession().catch(() => undefined);
+		void refreshWelcomeForSession(true).catch(() => undefined);
 	});
 </script>
 

@@ -1,25 +1,28 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { _ } from 'svelte-i18n';
+	import { _ } from '$lib/i18n';
 	import {
 		getPasskeys,
 		getRegistrationOptions,
 		savePasskey,
 		removePasskey,
-		isPasskeyMock
+		getReauthentication,
+		regenerateRecoveryCodes
 	} from '$lib/passkeys/api';
 	import {
 		registerPasskey,
 		cancelPasskey,
 		passkeyAvailable,
 		passkeyErrorKey,
-		type PasskeyDTO,
-		type RegistrationResponseJSON
+		type PasskeyDTO
 	} from '$lib/passkeys/webauthn';
+	import { getCurrentUser } from '$lib/api/users';
+	import { currentSession, persistSession } from '$lib/auth/session';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import TurnstileWidget from '$lib/components/security/turnstile-widget.svelte';
+	import Reauthentication from './reauthentication.svelte';
+	import RecoveryCodes from './recovery-codes.svelte';
 	let { onLogoutAll }: { onLogoutAll: () => Promise<void> } = $props();
 	let items = $state<PasskeyDTO[]>([]);
 	let loading = $state(true);
@@ -32,16 +35,16 @@
 	let deleteOpen = $state(false);
 	let deleting = $state<PasskeyDTO>();
 	let label = $state('');
-	let password = $state('');
-	let credential: RegistrationResponseJSON | undefined;
-	let expiresAt = 0;
-	let expirationTimer: ReturnType<typeof setTimeout> | undefined;
+	let recoveryCode = $state('');
+	let codes = $state<string[]>([]);
+	let codesOpen = $state(false);
 	let alive = true;
-	let turnstile = $state<{ verify: () => Promise<string>; reset: () => void } | null>(null);
-	const date = (value: string) =>
-		new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(
-			new Date(value)
-		);
+	const date = (value?: string) =>
+		value && Number.isFinite(Date.parse(value))
+			? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(
+					new Date(value)
+				)
+			: $_('plan.unknownDate');
 	async function load() {
 		loading = true;
 		try {
@@ -53,15 +56,15 @@
 			if (alive) loading = false;
 		}
 	}
-	function clearCeremony() {
-		clearTimeout(expirationTimer);
-		credential = undefined;
-		expiresAt = 0;
-		password = '';
-		cancelPasskey();
+	async function refreshUser() {
+		const user = await getCurrentUser();
+		if ($currentSession) persistSession(localStorage, { ...$currentSession, user });
 	}
 	$effect(() => {
-		if (!open) clearCeremony();
+		if (!open && !codesOpen) {
+			recoveryCode = '';
+			cancelPasskey();
+		}
 	});
 	onMount(() => {
 		available = passkeyAvailable();
@@ -72,60 +75,50 @@
 	});
 	onDestroy(() => {
 		alive = false;
-		clearCeremony();
+		cancelPasskey();
+		codes = [];
+		recoveryCode = '';
 	});
 	async function add(event: SubmitEvent) {
 		event.preventDefault();
-		if (busy || !label.trim() || !password || items.length >= 10) return;
+		if (busy || !label.trim() || items.length >= 10) return;
 		busy = true;
 		error = '';
 		notice = '';
-		let submitted = false;
 		try {
-			if (!credential || Date.now() >= expiresAt) {
-				const options = await getRegistrationOptions();
-				if (!alive || !open) return;
-				expiresAt = Date.now() + 5 * 60 * 1000;
-				clearTimeout(expirationTimer);
-				expirationTimer = setTimeout(
-					() => {
-						credential = undefined;
-						expiresAt = 0;
-					},
-					5 * 60 * 1000
-				);
-				credential = await registerPasskey(options);
-			}
+			const reauth = await getReauthentication(recoveryCode);
 			if (!alive || !open) return;
-			turnstile?.reset();
-			const token = isPasskeyMock() ? 'mock-passkey-token' : await turnstile?.verify();
+			const options = await getRegistrationOptions();
+			const credential = await registerPasskey(options);
 			if (!alive || !open) return;
-			if (!credential || Date.now() >= expiresAt)
-				throw new Error('passkeys.errors.PASSKEY_REJECTED');
-			if (!token) throw new Error('passkeys.errors.CAPTCHA_FAILED');
-			submitted = true;
-			await savePasskey(password, label.trim(), credential, token);
+			await savePasskey(label.trim(), credential, reauth);
 			if (!alive) return;
 			open = false;
 			label = '';
-			clearCeremony();
 			notice = 'passkeys.added';
 			await load();
+			await refreshUser();
 		} catch (cause) {
-			if (!alive) return;
-			const key = passkeyErrorKey(cause);
-			error = key;
-			password = '';
-			if (
-				!['passkeys.errors.CAPTCHA_FAILED', 'passkeys.errors.INVALID_CREDENTIALS'].includes(key)
-			) {
-				credential = undefined;
-				expiresAt = 0;
-				if (submitted && key === 'passkeys.errors.failed') error = 'passkeys.errors.uncertain';
-				if (!key.endsWith('cancelled')) await load();
-			}
+			if (alive) error = passkeyErrorKey(cause);
 		} finally {
-			turnstile?.reset();
+			recoveryCode = '';
+			if (alive) busy = false;
+		}
+	}
+	async function regenerate(event: SubmitEvent) {
+		event.preventDefault();
+		if (busy) return;
+		busy = true;
+		error = '';
+		try {
+			const result = await regenerateRecoveryCodes(await getReauthentication(recoveryCode));
+			if (!alive) return;
+			codes = result.codes;
+			await refreshUser();
+		} catch (cause) {
+			if (alive) error = passkeyErrorKey(cause);
+		} finally {
+			recoveryCode = '';
 			if (alive) busy = false;
 		}
 	}
@@ -141,10 +134,7 @@
 				await load();
 			}
 		} catch (cause) {
-			if (alive) {
-				error = passkeyErrorKey(cause);
-				await load();
-			}
+			if (alive) error = passkeyErrorKey(cause);
 		} finally {
 			if (alive) busy = false;
 		}
@@ -239,16 +229,8 @@
 					required
 					disabled={busy}
 				/></label
-			><label class="block space-y-2"
-				><span>{$_('passkeys.password')}</span><Input
-					type="password"
-					autocomplete="current-password"
-					bind:value={password}
-					required
-					disabled={busy}
-				/></label
 			>
-			{#if !isPasskeyMock()}<TurnstileWidget action="passkey" bind:this={turnstile} />{/if}
+			<Reauthentication bind:code={recoveryCode} disabled={busy} />
 			{#if error}<p role="alert" class="text-sm text-destructive">{$_(error)}</p>{/if}
 			<Dialog.Footer
 				><Button
@@ -258,7 +240,7 @@
 					onclick={() => {
 						open = false;
 					}}>{$_('passkeys.cancel')}</Button
-				><Button type="submit" disabled={busy || !available || !label.trim() || !password}
+				><Button type="submit" disabled={busy || !available || !label.trim()}
 					>{busy ? $_('passkeys.waiting') : $_('passkeys.add')}</Button
 				></Dialog.Footer
 			>
@@ -284,3 +266,47 @@
 		></Dialog.Content
 	></Dialog.Root
 >
+
+<section class="forge-panel mt-6 space-y-3 p-4 sm:p-6">
+	<h2 class="text-xl font-semibold">{$_('plan.account.codesTitle')}</h2>
+	<p>
+		{$_('plan.account.remaining', { values: { count: $currentSession?.user.recoveryCodes ?? 0 } })}
+	</p>
+	<Button
+		disabled={busy}
+		variant="outline"
+		onclick={() => {
+			codesOpen = true;
+			codes = [];
+			error = '';
+		}}>{$_('plan.account.regenerate')}</Button
+	>
+</section>
+<Dialog.Root
+	bind:open={codesOpen}
+	onOpenChange={(value) => {
+		if (!value) codes = [];
+	}}
+>
+	<Dialog.Content class="max-h-[90dvh] overflow-y-auto"
+		><Dialog.Header class="pr-8"
+			><Dialog.Title>{$_('plan.account.codesTitle')}</Dialog.Title><Dialog.Description
+				>{$_('plan.account.replaceCodes')}</Dialog.Description
+			></Dialog.Header
+		>
+		{#if codes.length}<RecoveryCodes
+				{codes}
+				onDone={() => {
+					codes = [];
+					codesOpen = false;
+				}}
+			/>{:else}<form class="space-y-4" onsubmit={regenerate}>
+				<Reauthentication bind:code={recoveryCode} disabled={busy} />{#if error}<p
+						role="alert"
+						class="text-destructive"
+					>
+						{$_(error)}
+					</p>{/if}<Button type="submit" disabled={busy}>{$_('plan.account.regenerate')}</Button>
+			</form>{/if}
+	</Dialog.Content>
+</Dialog.Root>

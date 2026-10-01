@@ -6,6 +6,8 @@
 	import * as Field from '$lib/components/ui/field';
 	import { Input } from '$lib/components/ui/input';
 	import XIcon from '@lucide/svelte/icons/x';
+	import { activeAuctionCardIds } from '$lib/auctions/store';
+	import { currentSession } from '$lib/auth/session';
 	import { onDestroy, untrack } from 'svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import type {
@@ -76,6 +78,8 @@
 			return;
 		}
 		activeScope = scopeKey;
+		requestVersion += 1;
+		loading = false;
 		query = '';
 		variantIds = [];
 		sortBy = 'name';
@@ -139,7 +143,7 @@
 				query,
 				variantIds,
 				sortBy,
-				page: nextPage - 1,
+				page: nextPage,
 				pageSize,
 				cursor: query.trim() ? undefined : cursorByPage.get(nextPage)
 			});
@@ -150,6 +154,7 @@
 			} catch {
 				comparisonCounts = {};
 			}
+			if (requestId !== requestVersion) return;
 			page = response.meta.page;
 			total = response.meta.total;
 			if (response.meta.nextCursor) {
@@ -157,9 +162,7 @@
 			}
 			resultCards = loadMore ? mergeCards(resultCards, response.items) : response.items;
 			knownCards = mergeCards(knownCards, response.items);
-			hasMore = query.trim()
-				? response.meta.page < response.meta.totalPages
-				: Boolean(response.meta.nextCursor);
+			hasMore = response.meta.hasNext ?? response.meta.page < response.meta.totalPages;
 			hasLoaded = true;
 		} catch {
 			if (requestId !== requestVersion) return;
@@ -275,7 +278,7 @@
 			{$_('trades.filtered_card_count', { values: { count: total } })}
 		</p>
 		<div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-			{#each resultCards.filter((card) => !selectedIds.includes(card.id) && !card.userProtected && !card.pendingTradeId && !card.activeAuctionId) as card (card.id)}
+			{#each resultCards.filter((card) => !selectedIds.includes(card.id) && !card.userProtected && !card.pendingTradeId && !card.activeAuctionId && !(scopeKey === $currentSession?.user.id && $activeAuctionCardIds.has(card.id))) as card (card.id)}
 				<div class="relative min-w-0">
 					<CardTile
 						{card}

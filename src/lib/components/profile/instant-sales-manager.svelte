@@ -42,6 +42,12 @@
 				!unavailableIds.has(card.id)
 		)
 	);
+	$effect(() => {
+		if (selected && sales.instantSales.some((sale) => sale.card.id === selected!.id)) {
+			selected = null;
+			price = '';
+		}
+	});
 	const validPrice = $derived(Number.isSafeInteger(Number(price)) && Number(price) > 0);
 </script>
 
@@ -85,7 +91,7 @@
 			{#each sales.instantSales as sale (sale.id)}<article
 					class="forge-panel-flat flex w-36 shrink-0 snap-start flex-col gap-2 p-2 sm:w-40"
 				>
-					<CardTile card={sale.card} showFriendOwners={false} />
+					<CardTile owned card={sale.card} showFriendOwners={false} />
 					<p class="forge-label text-primary">{sale.price} ◈</p>
 					<Button
 						class="mt-auto w-full"

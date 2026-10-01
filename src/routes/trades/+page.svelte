@@ -6,6 +6,8 @@
 	import { SvelteMap } from 'svelte/reactivity';
 	import { page } from '$app/state';
 	import { _ } from '$lib/i18n';
+	import { toast } from 'svelte-sonner';
+	import { operationError } from '$lib/domain/operation-error';
 	import {
 		realtimeRefresh,
 		refreshIncludes,
@@ -23,6 +25,8 @@
 		getTradeRegistry,
 		getTradePartners,
 		getWikiForgeCollectionPage,
+		getWikiForgeCollectionCard,
+		getWikiForgePublicPage,
 		respondToTradeOffer,
 		searchUsers
 	} from '$lib/api';
@@ -143,10 +147,15 @@
 
 	async function loadPartners() {
 		if (partnersRequest) return partnersRequest;
-		partnersRequest = getTradePartners(currentUserId).then((result) => {
-			partners = result;
-			return result;
-		});
+		partnersRequest = getTradePartners(currentUserId)
+			.then((result) => {
+				partners = result;
+				return result;
+			})
+			.catch((cause) => {
+				partnersRequest = null;
+				throw cause;
+			});
 		return partnersRequest;
 	}
 
@@ -160,31 +169,52 @@
 		counteringOfferId = null;
 		ownedCards = [];
 		partnerCards = [];
-		if (requestedCatalogueIds.length || offeredUserCardIds.length) {
-			const [ownPage, partnerPage] = await Promise.all([
-				getWikiForgeCollectionPage(),
-				getFriendCollectionPage(partner.id, {
-					variantIds: requestedVariantId ? [requestedVariantId] : []
-				}).catch(() => ({ items: [] as CardRecord[] }))
-			]);
-			ownedCards = ownPage.items.filter((card) => offeredUserCardIds.includes(card.id));
-			partnerCards = partnerPage.items.filter(
-				(card) =>
-					requestedCatalogueIds.includes(String(card.catalogueId ?? card.baseCardId ?? card.id)) &&
-					(!requestedVariantId || card.variantId === requestedVariantId)
-			);
-			editorDraft = {
-				recipientId: partner.id,
-				offeredCardIds: ownedCards.map((card) => card.id),
-				requestedCardIds: partnerCards.map((card) => card.id)
-			};
+		editorDraft = { recipientId: partner.id, offeredCardIds: [], requestedCardIds: [] };
+		try {
+			if (requestedCatalogueIds.length || offeredUserCardIds.length) {
+				const [ownSelection, requestedSelection] = await Promise.all([
+					Promise.all(offeredUserCardIds.slice(0, 20).map((id) => getWikiForgeCollectionCard(id))),
+					Promise.all(
+						requestedCatalogueIds.slice(0, 20).map(async (id) => {
+							const article = await getWikiForgePublicPage(id);
+							const result = await getFriendCollectionPage(partner.id, {
+								query: article.title,
+								variantIds: requestedVariantId ? [requestedVariantId] : []
+							});
+							return result.items.find(
+								(card) =>
+									String(card.catalogueId ?? card.baseCardId) === id &&
+									(!requestedVariantId || card.variantId === requestedVariantId) &&
+									!card.userProtected &&
+									!card.pendingTradeId &&
+									!card.activeAuctionId
+							);
+						})
+					)
+				]);
+				ownedCards = ownSelection.filter(
+					(card) => !card.userProtected && !card.pendingTradeId && !card.activeAuctionId
+				);
+				partnerCards = requestedSelection.filter((card): card is CardRecord => Boolean(card));
+				editorDraft = {
+					recipientId: partner.id,
+					offeredCardIds: ownedCards.map((card) => card.id),
+					requestedCardIds: partnerCards.map((card) => card.id)
+				};
+			}
+			editorOpen = true;
+		} catch (cause) {
+			toast.error(operationError(cause));
 		}
-		editorOpen = true;
 	}
 
 	async function openPartnerPicker() {
-		await loadPartners();
-		partnerPickerOpen = true;
+		try {
+			await loadPartners();
+			partnerPickerOpen = true;
+		} catch (cause) {
+			toast.error(operationError(cause));
+		}
 	}
 
 	async function loadOwnedTradeCards(query: import('$lib/types').TradeCardSearchQuery) {
@@ -192,13 +222,14 @@
 			query: query?.query,
 			sortBy: query?.sortBy === 'name' ? 'name' : 'acquiredDate',
 			variantIds: query?.variantIds,
-			page: query?.cursor ? undefined : query?.page,
+			page: query?.cursor ? undefined : Math.max(0, (query?.page ?? 1) - 1),
 			cursor: query?.cursor
 		});
 		const pageNumber = result.page + 1;
 		return {
 			items: result.items,
 			meta: {
+				hasNext: result.hasNext,
 				page: pageNumber,
 				pageSize: query?.pageSize ?? Math.max(1, result.items.length),
 				total: result.total < 0 ? result.items.length : result.total,
@@ -222,13 +253,14 @@
 			query: query.query,
 			sortBy: query.sortBy === 'name' ? 'name' : 'acquiredDate',
 			variantIds: query.variantIds,
-			page: query.cursor ? undefined : query.page,
+			page: query.cursor ? undefined : Math.max(0, (query.page ?? 1) - 1),
 			cursor: query.cursor
 		});
 		const pageNumber = result.page + 1;
 		return {
 			items: result.items,
 			meta: {
+				hasNext: result.hasNext,
 				page: pageNumber,
 				pageSize: Math.max(1, result.items.length),
 				total: result.total < 0 ? result.items.length : result.total,

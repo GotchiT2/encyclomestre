@@ -1,4 +1,5 @@
 <script lang="ts">
+	import UserAvatar from '$lib/components/users/user-avatar.svelte';
 	import { untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
@@ -13,6 +14,15 @@
 	let cache = $state<Record<string, Leaderboard>>({});
 	let loading = $state(false);
 	let failed = $state(false);
+	let sequence = 0;
+	$effect(() => {
+		const refreshAt = cache[active]?.refreshAt;
+		if (!refreshAt) return;
+		const delay = Date.parse(refreshAt) - Date.now();
+		if (!Number.isFinite(delay) || delay <= 0) return;
+		const timer = setTimeout(() => void load(active, true), Math.min(delay + 50, 2147483647));
+		return () => clearTimeout(timer);
+	});
 
 	$effect(() => {
 		const period = active;
@@ -20,22 +30,26 @@
 	});
 	const cacheKey = $derived(active);
 	async function load(period: LeaderboardPeriod, force = false) {
+		const request = ++sequence;
 		const key = period;
 		const cached = cache[key];
 		if (
 			cached &&
 			!force &&
 			(!cached.refreshAt || new Date(cached.refreshAt).getTime() > Date.now())
-		)
+		) {
+			loading = false;
+			failed = false;
 			return;
+		}
 		loading = true;
 		failed = false;
 		try {
 			cache[key] = await getLeaderboard(period);
 		} catch {
-			failed = true;
+			if (request === sequence) failed = true;
 		} finally {
-			loading = false;
+			if (request === sequence) loading = false;
 		}
 	}
 	const board = $derived(cache[cacheKey]);
@@ -49,8 +63,11 @@
 	<PageHeader
 		eyebrow={$_('leaderboard.eyebrow')}
 		title={$_('leaderboard.title')}
-		description={$_('leaderboard.description')}
+		description={$_('plan.leaderboard.criteria')}
 	/>
+	<Button variant="outline" disabled={loading} onclick={() => void load(active, true)}
+		>{$_('completion.refresh')}</Button
+	>
 	<div
 		class="grid grid-cols-3 border border-primary/30 bg-card p-1"
 		role="tablist"
@@ -75,16 +92,9 @@
 					class="grid grid-cols-[3rem_2.5rem_minmax(0,1fr)_auto] items-center gap-3 border-b border-primary/15 px-3 py-2 transition-colors hover:bg-primary/10"
 					class:bg-primary-15={entry.id === $currentSession?.user.id}
 					><strong class="text-center font-heading text-xl text-primary">{entry.rank}</strong
-					>{#if entry.image}<img
-							src={entry.image}
-							alt=""
-							class="size-10 rounded-full object-cover"
-						/>{:else}<div
-							class="grid size-10 place-items-center rounded-full border border-primary/30"
-						>
-							{entry.name[0]}
-						</div>{/if}<span class="truncate font-bold">{entry.name}</span><span
-						class="forge-label whitespace-nowrap"
+					><UserAvatar image={entry.image} crop={entry.imageCrop} name={entry.name} /><span
+						class="truncate font-bold">{entry.name}</span
+					><span class="forge-label whitespace-nowrap"
 						>{$_('leaderboard.cards', { values: { count: entry.nbCards } })}</span
 					></a
 				>{/each}
@@ -116,11 +126,7 @@
 							class="grid grid-cols-[3rem_2.5rem_minmax(0,1fr)_auto] items-center gap-3 border-b border-primary/15 px-3 py-2"
 							class:bg-primary-15={entry.id === $currentSession?.user.id}
 							><strong class="text-center font-heading text-xl text-primary">{entry.rank}</strong
-							>{#if entry.image}<img
-									src={entry.image}
-									alt=""
-									class="size-10 rounded-full object-cover"
-								/>{:else}<div class="size-10 rounded-full border border-primary/30"></div>{/if}<span
+							><UserAvatar image={entry.image} crop={entry.imageCrop} name={entry.name} /><span
 								class="truncate font-bold">{entry.name}</span
 							><span class="forge-label whitespace-nowrap">{entry.nbCards}</span></a
 						>{/each}

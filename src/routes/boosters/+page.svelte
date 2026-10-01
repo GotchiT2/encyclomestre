@@ -1,10 +1,19 @@
 <script lang="ts">
+	import { page } from '$app/state';
+	import {
+		publishRealtimeRefresh,
+		realtimeRefresh,
+		refreshIncludes
+	} from '$lib/realtime/resource-refresh';
 	import { onMount } from 'svelte';
 	import { _ } from '$lib/i18n';
 	import {
 		ApiError,
+		isMockApiEnabled,
 		addWishlistRegistryCard,
-		getBoosters,
+		getBoosterInventory,
+		toPackSummaries,
+		type BoosterFamilyDto,
 		getPackDetails,
 		getPacks,
 		getVariants,
@@ -41,7 +50,14 @@
 	} from '$lib/types';
 
 	let packDefinitions = $state<PackDefinition[] | null>(null);
+	let catalogueGeneration = 0;
+	let detailGeneration = 0;
+	let catalogueError = $state(false);
+	let catalogueLoading = $state(false);
+	let revision = 0;
+	let openedCount = $state(0);
 	let credits = $state<PackSummary[]>([]);
+	let families = $state<BoosterFamilyDto[]>([]);
 	let variants = $state<VariantDefinition[]>([]);
 	let selectedPackId = $state<number | null>(null);
 	let selectedPackSnapshot = $state<PackCatalogueItem | null>(null);
@@ -60,7 +76,9 @@
 	let detailDependenciesLoaded = $state(false);
 	let now = $state(Date.now());
 	let turnstile = $state<{ verify: () => Promise<string>; reset: () => void } | null>(null);
-	const packs = $derived(packDefinitions ? mergePackCatalogue(packDefinitions, credits) : null);
+	const packs = $derived(
+		packDefinitions ? mergePackCatalogue(packDefinitions, credits, families) : null
+	);
 	const selectedPack = $derived(
 		packs?.find((pack) => pack.id === selectedPackId) ??
 			(selectedPackSnapshot?.id === selectedPackId ? selectedPackSnapshot : null)
@@ -77,33 +95,63 @@
 	});
 
 	async function refreshPacks() {
-		const [catalogue, inventory, loadedVariants] = await Promise.all([
-			getPacks(),
-			getBoosters(),
-			getVariants()
-		]);
-		packDefinitions = catalogue;
-		credits = inventory;
-		variants = loadedVariants;
-		if (selectedPackId != null) {
-			const refreshed = mergePackCatalogue(catalogue, inventory).find(
-				(pack) => pack.id === selectedPackId
-			);
-			selectedPackSnapshot =
-				refreshed ??
-				(selectedPackSnapshot ? { ...selectedPackSnapshot, credit: null, status: 'CLOSED' } : null);
+		const generation = ++catalogueGeneration;
+		catalogueLoading = true;
+		catalogueError = false;
+		try {
+			const [catalogue, inventory, loadedVariants] = await Promise.all([
+				getPacks(),
+				getBoosterInventory(),
+				getVariants()
+			]);
+			if (generation !== catalogueGeneration) return;
+			packDefinitions = catalogue;
+			credits = toPackSummaries(inventory);
+			families = inventory.families ?? [];
+			variants = loadedVariants;
+			if (selectedPackId != null) {
+				const refreshed = mergePackCatalogue(
+					catalogue,
+					toPackSummaries(inventory),
+					inventory.families ?? []
+				).find((pack) => pack.id === selectedPackId);
+				selectedPackSnapshot =
+					refreshed ??
+					(selectedPackSnapshot
+						? { ...selectedPackSnapshot, credit: null, status: 'CLOSED' }
+						: null);
+			}
+		} catch (cause) {
+			if (generation === catalogueGeneration) catalogueError = true;
+			throw cause;
+		} finally {
+			if (generation === catalogueGeneration) catalogueLoading = false;
 		}
 	}
 
+	$effect(() => {
+		const refresh = $realtimeRefresh;
+		if (revision === refresh.revision || !refreshIncludes(refresh, 'boosters')) return;
+		revision = refresh.revision;
+		void refreshPacks().catch(() => undefined);
+	});
 	onMount(() => {
 		const clock = window.setInterval(() => (now = Date.now()), 1_000);
-		void refreshPacks().catch(() => (packDefinitions = []));
+		void refreshPacks()
+			.then(() => {
+				const requested = Number(page.url.searchParams.get('pack'));
+				const pack = packs?.find(
+					(p) => p.id === requested && p.status === 'OPEN' && p.credit?.available
+				);
+				if (pack) selectPack(pack);
+			})
+			.catch(() => undefined);
 		return () => window.clearInterval(clock);
 	});
 
 	$effect(() => {
-		const delays = credits
-			.map((pack) => getBoosterRefreshDelay(pack.nextAvailableAt))
+		const delays = families
+			.map((family) => getBoosterRefreshDelay(family.nextAvailableAt ?? null))
 			.filter((delay): delay is number => delay != null);
 		if (!delays.length) return;
 		const timer = window.setTimeout(
@@ -125,6 +173,8 @@
 				? await openAllBoosters(selectedPack.id, turnstileToken)
 				: await openBooster(selectedPack.id, turnstileToken);
 			result = opened.cards;
+			openedCount = Math.floor(opened.cards.length / Math.max(1, selectedPack.nbCards));
+			publishRealtimeRefresh(['collection', 'profile', 'achievements', 'boosters']);
 			openingId += 1;
 		} catch (error) {
 			const code = wikiForgeApiErrorCode(error);
@@ -157,16 +207,18 @@
 	}
 
 	async function showDetails(pack: PackCatalogueItem) {
+		const generation = ++detailGeneration;
 		detailPack = pack;
 		detail = null;
 		detailError = false;
 		detailLoading = true;
 		try {
-			detail = resolvePackDefinition(await getPackDetails(pack.id), variants);
+			const result = resolvePackDefinition(await getPackDetails(pack.id), variants);
+			if (generation === detailGeneration) detail = result;
 		} catch {
-			detailError = true;
+			if (generation === detailGeneration) detailError = true;
 		} finally {
-			detailLoading = false;
+			if (generation === detailGeneration) detailLoading = false;
 		}
 	}
 
@@ -198,6 +250,17 @@
 	}
 </script>
 
+{#if catalogueError}<div role="alert" class="forge-panel mb-4 p-4">
+		<p>{$_('plan.loadError')}</p>
+		<Button disabled={catalogueLoading} onclick={() => void refreshPacks().catch(() => undefined)}
+			>{$_('completion.retry')}</Button
+		>
+	</div>{/if}
+{#if result && !opening}<p role="status" class="mb-4">
+		{$_(catalogueError ? 'plan.boosters.openedUnknownCredits' : 'plan.boosters.opened', {
+			values: { count: openedCount, remaining: selectedPack?.credit?.available ?? 0 }
+		})}
+	</p>{/if}
 <section class="flex flex-col gap-8">
 	<PageHeader
 		eyebrow={$_('boosters.eyebrow')}
@@ -216,6 +279,7 @@
 	{:else}
 		<div class="mx-auto w-full max-w-sm">
 			<TurnstileWidget
+				mock={isMockApiEnabled()}
 				bind:this={turnstile}
 				action="open"
 				onError={() => (openingError = 'CAPTCHA')}
@@ -238,8 +302,11 @@
 				</p>
 			{/if}
 		</div>
+
 		<BoosterOpeningStage
 			available={selectedPack.credit?.available ?? 0}
+			regularAvailable={selectedPack.credit?.regularAvailable ?? 0}
+			bonusAvailable={selectedPack.credit?.bonus ?? 0}
 			maximum={selectedPack.credit?.max ?? 0}
 			{nextDelay}
 			packName={selectedPackName}
@@ -248,6 +315,7 @@
 			packCardCount={selectedPack.nbCards}
 			{opening}
 			canOpenAll={selectedPack.openAll}
+			canOpen={selectedPack.status === 'OPEN'}
 			{openingId}
 			cards={result}
 			error={Boolean(openingError)}

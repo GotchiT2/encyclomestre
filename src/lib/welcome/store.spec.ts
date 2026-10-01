@@ -18,4 +18,24 @@ describe('shared welcome state', () => {
 		expect(getWikiForgeWelcome).toHaveBeenCalledOnce();
 		expect(get(currentWelcome)).toMatchObject({ money: 120 });
 	});
+	it('discards reads started for a previous session', async () => {
+		let resolve!: (value: unknown) => void;
+		getWikiForgeWelcome.mockImplementationOnce(() => new Promise((done) => (resolve = done)));
+		const pending = refreshCurrentWelcome();
+		clearCurrentWelcome();
+		resolve({ money: 999 });
+		await pending;
+		expect(get(currentWelcome)).toBeNull();
+	});
+	it('reads again after an in-flight read when a mutation invalidates the aggregate', async () => {
+		let resolve!: (value: unknown) => void;
+		getWikiForgeWelcome.mockImplementationOnce(() => new Promise((done) => (resolve = done)));
+		getWikiForgeWelcome.mockResolvedValueOnce({ money: 300 });
+		const pending = refreshCurrentWelcome();
+		const fresh = refreshCurrentWelcome(true);
+		resolve({ money: 200 });
+		await Promise.all([pending, fresh]);
+		expect(getWikiForgeWelcome).toHaveBeenCalledTimes(2);
+		expect(get(currentWelcome)).toMatchObject({ money: 300 });
+	});
 });

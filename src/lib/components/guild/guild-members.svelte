@@ -1,4 +1,5 @@
 <script lang="ts">
+	import UserAvatar from '$lib/components/users/user-avatar.svelte';
 	import { untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { wikiForgeUtcDate } from '$lib/api/wikiforge-contract';
@@ -89,11 +90,9 @@
 				<a
 					class="flex min-w-0 items-center gap-3 underline"
 					href={resolve('/users/[id]', { id: String(member.id) })}
-					>{#if member.image}<img
-							src={member.image}
-							alt=""
-							class="size-10 object-cover"
-						/>{/if}<span>{member.name}</span></a
+					><UserAvatar image={member.image} crop={member.imageCrop} name={member.name} /><span
+						>{member.name}</span
+					></a
 				><span class="text-sm"
 					>{member.owner
 						? $_('completion.guild.owner')

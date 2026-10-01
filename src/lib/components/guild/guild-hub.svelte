@@ -20,7 +20,13 @@
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
 	import { operationError } from '$lib/domain/operation-error';
-	import { publishRealtimeRefresh } from '$lib/realtime/resource-refresh';
+	import {
+		realtimeRefresh,
+		refreshIncludes,
+		publishRealtimeRefresh
+	} from '$lib/realtime/resource-refresh';
+	let searchRevision = $state(0);
+	let revision = 0;
 	let mine = $state<Guild | null>(null);
 	let invitations = $state<GuildInvitation[]>([]);
 	let results = $state<Guild[]>([]);
@@ -48,6 +54,13 @@
 	}
 	onMount(() => void load());
 	$effect(() => {
+		const refresh = $realtimeRefresh;
+		if (revision === refresh.revision || !refreshIncludes(refresh, 'guild')) return;
+		revision = refresh.revision;
+		void load();
+	});
+	$effect(() => {
+		void searchRevision;
 		const q = search;
 		const p = index;
 		const active = tab;
@@ -56,6 +69,7 @@
 			query = q;
 			if (active !== 'search') return;
 			busy = true;
+			error = '';
 			void searchGuilds(q, p, { signal: abort.signal })
 				.then((value) => {
 					if (!abort.signal.aborted) {
@@ -94,10 +108,16 @@
 	</nav>
 	{#if error}<div role="alert" class="forge-panel p-4">
 			<p>{error}</p>
-			<Button variant="outline" onclick={() => void load()}>{$_('completion.retry')}</Button>
+			<Button
+				variant="outline"
+				onclick={() => {
+					if (tab === 'search') searchRevision++;
+					else void load();
+				}}>{$_('completion.retry')}</Button
+			>
 		</div>{/if}
 	{#if !ready && busy}<p role="status">{$_('completion.loading')}</p>{/if}
-	{#if tab === 'mine' && ready}{#if mine}<GuildSummary guild={mine} />{:else}<p>
+	{#if tab === 'mine' && ready && !error}{#if mine}<GuildSummary guild={mine} />{:else}<p>
 				{$_('completion.guild.noGuild')}
 			</p>
 			<GuildEditor

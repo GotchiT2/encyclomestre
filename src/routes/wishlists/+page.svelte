@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { currentSession } from '$lib/auth/session';
+	import { getFriends } from '$lib/api/users';
+	import { operationError } from '$lib/domain/operation-error';
 	import { page as route } from '$app/state';
 	import { replaceState } from '$app/navigation';
 	import { onMount } from 'svelte';
@@ -41,10 +44,12 @@
 		WishlistGroups,
 		WishlistPageEntry,
 		WishlistRegistrySummary,
-		WishlistSort
+		WishlistSort,
+		User
 	} from '$lib/types';
 
 	const emptyGroups: WishlistGroups = { owned: [], shared: [], pending: [] };
+	let friends = $state<User[]>([]);
 	let groups = $state<WishlistGroups>(emptyGroups);
 	let activeWishlist = $state<WishlistRegistrySummary | null>(null);
 	let entries = $state<WishlistPageEntry[]>([]);
@@ -100,6 +105,7 @@
 			return;
 		}
 		const currentRequest = ++requestId;
+		const requestedFilter = filterKey;
 		listLoading = true;
 		entriesFailed = false;
 		try {
@@ -109,7 +115,7 @@
 				sortBy,
 				sortDirection
 			});
-			if (currentRequest !== requestId) return;
+			if (currentRequest !== requestId || requestedFilter !== filterKey) return;
 			entries = result.items;
 			total = result.meta.total;
 			totalPages = result.meta.totalPages;
@@ -159,7 +165,15 @@
 		}
 	}
 
-	onMount(loadGroups);
+	onMount(() => {
+		void loadGroups();
+		void getFriends()
+			.then(
+				(items) =>
+					(friends = items.filter((item) => item.status === 'accepted').map((item) => item.user))
+			)
+			.catch(() => undefined);
+	});
 
 	function selectWishlist(wishlist: WishlistRegistrySummary) {
 		activeWishlist = wishlist;
@@ -223,15 +237,7 @@
 		if (!activeWishlist || !editable) return;
 		const wishlist = activeWishlist;
 		const pageId = String(card.baseCardId ?? card.id);
-		try {
-			await addWishlistRegistryCard(wishlist.id, '', pageId);
-		} catch (error) {
-			if (wikiForgeApiErrorCode(error) === 'WISHLIST_FULL') {
-				toast.error($_('wishlist.full_error'));
-				return;
-			}
-			throw error;
-		}
+		await addWishlistRegistryCard(wishlist.id, '', pageId);
 		if (!pickerAddedCardIds.includes(pageId)) {
 			pickerAddedCardIds = [...pickerAddedCardIds, pageId];
 		}
@@ -247,15 +253,7 @@
 		if (!activeWishlist || !editable || !cards.length) return;
 		const wishlist = activeWishlist;
 		const pageIds = cards.map((card) => String(card.baseCardId ?? card.id));
-		try {
-			await addWishlistRegistryCards(wishlist.id, pageIds);
-		} catch (error) {
-			if (wikiForgeApiErrorCode(error) === 'WISHLIST_FULL') {
-				toast.error($_('wishlist.full_error'));
-				return;
-			}
-			throw error;
-		}
+		await addWishlistRegistryCards(wishlist.id, pageIds);
 		pickerAddedCardIds = [...new Set([...pickerAddedCardIds, ...pageIds])];
 		toast.success(
 			$_('wishlist.cards_added', { values: { count: pageIds.length, wishlist: wishlist.title } })
@@ -280,30 +278,34 @@
 	function toggleSelection(pageId: string) {
 		selectedPageIds = selectedPageIds.includes(pageId)
 			? selectedPageIds.filter((id) => id !== pageId)
-			: [...selectedPageIds, pageId];
+			: [...selectedPageIds, pageId].slice(0, 500);
 	}
 
 	async function removeSelection() {
-		if (!activeWishlist || !editable || !selectedPageIds.length) return;
+		if (removingSelection || !activeWishlist || !editable || !selectedPageIds.length) return;
 		removingSelection = true;
 		try {
 			await removeWishlistRegistryCards(activeWishlist.id, selectedPageIds);
 			selectedPageIds = [];
 			selectionMode = false;
 			await Promise.all([refreshGroups(activeWishlist.id), loadEntries()]);
+		} catch (cause) {
+			toast.error(operationError(cause));
 		} finally {
 			removingSelection = false;
 		}
 	}
 
 	async function cleanOwnedCards() {
-		if (!activeWishlist || !editable) return;
+		if (cleaningOwned || !activeWishlist || !editable) return;
 		if (!window.confirm($_('wishlist.clean_owned_confirm'))) return;
 		cleaningOwned = true;
 		try {
 			await removeOwnedWishlistRegistryCards(activeWishlist.id);
 			await Promise.all([refreshGroups(activeWishlist.id), loadEntries()]);
 			toast.success($_('wishlist.clean_owned_success'));
+		} catch (cause) {
+			toast.error(operationError(cause));
 		} finally {
 			cleaningOwned = false;
 		}
@@ -327,8 +329,15 @@
 
 	async function openAccess() {
 		if (!activeWishlist || !editable) return;
-		followers = await getWishlistFollowers(activeWishlist.id);
-		accessOpen = true;
+		const id = activeWishlist.id;
+		try {
+			const result = await getWishlistFollowers(id);
+			if (activeWishlist?.id !== id) return;
+			followers = result;
+			accessOpen = true;
+		} catch (cause) {
+			toast.error(operationError(cause));
+		}
 	}
 
 	async function invite(userId: string) {
@@ -356,19 +365,11 @@
 
 	async function addCardFromDetail(wishlistId: string, selected: boolean) {
 		if (!selected || !selectedCard) return;
-		try {
-			await addWishlistRegistryCard(
-				wishlistId,
-				'',
-				String(selectedCard.baseCardId ?? selectedCard.id)
-			);
-		} catch (error) {
-			if (wikiForgeApiErrorCode(error) === 'WISHLIST_FULL') {
-				toast.error($_('wishlist.full_error'));
-				return;
-			}
-			throw error;
-		}
+		await addWishlistRegistryCard(
+			wishlistId,
+			'',
+			String(selectedCard.baseCardId ?? selectedCard.id)
+		);
 		await refreshGroups(activeWishlist?.id);
 	}
 
@@ -401,6 +402,29 @@
 			<Button variant="outline" onclick={() => void loadGroups()}>{$_('common.retry')}</Button>
 		</div>
 	{:else}
+		<div class="flex flex-wrap gap-3">
+			<Button
+				variant="outline"
+				href={'/market?wishlist=' + encodeURIComponent($currentSession?.user.id ?? '')}
+				>{$_('plan.auctions.wanted')}</Button
+			>{#if friends.length}<label class="grid min-w-0 gap-1 text-sm"
+					><span>{$_('plan.wishlist.friendCollection')}</span><select
+						aria-label={$_('plan.wishlist.friendCollection')}
+						onchange={(event) => {
+							if (event.currentTarget.value)
+								location.assign(
+									'/users/' +
+										encodeURIComponent(event.currentTarget.value) +
+										'?wishlist=mine&tab=collection'
+								);
+						}}
+						><option value="">{$_('completion.choose')}</option
+						>{#each friends as friend (friend.id)}<option value={friend.id}
+								>{friend.username}</option
+							>{/each}</select
+					></label
+				>{/if}
+		</div>
 		<WishlistHub
 			{groups}
 			activeId={activeWishlist?.id ?? null}
@@ -415,9 +439,18 @@
 				deletingWishlist = wishlist;
 				deleteOpen = true;
 			}}
-			onAccept={accept}
-			onDecline={leave}
-			onLeave={leave}
+			onAccept={(wishlist) =>
+				accept(wishlist).catch((cause) => {
+					toast.error(operationError(cause));
+				})}
+			onDecline={(wishlist) =>
+				leave(wishlist).catch((cause) => {
+					toast.error(operationError(cause));
+				})}
+			onLeave={(wishlist) =>
+				leave(wishlist).catch((cause) => {
+					toast.error(operationError(cause));
+				})}
 		/>
 
 		{#if activeWishlist}
@@ -484,7 +517,10 @@
 								{editable}
 								{selectionMode}
 								{selectedPageIds}
-								onRemove={removeCard}
+								onRemove={(id) =>
+									removeCard(id).catch((cause) => {
+										toast.error(operationError(cause));
+									})}
 								onToggleSelection={toggleSelection}
 								onOpen={(entry) => (selectedCard = entry.card)}
 							/>

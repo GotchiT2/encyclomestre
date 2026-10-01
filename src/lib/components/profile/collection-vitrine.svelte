@@ -8,6 +8,7 @@
 	let {
 		title,
 		cards,
+		owned = false,
 		perRow = 5,
 		maxPerRow = perRow,
 		onMove,
@@ -20,6 +21,7 @@
 	}: {
 		title: string;
 		cards: CardRecord[];
+		owned?: boolean;
 		/** Cartes par étagère. Plafonné plus bas sur les petites largeurs. */
 		perRow?: number;
 		/** Plus grand `perRow` de la page : sert à garder une taille de carte commune. */
@@ -139,7 +141,7 @@
 							onDropAt?.(index);
 						}}
 					>
-						<CardTile {card} showFriendOwners={false} showCollectionState={false} />
+						<CardTile {owned} {card} showFriendOwners={false} showCollectionState={false} />
 						{#if onMove}<div class="flex flex-wrap gap-1">
 								<Button
 									variant="outline"

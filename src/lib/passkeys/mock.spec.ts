@@ -18,26 +18,26 @@ describe('enregistrement passkey et défis à usage unique', () => {
 			passkeyMock(
 				'/me/passkeys',
 				'POST',
-				{ label: 'Expired', password: 'demo-password', credential },
+				{ label: 'Expired', reauth: { recoveryCode: 'DEMO-RECOVERY-1' }, credential },
 				{ 'CF-Turnstile-Response': 'token' }
 			)!.body
 		).toEqual({ error: 'PASSKEY_REJECTED' });
 	});
 
-	it('garde les options après un mauvais mot de passe et consomme le défi après succès', () => {
+	it('garde les options après un mauvais code de secours et consomme le défi après succès', () => {
 		const options = passkeyMock('/me/passkeys/options', 'POST')!.body as { challenge: string };
 		const credential = {
 			id: 'credential-test',
 			response: { clientDataJSON: btoa(JSON.stringify({ challenge: options.challenge })) }
 		};
-		const input = { label: 'Phone', password: 'wrong', credential };
+		const input = { label: 'Phone', reauth: { recoveryCode: 'wrong' }, credential };
 		expect(
 			passkeyMock('/me/passkeys', 'POST', input, { 'CF-Turnstile-Response': 'token' })!.status
 		).toBe(403);
 		const saved = passkeyMock(
 			'/me/passkeys',
 			'POST',
-			{ ...input, password: 'demo-password' },
+			{ ...input, reauth: { recoveryCode: 'DEMO-RECOVERY-2' } },
 			{ 'CF-Turnstile-Response': 'new-token' }
 		)!;
 		expect(saved.status).toBe(201);
@@ -45,7 +45,7 @@ describe('enregistrement passkey et défis à usage unique', () => {
 			passkeyMock(
 				'/me/passkeys',
 				'POST',
-				{ ...input, password: 'demo-password' },
+				{ ...input, reauth: { recoveryCode: 'DEMO-RECOVERY-3' } },
 				{ 'CF-Turnstile-Response': 'new-token' }
 			)!.body
 		).toEqual({ error: 'PASSKEY_REJECTED' });

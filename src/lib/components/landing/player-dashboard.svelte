@@ -20,7 +20,7 @@
 </script>
 
 <section class="flex flex-col gap-7">
-	<header class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+	<header class="grid gap-5">
 		<div>
 			<p class="forge-label">{$_('dashboard.eyebrow')}</p>
 			<h1 class="mt-2 font-serif text-4xl font-bold tracking-tight sm:text-6xl">
@@ -31,18 +31,18 @@
 		<div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
 			<HudStat
 				label={$_('dashboard.cards')}
-				value={String(dashboard?.collection.totalCopies ?? 0)}
+				value={dashboard ? String(dashboard.collection.totalCopies) : '—'}
 				accent
 			/>
 			<HudStat
 				label={$_('dashboard.trades')}
-				value={String(dashboard?.pendingTrades ?? 0).padStart(2, '0')}
+				value={dashboard ? String(dashboard.pendingTrades).padStart(2, '0') : '—'}
 			/>
 			<HudStat
 				label={$_('dashboard.auctions')}
-				value={String(dashboard?.pendingAuction ?? 0).padStart(2, '0')}
+				value={dashboard ? String(dashboard.pendingAuction).padStart(2, '0') : '—'}
 			/>
-			<HudStat label={$_('dashboard.money')} value={String(dashboard?.money ?? 0)} />
+			<HudStat label={$_('dashboard.money')} value={dashboard ? String(dashboard.money) : '—'} />
 			<HudStat label={$_('dashboard.rank')} value={rank} />
 		</div>
 	</header>
@@ -56,10 +56,20 @@
 	<div class="grid gap-5 xl:grid-cols-[minmax(22rem,0.8fr)_minmax(0,1.2fr)]">
 		<ForgePanel class="relative min-h-[28rem] min-w-0 overflow-hidden p-6">
 			<div class="relative z-10 w-full max-w-sm">
-				<p class="forge-label">{$_('dashboard.boosterReady')}</p>
+				<p class="forge-label">
+					{$_(
+						dashboard?.packs.some((pack) => pack.available > 0)
+							? 'dashboard.boosterReady'
+							: 'plan.boosters.checkAvailability'
+					)}
+				</p>
 				<h2 class="mt-3 text-3xl font-bold">{$_('dashboard.boosterTitle')}</h2>
 				<p class="mt-3 text-sm leading-relaxed text-muted-foreground">
-					{$_('dashboard.boosterBody')}
+					{$_(
+						dashboard?.packs.some((pack) => pack.available > 0)
+							? 'dashboard.boosterBody'
+							: 'plan.boosters.checkAvailability'
+					)}
 				</p>
 				<Button href="/boosters" class="mt-5"
 					><PackageOpenIcon />{$_('dashboard.openBooster')}</Button
@@ -84,7 +94,7 @@
 			</div>
 			<div class="mt-6 flex snap-x gap-4 overflow-x-auto pb-3">
 				{#each recentCards as card (card.id)}<div class="w-52 shrink-0 snap-start xl:w-[17rem]">
-						<CardTile {card} showFriendOwners={false} />
+						<CardTile owned {card} showFriendOwners={false} />
 					</div>{/each}
 			</div>
 		</ForgePanel>

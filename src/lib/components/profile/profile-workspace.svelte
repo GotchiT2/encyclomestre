@@ -1,7 +1,8 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import ShowcaseEditor from './showcase-editor.svelte';
-	import ArticlePicker from '$lib/components/selectors/article-picker.svelte';
+	import AvatarEditor from '$lib/components/settings/avatar-editor.svelte';
+	import UserAvatar from '$lib/components/users/user-avatar.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import InstantSalesManager from './instant-sales-manager.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -14,8 +15,7 @@
 		getMyShowcase,
 		getUserInstantSales,
 		replaceMyShowcase,
-		wikiForgeApiErrorCode,
-		updateWikiForgeImage
+		wikiForgeApiErrorCode
 	} from '$lib/api';
 	import type { CollectionPageResult } from '$lib/api';
 	import type { CollectionQuery } from '$lib/api';
@@ -47,20 +47,20 @@
 	let collectionCursor = $state(untrack(() => initialCollection.nextCursor));
 	let collectionHasNext = $state(untrack(() => initialCollection.hasNext));
 	let collectionLoading = $state(false);
+	let sequence = 0;
+	let collectionTotal = $state(untrack(() => initialCollection.total));
 	let pickerQuery = $state<CollectionQuery>({});
 	let money = $state(untrack(() => user.money ?? 0));
 	let saving = $state(false);
 	let buyingSlot = $state(false);
 	let buySlotOpen = $state(false);
-	let avatarPageId = $state<number | undefined>(untrack(() => user.imagePageId ?? undefined));
 	let salesBusy = $state(false);
 	let avatarPickerOpen = $state(false);
-	let avatarBusy = $state(false);
 	let avatarUrl = $state(untrack(() => user.avatarUrl));
 	let handledRealtimeRevision = 0;
 	const ownedCards = $derived(
-		initialCollection.total >= 0
-			? String(initialCollection.total)
+		collectionTotal >= 0
+			? String(collectionTotal)
 			: `${initialCollection.items.length}${initialCollection.hasNext ? '+' : ''}`
 	);
 
@@ -101,6 +101,7 @@
 		}
 	}
 	async function createSale(cardId: string, price: number) {
+		if (salesBusy) return;
 		salesBusy = true;
 		try {
 			sales = await createInstantSale(cardId, price);
@@ -112,6 +113,7 @@
 		}
 	}
 	async function cancelSale(saleId: string) {
+		if (salesBusy) return;
 		salesBusy = true;
 		try {
 			sales = await cancelInstantSale(saleId);
@@ -133,6 +135,7 @@
 		showcase = nextShowcase;
 		sales = nextSales;
 		collection = nextCollection.items;
+		collectionTotal = nextCollection.total;
 		collectionPage = nextCollection.page;
 		collectionCursor = nextCollection.nextCursor;
 		collectionHasNext = nextCollection.hasNext;
@@ -141,6 +144,10 @@
 	$effect(() => {
 		const refresh = $realtimeRefresh;
 		if (
+			saving ||
+			buyingSlot ||
+			salesBusy ||
+			collectionLoading ||
 			refresh.revision === handledRealtimeRevision ||
 			(!refreshIncludes(refresh, 'profile') && !refreshIncludes(refresh, 'collection'))
 		)
@@ -150,12 +157,14 @@
 	});
 	async function loadMoreCollection() {
 		if (!collectionHasNext || collectionLoading) return;
+		const request = sequence;
 		collectionLoading = true;
 		try {
 			const next = await getWikiForgeCollectionPage({
 				...pickerQuery,
 				...(collectionCursor ? { cursor: collectionCursor } : { page: collectionPage + 1 })
 			});
+			if (request !== sequence) return;
 			const known = new Set(collection.map((card) => card.id));
 			collection = [...collection, ...next.items.filter((card) => !known.has(card.id))];
 			collectionPage = next.page;
@@ -164,15 +173,16 @@
 		} catch {
 			toast.error($_('collection.load_more_error'));
 		} finally {
-			collectionLoading = false;
+			if (request === sequence) collectionLoading = false;
 		}
 	}
 	async function refreshPickerCollection(filters: CollectionQuery) {
-		if (collectionLoading) return;
+		const request = ++sequence;
 		pickerQuery = filters;
 		collectionLoading = true;
 		try {
 			const next = await getWikiForgeCollectionPage(filters);
+			if (request !== sequence) return;
 			collection = next.items;
 			collectionPage = next.page;
 			collectionCursor = next.nextCursor;
@@ -180,24 +190,7 @@
 		} catch {
 			toast.error($_('collection.load_error'));
 		} finally {
-			collectionLoading = false;
-		}
-	}
-	async function updateAvatar() {
-		if (avatarBusy) return;
-		avatarBusy = true;
-		try {
-			const next = await updateWikiForgeImage(avatarPageId ?? null);
-			avatarUrl = next.avatarUrl;
-			const session = $currentSession;
-			if (session)
-				persistSession(localStorage, { ...session, user: { ...session.user, avatarUrl } });
-			avatarPickerOpen = false;
-			toast.success($_('profile.avatar_updated'));
-		} catch {
-			toast.error($_('profile.avatar_error'));
-		} finally {
-			avatarBusy = false;
+			if (request === sequence) collectionLoading = false;
 		}
 	}
 </script>
@@ -217,12 +210,13 @@
 			aria-label={$_('settings.choose_avatar')}
 			onclick={() => (avatarPickerOpen = true)}
 		>
-			{#if avatarUrl}<img src={avatarUrl} alt="" class="size-full object-cover" />{:else}<span
-					class="grid size-full place-items-center bg-background text-3xl font-serif font-bold text-primary"
-					aria-hidden="true"
-				>
-					{user.username.slice(0, 1).toUpperCase()}
-				</span>{/if}
+			<UserAvatar
+				image={avatarUrl}
+				name={user.username}
+				crop={$currentSession?.user.imageCrop}
+				size="lg"
+				class="size-full"
+			/>
 			<span
 				class="absolute inset-x-0 bottom-0 bg-background/80 py-1 text-[9px] font-bold tracking-wider text-primary uppercase opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
 				>{$_('settings.choose_avatar')}</span
@@ -239,9 +233,11 @@
 				<div class="border border-primary/25 bg-background/40 px-3 py-2">
 					<p class="forge-label">{$_('profile.member_since')}</p>
 					<p class="mt-1 text-sm font-bold">
-						{new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(
-							new Date(user.createdAt)
-						)}
+						{user.createdAt && Number.isFinite(Date.parse(user.createdAt))
+							? new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(
+									new Date(user.createdAt)
+								)
+							: $_('plan.unknownDate')}
 					</p>
 				</div>
 			</div>
@@ -305,14 +301,7 @@
 		/>{/if}
 </section>
 
-<Dialog.Root bind:open={avatarPickerOpen}
-	><Dialog.Content class="p-5"
-		><Dialog.Title>{$_('settings.choose_avatar')}</Dialog.Title><ArticlePicker
-			bind:value={avatarPageId}
-		/><Button disabled={avatarBusy} onclick={updateAvatar}>{$_('completion.save')}</Button
-		></Dialog.Content
-	></Dialog.Root
->
+<AvatarEditor bind:open={avatarPickerOpen} onSaved={(next) => (avatarUrl = next.avatarUrl)} />
 <Dialog.Root bind:open={buySlotOpen}
 	><Dialog.Content class="p-5"
 		><Dialog.Title

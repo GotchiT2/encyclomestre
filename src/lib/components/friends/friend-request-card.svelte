@@ -10,11 +10,13 @@
 
 	let {
 		friendship,
+		busy = false,
 		onAccept,
 		onDecline,
 		onBlock
 	}: {
 		friendship: Friendship;
+		busy?: boolean;
 		onAccept: () => void;
 		onDecline: () => void;
 		onBlock: () => void;
@@ -28,6 +30,7 @@
 	>
 		<UserAvatar
 			image={friendship.user.avatarUrl}
+			crop={friendship.user.imageCrop}
 			name={friendship.user.username}
 			lastConnection={friendship.user.lastConnection}
 		/>
@@ -42,6 +45,7 @@
 	</a>
 	<div class="flex shrink-0 items-center gap-1.5">
 		<Button
+			disabled={busy}
 			size="icon-sm"
 			aria-label={$_('friends.accept')}
 			title={$_('friends.accept')}
@@ -50,6 +54,7 @@
 			<CheckIcon />
 		</Button>
 		<Button
+			disabled={busy}
 			size="icon-sm"
 			variant="outline"
 			aria-label={$_('friends.decline')}
@@ -59,6 +64,7 @@
 			<XIcon />
 		</Button>
 		<Button
+			disabled={busy}
 			size="icon-sm"
 			variant="destructive"
 			aria-label={$_('friends.block')}

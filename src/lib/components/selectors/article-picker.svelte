@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { getWikiForgePublicPages, type WikiForgePublicPageCard } from '$lib/api/pages';
+	import {
+		getWikiForgePublicPages,
+		getWikiForgePublicPage,
+		type WikiForgePublicPageCard
+	} from '$lib/api/pages';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Field from '$lib/components/ui/field';
@@ -24,6 +28,20 @@
 	let selected = $state<WikiForgePublicPageCard>();
 	let busy = $state(false);
 	let error = $state('');
+	$effect(() => {
+		const id = value;
+		if (!id || selected?.id === id) return;
+		const abort = new AbortController();
+		void getWikiForgePublicPage(id, { signal: abort.signal })
+			.then((article) => {
+				if (!abort.signal.aborted) selected = article;
+			})
+			.catch((cause) => {
+				if (!abort.signal.aborted) error = operationError(cause);
+			});
+		return () => abort.abort();
+	});
+
 	$effect(() => {
 		const q = query;
 		const index = page;
@@ -81,7 +99,8 @@
 					src={selected.image}
 					alt=""
 					class="size-16 object-cover"
-				/>{/if}<span class="min-w-0 break-words">{selected?.title ?? `#${value}`}</span><Button
+				/>{/if}<span class="min-w-0 break-words">{selected?.title ?? $_('completion.loading')}</span
+			><Button
 				variant="ghost"
 				onclick={() => {
 					value = undefined;

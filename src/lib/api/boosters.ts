@@ -117,10 +117,11 @@ export function toPackSummaries(inventory: BoostersDto): PackSummary[] {
 	});
 }
 
+export const getBoosterInventory = (options?: RequestOptions) =>
+	apiRequest<BoostersDto>('/boosters', { ...options, apiTarget: 'wikiforge' });
+
 export async function getBoosters(options?: RequestOptions): Promise<PackSummary[]> {
-	return toPackSummaries(
-		await apiRequest<BoostersDto>('/boosters', { ...options, apiTarget: 'wikiforge' })
-	);
+	return toPackSummaries(await getBoosterInventory(options));
 }
 
 function toPackDefinition(pack: PackDefinitionDto): PackDefinition {
@@ -172,11 +173,30 @@ export function resetPackDetailsCache() {
 
 export function mergePackCatalogue(
 	packs: PackDefinition[],
-	credits: PackSummary[]
+	credits: PackSummary[],
+	families: BoosterFamilyDto[] = []
 ): PackCatalogueItem[] {
 	const byId = new Map(credits.map((credit) => [credit.id, credit]));
 	return packs.map((pack) => {
-		const credit = byId.get(pack.id) ?? null;
+		const family = families.find((entry) => entry.family === pack.family);
+		const credit =
+			byId.get(pack.id) ??
+			(family
+				? {
+						id: pack.id,
+						slotId: pack.slotId,
+						family: pack.family,
+						name: pack.name,
+						description: pack.description,
+						imageUrl: pack.imageUrl ?? '/images/booster.png',
+						nbCards: pack.nbCards,
+						regularAvailable: family.available,
+						bonus: family.bonus ?? 0,
+						available: family.available + (family.bonus ?? 0),
+						max: family.max,
+						nextAvailableAt: family.nextAvailableAt ?? null
+					}
+				: null);
 		return { ...pack, credit, slotName: credit?.slotName };
 	});
 }

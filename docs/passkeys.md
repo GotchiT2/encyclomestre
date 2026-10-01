@@ -1,44 +1,33 @@
-# Passkeys — reprise de l’intégration
+# Passkeys — contrat FO du 1er octobre 2026
 
-La branche `passkey` part du `main` courant. Aucun commit, push ou déploiement effectué dans cette étape.
+Le contrat courant est `docs/contracts/api.openapi.json`, copie du Swagger fourni pour le Plan 1. La connexion FO utilise exclusivement les passkeys. Les formulaires de mot de passe ont été retirés des parcours de compte.
 
-## Parcours livrés
+## Parcours
 
-- Connexion explicite sans identifiant : options publiques, cérémonie WebAuthn avec `@simplewebauthn/browser`, grant OAuth puis `/me`. Finalisation de session commune au mot de passe, cookies inclus. Le BO conserve uniquement les sessions ADMIN ; un refus ou une lecture du profil échouée efface la session.
-- FO : section Passkeys dans `/settings`. BO : `/security`, accessible dans le menu.
-- Liste normalisée à vide si le serveur omet la réponse ; nom, synchronisation, dates UTC et suppression confirmée. Limite de dix passkeys.
-- Ajout : nom de 64 caractères maximum, mot de passe actuel, options serveur et réponse JSON complète. Turnstile `action=passkey`, jeton renouvelé avant chaque tentative. La connexion passkey ne demande aucun CAPTCHA.
-- Un mot de passe ou CAPTCHA refusé conserve la réponse WebAuthn en mémoire jusqu’à l’expiration de cinq minutes. Un challenge rejeté impose de nouvelles options ; un conflit recharge la liste. Une écriture au résultat incertain provoque une relecture, jamais une répétition automatique.
-- Suppression : avertissement sur la passkey restant dans l’appareil et les sessions existantes ; action de déconnexion globale disponible. Fermeture du dialogue ou navigation annule la cérémonie et efface les données sensibles en mémoire.
+- `/login` : credential découvrable, grant OAuth passkey puis lecture `/me` et retour à la destination demandée. Annulation, navigateur incompatible et expiration restent distincts.
+- `/register` : pseudonyme, création WebAuthn et finalisation OAuth. Les dix codes sont montrés une fois, copiables et téléchargeables ; la session est persistée après confirmation de sauvegarde. Si OAuth réussit et `/me` échoue, reprendre uniquement la lecture du profil conserve les codes sans rejouer la cérémonie.
+- `/recovery` : pseudonyme/code inutilisé, ou token reçu dans un lien. Le code ajoute une passkey et consomme un seul code ; le lien remplace les anciennes passkeys, révoque les autres sessions et renouvelle les dix codes, avec confirmation de sauvegarde.
+- `/settings` : liste et ajout de passkeys, suppression confirmée, nombre de codes restants et régénération après revérification. La suppression de la dernière passkey est permise par le serveur ; dix clés au maximum.
+- Fermeture de compte : aperçu en lecture seule, blocage si propriétaire de guilde, confirmation et revérification. Un résultat réseau incertain est vérifié par lecture `/me` avec le même Bearer, sans nouvelle suppression automatique.
 
-## Contrat API 1.2.0
+## Requêtes
 
-Source : `message.md` fourni par le propriétaire du projet.
+| Action          | Contrat                                                                                                                    |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Connexion       | `POST /public/passkeys/options`, sans corps, Bearer ou CAPTCHA                                                             |
+| Inscription     | `POST /public/passkeys/signup/options`, `{name,label?}`, Turnstile `signup`                                                |
+| Récupération    | `POST /public/passkeys/recovery/options`, `{name,code,label?}` avec Turnstile `recovery`, ou `{token,label?}` sans CAPTCHA |
+| Jetons          | `POST /oauth2/token`, formulaire `grant_type=urn:wikiforge:grant-type:passkey`, `request_id`, `credential` JSON            |
+| Revérification  | `POST /me/reauth/options`, ou code de secours ; preuve `{requestId,credential}` ou `{recoveryCode}`                        |
+| Ajout           | `POST /me/passkeys/options`, puis `POST /me/passkeys` avec `{label?,credential,reauth}`                                    |
+| Liste / retrait | `GET /me/passkeys`, `DELETE /me/passkeys/{id}`                                                                             |
+| Nouveaux codes  | `POST /me/recovery-codes`, preuve de revérification directement dans le corps                                              |
+| Fermeture       | `DELETE /me`, preuve directement dans le corps, Bearer figé et aucun rafraîchissement/rejeu                                |
 
-| Opération | Requête |
-|---|---|
-| Connexion : options | `POST /public/passkeys/options`, aucun corps ni Bearer |
-| Connexion : jetons | `POST /oauth2/token`, formulaire `grant_type=urn:wikiforge:grant-type:passkey`, `request_id`, `credential` JSON |
-| Liste | `GET /me/passkeys` |
-| Ajout : options | `POST /me/passkeys/options`, aucun corps |
-| Ajout : enregistrement | `POST /me/passkeys`, JSON `{password,label,credential}`, en-tête `CF-Turnstile-Response` |
-| Suppression | `DELETE /me/passkeys/{id}`, identifiant encodé |
-| Sessions | `POST /auth/logout-all` |
+Les challenges expirent après cinq minutes et sont consommés une fois. Les codes affichés, réponses WebAuthn et preuves restent en mémoire temporaire ; les codes complets ne sont jamais persistés dans la session ou les brouillons. `/me.recoveryCodes` est uniquement un compteur.
 
-Les options publiques et le grant ne reprennent pas un ancien Bearer. Les opérations consommant un challenge et les écritures ne sont pas rejouées sur 401. Les options RP ID et origines viennent du serveur et ne sont jamais réécrites en mode réel. La limite du pseudo déjà intégrée reste inchangée.
+## Validation locale
 
-## Développement et mocks
+Démarrer le FO HTTPS avec `PUBLIC_API_MOCK_ENABLED=true`, sur le port 5180. `node scripts/check-plan-account.mjs`, ou `node scripts/check-passkeys.mjs fo`, vérifie les parcours avec un authentificateur virtuel résident CTAP2 aux cinq largeurs. Le script `check-passkeys.mjs` utilise ce parcours FO par défaut ; son ancien mode explicite `bo` concerne le projet voisin et reste hors du Plan 1.
 
-Installer avec `npm install`, puis `npm run dev` selon la configuration HTTPS locale existante. Pour une démonstration, utiliser explicitement `PUBLIC_API_MOCK_ENABLED=true`. Aucune bascule automatique depuis l’API réelle.
-
-Les mocks utilisent le mot de passe `demo-password`, un authentificateur du navigateur et un RP local. Les enregistrements de démonstration restent uniquement en mémoire. Dans la console, définir `sessionStorage.setItem('wikiforge-passkey-scenario', 'limit')`, puis recharger le parcours. Autres scénarios : `empty`, `captcha`, `expired`, `invalid-grant` ; `denied` sur le BO simule un rôle USER. Retirer cette clé pour revenir au succès. Aucun mot de passe, challenge ou réponse WebAuthn n’est enregistré dans le stockage local.
-
-## Validation
-
-Check, ESLint ciblé, Vitest et build sont exécutés dans chaque dépôt, ainsi que `git diff --check`. Les tests de contrats couvrent les formulaires OAuth, les erreurs HTTP, les corps d’enregistrement, les listes omises, le contrôle ADMIN et les défis à usage unique/expirés.
-
-Le script Playwright `scripts/check-passkeys.mjs` du FO vérifie les deux applications avec un authentificateur virtuel résident CTAP2. Lancer deux serveurs Vite HTTPS **en mode mock** sur 5180 (FO) et 5181 (BO), puis `node scripts/check-passkeys.mjs`. Un argument `fo` ou `bo` limite le parcours. Toutes les requêtes vers l’API de production sont bloquées. Les captures sont écrites dans le dossier temporaire `wikiforge-passkeys`.
-
-Parcours aux largeurs 360, 390, 768, 1024 et 1440 : ajout, erreur de mot de passe puis correction sans recréer la credential, connexion sans identifiant, nouveau challenge après `invalid_grant`, suppression, contrôle de débordement et absence d’erreurs JavaScript. Le test de composant FO vérifie séparément l’action Turnstile et le renouvellement du jeton ; les parcours mock ne valident pas Cloudflare réel.
-
-Une cérémonie virtuelle ne valide pas une connexion biométrique en production. La validation réelle devra employer un navigateur compatible, HTTPS, les origines autorisées côté serveur et un compte habilité. Aucun appel d’écriture en production n’a été effectué.
+Les mocks simulent challenges, délais, codes consommés, revérification, récupération et OAuth. Les données de démonstration et credentials restent en mémoire. Les tests bloquent les appels à l’API de production. Ils vérifient aussi l’absence des codes dans `localStorage` et `sessionStorage`. Ils ne valident pas Cloudflare ni une passkey biométrique réelle en production.

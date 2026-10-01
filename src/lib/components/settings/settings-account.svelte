@@ -1,4 +1,6 @@
 <script lang="ts">
+	import UserAvatar from '$lib/components/users/user-avatar.svelte';
+	import { currentSession } from '$lib/auth/session';
 	import AccountDeletion from './account-deletion.svelte';
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
@@ -47,12 +49,13 @@
 					values: { date: new Date(nameChangeAvailableAt).toLocaleString('fr-FR') }
 				})}
 			</p>{/if}
-		<div class="mt-4 flex items-center gap-3">
-			{#if avatarUrl}<img
-					src={avatarUrl}
-					alt=""
-					class="size-16 border border-primary/30 object-cover"
-				/>{/if}
+		<div class="mt-4 flex flex-wrap items-center gap-3">
+			<UserAvatar
+				image={avatarUrl}
+				crop={$currentSession?.user.imageCrop}
+				name={username}
+				class="size-16"
+			/>
 			<Button variant="outline" onclick={onChooseAvatar}>{$_('settings.choose_avatar')}</Button>
 			{#if avatarUrl}<Button variant="ghost" onclick={onRemoveAvatar}
 					>{$_('settings.remove_avatar')}</Button

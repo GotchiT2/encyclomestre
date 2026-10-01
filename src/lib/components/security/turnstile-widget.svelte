@@ -7,8 +7,11 @@
 		type TurnstileApi
 	} from '$lib/security/turnstile';
 
-	let { action, onError = () => undefined }: { action: TurnstileAction; onError?: () => void } =
-		$props();
+	let {
+		action,
+		mock = false,
+		onError = () => undefined
+	}: { action: TurnstileAction; mock?: boolean; onError?: () => void } = $props();
 
 	let container: HTMLDivElement;
 	let api: TurnstileApi | null = null;
@@ -42,6 +45,7 @@
 	}
 
 	export function verify(): Promise<string> {
+		if (mock) return Promise.resolve('mock-turnstile-token');
 		if (token) return Promise.resolve(token);
 		return new Promise((resolve, reject) => {
 			pending.push({ resolve, reject });
@@ -66,6 +70,7 @@
 	}
 
 	onMount(() => {
+		if (mock) return;
 		let disposed = false;
 		void loadTurnstile()
 			.then((loadedApi) => {

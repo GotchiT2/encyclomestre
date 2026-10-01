@@ -160,7 +160,9 @@
 }
 
 @utility wikiforge-card-grid {
-	@apply grid min-w-0 grid-cols-2 justify-items-center gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4;
+	/* Les cartes restent lisibles même à côté d’un panneau de filtres. */
+	@apply grid min-w-0 justify-items-center gap-x-3 gap-y-5;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr));
 }
 
 @utility wikiforge-card-size {
@@ -490,4 +492,15 @@ select:not([multiple]):focus,
 	font-size: 0.625rem;
 	font-weight: 700;
 	line-height: 1;
+}
+
+/* Le défilement vers un champ laisse les actions au-dessous des annonces fixes. */
+html {
+	scroll-padding-top: calc(var(--site-banner-height, 0px) + 5rem);
+	scroll-padding-bottom: 8rem;
+}
+@media (min-width: 768px) {
+	html {
+		scroll-padding-top: calc(var(--site-banner-height, 0px) + 1rem);
+	}
 }

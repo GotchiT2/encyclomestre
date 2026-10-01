@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { operationError } from '$lib/domain/operation-error';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardSearchPanel from '$lib/components/cards/card-search-panel.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -39,6 +40,7 @@
 	let selectedCards = $state<CardRecord[]>([]);
 	const selectedIds = $derived(selectedCards.map((card) => String(card.baseCardId ?? card.id)));
 	let selecting = $state(false);
+	let mutationError = $state('');
 	const visibleCards = $derived(
 		cards.filter((card) => !existingCardIds.includes(String(card.baseCardId ?? card.id)))
 	);
@@ -82,7 +84,16 @@
 
 	async function select(card: CardRecord) {
 		if (!onSelectMany) {
-			await onSelect(card);
+			if (selecting) return;
+			selecting = true;
+			mutationError = '';
+			try {
+				await onSelect(card);
+			} catch (cause) {
+				mutationError = operationError(cause);
+			} finally {
+				selecting = false;
+			}
 			return;
 		}
 		const id = String(card.baseCardId ?? card.id);
@@ -90,15 +101,18 @@
 			? selectedCards.filter(
 					(selectedCard) => String(selectedCard.baseCardId ?? selectedCard.id) !== id
 				)
-			: [...selectedCards, card];
+			: [...selectedCards, card].slice(0, 500);
 	}
 
 	async function addSelected() {
-		if (!onSelectMany || !selectedIds.length) return;
+		if (!onSelectMany || !selectedIds.length || selecting) return;
+		mutationError = '';
 		selecting = true;
 		try {
 			await onSelectMany(selectedCards);
 			selectedCards = [];
+		} catch (cause) {
+			mutationError = operationError(cause);
 		} finally {
 			selecting = false;
 		}
@@ -115,8 +129,9 @@
 			<Dialog.Title class="truncate text-lg leading-tight sm:text-xl">{title}</Dialog.Title>
 		</div>
 		<div class="min-h-0 overflow-y-auto p-3 sm:p-4">
+			{#if mutationError}<p class="mb-3 text-destructive" role="alert">{mutationError}</p>{/if}
 			<CardSearchPanel>
-				<div class="grid grid-cols-[minmax(0,1fr)_10rem] gap-2">
+				<div class="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]">
 					<Input
 						bind:value={query}
 						oninput={() => {

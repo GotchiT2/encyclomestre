@@ -42,6 +42,8 @@ export interface ApiSchemas {
 		acquiredDate?: string;
 		creationDate?: string;
 		pendingTradeId?: number;
+		saleId?: number;
+		auctionId?: number;
 		ownedCount?: number;
 		wishlists?: Array<ApiSchemas['CardWishlistDTO']>;
 	};
@@ -71,7 +73,14 @@ export interface ApiSchemas {
 		offeredMoney?: number;
 		requestedMoney?: number;
 	};
-	SimpleUserDTO: { id?: number; name?: string; imagePageId?: number; image?: string };
+	ImageCrop: { x?: number; y?: number; zoom?: number };
+	SimpleUserDTO: {
+		id?: number;
+		name?: string;
+		imagePageId?: number;
+		image?: string;
+		imageCrop?: ApiSchemas['ImageCrop'];
+	};
 	TradeCardDTO: { card?: ApiSchemas['CardDTO']; status?: 'ADDED' | 'REMOVED' };
 	TradeDTO: {
 		id?: number;
@@ -109,6 +118,36 @@ export interface ApiSchemas {
 		reason: 'CHEATING' | 'NAME' | 'HARASSMENT' | 'SPAM' | 'INAPPROPRIATE' | 'OTHER';
 		comment?: string;
 	};
+	SignupOptionsRequest: { name: string; label?: string };
+	JsonNode: {
+		empty?: boolean;
+		array?: boolean;
+		null?: boolean;
+		object?: boolean;
+		float?: boolean;
+		pojo?: boolean;
+		floatingPointNumber?: boolean;
+		short?: boolean;
+		int?: boolean;
+		long?: boolean;
+		double?: boolean;
+		bigDecimal?: boolean;
+		bigInteger?: boolean;
+		textual?: boolean;
+		boolean?: boolean;
+		binary?: boolean;
+		nodeType?:
+			'ARRAY' | 'BINARY' | 'BOOLEAN' | 'MISSING' | 'NULL' | 'NUMBER' | 'OBJECT' | 'POJO' | 'STRING';
+		string?: boolean;
+		integralNumber?: boolean;
+		valueNode?: boolean;
+		container?: boolean;
+		missingNode?: boolean;
+		number?: boolean;
+		embeddedValue?: boolean;
+	};
+	PasskeyCeremonyDTO: { requestId?: string; options?: ApiSchemas['JsonNode'] };
+	RecoveryOptionsRequest: { name?: string; code?: string; token?: string; label?: string };
 	SaleRequest: { cardId: number; price?: number };
 	AuctionBidDTO: {
 		user?: ApiSchemas['AuctionUserDTO'];
@@ -132,6 +171,21 @@ export interface ApiSchemas {
 		endsAt?: string;
 		nbExtensions?: number;
 		closedAt?: string;
+		listingFee?: number;
+		finalFee?: number;
+		favorite?: boolean;
+		viewerOutcome?:
+			| 'SCHEDULED'
+			| 'RUNNING'
+			| 'SETTLING'
+			| 'SOLD'
+			| 'UNSOLD'
+			| 'LEADING'
+			| 'OUTBID'
+			| 'WON_PENDING'
+			| 'WON'
+			| 'LOST'
+			| 'CANCELLED';
 		bids?: Array<ApiSchemas['AuctionBidDTO']>;
 	};
 	AuctionUserDTO: { id?: number; name?: string };
@@ -139,6 +193,20 @@ export interface ApiSchemas {
 	SalesDTO: {
 		instantSales?: Array<ApiSchemas['InstantSaleDTO']>;
 		auctions?: Array<ApiSchemas['AuctionDTO']>;
+	};
+	ReauthRequest: { requestId?: string; credential?: ApiSchemas['JsonNode']; recoveryCode?: string };
+	RecoveryCodesDTO: { codes?: Array<string> };
+	PasskeyRegistrationRequest: {
+		label: string;
+		credential: ApiSchemas['JsonNode'];
+		reauth: ApiSchemas['ReauthRequest'];
+	};
+	PasskeyDTO: {
+		id?: string;
+		label?: string;
+		synced?: boolean;
+		createdAt?: string;
+		lastUsedAt?: string;
 	};
 	ModerationCaseMessageRequest: { content: string };
 	ModerationCaseDTO: {
@@ -185,6 +253,7 @@ export interface ApiSchemas {
 		id?: number;
 		guildId?: number;
 		fromUserId?: number;
+		fromUser?: ApiSchemas['SimpleUserDTO'];
 		type?: 'TEXT' | 'TRADE' | 'CARD' | 'PAGE';
 		content?: string;
 		meta?: string;
@@ -238,10 +307,11 @@ export interface ApiSchemas {
 	MeDTO: {
 		id?: number;
 		name?: string;
-		email?: string;
 		roles?: Array<'USER' | 'ADMIN'>;
+		recoveryCodes?: number;
 		imagePageId?: number;
 		image?: string;
+		imageCrop?: ApiSchemas['ImageCrop'];
 		nsfw?: boolean;
 		safeWords?: Array<string>;
 		money?: number;
@@ -250,8 +320,9 @@ export interface ApiSchemas {
 		mutedNotifications?: Array<'TRADE' | 'SALE' | 'FRIEND' | 'GUILD' | 'ACHIEVEMENT' | 'AUCTION'>;
 		rank?: number;
 		banners?: Array<ApiSchemas['BannerDTO']>;
+		nameChangeAvailableAt?: string;
 	};
-	MeImageRequest: { imagePageId?: number };
+	MeImageRequest: { imagePageId?: number; imageCrop?: ApiSchemas['ImageCrop'] };
 	AuctionUpdateRequest: { startPrice?: number };
 	WishlistsDTO: {
 		owned?: Array<ApiSchemas['WishlistSummaryDTO']>;
@@ -271,6 +342,7 @@ export interface ApiSchemas {
 		name?: string;
 		imagePageId?: number;
 		image?: string;
+		imageCrop?: ApiSchemas['ImageCrop'];
 		accepted?: boolean;
 	};
 	BoosterFamilyDTO: {
@@ -322,6 +394,7 @@ export interface ApiSchemas {
 		name?: string;
 		imagePageId?: number;
 		image?: string;
+		imageCrop?: ApiSchemas['ImageCrop'];
 		joinedAt?: string;
 		lastConnection?: 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'AWAY';
 		full?: boolean;
@@ -342,6 +415,10 @@ export interface ApiSchemas {
 		sortBy?: 'NAME' | 'RELEVANCE';
 		sortDirection?: 'ASC' | 'DESC';
 		results?: Array<ApiSchemas['PageDTO']>;
+		pageSize?: number;
+		maxResults?: number;
+		truncated?: boolean;
+		hasNext?: boolean;
 	};
 	PackCatalogDTO: {
 		id?: number;
@@ -428,12 +505,53 @@ export interface ApiSchemas {
 		maxMembers?: number;
 		nbMembers?: number;
 	};
-	MyBidsDTO: { escrowed?: number; auctions?: Array<ApiSchemas['AuctionDTO']> };
+	AccountDeletionDTO: {
+		canDelete?: boolean;
+		blockers?: Array<ApiSchemas['Blocker']>;
+		consequences?: ApiSchemas['Consequences'];
+	};
+	Blocker: { code?: 'GUILD_OWNER'; guildId?: number; guildName?: string };
+	Consequences: {
+		openTrades?: number;
+		openSales?: number;
+		openAuctions?: number;
+		leadingAuctions?: number;
+		refundedAmount?: number;
+		friends?: number;
+		friendRequests?: number;
+		wishlists?: number;
+		guildId?: number;
+		nbCards?: number;
+		money?: number;
+	};
+	MyBidsDTO: {
+		escrowed?: number;
+		nbResults?: number;
+		page?: number;
+		pageSize?: number;
+		hasNext?: boolean;
+		auctions?: Array<ApiSchemas['AuctionDTO']>;
+	};
+	AuctionsResult: {
+		nbResults?: number;
+		page?: number;
+		pageSize?: number;
+		hasNext?: boolean;
+		results?: Array<ApiSchemas['AuctionDTO']>;
+	};
+	AuctionFeeDTO: {
+		startPrice?: number;
+		feePercent?: number;
+		fee?: number;
+		alreadyPaid?: number;
+		due?: number;
+	};
 	AchievementDTO: {
 		code?: string;
 		category?: 'COLLECTION' | 'BOOSTER' | 'TRADE' | 'SALE' | 'SOCIAL' | 'MONEY' | 'AUCTION';
 		name?: string;
 		description?: string;
+		icon?: string;
 		threshold?: number;
 		progress?: number;
 		rewardMoney?: number;
@@ -453,6 +571,7 @@ export interface ApiSchemas {
 		name?: string;
 		imagePageId?: number;
 		image?: string;
+		imageCrop?: ApiSchemas['ImageCrop'];
 		nbCards?: number;
 	};
 	GuildsResult: {
@@ -470,13 +589,17 @@ export interface ApiSchemas {
 		name?: string;
 		imagePageId?: number;
 		image?: string;
+		imageCrop?: ApiSchemas['ImageCrop'];
 		owner?: boolean;
 		permissions?: Array<'INVITE' | 'KICK' | 'GRANT' | 'EDIT'>;
 		joinedAt?: string;
 	};
 	GuildMembersResult: {
 		nbResults?: number;
+		nbMembers?: number;
 		page?: number;
+		pageSize?: number;
+		hasNext?: boolean;
 		results?: Array<ApiSchemas['GuildMemberDTO']>;
 	};
 	GuildInviteeDTO: {
@@ -484,6 +607,7 @@ export interface ApiSchemas {
 		name?: string;
 		imagePageId?: number;
 		image?: string;
+		imageCrop?: ApiSchemas['ImageCrop'];
 		invitedAt?: string;
 	};
 	FriendDTO: {
@@ -491,6 +615,7 @@ export interface ApiSchemas {
 		name?: string;
 		imagePageId?: number;
 		image?: string;
+		imageCrop?: ApiSchemas['ImageCrop'];
 		createdAt?: string;
 		lastConnection?: 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'AWAY';
 		sharesWishlist?: boolean;
@@ -526,12 +651,13 @@ export interface ApiSchemas {
 		nextCursor?: string;
 		hasNext?: boolean;
 	};
+	CollectionStatsDTO: { nbCards?: number; nbDistinctPages?: number; nbActivePages?: number };
 	BlockedUserDTO: {
 		id?: number;
 		name?: string;
 		imagePageId?: number;
 		image?: string;
+		imageCrop?: ApiSchemas['ImageCrop'];
 		createdAt?: string;
 	};
-	AuctionsResult: { nbResults?: number; page?: number; results?: Array<ApiSchemas['AuctionDTO']> };
 }

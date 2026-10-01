@@ -10,6 +10,7 @@
 
 	let {
 		card,
+		owned = false,
 		showFriendOwners = true,
 		showCollectionState = true,
 		tags = [],
@@ -21,6 +22,7 @@
 		onOrientationChange
 	}: {
 		card: CardRecord;
+		owned?: boolean;
 		showFriendOwners?: boolean;
 		/** Masque les indicateurs propres à une collection (quantités, listes et protection). */
 		showCollectionState?: boolean;
@@ -34,7 +36,8 @@
 	} = $props();
 
 	function handleOpen() {
-		(onOpen ?? openCardDetail)(card);
+		if (onOpen) onOpen(card);
+		else openCardDetail(card, owned);
 	}
 </script>
 

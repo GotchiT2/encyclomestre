@@ -11,12 +11,14 @@
 
 	let {
 		friendship,
+		busy = false,
 		onTrade,
 		onMessage,
 		onRemove,
 		onBlock
 	}: {
 		friendship: Friendship;
+		busy?: boolean;
 		onTrade: () => void;
 		onMessage: () => void;
 		onRemove: () => void;
@@ -32,6 +34,7 @@
 		>
 			<UserAvatar
 				image={friendship.user.avatarUrl}
+				crop={friendship.user.imageCrop}
 				name={friendship.user.username}
 				lastConnection={friendship.user.lastConnection}
 			/>
@@ -46,6 +49,7 @@
 		</a>
 		<div class="flex w-full items-center justify-end gap-1.5 sm:w-auto sm:shrink-0">
 			<Button
+				disabled={busy}
 				size="icon-sm"
 				variant="outline"
 				aria-label={$_('friends.trade')}
@@ -55,6 +59,7 @@
 				<ArrowLeftRightIcon />
 			</Button>
 			<Button
+				disabled={busy}
 				size="icon-sm"
 				variant="outline"
 				aria-label={$_('friends.message')}
@@ -64,6 +69,7 @@
 				<MessageCircleIcon />
 			</Button>
 			<Button
+				disabled={busy}
 				size="icon-sm"
 				variant="destructive"
 				aria-label={$_('friends.block')}
@@ -73,6 +79,7 @@
 				<ShieldBanIcon />
 			</Button>
 			<Button
+				disabled={busy}
 				size="icon-sm"
 				variant="destructive"
 				aria-label={$_('friends.remove')}

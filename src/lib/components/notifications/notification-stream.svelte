@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { apiUrl, getCurrentUser, getNotifications, isMockApiEnabled } from '$lib/api';
-	import { currentSession, verifiedWikiForgeSession } from '$lib/auth/session';
+	import { currentSession, verifiedWikiForgeSession, persistSession } from '$lib/auth/session';
 	import { unreadNotifications } from '$lib/notifications/store';
 	import { chatStreamEvent, toChatStreamEvent } from '$lib/messages/stream';
 	import {
@@ -20,14 +20,26 @@
 
 	async function resync(reset = false) {
 		if (!$currentSession || !$verifiedWikiForgeSession) return;
+		const accountId = $currentSession.user.id;
 		const notifications = await getNotifications().catch(() => null);
+		if (disposed || $currentSession?.user.id !== accountId) return;
 		if (notifications) {
 			unreadNotifications.set(notifications.unread);
 			notifications.items.forEach((notification) => knownNotificationIds.add(notification.id));
 		}
 		if (reset) {
+			const session = $currentSession;
+			const user = await getCurrentUser().catch(() => null);
+			if (user && session && $currentSession?.accessToken === session.accessToken) {
+				persistSession(localStorage, { ...session, user });
+				replaceBanners(user.banners);
+			}
+			if (disposed || $currentSession?.user.id !== accountId) return;
 			publishRealtimeRefresh([
 				'collection',
+				'boosters',
+				'auctions',
+				'catalogue',
 				'friends',
 				'guild',
 				'messages',
@@ -56,9 +68,6 @@
 		stream.addEventListener('stream.ready', () => {
 			authRecoveryUsed = false;
 			void resync(true);
-			void getCurrentUser()
-				.then((user) => replaceBanners(user.banners))
-				.catch(() => undefined);
 			window.dispatchEvent(new Event('wikiforge:stream-ready'));
 		});
 		stream.addEventListener('stream.reset', () => {
@@ -76,13 +85,16 @@
 		stream.addEventListener('auction.updated', (event) => {
 			try {
 				const payload = JSON.parse((event as MessageEvent<string>).data);
-				if (typeof payload?.id === 'number')
+				if (typeof payload?.id === 'number') {
 					window.dispatchEvent(new CustomEvent('wikiforge:auction-updated', { detail: payload }));
+					publishRealtimeRefresh(['auctions', 'profile']);
+				}
 			} catch {
 				/* Ignore malformed auction events. */
 			}
 		});
 		stream.addEventListener('notification.created', (event) => {
+			const accountId = $currentSession?.user.id;
 			try {
 				const payload = JSON.parse((event as MessageEvent<string>).data) as { unread?: number };
 				if (typeof payload.unread === 'number') unreadNotifications.set(payload.unread);
@@ -91,6 +103,7 @@
 			}
 			void getNotifications({ unreadOnly: true })
 				.then((notifications) => {
+					if (disposed || !accountId || $currentSession?.user.id !== accountId) return;
 					unreadNotifications.set(notifications.unread);
 					const newNotifications = notifications.items.filter(
 						(notification) => !knownNotificationIds.has(notification.id)
@@ -101,6 +114,7 @@
 				.catch(() => undefined);
 		});
 		stream.addEventListener('notification.read', (event) => {
+			publishRealtimeRefresh(['notifications']);
 			try {
 				const payload = JSON.parse((event as MessageEvent<string>).data) as { unread?: number };
 				if (typeof payload.unread === 'number') unreadNotifications.set(payload.unread);
@@ -132,7 +146,7 @@
 			publishRealtimeRefresh(['messages']);
 		});
 		stream.addEventListener('collection.changed', () =>
-			publishRealtimeRefresh(['collection', 'profile'])
+			publishRealtimeRefresh(['collection', 'profile', 'achievements', 'catalogue', 'boosters'])
 		);
 		const source = stream;
 		stream.onerror = () => {

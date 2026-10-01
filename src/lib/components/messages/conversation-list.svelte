@@ -73,6 +73,7 @@
 					<span class="relative size-12 shrink-0">
 						<UserAvatar
 							image={conversation.avatarUrl}
+							crop={conversation.imageCrop}
 							name={conversation.title}
 							lastConnection={conversation.lastConnection}
 							presenceSize="md"

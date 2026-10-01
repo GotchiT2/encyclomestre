@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { operationError } from '$lib/domain/operation-error';
 	import { Button } from '$lib/components/ui/button';
 	import TagFilterSelector from '$lib/components/collection/tag-filter-selector.svelte';
 	import { _ } from '$lib/i18n';
@@ -52,18 +53,26 @@
 	}
 
 	async function protectCards() {
+		if (protecting || unprotecting || applying) return;
+		error = '';
 		protecting = true;
 		try {
 			await onProtect();
+		} catch (cause) {
+			error = operationError(cause);
 		} finally {
 			protecting = false;
 		}
 	}
 
 	async function unprotectCards() {
+		if (protecting || unprotecting || applying) return;
+		error = '';
 		unprotecting = true;
 		try {
 			await onUnprotect();
+		} catch (cause) {
+			error = operationError(cause);
 		} finally {
 			unprotecting = false;
 		}

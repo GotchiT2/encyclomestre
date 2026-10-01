@@ -534,6 +534,24 @@ Validation finale : check sans erreur ni avertissement, ESLint ciblé, 282 tests
 - [x] Remplace le message d’annulation WebAuthn par une aide pour vérifier la passkey disponible sur l’appareil.
 - Sujet Conventional Commit : `feat(auth): add passkey login and management`.
 
+
+## Plan 1 — bugs, fonctions et parcours de collection — 1er octobre 2026
+
+Plan approuvé par l’utilisateur. Apparence et composition des cartes conservées ; les skills UI/UX sont écartés à sa demande. Les mentions de mots de passe dans les étapes historiques ci-dessus décrivent l’ancien contrat, remplacé par la revérification passkey/code de secours.
+
+- [x] Ensemble 1 : Swagger fourni (134 opérations), types et couverture ; landing et pages de compte/légales publiques ; inscription, récupération, codes éphémères, passkeys et fermeture revérifiée ; navigation et actualisation des données de référence.
+- [x] Ensemble 2 : protection/déprotection et cession depuis la collection ; filtres tri-état, reprise et réponses obsolètes ; catalogue et contexte article/exemplaire ; invitations de wishlist par nom, opérations multiples ; packs, crédits et ouvertures réelles limitées par le stock.
+- [x] Ensemble 3 : filtres d’enchères sans identifiants saisis, union des souhaits, favoris et devis ; ventes immédiates compatibles avec les échanges ; préremplissage d’échange indépendant de la première page, pagination par page et curseur, historique borné.
+- [x] Ensemble 4 : premier message et resynchronisation, relations fiables et confirmations ; guilde et chat visible ; vitrines/profils et avatar recadré commun ; paramètres complets, succès, classements, notifications et dossiers de modération.
+- [x] Mocks étendus au nouveau contrat : compte neuf, collections nombreuses, erreurs, conflits, champs omis, dates relatives, stock limitant l’ouverture et propriété de guilde bloquant la fermeture.
+- [x] Parcours navigateur spécifiques : WebAuthn virtuel, sauvegarde des codes, récupération par code/lien, premier message, protection et vente, pagination, invitation par pseudonyme, avatar et crédits ; cinq largeurs 360, 390, 768, 1024 et 1440 px.
+- [x] Validation finale consolidée : Svelte sans erreur ni avertissement, 295 tests dans 84 fichiers, lint ciblé, revue visuelle et parcours navigateur aux cinq largeurs, build statique et diff validés.
+
+Détail par page et commandes : `docs/plan-1-validation.md`. Les écritures de validation utilisent les mocks ; aucun push, déploiement ou changement backend. Les textes légaux définitifs et la refonte graphique appartiennent aux livraisons ultérieures.
+
+- [x] Livraison du Plan 1 sur la branche `feat/plan-1-collection-parcours` ; commit local demandé par l’utilisateur.
+- Sujet Conventional Commit : `feat(collection): complete player flows and fix usability bugs`.
+
 ## Déploiement sûr et variables publiques figées — 30 septembre 2026
 
 - [x] Variables publiques lues via `$env/static/public` (module `src/lib/api/public-env.ts`) : valeurs intégrées aux fichiers hashés, plus de `_app/env.js` mis en cache un an.

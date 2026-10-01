@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-
-	void goto(resolve('/login'));
+	import AccountEntry from '$lib/components/security/account-entry.svelte';
 </script>
+
+<AccountEntry />

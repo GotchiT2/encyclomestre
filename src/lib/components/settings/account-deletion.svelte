@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
+	import Reauthentication from '$lib/components/security/reauthentication.svelte';
+	import { getReauthentication } from '$lib/passkeys/api';
+	import { passkeyErrorKey } from '$lib/passkeys/webauthn';
 	import { currentSession, clearSession } from '$lib/auth/session';
 	import { ApiError, disableWikiForgeSessionRefresh } from '$lib/api/client';
 	import {
@@ -12,7 +14,7 @@
 	} from '$lib/api/account-deletion';
 	import { operationError } from '$lib/domain/operation-error';
 	let preview = $state<DeletionPreview>();
-	let password = $state('');
+	let recoveryCode = $state('');
 	let confirmed = $state(false);
 	let busy = $state(false);
 	let error = $state('');
@@ -21,7 +23,7 @@
 	function finish() {
 		disableWikiForgeSessionRefresh();
 		clearSession(localStorage);
-		password = '';
+		recoveryCode = '';
 		uncertainToken = '';
 		complete = true;
 	}
@@ -50,27 +52,24 @@
 		busy = false;
 	}
 	async function remove() {
-		if (
-			busy ||
-			!preview?.canDelete ||
-			preview.blockers?.length ||
-			!confirmed ||
-			!password ||
-			uncertainToken
-		)
+		if (busy || !preview?.canDelete || preview.blockers?.length || !confirmed || uncertainToken)
 			return;
 		const token = $currentSession?.accessToken;
 		if (!token) return;
 		busy = true;
 		error = '';
+		let submitted = false;
 		try {
-			await deleteAccount(password, token);
+			const reauth = await getReauthentication(recoveryCode);
+			submitted = true;
+			await deleteAccount(reauth, token);
 			finish();
 		} catch (cause) {
 			if (cause instanceof ApiError) error = operationError(cause);
-			else uncertainToken = token;
+			else if (submitted) uncertainToken = token;
+			else error = $_(passkeyErrorKey(cause));
 		} finally {
-			password = '';
+			recoveryCode = '';
 			confirmed = false;
 			busy = false;
 		}
@@ -108,20 +107,13 @@
 					{blocker.guildName ?? blocker.code}
 				</p>{/each}
 			{#if preview.canDelete && !preview.blockers?.length}
-				<label class="grid gap-2"
-					>{$_('apiEvolution.deletion.password')}<Input
-						type="password"
-						autocomplete="current-password"
-						bind:value={password}
-						disabled={busy}
-					/></label
-				>
+				<Reauthentication bind:code={recoveryCode} disabled={busy} />
 				<label class="flex items-start gap-3 text-sm"
 					><input type="checkbox" bind:checked={confirmed} disabled={busy} class="mt-1" />{$_(
 						'apiEvolution.deletion.confirm'
 					)}</label
 				>
-				<Button variant="destructive" disabled={busy || !confirmed || !password} onclick={remove}
+				<Button variant="destructive" disabled={busy || !confirmed} onclick={remove}
 					>{$_('apiEvolution.deletion.delete')}</Button
 				>
 			{/if}

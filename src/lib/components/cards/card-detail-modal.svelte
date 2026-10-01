@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { activeAuctionCardIds } from '$lib/auctions/store';
+	import { protectWikiForgeCard, unprotectWikiForgeCard } from '$lib/api/collection';
+	import { publishRealtimeRefresh } from '$lib/realtime/resource-refresh';
+	import { operationError } from '$lib/domain/operation-error';
 	import { untrack } from 'svelte';
 	import CardVariantPreviews from './card-variant-previews.svelte';
 	import CardTile from '$lib/components/card-tile.svelte';
@@ -14,11 +18,12 @@
 		createTradeOffer,
 		getFriendCollectionPage,
 		getWikiForgeCollectionCard,
+		getWikiForgeTags,
 		getWikiForgeCollectionPage
 	} from '$lib/api';
 	import { currentSession } from '$lib/auth/session';
 	import { toast } from 'svelte-sonner';
-	import AuctionCreatePanel from '$lib/components/market/auction-create-panel.svelte';
+	import CardCession from '$lib/components/collection/card-cession.svelte';
 	import ReportDialog from '$lib/components/reports/report-dialog.svelte';
 	import XIcon from '@lucide/svelte/icons/x';
 	import LockIcon from '@lucide/svelte/icons/lock';
@@ -69,6 +74,24 @@
 	let sharedWishlistsLoading = $state(false);
 	let sharedWishlistsCardId = $state<string | null>(null);
 	let landscapePreview = $state(false);
+	let protecting = $state(false);
+	async function protect() {
+		if (protecting) return;
+		protecting = true;
+		try {
+			if (onToggleProtection) await onToggleProtection();
+			else {
+				if (card.userProtected) await unprotectWikiForgeCard(card.id);
+				else await protectWikiForgeCard(card.id);
+				card = { ...card, userProtected: !card.userProtected };
+			}
+			publishRealtimeRefresh(['collection']);
+		} catch (cause) {
+			toast.error(operationError(cause));
+		} finally {
+			protecting = false;
+		}
+	}
 
 	$effect(() => {
 		if (!owned) return;
@@ -76,10 +99,17 @@
 		if (sharedWishlistsCardId === cardId) return;
 		sharedWishlistsCardId = cardId;
 		sharedWishlistsLoading = true;
+		if (!untrack(() => tags.length))
+			void getWikiForgeTags()
+				.then((result) => {
+					if (card.id === cardId) tags = result;
+				})
+				.catch((cause) => toast.error(operationError(cause)));
 		void getWikiForgeCollectionCard(cardId)
 			.then((detail) => {
 				if (card.id !== cardId) return;
 				card = { ...card, sharedWishlistMemberships: detail.sharedWishlistMemberships };
+				assignments = { ...assignments, [cardId]: detail.collectionTagIds ?? [] };
 			})
 			.catch(() => undefined)
 			.finally(() => {
@@ -95,6 +125,7 @@
 		return {
 			items: result.items,
 			meta: {
+				hasNext: result.hasNext,
 				page,
 				pageSize,
 				total: result.total < 0 ? result.items.length : result.total,
@@ -113,7 +144,7 @@
 				query: query.query,
 				sortBy: query.sortBy === 'name' ? 'name' : 'acquiredDate',
 				variantIds: query.variantIds,
-				page: query.cursor ? undefined : query.page,
+				page: query.cursor ? undefined : Math.max(0, (query.page ?? 1) - 1),
 				cursor: query.cursor
 			})
 		);
@@ -126,7 +157,7 @@
 			query: query.query,
 			sortBy: query.sortBy === 'name' ? 'name' : 'acquiredDate',
 			variantIds: query.variantIds,
-			page: query.cursor ? undefined : query.page,
+			page: query.cursor ? undefined : Math.max(0, (query.page ?? 1) - 1),
 			cursor: query.cursor
 		});
 		return asTradePage(result);
@@ -263,8 +294,20 @@
 						<div class="forge-panel-flat p-3" data-testid="card-detail-tab-panel">
 							{#if activeTab === 'data'}
 								{#if owned}
-									{#if onToggleProtection}
-										<Button variant="outline" class="mb-3" onclick={onToggleProtection}>
+									{#if owned}
+										<Button
+											variant="outline"
+											class="mb-3"
+											disabled={protecting ||
+												Boolean(
+													!card.userProtected &&
+													(card.saleId ||
+														card.activeAuctionId ||
+														card.pendingTradeId ||
+														$activeAuctionCardIds.has(card.id))
+												)}
+											onclick={() => void protect()}
+										>
 											{#if card.userProtected}<LockOpenIcon />{$_('collection.unprotect')}
 											{:else}<LockIcon />{$_('collection.protect')}{/if}
 										</Button>
@@ -303,7 +346,7 @@
 								{#if card.wikipediaUrl}<Button href={card.wikipediaUrl} target="_blank" class="mt-3"
 										>{$_('codex.wikipedia')}</Button
 									>{/if}
-								{#if owned}<div class="mt-4"><AuctionCreatePanel {card} /></div>{/if}
+								{#if owned}<div class="mt-4"><CardCession {card} /></div>{/if}
 								{#if card.baseCardId}<div class="mt-4">
 										<ReportDialog pageId={card.baseCardId} title={card.title} />
 									</div>{/if}

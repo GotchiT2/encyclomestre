@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { onDestroy, onMount, tick, untrack } from 'svelte';
-	import emblaCarouselSvelte from 'embla-carousel-svelte';
-	import type { EmblaCarouselType } from 'embla-carousel';
 	import BoosterRevealCard from './booster-reveal-card.svelte';
 	import BoosterPackArt from './booster-pack-art.svelte';
 	import ForgePanel from '$lib/components/layout/forge-panel.svelte';
@@ -17,6 +15,8 @@
 
 	let {
 		available,
+		regularAvailable = available,
+		bonusAvailable = 0,
 		maximum,
 		nextDelay,
 		opening,
@@ -31,10 +31,13 @@
 		onOpen,
 		onOpenAll = () => undefined,
 		canOpenAll = false,
+		canOpen = true,
 		onReset,
 		onOpenCard = () => undefined
 	}: {
 		available: number;
+		regularAvailable?: number;
+		bonusAvailable?: number;
 		maximum: number;
 		nextDelay?: string;
 		opening: boolean;
@@ -49,6 +52,7 @@
 		onOpen: () => void;
 		onOpenAll?: () => void;
 		canOpenAll?: boolean;
+		canOpen?: boolean;
 		onReset: () => void;
 		onOpenCard?: (card: CardRecord) => void;
 	} = $props();
@@ -65,17 +69,10 @@
 	let suspensionActive = $state(false);
 	let mobileViewport = $state(false);
 	let deckElement = $state<HTMLDivElement>();
-	let carouselApi = $state<EmblaCarouselType>();
 	const mobileSceneActive = $derived(
 		mobileViewport && ['dealing', 'revealing', 'complete'].includes(phase)
 	);
-	const bulkOpening = $derived(slots.length > 12);
-	const boosterCarouselOptions = $derived({
-		active: (mobileViewport || bulkOpening) && phase === 'complete',
-		align: 'center' as const,
-		containScroll: 'trimSnaps' as const,
-		dragFree: true
-	});
+	const bulkOpening = $derived(slots.length > packCardCount);
 	const awaitingMobileSummary = $derived(
 		mobileViewport &&
 			!quickOpening &&
@@ -116,7 +113,7 @@
 		slots = nextCards.map((card) => ({ card, revealed: false }));
 		landscapeSlots = {};
 		mobileIndex = 0;
-		if (nextCards.length > 12) {
+		if (nextCards.length > packCardCount) {
 			slots = slots.map((slot) => ({ ...slot, revealed: true }));
 			phase = 'complete';
 			return;
@@ -134,21 +131,30 @@
 	async function showMobileCard(index: number, behavior: ScrollBehavior = 'smooth') {
 		mobileIndex = Math.max(0, Math.min(index, slots.length - 1));
 		await tick();
-		if (carouselApi) {
-			carouselApi.scrollTo(mobileIndex, behavior !== 'smooth');
-			return;
-		}
 		const target = deckElement?.querySelector<HTMLElement>(`[data-slot-index="${mobileIndex}"]`);
-		target?.scrollIntoView({ behavior, block: 'nearest', inline: 'center' });
+		if (!target || !deckElement) return;
+		const viewport = deckElement.getBoundingClientRect();
+		const card = target.getBoundingClientRect();
+		deckElement.scrollTo({
+			left:
+				deckElement.scrollLeft + card.left + card.width / 2 - viewport.left - viewport.width / 2,
+			behavior
+		});
 	}
 
-	function handleCarouselInit(event: CustomEvent<EmblaCarouselType>) {
-		carouselApi = event.detail;
-		const updateIndex = () => {
-			if (phase === 'complete') mobileIndex = carouselApi?.selectedScrollSnap() ?? 0;
-		};
-		carouselApi.on('select', updateIndex);
-		carouselApi.on('reInit', updateIndex);
+	function updateScrollIndex() {
+		if (!deckElement || phase !== 'complete' || (!mobileViewport && !bulkOpening)) return;
+		const viewport = deckElement.getBoundingClientRect();
+		const center = viewport.left + viewport.width / 2;
+		let distance = Infinity;
+		for (const slot of deckElement.querySelectorAll<HTMLElement>('[data-slot-index]')) {
+			const box = slot.getBoundingClientRect();
+			const next = Math.abs(box.left + box.width / 2 - center);
+			if (next < distance) {
+				distance = next;
+				mobileIndex = Number(slot.dataset.slotIndex);
+			}
+		}
 	}
 
 	function revealNext() {
@@ -158,7 +164,7 @@
 	}
 
 	function requestOpen(all = false) {
-		if (!available || opening || openRequested || suspended) return;
+		if (!available || !canOpen || opening || openRequested || suspended) return;
 		openRequested = true;
 		if (all) onOpenAll();
 		else onOpen();
@@ -292,7 +298,11 @@
 		data-booster-interactive
 	>
 		<div class="flex flex-wrap gap-2">
-			<HudStat label={$_('boosters.reserve')} value={`${available} / ${maximum}`} accent />
+			<HudStat
+				label={$_('boosters.reserve')}
+				value={`${regularAvailable} / ${maximum}${bonusAvailable ? ` +${bonusAvailable}` : ''}`}
+				accent
+			/>
 			{#if nextDelay}<HudStat label={$_('boosters.nextCharge')} value={nextDelay} />{/if}
 		</div>
 		<label class="booster-quick-toggle" data-booster-interactive>
@@ -304,6 +314,9 @@
 		</label>
 	</div>
 
+	{#if !canOpen}<p class="relative z-20 mt-3 text-sm" role="status">
+			{$_('plan.boosters.unavailable')}
+		</p>{/if}
 	<div
 		class="booster-stage-content relative z-10"
 		data-phase={phase}
@@ -322,7 +335,7 @@
 				<h2 class="mt-3 text-3xl font-bold sm:text-4xl">{packName}</h2>
 				<button
 					class="forge-energy-orbit mt-4 flex w-56 cursor-pointer flex-col items-center border-0 bg-transparent p-4 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45 sm:w-72"
-					disabled={!available || opening}
+					disabled={!available || !canOpen || opening}
 					onclick={(event) => {
 						event.stopPropagation();
 						requestOpen();
@@ -354,7 +367,7 @@
 								: $_('boosters.open')}
 					</span>
 				</button>
-				{#if canOpenAll && available > 1}
+				{#if canOpenAll && canOpen && available > 1}
 					<Button
 						variant="outline"
 						disabled={opening}
@@ -381,8 +394,7 @@
 					class={cn('booster-deck mt-5', bulkOpening && 'bulk-opening')}
 					data-phase={phase}
 					aria-label={$_('boosters.revealed_title')}
-					use:emblaCarouselSvelte={{ options: boosterCarouselOptions, plugins: [] }}
-					onemblaInit={handleCarouselInit}
+					onscroll={updateScrollIndex}
 				>
 					{#each slots as slot, index (slot.card.id)}
 						<div
@@ -404,7 +416,7 @@
 						</div>
 					{/each}
 				</div>
-				{#if phase === 'complete' && mobileViewport && slots.length > 1}
+				{#if phase === 'complete' && (mobileViewport || bulkOpening) && slots.length > 1}
 					<div class="booster-mobile-navigation" data-booster-interactive>
 						<Button
 							variant="outline"
@@ -435,7 +447,8 @@
 				>
 					{#if phase === 'complete'}
 						<Button variant="outline" onclick={resetStage}>{$_('boosters.close')}</Button>
-						{#if available}<Button onclick={() => requestOpen()}>{$_('boosters.open_next')}</Button
+						{#if available}<Button disabled={!canOpen} onclick={() => requestOpen()}
+								>{$_('boosters.open_next')}</Button
 							>{/if}
 					{:else if awaitingMobileSummary}
 						<Button onclick={advance}>{$_('boosters.show_summary')}</Button>
@@ -550,7 +563,7 @@
 		justify-content: flex-start;
 		gap: 0.75rem;
 		overflow-x: auto;
-		padding-inline: 1rem;
+		padding-inline: max(1rem, calc(50% - 5rem));
 		scroll-snap-type: x mandatory;
 	}
 
@@ -605,11 +618,29 @@
 			height: 100dvh;
 			min-height: 0;
 			max-width: 100vw;
-			padding: max(0.75rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
-				max(0.75rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+			padding: max(5rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+				max(6.25rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+			background-color: var(--background);
 			overflow: hidden;
 			clip-path: none;
 		}
+		.booster-mobile-navigation {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+			gap: 0.5rem;
+		}
+		.booster-mobile-navigation > p {
+			grid-column: 1 / -1;
+			grid-row: 1;
+			text-align: center;
+		}
+		.booster-mobile-navigation :global(button) {
+			min-width: 0;
+			min-height: 44px;
+			height: auto;
+			white-space: normal;
+		}
+
 		.booster-stage-content {
 			min-height: 0;
 			overflow: hidden;
@@ -654,6 +685,20 @@
 		}
 		.booster-slot.landscape {
 			flex-basis: min(86vw, 19rem, calc((100dvh - 15rem) * 1.416));
+		}
+		@supports (width: 1cqh) {
+			.booster-deck {
+				container-type: size;
+			}
+			.booster-slot :global(.booster-reveal-card) {
+				width: min(58vw, 13rem, calc(100cqh * 0.706));
+			}
+			.booster-slot :global(.booster-reveal-card.is-landscape) {
+				width: min(86vw, 19rem, calc(100cqh * 1.416));
+			}
+			.booster-slot.landscape {
+				flex-basis: min(86vw, 19rem, calc(100cqh * 1.416));
+			}
 		}
 		:global(.booster-mobile-fullscreen) .booster-stage-energy {
 			inset: 0;

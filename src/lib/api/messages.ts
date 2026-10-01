@@ -1,5 +1,5 @@
 import { apiRequest, type RequestOptions } from './client';
-import { wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
+import { wikiForgeNumericId, wikiForgeIsoDate } from './wikiforge-contract';
 import type { Conversation, CursorPage, MessageRecord, TradeMessageEvent } from '$lib/types';
 import type { LastConnection } from '$lib/types';
 
@@ -7,6 +7,7 @@ interface WikiForgeSimpleUserDto {
 	id: number;
 	name: string;
 	image?: string | null;
+	imageCrop?: import('$lib/types/user').ImageCrop;
 	lastConnection?: LastConnection;
 }
 
@@ -59,7 +60,7 @@ export function toWikiForgeMessage(message: WikiForgeMessageDto): MessageRecord 
 		senderId: String(message.fromUserId),
 		type: message.type === 'TRADE' ? 'trade' : message.type === 'TEXT' ? 'text' : 'unknown',
 		content: message.content ?? '',
-		createdAt: wikiForgeUtcDate(message.creationDate).toISOString(),
+		createdAt: wikiForgeIsoDate(message.creationDate) ?? '',
 		readAt: null,
 		reactions: [],
 		...(message.type === 'TRADE' ? { tradeEvent: parseTradeEvent(message.meta) } : {})
@@ -75,12 +76,13 @@ function toWikiForgeConversation(conversation: WikiForgeConversationDto): Conver
 		participantIds: [String(conversation.user.id)],
 		title: conversation.user.name,
 		avatarUrl: conversation.user.image?.trim() || null,
+		imageCrop: conversation.user.imageCrop,
 		lastConnection: conversation.user.lastConnection,
 		preview: lastMessage?.type === 'TRADE' ? '' : (lastMessage?.content ?? ''),
 		previewType: lastMessage?.type === 'TRADE' ? 'trade' : lastMessage ? 'text' : null,
 		unreadCount: conversation.unread ?? 0,
 		updatedAt: lastMessage
-			? wikiForgeUtcDate(lastMessage.creationDate).toISOString()
+			? (wikiForgeIsoDate(lastMessage.creationDate) ?? '')
 			: new Date(0).toISOString()
 	};
 }

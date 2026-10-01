@@ -5,6 +5,7 @@
 
 	let {
 		image,
+		crop,
 		name,
 		lastConnection,
 		presenceSize = 'md',
@@ -13,6 +14,7 @@
 		class: className
 	}: {
 		image?: string | null;
+		crop?: Partial<import('$lib/types/user').ImageCrop>;
 		name: string;
 		lastConnection?: LastConnection;
 		presenceSize?: 'sm' | 'md' | 'lg';
@@ -20,6 +22,11 @@
 		shape?: 'square' | 'round';
 		class?: string;
 	} = $props();
+	let failed = $state(false);
+	$effect(() => {
+		void image;
+		failed = false;
+	});
 	const sizeClass = $derived(size === 'lg' ? 'size-20 text-3xl' : 'size-10 text-sm');
 </script>
 
@@ -30,10 +37,17 @@
 			shape === 'round' && 'rounded-full'
 		)}
 	>
-		{#if image}<img src={image} alt="" class="size-full object-cover" />{:else}<span
-			class="font-bold text-primary"
-			>{name.slice(0, 1).toUpperCase()}</span
-		>{/if}
+		{#if image && !failed}<img
+				src={image}
+				alt=""
+				onerror={() => (failed = true)}
+				class="size-full object-cover"
+				style={`object-position:${crop?.x ?? 50}% ${crop?.y ?? 50}%;transform:scale(${crop?.zoom ?? 1});transform-origin:${crop?.x ?? 50}% ${crop?.y ?? 50}%`}
+			/>{:else}<span class="font-bold text-primary">{name.slice(0, 1).toUpperCase()}</span>{/if}
 	</span>
-	<UserPresence value={lastConnection} size={presenceSize} class="absolute -right-1 -bottom-1 z-10" />
+	<UserPresence
+		value={lastConnection}
+		size={presenceSize}
+		class="absolute -right-1 -bottom-1 z-10"
+	/>
 </span>

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { SvelteSet } from 'svelte/reactivity';
+	import CollectionProgress from '$lib/components/collection/collection-progress.svelte';
 	import { replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { currentSession } from '$lib/auth/session';
@@ -40,7 +42,11 @@
 		User,
 		WishlistRegistrySummary
 	} from '$lib/types';
-	import { onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
+	import { operationError } from '$lib/domain/operation-error';
+	import CardCession from '$lib/components/collection/card-cession.svelte';
+	import * as Dialog from '$lib/components/ui/dialog';
+	import { onMount, onDestroy } from 'svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -71,8 +77,11 @@
 	let selectedCard = $state<CardRecord | null>(null);
 	let wishlists = $state<WishlistRegistrySummary[]>([]);
 	let filterTimer: number | undefined;
-	let previousFilterKey = '';
+	let previousFilterKey = $state('');
 	let requestId = 0;
+	let selling = $state<CardRecord | null>(null);
+	const protecting = new SvelteSet<string>();
+	onDestroy(() => requestController?.abort());
 	let requestController: AbortController | null = null;
 	let handledRealtimeRevision = 0;
 	const activeFilterCount = $derived(
@@ -150,8 +159,15 @@
 		wishlistOwnerId = data.filters.wishlistOwnerId;
 		const dependencies = Promise.allSettled([data.tags, getWishlists()]);
 		try {
-			const collection = await data.collection;
-			if (!restoredSnapshot) applyResponse(collection, false);
+			const restoredCount = restoredSnapshot ? cards.length : 0;
+			let collection = await data.collection;
+			while (collection.hasNext && collection.items.length < restoredCount) {
+				const position = nextCollectionPosition(collection);
+				if (!position) break;
+				const next = await getWikiForgeCollectionPage(requestQuery(position));
+				collection = { ...next, items: mergeCards(collection.items, next.items) };
+			}
+			applyResponse(collection, false);
 		} catch {
 			failed = true;
 		} finally {
@@ -204,7 +220,8 @@
 				const response = await getWikiForgeCollectionPage(requestQuery(), {
 					signal: controller.signal
 				});
-				if (controller.signal.aborted || currentRequest !== requestId) return;
+				if (controller.signal.aborted || currentRequest !== requestId || currentKey !== filterKey)
+					return;
 				applyResponse(response, false);
 			} catch (error) {
 				if (
@@ -238,14 +255,17 @@
 
 	async function loadNext() {
 		const position = nextCollectionPosition({ hasNext, nextCursor, page: responsePage });
-		if (!position || loadingMore) return;
+		if (!position || loadingMore || loading) return;
+		const currentRequest = requestId;
+		const currentFilter = filterKey;
 		loadingMore = true;
 		loadMoreFailed = false;
 		try {
 			const response = await getWikiForgeCollectionPage(requestQuery(position));
-			applyResponse(response, true);
+			if (currentRequest === requestId && currentFilter === filterKey)
+				applyResponse(response, true);
 		} catch {
-			loadMoreFailed = true;
+			if (currentRequest === requestId && currentFilter === filterKey) loadMoreFailed = true;
 		} finally {
 			loadingMore = false;
 		}
@@ -254,11 +274,13 @@
 	function toggleCardSelection(cardId: string) {
 		selectedCardIds = selectedCardIds.includes(cardId)
 			? selectedCardIds.filter((id) => id !== cardId)
-			: [...selectedCardIds, cardId];
+			: selectedCardIds.length < 500
+				? [...selectedCardIds, cardId]
+				: selectedCardIds;
 	}
 
 	function toggleSelectAll() {
-		const visibleCardIds = cards.map((card) => card.id);
+		const visibleCardIds = cards.map((card) => card.id).slice(0, 500);
 		const allSelected = visibleCardIds.every((cardId) => selectedCardIds.includes(cardId));
 		selectedCardIds = allSelected ? [] : visibleCardIds;
 	}
@@ -319,11 +341,20 @@
 	}
 
 	async function toggleProtection(card: CardRecord) {
-		if (card.userProtected) await unprotectWikiForgeCard(card.id);
-		else await protectWikiForgeCard(card.id);
-		const updated = { ...card, userProtected: !card.userProtected };
-		cards = cards.map((item) => (item.id === card.id ? updated : item));
-		selectedCard = updated;
+		if (protecting.has(card.id)) return;
+		protecting.add(card.id);
+		try {
+			if (card.userProtected) await unprotectWikiForgeCard(card.id);
+			else await protectWikiForgeCard(card.id);
+			const updated = { ...card, userProtected: !card.userProtected };
+			cards = cards.map((item) => (item.id === card.id ? updated : item));
+			if (selectedCard?.id === card.id) selectedCard = updated;
+			if (protection !== 'all') previousFilterKey = '';
+		} catch (cause) {
+			toast.error(operationError(cause));
+		} finally {
+			protecting.delete(card.id);
+		}
 	}
 
 	function clearFilters() {
@@ -393,6 +424,7 @@
 		title={$_('collection.title')}
 		description={$_('collection.description')}
 	/>
+	<CollectionProgress />
 	<div class="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
 		<FilterShell activeCount={activeFilterCount} description={$_('collection.filtersDescription')}>
 			<FilterControls
@@ -451,6 +483,8 @@
 					quickActions
 					onToggleCard={toggleCardSelection}
 					onOpenCard={(card) => (selectedCard = card)}
+					onProtect={(card) => void toggleProtection(card)}
+					onSell={(card) => (selling = card)}
 				/>
 				{#if hasNext || loadMoreFailed}
 					<div class="flex flex-col items-center gap-2 border-t border-primary/20 pt-4">
@@ -503,3 +537,20 @@
 		onClose={() => (selectedCard = null)}
 	/>
 {/if}
+
+<Dialog.Root
+	open={Boolean(selling)}
+	onOpenChange={(value) => {
+		if (!value) selling = null;
+	}}
+	><Dialog.Content class="max-h-[90dvh] overflow-y-auto"
+		><Dialog.Header class="pr-8"
+			><Dialog.Title>{selling?.title}</Dialog.Title><Dialog.Description
+				>{$_('plan.cards.cede')}</Dialog.Description
+			></Dialog.Header
+		>{#if selling}<CardCession
+				card={selling}
+				onChanged={() => (previousFilterKey = '')}
+			/>{/if}</Dialog.Content
+	></Dialog.Root
+>

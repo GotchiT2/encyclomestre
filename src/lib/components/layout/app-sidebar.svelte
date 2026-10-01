@@ -5,7 +5,14 @@
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import UserPresence from '$lib/components/users/user-presence.svelte';
 	import { _ } from '$lib/i18n';
-	import { communityNavigation, exploreNavigation, isActiveRoute, type NavItem } from './nav-items';
+	import {
+		communityNavigation,
+		exploreNavigation,
+		transactionNavigation,
+		progressionNavigation,
+		isActiveRoute,
+		type NavItem
+	} from './nav-items';
 	import GalleryVerticalEndIcon from '@lucide/svelte/icons/gallery-vertical-end';
 	import LogInIcon from '@lucide/svelte/icons/log-in';
 	import PackageOpenIcon from '@lucide/svelte/icons/package-open';
@@ -91,7 +98,9 @@
 
 	<Sidebar.Content>
 		{@render navGroup('navigation.sectionExplore', exploreNavigation)}
+		{@render navGroup('plan.navigation.transactions', transactionNavigation)}
 		{@render navGroup('navigation.sectionCommunity', communityNavigation)}
+		{@render navGroup('plan.navigation.progression', progressionNavigation)}
 	</Sidebar.Content>
 
 	<Sidebar.Footer class="gap-2 border-t border-primary/20 p-2">

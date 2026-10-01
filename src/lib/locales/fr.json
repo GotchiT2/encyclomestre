@@ -250,7 +250,7 @@
 	"codex": {
 		"eyebrow": "Catalogue de cartes",
 		"title": "Toutes les cartes",
-		"description": "Parcourez les cartes créées à partir d’cartes Wikipédia.",
+		"description": "Le catalogue présente les articles et leurs variantes. Votre collection contient les exemplaires que vous possédez.",
 		"loading": "Chargement du catalogue…",
 		"error": "Le catalogue est indisponible.",
 		"empty": "Aucune carte ne correspond à cette recherche.",
@@ -665,7 +665,14 @@
 			"upcoming": "Prochaines éditions",
 			"upcoming_eyebrow": "À venir",
 			"past": "Archives des éditions",
-			"past_eyebrow": "Terminées ou épuisées"
+			"past_eyebrow": "Terminées ou épuisées",
+			"status": {
+				"OPEN": "Disponible",
+				"UPCOMING": "Bientôt disponible",
+				"EXHAUSTED": "Stock épuisé",
+				"ENDED": "Terminé",
+				"CLOSED": "Indisponible"
+			}
 		},
 		"family": {
 			"NORMAL": "Quotidien",
@@ -673,10 +680,11 @@
 			"PREMIUM_PLUS": "Premium +"
 		},
 		"status": {
-			"OPEN": "Ouvert",
-			"UPCOMING": "À venir",
+			"OPEN": "Disponible",
+			"UPCOMING": "Bientôt disponible",
+			"EXHAUSTED": "Stock épuisé",
 			"ENDED": "Terminé",
-			"EXHAUSTED": "Épuisé"
+			"CLOSED": "Indisponible"
 		},
 		"detail": {
 			"status": "État de l’édition",
@@ -692,10 +700,10 @@
 			"per_subject_run": "Tirage maximal : {count} exemplaires par sujet",
 			"page_stock": "{remaining} / {max} restants",
 			"search_card": "Rechercher une carte du pack",
-			"search_card_hint": "Consultez le stock détaillé des cartes présentes dans les pools limités.",
+			"search_card_hint": "Consultez les cartes encore disponibles dans ce pack.",
 			"search_card_placeholder": "Titre de la carte…",
 			"search_no_result": "Aucune carte de ce pack ne correspond à la recherche.",
-			"global_pool": "Cette variante tire dans le catalogue global. L’API ne fournit pas de stock par carte.",
+			"global_pool": "Cette variante peut contenir des cartes de l’ensemble du catalogue.",
 			"image_missing": "Illustration indisponible",
 			"ready": "Ce pack peut être ouvert avec vos crédits disponibles."
 		},
@@ -1430,10 +1438,10 @@
 	"passkeys": {
 		"security": "Sécurité du compte",
 		"title": "Passkeys",
-		"description": "Connectez-vous avec votre empreinte, votre visage ou le code de votre appareil. Le mot de passe reste disponible.",
+		"description": "Connectez-vous avec votre empreinte, votre visage ou le code de votre appareil. Les codes de secours permettent de récupérer le compte.",
 		"login": "Se connecter avec une passkey",
 		"add": "Ajouter une passkey",
-		"addDescription": "Choisissez un nom et confirmez votre mot de passe actuel, puis suivez les instructions de votre appareil.",
+		"addDescription": "Nommez votre passkey, confirmez votre identité, puis suivez les instructions de votre appareil.",
 		"label": "Nom de la passkey",
 		"password": "Mot de passe actuel",
 		"synced": "Synchronisée entre vos appareils",
@@ -1452,20 +1460,25 @@
 		"added": "Passkey enregistrée.",
 		"removed": "Passkey supprimée.",
 		"errors": {
-			"unsupported": "Les passkeys ne sont pas disponibles dans ce navigateur. Utilisez votre mot de passe.",
+			"unsupported": "Ce navigateur ne permet pas d’utiliser les passkeys. Utilisez un navigateur compatible pour vous connecter ou récupérer votre compte.",
 			"insecure": "Les passkeys nécessitent une connexion HTTPS.",
 			"cancelled": "Le navigateur n’a pas utilisé de passkey. Vérifiez qu’une passkey WikiForge est enregistrée sur cet appareil, ou relancez la fenêtre si vous l’avez fermée.",
 			"origin": "Le serveur ne reconnaît pas ce domaine pour les passkeys. Vérifiez la configuration des origines autorisées.",
 			"CAPTCHA_FAILED": "La vérification de sécurité a échoué. Réessayez avec un nouveau jeton.",
-			"INVALID_CREDENTIALS": "Mot de passe incorrect. Corrigez-le pour terminer l’enregistrement.",
+			"INVALID_CREDENTIALS": "La vérification de votre identité a échoué.",
 			"PASSKEY_REJECTED": "Le challenge a expiré ou a été refusé. Recommencez l’ajout.",
 			"PASSKEY_CONFLICT": "Cette passkey existe déjà ou la limite de 10 passkeys est atteinte. La liste a été actualisée.",
-			"invalid_grant": "La connexion a été refusée. Réessayez avec une nouvelle demande ou utilisez votre mot de passe.",
-			"denied": "Ce compte n’a pas accès au backoffice.",
+			"invalid_grant": "La cérémonie a expiré ou n’est plus valide. Recommencez.",
+			"denied": "Cette opération n’est pas autorisée. Vérifiez votre identité puis réessayez.",
 			"failed": "La demande a échoué. Réessayez explicitement.",
 			"uncertain": "Le résultat de l’enregistrement n’est pas confirmé. Vérifiez la liste actualisée avant de recommencer.",
-			"sessionExpired": "Votre session a expiré. Reconnectez-vous avant de gérer vos passkeys."
+			"sessionExpired": "Votre session a expiré. Reconnectez-vous avant de gérer vos passkeys.",
+			"ALREADY_EXISTS": "Ce pseudonyme est déjà utilisé.",
+			"name_taken": "Ce pseudonyme a été pris pendant la création. Choisissez-en un autre.",
+			"FORBIDDEN_NAME": "Ce pseudonyme contient un terme interdit.",
+			"INVALID_PARAMETER": "Vérifiez votre pseudonyme et les champs saisis.",
+			"finalize": "Votre passkey a été créée, mais les informations du compte n’ont pas pu être chargées. Réessayez pour terminer la connexion."
 		},
-		"loginHint": "Cette option fonctionne après avoir enregistré une passkey depuis les paramètres du compte."
+		"loginHint": "Utilisez une passkey déjà enregistrée. Si vous avez perdu vos passkeys, ouvrez la récupération du compte."
 	}
 }

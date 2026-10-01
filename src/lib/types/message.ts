@@ -10,6 +10,7 @@ export interface Conversation {
 	userId?: string;
 	title: string;
 	avatarUrl?: string | null;
+	imageCrop?: import('./user').ImageCrop;
 	lastConnection?: import('./user').LastConnection;
 	preview: string;
 	previewType?: MessageKind | null;

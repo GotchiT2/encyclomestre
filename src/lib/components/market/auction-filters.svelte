@@ -1,6 +1,9 @@
 <script lang="ts">
 	import VariantSelector from '$lib/components/cards/variant-selector.svelte';
 
+	import { currentSession } from '$lib/auth/session';
+	import { getWikiForgePublicPage } from '$lib/api/pages';
+	import { untrack } from 'svelte';
 	import { _ } from '$lib/i18n';
 
 	import { Button } from '$lib/components/ui/button';
@@ -21,6 +24,28 @@
 		$props();
 
 	let expanded = $state(false);
+	let wanted = $state(false);
+	let articleTitle = $state('');
+	$effect(() => {
+		wanted = Boolean(query.wishlist);
+		const id = query.pageId;
+		articleTitle = '';
+		let alive = true;
+		if (id)
+			untrack(
+				() =>
+					void getWikiForgePublicPage(Number(id))
+						.then((page) => {
+							if (alive) articleTitle = page.title;
+						})
+						.catch(() => {
+							if (alive) articleTitle = $_('plan.auctions.exactCard');
+						})
+			);
+		return () => {
+			alive = false;
+		};
+	});
 
 	let selectedVariants = $derived(query.variant.split(',').filter(Boolean).map(Number));
 	let variants = $state<Auction['card']['variant'][]>([]);
@@ -38,12 +63,11 @@
 		[
 			query.q,
 			query.variant,
-			query.seller,
+
 			query.min,
 			query.max,
 			query.phase,
-			query.pageId,
-			query.wishlist,
+
 			query.sortBy === 'ENDS_AT' ? '' : query.sortBy,
 			query.sortDirection === 'ASC' ? '' : query.sortDirection
 		].filter(Boolean)
@@ -56,6 +80,7 @@
 
 		fields.set('variant', selectedVariants.join(','));
 		fields.set('page', '0');
+		fields.set('wishlist', wanted ? ($currentSession?.user.id ?? '') : '');
 
 		onChange(Object.fromEntries([...fields].map(([key, value]) => [key, String(value)])));
 	}
@@ -74,6 +99,14 @@
 				.join(' · ')}
 		</p>{/if}
 
+	{#if query.pageId}<div class="mb-3 flex flex-wrap items-center gap-2">
+			<span>{articleTitle || $_('completion.loading')}</span><Button
+				size="sm"
+				variant="ghost"
+				onclick={() => onChange({ pageId: '', title: '', page: '0' })}
+				>{$_('plan.auctions.removeExact')}</Button
+			>
+		</div>{/if}
 	<form class="flex flex-col gap-3" onsubmit={submit} aria-label={$_('auctionHub.filters')}>
 		<div>
 			<h2 class="font-serif text-xl">{$_('auctionHub.filters')}</h2>
@@ -99,16 +132,6 @@
 					multiple={true}
 					name="variant"
 					onChange={() => {}}
-				/></label
-			>
-
-			<label class="grid gap-1 text-sm"
-				>{$_('apiEvolution.sellerId')}<input
-					name="seller"
-					value={query.seller}
-					type="number"
-					min="1"
-					class="h-11 min-w-0 border border-primary/25 bg-background px-3"
 				/></label
 			>
 
@@ -145,15 +168,9 @@
 						>{/each}</select
 				></label
 			>
-			{#each ['pageId', 'wishlist'] as key (key)}<label class="grid gap-1 text-sm"
-					>{$_('apiEvolution.' + key)}<input
-						class="h-11 min-w-0 border border-primary/25 bg-background px-3"
-						type="number"
-						min="1"
-						name={key}
-						value={key === 'pageId' ? query.pageId : query.wishlist}
-					/></label
-				>{/each}
+			<label class="flex items-center gap-2 text-sm"
+				><input type="checkbox" bind:checked={wanted} />{$_('plan.auctions.wanted')}</label
+			>
 			<label class="grid gap-1 text-sm"
 				>{$_('apiEvolution.sortBy')}<select
 					name="sortBy"

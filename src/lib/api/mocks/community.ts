@@ -68,6 +68,7 @@ export function createCommunityMocks(
 			id: 1,
 			guildId: 1,
 			fromUserId: 2,
+			fromUser: { id: 2, name: 'Collectionneur' },
 			type: 'TEXT',
 			content: 'Bienvenue dans les archives !',
 			creationDate: stamp()
@@ -424,6 +425,7 @@ export function createCommunityMocks(
 					id: messages.length + 1,
 					guildId: id,
 					fromUserId: 1,
+					fromUser: { id: 1, name: 'Administrateur' },
 					type: body.cardId ? 'CARD' : body.pageId ? 'PAGE' : 'TEXT',
 					content: String(body.content ?? ''),
 					creationDate: stamp()

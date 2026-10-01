@@ -12,9 +12,11 @@ export interface OAuthCurrentUserResponse {
 	nameChangeAvailableAt?: string;
 	id: string | number;
 	name: string;
-	email: string;
-	roles: string[];
+	email?: string;
+	roles?: string[];
 	imagePageId?: number | null;
+	imageCrop?: import('$lib/types/user').ImageCrop;
+	recoveryCodes?: number;
 	image?: string | null;
 	nsfw?: boolean;
 	safeWords?: string[];
@@ -23,7 +25,7 @@ export interface OAuthCurrentUserResponse {
 	visibility?: ProfileVisibility;
 	rank?: number;
 	lastConnection?: LastConnection;
-	createdAt: string;
+	createdAt?: string;
 	banners?: Banner[];
 }
 
@@ -35,6 +37,8 @@ function toUserRole(roles: string[]): UserRole {
 
 /** Converts the OAuth profile payload into the user shape used by the existing application. */
 export function toCurrentUser(profile: OAuthCurrentUserResponse): User {
+	const date = profile.createdAt ? wikiForgeUtcDate(profile.createdAt) : undefined;
+	const createdAt = date && Number.isFinite(date.getTime()) ? date.toISOString() : '';
 	return {
 		id: String(profile.id),
 		username: profile.name,
@@ -45,6 +49,8 @@ export function toCurrentUser(profile: OAuthCurrentUserResponse): User {
 		email: profile.email,
 		avatarUrl: profile.image ?? null,
 		imagePageId: profile.imagePageId ?? null,
+		imageCrop: profile.imageCrop,
+		recoveryCodes: profile.recoveryCodes,
 		nsfwEnabled: Boolean(profile.nsfw),
 		safeWords: profile.safeWords ?? [],
 		mutedNotifications: profile.mutedNotifications ?? [],
@@ -52,9 +58,9 @@ export function toCurrentUser(profile: OAuthCurrentUserResponse): User {
 		visibility: profile.visibility ?? 'FRIENDS',
 		...(typeof profile.rank === 'number' ? { rank: profile.rank } : {}),
 		lastConnection: profile.lastConnection,
-		role: toUserRole(profile.roles),
-		createdAt: wikiForgeUtcDate(profile.createdAt).toISOString(),
-		updatedAt: wikiForgeUtcDate(profile.createdAt).toISOString(),
+		role: toUserRole(profile.roles ?? []),
+		createdAt,
+		updatedAt: createdAt,
 		...(profile.banners ? { banners: profile.banners } : {})
 	};
 }

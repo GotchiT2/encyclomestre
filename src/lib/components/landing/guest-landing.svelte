@@ -3,7 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import ForgePanel from '$lib/components/layout/forge-panel.svelte';
-	import HudStat from '$lib/components/layout/hud-stat.svelte';
+	import LegalLinks from '$lib/components/security/legal-links.svelte';
 	import { _ } from '$lib/i18n';
 	import ArrowUpRightIcon from '@lucide/svelte/icons/arrow-up-right';
 	import BookOpenIcon from '@lucide/svelte/icons/book-open';
@@ -31,14 +31,9 @@
 		</div>
 		<div class="flex flex-col gap-3 sm:flex-row">
 			<Button href="/register" size="lg"><ArrowUpRightIcon />{$_('landing.primaryCta')}</Button>
-			<Button href="/cards" variant="outline" size="lg"
-				><BookOpenIcon />{$_('landing.secondaryCta')}</Button
+			<Button href="/login" variant="outline" size="lg"
+				><BookOpenIcon />{$_('plan.account.login')}</Button
 			>
-		</div>
-		<div class="grid grid-cols-3 gap-2">
-			<HudStat label={$_('landing.statArticles')} value={$_('landing.statArticlesValue')} accent />
-			<HudStat label={$_('landing.statCollectors')} value={$_('landing.statCollectorsValue')} />
-			<HudStat label={$_('landing.statTrades')} value={$_('landing.statTradesValue')} />
 		</div>
 	</div>
 
@@ -72,3 +67,5 @@
 		</ForgePanel>
 	{/each}
 </section>
+
+<LegalLinks />

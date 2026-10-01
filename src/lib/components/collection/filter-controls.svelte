@@ -4,7 +4,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Field from '$lib/components/ui/field';
 	import { Input } from '$lib/components/ui/input';
-	import { Switch } from '$lib/components/ui/switch';
 	import { _ } from '$lib/i18n';
 	import type {
 		CardSearchSort,
@@ -67,11 +66,15 @@
 		class="flex min-h-11 items-center justify-between gap-3 border border-primary/20 bg-background/40 px-3"
 	>
 		<span class="forge-label">{label}</span>
-		<Switch
-			checked={value === 'yes'}
-			onCheckedChange={(checked) => setValue(checked ? 'yes' : 'all')}
+		<select
 			aria-label={switchLabel}
-		/>
+			{value}
+			onchange={(event) => setValue(event.currentTarget.value as CollectionBooleanFilter)}
+			class="min-h-11"
+			><option value="all">{$_('plan.filters.all')}</option><option value="yes"
+				>{$_('plan.filters.yes')}</option
+			><option value="no">{$_('plan.filters.no')}</option></select
+		>
 	</div>
 {/snippet}
 

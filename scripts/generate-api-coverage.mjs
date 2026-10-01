@@ -12,6 +12,25 @@ const operations = Object.entries(api.paths)
 	)
 	.sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
 function destination(path) {
+	if (/passkeys|reauth|recovery-codes/.test(path))
+		return [
+			'/login, /register, /recovery, /settings',
+			'../passkeys/api.ts',
+			'Options WebAuthn, création ou récupération de compte, revérification et codes de secours éphémères.'
+		];
+	if (path === '/me/deletion' || path === '/me')
+		return [
+			'/settings, profil, shell',
+			'account-deletion.ts, current-user.ts, users.ts',
+			'Profil courant, sauvegarde complète ou fermeture revérifiée ; vérification du résultat avec le même jeton.'
+		];
+	if (/auction-favorites/.test(path))
+		return [
+			'/market, /market/[id]',
+			'auctions.ts',
+			'Favoris persistants et liste paginée, distincts des abonnements temporaires.'
+		];
+
 	if (/guild/.test(path))
 		return [
 			'/guild, /guilds/[id]',

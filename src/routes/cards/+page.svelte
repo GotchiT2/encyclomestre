@@ -48,14 +48,14 @@
 				.catch(() => toast.error($_('common.error')));
 		}
 		if (!restoreSession(localStorage)?.accessToken) return;
-		wishlists = await getWishlists();
+		wishlists = await getWishlists().catch(() => []);
 	});
 
 	async function openCard(card: CardRecord) {
 		if (selectionMode) {
 			selectedCardIds = selectedCardIds.includes(card.id)
 				? selectedCardIds.filter((id) => id !== card.id)
-				: [...selectedCardIds, card.id];
+				: [...selectedCardIds, card.id].slice(0, 500);
 			return;
 		}
 		const request = ++detailRequest;
@@ -69,7 +69,7 @@
 	}
 
 	async function addSelectedToWishlist(wishlistId: string) {
-		if (!selectedCardIds.length) return;
+		if (!selectedCardIds.length || wishlistAdding) return;
 		wishlistAdding = true;
 		try {
 			await addWishlistRegistryCards(wishlistId, selectedCardIds);

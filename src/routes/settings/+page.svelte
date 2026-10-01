@@ -1,4 +1,5 @@
 <script lang="ts">
+	import AvatarEditor from '$lib/components/settings/avatar-editor.svelte';
 	import PasskeyManager from '$lib/components/security/passkey-manager.svelte';
 	import { nameChangeLocked, nameChangeRefusal } from '$lib/domain/name-change';
 	import { operationError } from '$lib/domain/operation-error';
@@ -9,8 +10,6 @@
 	import { clearSession, currentSession, persistSession } from '$lib/auth/session';
 	import {
 		getCurrentUser,
-		getWikiForgePublicPages,
-		toPublicPageCardRecord,
 		logout,
 		logoutAll,
 		updateWikiForgeMe,
@@ -22,9 +21,7 @@
 	import CensoredKeywords from '$lib/components/settings/censored-keywords.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import WishlistPicker from '$lib/components/wishlist/wishlist-picker.svelte';
-	import type { CardQuery } from '$lib/api';
-	import type { CardRecord, ProfileSettings } from '$lib/types';
+	import type { ProfileSettings } from '$lib/types';
 
 	let profile = $state<ProfileSettings | null>(null);
 	let loading = $state(true);
@@ -101,44 +98,6 @@
 		}
 	}
 
-	async function loadAvatarCards(cardQuery: CardQuery) {
-		const result = await getWikiForgePublicPages({
-			page: Math.max(0, (cardQuery.page ?? 1) - 1),
-			q: cardQuery.query,
-			sortBy: cardQuery.query?.trim() ? 'relevance' : 'name'
-		});
-		const page = result.page + 1;
-		const pageSize = 48;
-		const total = result.nbResults;
-		return {
-			items: (result.results ?? []).map((item) =>
-				toPublicPageCardRecord({ ...item, _variants: result._variants })
-			),
-			meta: {
-				page,
-				pageSize,
-				total,
-				totalPages:
-					total > 0
-						? Math.max(page, Math.ceil(Math.min(total, result.maxResults ?? Infinity) / pageSize))
-						: 1,
-				hasNext: result.hasNext,
-				maxResults: result.maxResults,
-				truncated: result.truncated
-			}
-		};
-	}
-
-	async function selectAvatar(card: CardRecord) {
-		if (!profile) return;
-		const imagePageId = Number(card.baseCardId ?? card.catalogueId);
-		const user = await updateWikiForgeImage(imagePageId);
-		nameChangeAvailableAt = user.nameChangeAvailableAt;
-		profile.avatarCardId = imagePageId.toString();
-		avatarImageUrl = user.avatarUrl ?? card.imageUrl;
-		const session = $currentSession;
-		if (session) persistSession(localStorage, { ...session, user });
-	}
 	async function removeAvatar() {
 		if (!profile) return;
 		const user = await updateWikiForgeImage(null);
@@ -199,11 +158,11 @@
 	{/if}
 </section>
 
-<WishlistPicker
+<AvatarEditor
 	bind:open={avatarPickerOpen}
-	existingCardIds={profile?.avatarCardId ? [profile.avatarCardId] : []}
-	loadCards={loadAvatarCards}
-	onSelect={selectAvatar}
-	catalogueLabel={$_('settings.avatar_collection')}
-	title={$_('settings.choose_avatar')}
+	onSaved={(user) => {
+		if (profile) profile.avatarCardId = user.imagePageId == null ? null : String(user.imagePageId);
+		avatarImageUrl = user.avatarUrl ?? null;
+		nameChangeAvailableAt = user.nameChangeAvailableAt;
+	}}
 />

@@ -3,7 +3,7 @@
 	"info": {
 		"title": "Api",
 		"description": "@project.description@",
-		"version": "1.0.0"
+		"version": "2.0.0"
 	},
 	"servers": [
 		{
@@ -27,6 +27,10 @@
 		{
 			"name": "Welcome",
 			"description": "Agrégat de la page d'accueil : boosters, collection, échanges, demandes d'amitié et pastilles de non lus."
+		},
+		{
+			"name": "Passkeys",
+			"description": "Connexion, inscription et récupération de compte par passkey, toutes terminées au token endpoint ; passkeys, revérification et codes de secours du joueur connecté."
 		},
 		{
 			"name": "Collection",
@@ -290,6 +294,52 @@
 								}
 							}
 						}
+					}
+				}
+			}
+		},
+		"/me/auction-favorites/{auctionId}": {
+			"put": {
+				"tags": ["Me"],
+				"summary": "Suit une enchère",
+				"description": "Idempotent : `204` que l'enchère soit déjà suivie ou non. Toute enchère lisible par `GET /auctions/{id}` peut être suivie, terminée\ncomprise. Le champ `favorite` des enchères passe alors à `true`.\n\nErreurs : `404` / `NOT_FOUND` si l'enchère n'existe pas, si son vendeur est désactivé ou si l'appelant l'a bloqué.",
+				"operationId": "addAuctionFavorite",
+				"parameters": [
+					{
+						"name": "auctionId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "integer",
+							"format": "int64"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK"
+					}
+				}
+			},
+			"delete": {
+				"tags": ["Me"],
+				"summary": "Ne suit plus une enchère",
+				"description": "Idempotent : `204` même si l'enchère n'était pas suivie ou n'existe plus. Ne touche ni aux mises ni à l'abonnement temps réel.",
+				"operationId": "removeAuctionFavorite",
+				"parameters": [
+					{
+						"name": "auctionId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "integer",
+							"format": "int64"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK"
 					}
 				}
 			}
@@ -1058,6 +1108,106 @@
 				}
 			}
 		},
+		"/public/passkeys/signup/options": {
+			"post": {
+				"tags": ["Passkeys"],
+				"summary": "Ouvre une inscription",
+				"description": "Sans authentification. Corps : `{ \"name\": \"…\", \"label\": \"iPhone\" }` — `name` obligatoire, 64 caractères au plus, espaces de bord retirés ;\n`label` facultatif, le nom de la passkey dans la liste du joueur (`Passkey` par défaut).\n\nExige un jeton Turnstile dans l'en-tête `CF-Turnstile-Response`, obtenu d'un widget monté avec `data-action=\"signup\"`, à usage unique.\n\nRéponse : `{ \"requestId\": \"…\", \"options\": { … } }`, les `PublicKeyCredentialCreationOptions` à passer à\n`PublicKeyCredential.parseCreationOptionsFromJSON(...)` puis à `navigator.credentials.create({ publicKey })`. L'inscription se termine au\ntoken endpoint, **exactement** comme une connexion (`grant_type=urn:wikiforge:grant-type:passkey`, `request_id`, `credential`) :\n\n```jsonc\n{\n  \"access_token\": \"…\", \"refresh_token\": \"…\", \"token_type\": \"Bearer\", \"expires_in\": 900,\n  \"recovery_codes\": [\"ABCD-EFGH-IJKL-MNOP\", \"…\"]   // 10 codes de secours, servis UNE SEULE FOIS\n}\n```\n\nLe compte n'existe qu'à la fin : une cérémonie abandonnée ne crée rien. Les codes de secours doivent être montrés au joueur avant de\nquitter l'écran, avec copie et téléchargement : ils ne se relisent jamais, seul `POST /me/recovery-codes` en génère de nouveaux.\n\nErreurs à l'ouverture : `400` / `INVALID_PARAMETER`, `400` / `FORBIDDEN_NAME` (nom contenant un terme interdit), `403` /\n`CAPTCHA_FAILED`, `409` / `ALREADY_EXISTS` (nom pris). Au token endpoint : `400 {\"error\": \"name_taken\"}` si le nom a été pris entre les\ndeux appels, `400 {\"error\": \"invalid_grant\"}` pour tout le reste.",
+				"operationId": "signupOptions",
+				"parameters": [
+					{
+						"name": "CF-Turnstile-Response",
+						"in": "header",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SignupOptionsRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"*/*": {
+								"schema": {
+									"$ref": "#/components/schemas/PasskeyCeremonyDTO"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/public/passkeys/recovery/options": {
+			"post": {
+				"tags": ["Passkeys"],
+				"summary": "Ouvre une récupération de compte",
+				"description": "Sans authentification. Deux formes :\n\n- par code de secours : `{ \"name\": \"…\", \"code\": \"ABCD-EFGH-IJKL-MNOP\", \"label\": \"…\" }`, avec un jeton Turnstile d'action `recovery` dans\n  `CF-Turnstile-Response`. Le code est lu sans tenir compte des tirets, des espaces ni de la casse ; le nom, lui, est comparé exactement ;\n- par lien : `{ \"token\": \"…\", \"label\": \"…\" }`, le `token` étant le paramètre du lien généré par le back office. Pas de Turnstile.\n\nRéponse : `{ \"requestId\": \"…\", \"options\": { … } }`, une création de passkey, terminée au token endpoint comme une connexion. Le code ou le\nlien n'est consommé qu'à ce moment, et seulement si la passkey est acceptée.\n\nRécupérer par **code** ajoute une passkey et ouvre une session, sans rien toucher d'autre : les autres passkeys et sessions restent, et le\njoueur retire lui-même celle de l'appareil perdu. Récupérer par **lien** est une reprise complète d'un compte peut-être compromis : **toutes\nles autres passkeys sont supprimées**, toutes les autres sessions fermées, et **les codes de secours remplacés**, rendus dans\n`recovery_codes` au token endpoint comme à l'inscription. Les anciennes passkeys ne sont pas dans `excludeCredentials` : un appareil qui\nen porte encore une peut en créer une nouvelle.\n\nErreurs : `400` / `INVALID_PARAMETER` si ni code ni lien, `403` / `CAPTCHA_FAILED`, `403` / `INVALID_CREDENTIALS` si le nom, le code ou\nle lien ne correspond à rien — lien expiré, code déjà utilisé et compte fermé compris, sans distinction.",
+				"operationId": "recoveryOptions",
+				"parameters": [
+					{
+						"name": "CF-Turnstile-Response",
+						"in": "header",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/RecoveryOptionsRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"*/*": {
+								"schema": {
+									"$ref": "#/components/schemas/PasskeyCeremonyDTO"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/public/passkeys/options": {
+			"post": {
+				"tags": ["Passkeys"],
+				"summary": "Ouvre une connexion par passkey",
+				"description": "Sans authentification. Corps : aucun. Réponse :\n\n```jsonc\n{\n  \"requestId\": \"…\",  // à renvoyer au token endpoint avec la réponse du navigateur\n  \"options\": { … }   // PublicKeyCredentialRequestOptions au format JSON de WebAuthn\n}\n```\n\n`options` se passe à `PublicKeyCredential.parseRequestOptionsFromJSON(...)` puis à `navigator.credentials.get({ publicKey })` — ou à\n`navigator.credentials.get({ publicKey, mediation: \"conditional\" })` pour proposer les passkeys dans l'autocomplétion. `allowCredentials`\nest vide : le navigateur propose toutes les passkeys du site, sans nom à saisir.\n\nLa connexion se termine par `POST /oauth2/token`, en `application/x-www-form-urlencoded` :\n\n```\ngrant_type=urn:wikiforge:grant-type:passkey\nrequest_id=<requestId>\ncredential=<JSON.stringify(credential.toJSON())>\n```\n\nRéponse : `access_token`, `refresh_token` et le cookie du flux SSE. Pas de Turnstile : une passkey ne se devine pas. Les options valent\n**cinq minutes** et une seule fois, qu'elles aboutissent ou non ; un échec répond `400 {\"error\": \"invalid_grant\"}`, sans distinguer passkey\ninconnue, signature fausse, options expirées ou compte fermé.",
+				"operationId": "loginOptions",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"*/*": {
+								"schema": {
+									"$ref": "#/components/schemas/PasskeyCeremonyDTO"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
 		"/notifications/read-all": {
 			"post": {
 				"tags": ["Notifications"],
@@ -1114,6 +1264,127 @@
 							"*/*": {
 								"schema": {
 									"$ref": "#/components/schemas/SalesDTO"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/me/recovery-codes": {
+			"post": {
+				"tags": ["Passkeys"],
+				"summary": "Régénère les codes de secours",
+				"description": "Corps : la revérification, `{ \"requestId\": \"…\", \"credential\": { … } }` ou `{ \"recoveryCode\": \"…\" }` (voir `POST /me/reauth/options`).\n\nRemplace **tous** les codes de secours du joueur par 10 nouveaux : les anciens cessent aussitôt de fonctionner. Réponse :\n\n```jsonc\n{ \"codes\": [\"ABCD-EFGH-IJKL-MNOP\", \"…\"] }   // servis une seule fois : les montrer, proposer copie et téléchargement\n```\n\nLe nombre de codes restants se lit sur `GET /me` (`recoveryCodes`).\n\nErreurs : `403` / `INVALID_CREDENTIALS` si la revérification échoue.",
+				"operationId": "replaceRecoveryCodes",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ReauthRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"*/*": {
+								"schema": {
+									"$ref": "#/components/schemas/RecoveryCodesDTO"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/me/reauth/options": {
+			"post": {
+				"tags": ["Passkeys"],
+				"summary": "Ouvre une revérification",
+				"description": "Première étape de tout geste sensible — supprimer le compte, ajouter une passkey, régénérer les codes de secours. Corps : aucun.\n\nRéponse : `{ \"requestId\": \"…\", \"options\": { … } }`, à passer à `PublicKeyCredential.parseRequestOptionsFromJSON(...)` puis à\n`navigator.credentials.get({ publicKey })`. `allowCredentials` ne porte que les passkeys du joueur.\n\nLe geste reçoit ensuite, dans son corps, l'objet de revérification :\n\n```jsonc\n{ \"requestId\": \"…\", \"credential\": { … } }   // credential.toJSON() de la réponse du navigateur\n{ \"recoveryCode\": \"ABCD-EFGH-IJKL-MNOP\" }   // ou un code de secours, consommé — pour un joueur sans passkey sous la main\n```\n\nLes options valent **cinq minutes** et une seule fois, une seule revérification par joueur : en redemander remplace celle en cours. Une passkey d'un autre compte, une signature fausse ou des options expirées\nrépondent `403` / `INVALID_CREDENTIALS` sur le geste.",
+				"operationId": "reauthOptions",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"*/*": {
+								"schema": {
+									"$ref": "#/components/schemas/PasskeyCeremonyDTO"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/me/passkeys": {
+			"get": {
+				"tags": ["Passkeys"],
+				"summary": "Liste les passkeys du joueur connecté",
+				"description": "Renvoie les passkeys du joueur, de la plus ancienne à la plus récente :\n\n```jsonc\n[{\n  \"id\": \"…\",           // identifiant de la passkey en base64url, à passer à DELETE /me/passkeys/{id}\n  \"label\": \"iPhone\",   // nom choisi par le joueur à l'enregistrement\n  \"synced\": true,      // true pour une passkey synchronisée entre appareils, false pour une clé liée à un seul appareil\n  \"createdAt\": \"…Z\",\n  \"lastUsedAt\": \"…Z\"   // dernière connexion, ou la date d'enregistrement si elle n'a jamais servi\n}]\n```",
+				"operationId": "list",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"*/*": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/PasskeyDTO"
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"tags": ["Passkeys"],
+				"summary": "Enregistre une passkey",
+				"description": "Seconde étape de l'enregistrement, après `POST /me/passkeys/options` et `navigator.credentials.create(...)`.\n\n```jsonc\n{\n  \"label\": \"iPhone\",   // obligatoire, 64 caractères au maximum\n  \"credential\": { … }, // le PublicKeyCredential rendu par le navigateur, sérialisé par credential.toJSON()\n  \"reauth\": { \"requestId\": \"…\", \"credential\": { … } }   // ou { \"recoveryCode\": \"…\" }, voir POST /me/reauth/options\n}\n```\n\nUne passkey est un moyen de connexion permanent, qu'un access token volé ne doit pas pouvoir ajouter : la revérification est exigée, et\ncontrôlée **avant** de consommer les options d'enregistrement. Ordre côté front : `POST /me/reauth/options` et\n`navigator.credentials.get(...)`, puis `POST /me/passkeys/options` et `navigator.credentials.create(...)`, puis cet appel. Un code de\nsecours n'est consommé que si la passkey est enregistrée.\n\nRéponse : `201` et la passkey créée, au format de `GET /me/passkeys`.\n\nErreurs : `403` / `INVALID_CREDENTIALS` si la revérification échoue, `400` / `PASSKEY_REJECTED` si aucune cérémonie d'enregistrement n'est\nen cours (options expirées ou déjà utilisées) ou si la vérification WebAuthn échoue — recommencer à `POST /me/passkeys/options` —,\n`409` / `PASSKEY_CONFLICT` si la passkey est déjà enregistrée ou si le joueur a déjà 10 passkeys.",
+				"operationId": "register",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/PasskeyRegistrationRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"*/*": {
+								"schema": {
+									"$ref": "#/components/schemas/PasskeyDTO"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/me/passkeys/options": {
+			"post": {
+				"tags": ["Passkeys"],
+				"summary": "Ouvre l'enregistrement d'une passkey",
+				"description": "Première étape de l'enregistrement. Corps : aucun. Réponse : les `PublicKeyCredentialCreationOptions` au format JSON de WebAuthn, à passer\ntelles quelles à `PublicKeyCredential.parseCreationOptionsFromJSON(...)` puis à `navigator.credentials.create({ publicKey })`.\n\nLes options valent **cinq minutes** et une seule fois ; en redemander remplace celles en cours. Les passkeys déjà enregistrées sont dans\n`excludeCredentials`, pour que l'appareil refuse d'en créer une seconde.\n\nErreurs : `409` / `PASSKEY_CONFLICT` si le joueur a déjà 10 passkeys.",
+				"operationId": "registrationOptions",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"*/*": {
+								"schema": {
+									"$ref": "#/components/schemas/JsonNode"
 								}
 							}
 						}
@@ -1212,18 +1483,36 @@
 			"get": {
 				"tags": ["Me"],
 				"summary": "Enchères du joueur connecté",
-				"description": "Les enchères de l'appelant, ouvertes d'abord puis les terminées, les plus récentes en tête, cent au plus. Même forme que\n`GET /auctions/{id}`, sans l'historique des mises.\n\nUne enchère terminée depuis plus de 30 jours n'y figure plus.",
+				"description": "Les enchères que l'appelant vend, ouvertes d'abord puis les terminées, les plus récentes en tête, 48 par page. Même forme que\n`GET /auctions/{id}`, sans l'historique des mises.\n\n```jsonc\n{ \"nbResults\": 12, \"page\": 0, \"pageSize\": 48, \"hasNext\": false, \"results\": [ { … } ] }\n```\n\n`status` (facultatif) filtre sur `OPEN`, `SOLD`, `UNSOLD` ou `CANCELLED`. Chaque enchère porte `viewerOutcome` (`SCHEDULED`, `RUNNING`,\n`SETTLING`, `SOLD`, `UNSOLD`, `CANCELLED`), `listingFee` — les frais de mise en vente déjà payés — et `finalFee` une fois vendue.\n\n**Conservation** : une enchère close depuis plus de 30 jours est purgée et disparaît de cette liste ; la trace de l'argent et de la carte\nreste dans l'historique des transferts.",
 				"operationId": "myAuctions",
+				"parameters": [
+					{
+						"name": "status",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "string",
+							"enum": ["OPEN", "SOLD", "UNSOLD", "CANCELLED"]
+						}
+					},
+					{
+						"name": "page",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "integer",
+							"format": "int32",
+							"default": 0
+						}
+					}
+				],
 				"responses": {
 					"200": {
 						"description": "OK",
 						"content": {
 							"*/*": {
 								"schema": {
-									"type": "array",
-									"items": {
-										"$ref": "#/components/schemas/AuctionDTO"
-									}
+									"$ref": "#/components/schemas/AuctionsResult"
 								}
 							}
 						}
@@ -1407,7 +1696,7 @@
 			"get": {
 				"tags": ["Guilds"],
 				"summary": "Lit le chat de la guilde",
-				"description": "Messages de la guilde, **du plus récent au plus ancien**, 50 par page. Réservé aux membres.\n\nSans paramètre, l'appel rend les 50 derniers messages. Pour remonter, rappeler l'endpoint avec le `nextCursor` de la réponse précédente\ndans `cursor` ; `hasNext` dit s'il reste quelque chose au-dessus. Le curseur est opaque : ne rien en déduire, ne pas le fabriquer.\n\n```jsonc\n{\n  \"results\": [\n    { \"id\": 91, \"guildId\": 12, \"fromUserId\": 42, \"type\": \"TEXT\", \"content\": \"…\", \"creationDate\": \"2026-08-23T14:31:00\" },\n    { \"id\": 90, \"guildId\": 12, \"fromUserId\": 51, \"type\": \"CARD\", \"meta\": \"{\\\"cardId\\\": 12}\",\n      \"card\": { \"id\": 12, \"pageId\": 1234, \"title\": \"…\", \"image\": \"https://…\", \"variantId\": 4, \"packId\": 2,\n                \"serialNumber\": 12, \"maxCopies\": 500, \"atk\": 42 },\n      \"creationDate\": \"…\" },\n    { \"id\": 89, \"guildId\": 12, \"fromUserId\": 51, \"type\": \"PAGE\", \"meta\": \"{\\\"pageId\\\": 1234}\",\n      \"page\": { \"id\": 1234, \"title\": \"…\", \"image\": \"https://…\", \"ownedCount\": 2 },\n      \"creationDate\": \"…\" }\n  ],\n  \"nextCursor\": \"MTc1…\",\n  \"hasNext\": true\n}\n```\n\nLa carte et l'article partagés sont **résolus par le serveur** : `card` a la forme d'une carte de vitrine, `page` celle d'un `PageDTO`\ndont l'`ownedCount` est celui du **lecteur** — de quoi savoir d'un coup d'œil si on possède déjà l'article. Ils sont chargés en un lot par\npage de messages, pas un appel par message.\n\nUne carte disparue de la collection ou un article désactivé sont **ignorés silencieusement** : le message reste, `card` ou `page` est\nsimplement absent, et rien n'indique une erreur. `meta` porte toujours l'identifiant partagé, de quoi afficher « contenu indisponible »\nplutôt qu'un vide.\n\nContrairement au chat privé, **rien n'est marqué comme lu** : le chat de guilde n'a pas de compteur de non lus.\n\nL'historique s'arrête à **14 jours** : les messages plus vieux sont archivés hors de portée de l'API. Une guilde silencieuse depuis\nlongtemps a donc un chat vide, sans que cela signale une erreur.\n\nErreurs : `404` / `NOT_FOUND` si la guilde n'existe pas ou si l'appelant n'en est pas membre.",
+				"description": "Messages de la guilde, **du plus récent au plus ancien**, 50 par page. Réservé aux membres.\n\nSans paramètre, l'appel rend les 50 derniers messages. Pour remonter, rappeler l'endpoint avec le `nextCursor` de la réponse précédente\ndans `cursor` ; `hasNext` dit s'il reste quelque chose au-dessus. Le curseur est opaque : ne rien en déduire, ne pas le fabriquer.\n\n```jsonc\n{\n  \"results\": [\n    { \"id\": 91, \"guildId\": 12, \"fromUserId\": 42,\n      \"fromUser\": { \"id\": 42, \"name\": \"…\", \"imagePageId\": 1234, \"image\": \"https://…\", \"imageCrop\": { \"x\": 50, \"y\": 50, \"zoom\": 1 } },\n      \"type\": \"TEXT\", \"content\": \"…\", \"creationDate\": \"2026-08-23T14:31:00\" },\n    { \"id\": 90, \"guildId\": 12, \"fromUserId\": 51, \"type\": \"CARD\", \"meta\": \"{\\\"cardId\\\": 12}\",\n      \"card\": { \"id\": 12, \"pageId\": 1234, \"title\": \"…\", \"image\": \"https://…\", \"variantId\": 4, \"packId\": 2,\n                \"serialNumber\": 12, \"maxCopies\": 500, \"atk\": 42 },\n      \"creationDate\": \"…\" },\n    { \"id\": 89, \"guildId\": 12, \"fromUserId\": 51, \"type\": \"PAGE\", \"meta\": \"{\\\"pageId\\\": 1234}\",\n      \"page\": { \"id\": 1234, \"title\": \"…\", \"image\": \"https://…\", \"ownedCount\": 2 },\n      \"creationDate\": \"…\" }\n  ],\n  \"nextCursor\": \"MTc1…\",\n  \"hasNext\": true\n}\n```\n\n`fromUser` porte le nom et l'avatar **actuels** de l'auteur, lus à chaque appel : un joueur renommé l'est aussi dans ses anciens messages.\n\nLa carte et l'article partagés sont **résolus par le serveur** : `card` a la forme d'une carte de vitrine, `page` celle d'un `PageDTO`\ndont l'`ownedCount` est celui du **lecteur** — de quoi savoir d'un coup d'œil si on possède déjà l'article. Ils sont chargés en un lot par\npage de messages, pas un appel par message.\n\nUne carte disparue de la collection ou un article désactivé sont **ignorés silencieusement** : le message reste, `card` ou `page` est\nsimplement absent, et rien n'indique une erreur. `meta` porte toujours l'identifiant partagé, de quoi afficher « contenu indisponible »\nplutôt qu'un vide.\n\nContrairement au chat privé, **rien n'est marqué comme lu** : le chat de guilde n'a pas de compteur de non lus.\n\nL'historique s'arrête à **14 jours** : les messages plus vieux sont archivés hors de portée de l'API. Une guilde silencieuse depuis\nlongtemps a donc un chat vide, sans que cela signale une erreur.\n\nErreurs : `404` / `NOT_FOUND` si la guilde n'existe pas ou si l'appelant n'en est pas membre.",
 				"operationId": "messages",
 				"parameters": [
 					{
@@ -1511,6 +1800,37 @@
 				"summary": "Invite un joueur dans une guilde",
 				"description": "Demande le droit `INVITE`. Corps de requête : aucun. Réponse : `204` sans corps.\n\nL'invité la voit dans `GET /me/guild-invitations` et reçoit une notification `GUILD_INVITE`. L'appel est idempotent : réinviter un joueur\ndéjà invité répond `204` sans nouvelle notification.\n\nL'invitation n'est pas refusée à un joueur déjà en guilde ailleurs : elle échouera à l'acceptation, ce qui évite de faire de cet endpoint\nun oracle sur l'appartenance des autres. Le nombre de places n'est pas contrôlé non plus — une place peut se libérer d'ici la réponse.\n\nUne invitation sans réponse est purgée au bout de sept jours.\n\nErreurs : `403` / `MISSING_GUILD_PERMISSION` sans le droit `INVITE`, `404` / `NOT_FOUND` si la guilde n'existe pas, si l'appelant n'en est\npas membre ou si le joueur invité n'existe pas, `409` / `GUILD_CONFLICT` s'il est déjà membre de cette guilde.",
 				"operationId": "invite_1",
+				"parameters": [
+					{
+						"name": "guildId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "integer",
+							"format": "int64"
+						}
+					},
+					{
+						"name": "invitedId",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "integer",
+							"format": "int64"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK"
+					}
+				}
+			},
+			"delete": {
+				"tags": ["Guilds"],
+				"summary": "Révoque une invitation envoyée",
+				"description": "Retire l'invitation en attente du joueur `invitedId` : il ne peut plus l'accepter, et sa notification `GUILD_INVITE` est supprimée.\nDistinct du refus par le joueur invité (`DELETE /me/guild-invitations/{guildId}`) et de l'exclusion d'un membre.\n\nRéservé aux membres qui ont le droit `INVITE` — pas seulement celui qui a invité. Révocation et acceptation passent par le même verrou de\nla guilde : si l'invité accepte d'abord, la révocation répond `404` et il est membre ; sinon l'acceptation répond `404`.\n\nRéponse : `204` sans corps. Une seconde révocation répond `404`, l'invitation n'existant plus.\n\nErreurs : `403` / `MISSING_GUILD_PERMISSION` sans le droit `INVITE`, `404` / `NOT_FOUND` si la guilde n'existe pas, si l'appelant n'en\nest pas membre ou s'il n'y a pas d'invitation en attente pour ce joueur.",
+				"operationId": "revokeInvitation",
 				"parameters": [
 					{
 						"name": "guildId",
@@ -2085,7 +2405,7 @@
 			"get": {
 				"tags": ["Me"],
 				"summary": "Profil du joueur connecté",
-				"description": "Renvoie le profil correspondant au jeton présenté. Aucun paramètre : l'identité vient du jeton, il n'existe pas d'endpoint pour lire le\nprofil complet d'un autre joueur.\n\n```jsonc\n{\n  \"id\": 42,\n  \"name\": \"…\",\n  \"email\": \"…\",\n  \"roles\": [\"USER\"],\n  \"imagePageId\": 1234,       // article choisi comme avatar, null si aucun\n  \"image\": \"https://…\",      // URL de vignette déjà construite, absente si imagePageId est null\n  \"nsfw\": false,             // le joueur accepte-t-il les articles sensibles\n  \"safeWords\": [\"…\"],        // mots à masquer, propres au joueur\n  \"money\": 350,\n  \"createdAt\": \"2026-01-14T09:12:00\",\n  \"visibility\": \"FRIENDS\",   // qui voit son profil complet sur GET /users/{id}\n  \"rank\": 412,               // rang au classement global, cartes décroissantes puis nom\n  \"banners\": [{              // annonces en cours, par date de début croissante\n    \"id\": 3,\n    \"title\": \"Maintenance\",  // absent si aucun\n    \"message\": \"…\",\n    \"level\": \"WARNING\",      // INFO, WARNING ou CRITICAL\n    \"link\": \"/packs/3\",      // absent si aucun ; URL http(s) absolue, ou chemin du site\n    \"startsAt\": \"2026-09-25T18:00:00\",\n    \"endsAt\": \"2026-09-25T21:00:00\" // absent : jusqu'à suppression\n  }]\n}\n```\n\nLes champs vides ou nuls sont **omis** de la réponse : traiter l'absence d'une clé comme `null`, pas comme une erreur.\n\n`rank` est le rang du joueur dans le même classement que `GET /leaderboards/global`, calculé sur tous les comptes actifs : de quoi afficher\n« 412ᵉ » sans charger le classement. Il est servi tel quel par `PATCH /me` et `PATCH /me/image`, un changement de nom pouvant le faire\nbouger d'un cran entre ex æquo.\n\n`banners` est remplacé en direct par l'événement SSE `banners.changed`, poussé à tous les joueurs connectés quand une bannière commence,\nfinit, est modifiée, activée, désactivée ou supprimée. Le front masque aussi de lui-même une bannière passée son `endsAt`.\n\nBon appel de démarrage pour l'identité et les préférences. Pour l'écran d'accueil, préférer `GET /welcome`, qui agrège en une requête l'état\ndes boosters, les compteurs et les dernières cartes.",
+				"description": "Renvoie le profil correspondant au jeton présenté. Aucun paramètre : l'identité vient du jeton, il n'existe pas d'endpoint pour lire le\nprofil complet d'un autre joueur.\n\n```jsonc\n{\n  \"id\": 42,\n  \"name\": \"…\",               // aussi l'identifiant de la récupération par code de secours\n  \"roles\": [\"USER\"],\n  \"recoveryCodes\": 8,        // codes de secours restants, 0 à 10 ; proposer d'en régénérer quand il en reste peu\n  \"imagePageId\": 1234,       // article choisi comme avatar, null si aucun\n  \"image\": \"https://…\",      // URL de vignette déjà construite, absente si imagePageId est null\n  \"imageCrop\": { \"x\": 50, \"y\": 50, \"zoom\": 1 },   // recadrage de l'avatar, absent si imagePageId est null\n  \"nsfw\": false,             // le joueur accepte-t-il les articles sensibles\n  \"safeWords\": [\"…\"],        // mots à masquer, propres au joueur\n  \"money\": 350,\n  \"createdAt\": \"2026-01-14T09:12:00\",\n  \"visibility\": \"FRIENDS\",   // qui voit son profil complet sur GET /users/{id}\n  \"rank\": 412,               // rang au classement global, cartes décroissantes puis nom\n  \"banners\": [{              // annonces en cours, par date de début croissante\n    \"id\": 3,\n    \"title\": \"Maintenance\",  // absent si aucun\n    \"message\": \"…\",\n    \"level\": \"WARNING\",      // INFO, WARNING ou CRITICAL\n    \"link\": \"/packs/3\",      // absent si aucun ; URL http(s) absolue, ou chemin du site\n    \"startsAt\": \"2026-09-25T18:00:00\",\n    \"endsAt\": \"2026-09-25T21:00:00\" // absent : jusqu'à suppression\n  }]\n}\n```\n\nLes champs vides ou nuls sont **omis** de la réponse : traiter l'absence d'une clé comme `null`, pas comme une erreur.\n\n`rank` est le rang du joueur dans le même classement que `GET /leaderboards/global`, calculé sur tous les comptes actifs : de quoi afficher\n« 412ᵉ » sans charger le classement. Il est servi tel quel par `PATCH /me` et `PATCH /me/image`, un changement de nom pouvant le faire\nbouger d'un cran entre ex æquo.\n\n`banners` est remplacé en direct par l'événement SSE `banners.changed`, poussé à tous les joueurs connectés quand une bannière commence,\nfinit, est modifiée, activée, désactivée ou supprimée. Le front masque aussi de lui-même une bannière passée son `endsAt`.\n\nBon appel de démarrage pour l'identité et les préférences. Pour l'écran d'accueil, préférer `GET /welcome`, qui agrège en une requête l'état\ndes boosters, les compteurs et les dernières cartes.",
 				"operationId": "me",
 				"responses": {
 					"200": {
@@ -2100,10 +2420,31 @@
 					}
 				}
 			},
+			"delete": {
+				"tags": ["Me"],
+				"summary": "Supprime le compte du joueur connecté",
+				"description": "Corps : la revérification, `{ \"requestId\": \"…\", \"credential\": { … } }` ou `{ \"recoveryCode\": \"…\" }` — voir `POST /me/reauth/options`.\n**Irréversible.**\n\nLe compte n'est pas effacé mais anonymisé et fermé :\n\n- le nom devient `deleted_<ancien nom>` (suffixé de l'identifiant s'il est déjà pris), ce qui **libère l'ancien nom** ; l'avatar, les mots\n  sensibles, les passkeys et les codes de secours sont effacés ;\n- le joueur disparaît de la recherche, des classements et des listes d'amis, et `GET /users/{id}` répond `404` ;\n- ses échanges ouverts sont annulés dans les deux sens, l'autre joueur recevant `TRADE_CANCELLED` avec `meta.accountDeleted` ;\n- ses ventes sont retirées, ses enchères annulées (le meneur est remboursé et reçoit `AUCTION_CANCELLED`) ;\n- les enchères **d'autres joueurs** qu'il mène sont annulées, son maximum lui est rendu, et le vendeur reçoit `AUCTION_CANCELLED` avec\n  `meta.accountDeleted` ;\n- il quitte sa guilde ; amis, demandes, blocages, invitations, listes de souhaits et notifications sont supprimés ;\n- ses cartes et son argent restent en base, figés : aucun numéro n'est brûlé.\n\nCe que les autres joueurs ont déjà vu reste lisible sous le nouveau nom : messages, historique des échanges et des mises.\n\nToutes les sessions sont révoquées et les flux SSE fermés : purger les jetons et revenir à l'écran de connexion dès la réponse.\n\nRéponse : `204` sans corps. Tout se fait en une transaction : soit rien n'a changé, soit tout.\n\n**Résultat incertain** (coupure réseau pendant l'appel) : ne pas réessayer à l'aveugle. Appeler `GET /me` avec le même jeton — `401`\nveut dire que la suppression a abouti (les sessions sont révoquées), `200` qu'elle n'a pas eu lieu. Un `DELETE /me` répété après succès\nrépond lui aussi `401`, jamais `204`.\n\nErreurs : `403` / `INVALID_CREDENTIALS` si la revérification échoue (cérémonie expirée, passkey d'un autre compte, code de secours faux ou\ndéjà utilisé), `409` / `GUILD_CONFLICT` si le joueur est propriétaire d'une guilde (la transmettre ou la dissoudre d'abord), `409` /\n`ACCOUNT_CONFLICT` en cas d'opération concurrente, à réessayer. Un code de secours est consommé par la revérification même si la\nsuppression est ensuite refusée.",
+				"operationId": "delete_1",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ReauthRequest"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "OK"
+					}
+				}
+			},
 			"patch": {
 				"tags": ["Me"],
 				"summary": "Modifie le profil du joueur connecté",
-				"description": "Malgré le verbe `PATCH`, le corps est **complet** : tout champ omis est écrasé par sa valeur par défaut. Lire le profil, modifier les\nchamps voulus et renvoyer l'objet entier.\n\n```jsonc\n{\n  \"name\": \"…\",           // obligatoire, non vide, 64 caractères au maximum, unique parmi tous les joueurs\n  \"imagePageId\": 1234,   // article servant d'avatar, null pour aucun ; doit être un article actif\n  \"nsfw\": false,         // true pour ne plus masquer les articles sensibles\n  \"safeWords\": [\"…\"],    // 128 entrées au maximum, 64 caractères chacune\n  \"visibility\": \"FRIENDS\" // obligatoire : PRIVATE, FRIENDS ou PUBLIC\n}\n```\n\nLe serveur retire les espaces de bord du nom, ainsi que les entrées vides et les doublons de `safeWords`.\n\n`visibility` décide qui voit le profil complet sur `GET /users/{id}` : `PUBLIC` tout le monde, `FRIENDS` les amis acceptés, `PRIVATE`\npersonne. Les autres n'ont alors droit qu'au nom, au nombre total de cartes et au mois d'inscription. Le joueur voit toujours son propre\nprofil en entier.\n\nRéponse : le `MeDTO` à jour, `image` recalculée à partir du nouvel `imagePageId`. Le nom apparaissant dans les listes d'amis, d'échanges et\nde conversations d'autres joueurs, un changement de nom se propage sans action supplémentaire.\n\nErreurs : `400` / `INVALID_PARAMETER` si une contrainte de champ n'est pas respectée, `400` / `FORBIDDEN_NAME` si le nouveau nom tombe sous\nla liste des mots interdits (le mot n'est pas précisé, et un nom inchangé n'est jamais contrôlé), `409` / `ALREADY_EXISTS` si le nom est\ndéjà pris, `404` / `NOT_FOUND` si `imagePageId` ne désigne pas un article actif.",
+				"description": "Malgré le verbe `PATCH`, le corps est **complet** : tout champ omis est écrasé par sa valeur par défaut. Lire le profil, modifier les\nchamps voulus et renvoyer l'objet entier.\n\n```jsonc\n{\n  \"name\": \"…\",           // obligatoire, non vide, 64 caractères au maximum, unique parmi tous les joueurs\n  \"imagePageId\": 1234,   // article servant d'avatar, null pour aucun ; doit être un article actif\n  \"nsfw\": false,         // true pour ne plus masquer les articles sensibles\n  \"safeWords\": [\"…\"],    // 128 entrées au maximum, 64 caractères chacune\n  \"visibility\": \"FRIENDS\" // obligatoire : PRIVATE, FRIENDS ou PUBLIC\n}\n```\n\nLe serveur retire les espaces de bord du nom, ainsi que les entrées vides et les doublons de `safeWords`.\n\n`visibility` décide qui voit le profil complet sur `GET /users/{id}` : `PUBLIC` tout le monde, `FRIENDS` les amis acceptés, `PRIVATE`\npersonne. Les autres n'ont alors droit qu'au nom, au nombre total de cartes et au mois d'inscription. Le joueur voit toujours son propre\nprofil en entier.\n\nRéponse : le `MeDTO` à jour, `image` recalculée à partir du nouvel `imagePageId`. Le nom apparaissant dans les listes d'amis, d'échanges et\nde conversations d'autres joueurs, un changement de nom se propage sans action supplémentaire.\n\n**Un changement de nom par 24 heures**, les administrateurs exceptés. Renvoyer le nom actuel ne compte pas, et un changement refusé\n(nom pris, mot interdit) non plus. Tant qu'un changement récent en bloque un nouveau, `nameChangeAvailableAt` dit à partir de quand le\nprochain sera possible — absent, le joueur peut changer de nom. Un renommage imposé par la modération ne compte pas.\n\nErreurs : `400` / `INVALID_PARAMETER` si une contrainte de champ n'est pas respectée, `400` / `FORBIDDEN_NAME` si le nouveau nom tombe sous\nla liste des mots interdits (le mot n'est pas précisé, et un nom inchangé n'est jamais contrôlé), `409` / `ALREADY_EXISTS` si le nom est\ndéjà pris, `429` / `NAME_CHANGE_TOO_SOON` si le nom a déjà changé depuis moins de 24 heures, avec `meta.availableAt`, `404` / `NOT_FOUND` si\n`imagePageId` ne désigne pas un article actif. Rien n'est modifié quand la requête est refusée, les autres champs compris.",
 				"operationId": "update_1",
 				"requestBody": {
 					"content": {
@@ -2133,7 +2474,7 @@
 			"patch": {
 				"tags": ["Me"],
 				"summary": "Change l'avatar du joueur connecté",
-				"description": "Corps : `{ \"imagePageId\": 1234 }`, ou `{ \"imagePageId\": null }` pour retirer l'avatar.\n\nRaccourci de `PATCH /me` pour le seul avatar : celui-ci exige le corps complet du profil, donc changer l'image demanderait de relire et de\nrenvoyer le nom, `nsfw`, `safeWords` et `visibility`, au risque de les écraser. Ici rien d'autre n'est touché.\n\nRéponse : le `MeDTO` à jour, `image` recalculée à partir du nouvel `imagePageId`.\n\nErreurs : `404` / `NOT_FOUND` si `imagePageId` ne désigne pas un article actif.",
+				"description": "Corps : `{ \"imagePageId\": 1234, \"imageCrop\": { \"x\": 50, \"y\": 50, \"zoom\": 1 } }`, ou `{ \"imagePageId\": null }` pour retirer l'avatar.\n\n`imageCrop` recadre l'avatar : `x` et `y` sont le point de l'image placé au centre du cadre, en pourcentage de sa largeur et de sa\nhauteur (0 à 100, l'équivalent d'`object-position`), `zoom` le grossissement (1 à 5, 1 = image entière). Omis, il revient au défaut\n`{ 50, 50, 1 }` : un recadrage n'a de sens que pour l'image qu'il accompagne. Pour ne changer que le recadrage, renvoyer le même\n`imagePageId`. Le même `imageCrop` est servi partout où l'avatar l'est — profils, listes d'amis, membres de guilde, classements,\nmessages — et absent quand le joueur n'a pas d'avatar. `PATCH /me` le remet au défaut quand il change `imagePageId`, et le garde sinon.\n\nRaccourci de `PATCH /me` pour le seul avatar : celui-ci exige le corps complet du profil, donc changer l'image demanderait de relire et de\nrenvoyer le nom, `nsfw`, `safeWords` et `visibility`, au risque de les écraser. Ici rien d'autre n'est touché.\n\nRéponse : le `MeDTO` à jour, `image` recalculée à partir du nouvel `imagePageId`.\n\nErreurs : `400` / `INVALID_PARAMETER` si `imageCrop` sort de ses bornes, `404` / `NOT_FOUND` si `imagePageId` ne désigne pas un article\nactif.",
 				"operationId": "updateImage",
 				"requestBody": {
 					"content": {
@@ -2450,7 +2791,7 @@
 			"get": {
 				"tags": ["Users"],
 				"summary": "Profil public d'un joueur",
-				"description": "Fiche d'un joueur : son identité, son ancienneté, le volume de sa collection et ses tags visibles.\n\n```jsonc\n{\n  \"id\": 7, \"name\": \"…\", \"imagePageId\": 1234, \"image\": \"https://…\",\n  \"joinedAt\": \"2026-03\",\n  \"lastConnection\": \"TODAY\",\n  \"full\": true,\n  \"nbCards\": 412,\n  \"tags\": [ { \"name\": \"Doublons à échanger\", \"color\": \"#4f8ef7\" } ],\n  \"showcase\": [ { \"title\": \"Mes préférées\", \"cards\": [ { \"id\": 12, \"pageId\": 1234, \"title\": \"…\", \"image\": \"https://…\",\n                                                        \"nsfw\": false, \"variantId\": 4, \"packId\": 2, \"serialNumber\": 12, \"maxCopies\": 500, \"atk\": 42 } ] } ]\n}\n```\n\n`lastConnection` dit à quand remonte sa dernière connexion, par tranches : `TODAY` (moins de 24 h), `THIS_WEEK` (moins de 7 jours),\n`THIS_MONTH` (moins de 30 jours), `AWAY` au-delà et pour un joueur jamais connecté depuis la mise en place du suivi. La date exacte n'est\njamais exposée, et une connexion est aussi bien une authentification par mot de passe qu'un renouvellement de jeton. Le champ est servi\n**sur les deux formes** de la fiche, réduite comprise : c'est le même ordre d'information que `joinedAt`.\n\n`joinedAt` est au mois près (`yyyy-MM`) : la date exacte d'inscription n'est pas exposée.\n\n`tags` porte le `name` et la `color` de chaque tag, **sans identifiant** : de quoi afficher les libellés du joueur avec leurs couleurs,\npas de quoi filtrer sa collection. La liste dépend du lien avec l'appelant : ses propres tags s'il demande son profil, les `FRIENDS` et\n`PUBLIC` s'il est un ami accepté, les seuls `PUBLIC` sinon.\n\n`showcase` est la vitrine du joueur — ses cartes mises en avant, en lignes titrées et ordonnées, qu'il compose sur `PUT /me/showcase`.\nElle est absente d'une fiche réduite comme les tags.\n\nLa `visibility` du **joueur regardé** décide d'abord si la fiche complète est servie : `PUBLIC` à tous, `FRIENDS` aux amis acceptés,\n`PRIVATE` à lui seul. Sinon la réponse tombe à l'identité, le nombre total de cartes et le mois d'inscription — l'avatar reste, mais ni\nvitrine, ni **aucun tag**, `PUBLIC` compris :\n\n```jsonc\n{ \"id\": 7, \"name\": \"…\", \"imagePageId\": 1234, \"image\": \"https://…\", \"joinedAt\": \"2026-03\", \"lastConnection\": \"TODAY\", \"full\": false,\n  \"nbCards\": 412 }\n```\n\n**`full` est le drapeau à tester pour afficher ou non les blocs** « tags » et « vitrine » : il vaut `true` sur une fiche\ncomplète, `false` sur une fiche réduite. Ne pas déduire la forme de l'absence d'une clé — les champs nuls **et les listes vides** sont\nomis de la réponse, donc une fiche complète d'un joueur sans aucun tag et sans vitrine n'a ni `tags` ni `showcase`, exactement comme\nune fiche réduite.\n\nLe code reste `200` dans les deux cas : une fiche réduite n'est pas une erreur, et le `404` garde son seul sens.\n\nErreurs : `404` / `NOT_FOUND` si le joueur n'existe pas, si son compte est désactivé, ou si l'appelant l'a bloqué. Un joueur qui a bloqué\nl'appelant reste visible : le blocage ne se déduit jamais d'un refus.",
+				"description": "Fiche d'un joueur : son identité, son ancienneté, le volume de sa collection et ses tags visibles.\n\n```jsonc\n{\n  \"id\": 7, \"name\": \"…\", \"imagePageId\": 1234, \"image\": \"https://…\",\n  \"joinedAt\": \"2026-03\",\n  \"lastConnection\": \"TODAY\",\n  \"full\": true,\n  \"nbCards\": 412,\n  \"tags\": [ { \"name\": \"Doublons à échanger\", \"color\": \"#4f8ef7\" } ],\n  \"showcase\": [ { \"title\": \"Mes préférées\", \"cards\": [ { \"id\": 12, \"pageId\": 1234, \"title\": \"…\", \"image\": \"https://…\",\n                                                        \"nsfw\": false, \"variantId\": 4, \"packId\": 2, \"serialNumber\": 12, \"maxCopies\": 500, \"atk\": 42 } ] } ]\n}\n```\n\n`lastConnection` dit à quand remonte sa dernière connexion, par tranches : `TODAY` (moins de 24 h), `THIS_WEEK` (moins de 7 jours),\n`THIS_MONTH` (moins de 30 jours), `AWAY` au-delà et pour un joueur jamais connecté depuis la mise en place du suivi. La date exacte n'est\njamais exposée, et une connexion est aussi bien une authentification par passkey qu'un renouvellement de jeton. Le champ est servi\n**sur les deux formes** de la fiche, réduite comprise : c'est le même ordre d'information que `joinedAt`.\n\n`joinedAt` est au mois près (`yyyy-MM`) : la date exacte d'inscription n'est pas exposée.\n\n`tags` porte le `name` et la `color` de chaque tag, **sans identifiant** : de quoi afficher les libellés du joueur avec leurs couleurs,\npas de quoi filtrer sa collection. La liste dépend du lien avec l'appelant : ses propres tags s'il demande son profil, les `FRIENDS` et\n`PUBLIC` s'il est un ami accepté, les seuls `PUBLIC` sinon.\n\n`showcase` est la vitrine du joueur — ses cartes mises en avant, en lignes titrées et ordonnées, qu'il compose sur `PUT /me/showcase`.\nElle est absente d'une fiche réduite comme les tags.\n\nLa `visibility` du **joueur regardé** décide d'abord si la fiche complète est servie : `PUBLIC` à tous, `FRIENDS` aux amis acceptés,\n`PRIVATE` à lui seul. Sinon la réponse tombe à l'identité, le nombre total de cartes et le mois d'inscription — l'avatar reste, mais ni\nvitrine, ni **aucun tag**, `PUBLIC` compris :\n\n```jsonc\n{ \"id\": 7, \"name\": \"…\", \"imagePageId\": 1234, \"image\": \"https://…\", \"joinedAt\": \"2026-03\", \"lastConnection\": \"TODAY\", \"full\": false,\n  \"nbCards\": 412 }\n```\n\n**`full` est le drapeau à tester pour afficher ou non les blocs** « tags » et « vitrine » : il vaut `true` sur une fiche\ncomplète, `false` sur une fiche réduite. Ne pas déduire la forme de l'absence d'une clé — les champs nuls **et les listes vides** sont\nomis de la réponse, donc une fiche complète d'un joueur sans aucun tag et sans vitrine n'a ni `tags` ni `showcase`, exactement comme\nune fiche réduite.\n\nLe code reste `200` dans les deux cas : une fiche réduite n'est pas une erreur, et le `404` garde son seul sens.\n\nErreurs : `404` / `NOT_FOUND` si le joueur n'existe pas, si son compte est désactivé, ou si l'appelant l'a bloqué. Un joueur qui a bloqué\nl'appelant reste visible : le blocage ne se déduit jamais d'un refus.",
 				"operationId": "get_2",
 				"parameters": [
 					{
@@ -2563,7 +2904,7 @@
 			"get": {
 				"tags": ["Pages"],
 				"summary": "Recherche dans le catalogue des articles",
-				"description": "Recherche paginée sur **tous** les articles du jeu, possédés ou non — à ne pas confondre avec `GET /collection`, qui ne voit que les cartes\ndu joueur. Sert le catalogue, la fiche d'un article et l'alimentation des wishlists.\n\nLa recherche est servie par un index de recherche, pas par la base : la taille de page est fixée par le serveur (48 aujourd'hui) et la\npagination est purement numérique, sans curseur.\n\nParamètres :\n\n- `sortBy` (**obligatoire**) — `NAME` (titre) ou `RELEVANCE` (pertinence de la recherche texte). `RELEVANCE` sans `q` est traité comme\n  `NAME`, et la réponse renvoie `sortBy: \"NAME\"` ;\n- `sortDirection` (**obligatoire**) — `ASC` ou `DESC` ;\n- `q` — recherche plein texte sur le titre et la description. Une valeur de moins de 3 caractères est **ignorée** (traitée comme absente),\n  elle ne provoque pas d'erreur ;\n- `page` — entier ≥ 0, défaut `0`.\n\nRéponse :\n\n```jsonc\n{\n  \"nbResults\": 1247,\n  \"page\": 0,\n  \"sortBy\": \"NAME\",\n  \"sortDirection\": \"ASC\",\n  \"results\": [ /* PageDTO */ ]\n}\n```\n\nChaque `PageDTO` porte `globalCount` — exemplaires détenus par l'ensemble des joueurs — et `ownedCount` — exemplaires détenus par\nl'appelant seul, donc `0` sur un article qu'il ne possède pas. `image` est une URL de vignette déjà construite, à utiliser telle quelle.\n\n`friends` liste les **amis acceptés** de l'appelant qui possèdent l'article, triés par nom, chacun avec son `id`, son `name` et\n`nbCards`, son nombre d'exemplaires :\n\n```jsonc\n\"friends\": [ { \"id\": 42, \"name\": \"Alice\", \"nbCards\": 3 } ]\n```\n\nLe champ est **omis** quand aucun ami ne possède l'article, comme toute liste vide de l'API.\n\nLe serveur s'arrête à 10 000 résultats cumulés : au-delà, la page renvoyée est vide. Fin de liste quand `results` est vide, ou quand\n`(page + 1) * taille ≥ nbResults`.\n\nL'index est reconstruit par un travail de fond : une page tout juste importée peut n'apparaître qu'après la synchronisation suivante.\n\nLa **première page** de chaque combinaison de tri — donc sans `q` — est servie depuis un cache mémoire d'une demi-heure, vidé\ndès que l'index est resynchronisé. `ownedCount` et `friends` en sont exclus et restent calculés à chaque appel, `globalCount` étant lui\ngardé une minute. La réponse ne porte volontairement **aucun `Cache-Control`** : elle contient l'état du joueur, qui doit suivre ses\nouvertures de boosters sans attendre l'expiration d'un cache navigateur.",
+				"description": "Recherche paginée sur **tous** les articles du jeu, possédés ou non — à ne pas confondre avec `GET /collection`, qui ne voit que les cartes\ndu joueur. Sert le catalogue, la fiche d'un article et l'alimentation des wishlists.\n\nLa recherche est servie par un index de recherche, pas par la base : la taille de page est fixée par le serveur (48 aujourd'hui) et la\npagination est purement numérique, sans curseur.\n\nParamètres :\n\n- `sortBy` (**obligatoire**) — `NAME` (titre) ou `RELEVANCE` (pertinence de la recherche texte). `RELEVANCE` sans `q` est traité comme\n  `NAME`, et la réponse renvoie `sortBy: \"NAME\"` ;\n- `sortDirection` (**obligatoire**) — `ASC` ou `DESC` ;\n- `q` — recherche plein texte sur le titre et la description. Une valeur de moins de 3 caractères est **ignorée** (traitée comme absente),\n  elle ne provoque pas d'erreur ;\n- `page` — entier ≥ 0, défaut `0`.\n\nRéponse :\n\n```jsonc\n{\n  \"nbResults\": 1247,     // total exact des articles qui répondent, même au-delà de maxResults\n  \"page\": 0,\n  \"pageSize\": 48,\n  \"hasNext\": true,       // une page atteignable suit celle-ci\n  \"maxResults\": 10000,   // profondeur maximale servie\n  \"truncated\": false,    // true si nbResults dépasse maxResults : les résultats au-delà ne sont pas atteignables\n  \"sortBy\": \"NAME\",\n  \"sortDirection\": \"ASC\",\n  \"results\": [ /* PageDTO */ ]\n}\n```\n\nChaque `PageDTO` porte `globalCount` — exemplaires détenus par l'ensemble des joueurs — et `ownedCount` — exemplaires détenus par\nl'appelant seul, donc `0` sur un article qu'il ne possède pas. `image` est une URL de vignette déjà construite, à utiliser telle quelle.\n\n`friends` liste les **amis acceptés** de l'appelant qui possèdent l'article, triés par nom, chacun avec son `id`, son `name` et\n`nbCards`, son nombre d'exemplaires :\n\n```jsonc\n\"friends\": [ { \"id\": 42, \"name\": \"Alice\", \"nbCards\": 3 } ]\n```\n\nLe champ est **omis** quand aucun ami ne possède l'article, comme toute liste vide de l'API.\n\nLe serveur s'arrête à `maxResults` (10 000) résultats cumulés, soit 209 pages : au-delà, la page renvoyée est vide et n'est pas une\nerreur. `hasNext` tient compte de cette limite, c'est lui qui décide du bouton « suivant ». Zéro résultat : `nbResults` à `0` et\n`results` absent. Dernière page pleine : `hasNext` à `false`. Total tronqué : `truncated` à `true`, afficher « plus de 10 000\nrésultats, affinez la recherche ». Sur une page hors limite d'une recherche texte, `nbResults` peut valoir `0` : ne lire le total que\nsur une page atteignable.\n\nL'index est reconstruit par un travail de fond : une page tout juste importée peut n'apparaître qu'après la synchronisation suivante.\n\nLa **première page** de chaque combinaison de tri — donc sans `q` — est servie depuis un cache mémoire d'une demi-heure, vidé\ndès que l'index est resynchronisé. `ownedCount` et `friends` en sont exclus et restent calculés à chaque appel, `globalCount` étant lui\ngardé une minute. La réponse ne porte volontairement **aucun `Cache-Control`** : elle contient l'état du joueur, qui doit suivre ses\nouvertures de boosters sans attendre l'expiration d'un cache navigateur.",
 				"operationId": "search_3",
 				"parameters": [
 					{
@@ -2828,6 +3169,26 @@
 				}
 			}
 		},
+		"/me/deletion": {
+			"get": {
+				"tags": ["Me"],
+				"summary": "Aperçu de la suppression du compte",
+				"description": "Lecture seule, rien n'est modifié : ce qu'entraînerait `DELETE /me` à cet instant, pour l'écran de confirmation.\n\n```jsonc\n{\n  \"canDelete\": false,\n  \"blockers\": [ { \"code\": \"GUILD_OWNER\", \"guildId\": 3, \"guildName\": \"…\" } ],   // absent si vide\n  \"consequences\": {\n    \"openTrades\": 2,        // échanges ouverts annulés, dans les deux sens\n    \"openSales\": 1,         // ventes retirées\n    \"openAuctions\": 1,      // ses enchères ouvertes annulées, le meneur remboursé\n    \"leadingAuctions\": 1,   // enchères d'autres joueurs qu'il mène, annulées\n    \"refundedAmount\": 400,  // argent bloqué par ces enchères, rendu sur le compte avant sa fermeture\n    \"friends\": 12, \"friendRequests\": 1, \"wishlists\": 3,\n    \"guildId\": 5,           // guilde quittée, absente s'il n'en a pas\n    \"nbCards\": 1520, \"money\": 3200   // gardés sur le compte fermé, jamais transférés à quelqu'un\n  }\n}\n```\n\n`blockers` est le seul motif de refus : `GUILD_OWNER`, le joueur possède une guilde et doit la transmettre ou la dissoudre d'abord.\nTout le reste est annulé par la suppression, pas bloquant. Ce n'est qu'un aperçu : `DELETE /me` revérifie tout dans sa transaction.",
+				"operationId": "deletionPreview",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"*/*": {
+								"schema": {
+									"$ref": "#/components/schemas/AccountDeletionDTO"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
 		"/me/cases": {
 			"get": {
 				"tags": ["Moderation cases"],
@@ -2886,8 +3247,29 @@
 			"get": {
 				"tags": ["Me"],
 				"summary": "Enchères sur lesquelles le joueur a misé",
-				"description": "```jsonc\n{\n  \"escrowed\": 1500,          // argent bloqué par les enchères que l'appelant mène\n  \"auctions\": [ { … } ]      // même forme que GET /auctions/{id}, sans l'historique des mises\n}\n```\n\n`escrowed` est la somme des **maximums** des enchères ouvertes que l'appelant mène : c'est ce qui a quitté son `money` en attendant le\nrèglement, et qui revient s'il est surenchéri. Le front l'affiche à côté du solde, sinon celui-ci semble fondre sans raison.\n\nLes enchères ouvertes d'abord, puis les terminées, cent au plus.",
+				"description": "```jsonc\n{\n  \"escrowed\": 1500,          // argent bloqué par les enchères que l'appelant mène\n  \"nbResults\": 7, \"page\": 0, \"pageSize\": 48, \"hasNext\": false,\n  \"auctions\": [ { … } ]      // même forme que GET /auctions/{id}, sans l'historique des mises\n}\n```\n\n`escrowed` est la somme des **maximums** des enchères ouvertes que l'appelant mène — toutes, pas seulement celles de la page : c'est ce\nqui a quitté son `money` en attendant le règlement, et qui revient s'il est surenchéri.\n\nLes enchères ouvertes d'abord, puis les terminées, 48 par page ; `status` (facultatif) filtre sur `OPEN`, `SOLD`, `UNSOLD` ou\n`CANCELLED`. Chaque enchère porte `viewerOutcome` : `LEADING`, `OUTBID`, `WON_PENDING` (terminée, l'appelant l'emporte, règlement pas\nencore fait), `WON`, `LOST` ou `CANCELLED`. `myMax` n'est servi que tant que l'appelant mène. Même conservation de 30 jours que\n`GET /me/auctions`.",
 				"operationId": "myBids",
+				"parameters": [
+					{
+						"name": "status",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "string",
+							"enum": ["OPEN", "SOLD", "UNSOLD", "CANCELLED"]
+						}
+					},
+					{
+						"name": "page",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "integer",
+							"format": "int32",
+							"default": 0
+						}
+					}
+				],
 				"responses": {
 					"200": {
 						"description": "OK",
@@ -2902,11 +3284,85 @@
 				}
 			}
 		},
+		"/me/auctions/fee": {
+			"get": {
+				"tags": ["Me"],
+				"summary": "Frais de mise en vente d'une enchère",
+				"description": "Devis, sans rien débiter : `GET /me/auctions/fee?startPrice=800` pour une création, `&auctionId=3` pour un changement de prix.\n\n```jsonc\n{ \"startPrice\": 800, \"feePercent\": 1, \"fee\": 8, \"alreadyPaid\": 5, \"due\": 3 }\n```\n\n`fee` est ce que coûte ce prix de départ : `feePercent` % arrondi à l'entier supérieur, `feePercent` valant 0 jusqu'à 10 inclus.\n`alreadyPaid` est ce que l'enchère a déjà payé, cumulé sur toutes ses modifications — le `listingFee` de l'enchère. `due` est ce que\ndébiterait la requête : `max(fee - alreadyPaid, 0)`. Baisser le prix ne rembourse jamais rien.\n\nLe devis ne réserve rien et n'a pas de version : `POST /me/auctions` et `PATCH /me/auctions/{id}` recalculent sous verrou, et répondent\n`409` / `NOT_ENOUGH_MONEY` si le solde ne couvre plus `due`. Il n'y a pas de clé d'idempotence.\n\nErreurs : `400` / `INVALID_PARAMETER` si `startPrice` n'est pas strictement positif ou dépasse 10¹², `404` / `NOT_FOUND` si\n`auctionId` n'est pas une enchère de l'appelant, `409` / `AUCTION_CONFLICT` si son prix ne peut plus changer — une mise a été posée,\nou l'enchère est terminée ou annulée.",
+				"operationId": "auctionFee",
+				"parameters": [
+					{
+						"name": "startPrice",
+						"in": "query",
+						"required": true,
+						"schema": {
+							"type": "integer",
+							"format": "int64",
+							"exclusiveMinimum": 0,
+							"maximum": 1000000000000
+						}
+					},
+					{
+						"name": "auctionId",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "integer",
+							"format": "int64"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"*/*": {
+								"schema": {
+									"$ref": "#/components/schemas/AuctionFeeDTO"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/me/auction-favorites": {
+			"get": {
+				"tags": ["Me"],
+				"summary": "Enchères suivies",
+				"description": "Les enchères que l'appelant a mises en favori, les en cours et à venir d'abord (de la plus proche de sa fin à la plus lointaine), puis\nles terminées. 48 par page, même forme que `GET /me/auctions`.\n\nUn favori n'engage rien : ni argent bloqué, ni mise, ni abonnement au temps réel. Il survit à la fin de l'enchère et disparaît avec elle,\n30 jours après sa clôture. Les enchères d'un vendeur bloqué depuis sont masquées.",
+				"operationId": "auctionFavorites",
+				"parameters": [
+					{
+						"name": "page",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "integer",
+							"format": "int32",
+							"default": 0
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"*/*": {
+								"schema": {
+									"$ref": "#/components/schemas/AuctionsResult"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
 		"/me/achievements": {
 			"get": {
 				"tags": ["Me"],
 				"summary": "Succès du joueur connecté",
-				"description": "Le catalogue **complet** des succès, débloqués ou non, avec l'avancement de l'appelant sur chacun. Trié par catégorie puis par palier\ncroissant : une série se lit de haut en bas, le front n'a pas à retrier.\n\n```jsonc\n[\n  { \"code\": \"boosters_100\", \"category\": \"BOOSTER\", \"name\": \"…\", \"description\": \"…\",\n    \"threshold\": 100, \"progress\": 100, \"rewardMoney\": 750,\n    \"unlockedAt\": \"2026-09-14T18:22:31\", \"claimedAt\": \"2026-09-14T18:22:40\" },\n  { \"code\": \"boosters_500\", \"category\": \"BOOSTER\", \"name\": \"…\",\n    \"threshold\": 500, \"progress\": 500, \"rewardMoney\": 0, \"rewardBoosters\": { \"PREMIUM\": 1 },\n    \"unlockedAt\": \"2026-09-19T09:03:12\" },\n  { \"code\": \"boosters_1000\", \"category\": \"BOOSTER\", \"name\": \"…\",\n    \"threshold\": 1000, \"progress\": 137, \"rewardMoney\": 0, \"rewardBoosters\": { \"PREMIUM_PLUS\": 1 } }\n]\n```\n\n**Trois états, pas deux.** `unlockedAt` absente : le succès est à faire. `unlockedAt` présente et `claimedAt` absente : il est gagné et sa\nrécompense **attend d'être réclamée** — c'est l'entrée à mettre en avant, et la seule sur laquelle proposer le geste. Les deux présentes :\nc'est fini.\n\nNe pas déduire l'obtention de `progress >= threshold` : les succès de collection se mesurent sur un compteur qui **redescend** quand le\njoueur échange ou vend, donc un succès gagné peut afficher un avancement inférieur à son palier. `progress` est plafonné à `threshold`,\npour que la barre soit le simple rapport des deux.\n\nLa récompense est `rewardMoney`, `rewardBoosters`, ou les deux. `rewardBoosters` ne porte que les familles réellement données et est\n**omise** quand la récompense est en argent seul.\n\nIl n'y a **pas d'image** dans la réponse : l'illustration d'un succès est du rendu, résolue côté client sur `code`, comme la `renderKey`\nd'une variante.\n\n`category` vaut `COLLECTION`, `BOOSTER`, `TRADE`, `SALE`, `SOCIAL` ou `MONEY` — **ensemble ouvert**, une valeur inconnue du client doit\naller dans un groupe par défaut plutôt que faire échouer l'écran.\n\nRien n'est à déclencher : un succès est décerné à l'instant où le compteur franchit son palier, dans la transaction de l'action, et le\njoueur reçoit une notification `ACHIEVEMENT_UNLOCKED` dont l'`extId` est celui du succès. Cet endpoint ne fait que lire.",
+				"description": "Le catalogue **complet** des succès, débloqués ou non, avec l'avancement de l'appelant sur chacun. Trié par catégorie puis par palier\ncroissant : une série se lit de haut en bas, le front n'a pas à retrier.\n\n```jsonc\n[\n  { \"code\": \"boosters_100\", \"category\": \"BOOSTER\", \"name\": \"…\", \"description\": \"…\", \"icon\": \"BoosterIcon\",\n    \"threshold\": 100, \"progress\": 100, \"rewardMoney\": 750,\n    \"unlockedAt\": \"2026-09-14T18:22:31\", \"claimedAt\": \"2026-09-14T18:22:40\" },\n  { \"code\": \"boosters_500\", \"category\": \"BOOSTER\", \"name\": \"…\",\n    \"threshold\": 500, \"progress\": 500, \"rewardMoney\": 0, \"rewardBoosters\": { \"PREMIUM\": 1 },\n    \"unlockedAt\": \"2026-09-19T09:03:12\" },\n  { \"code\": \"boosters_1000\", \"category\": \"BOOSTER\", \"name\": \"…\",\n    \"threshold\": 1000, \"progress\": 137, \"rewardMoney\": 0, \"rewardBoosters\": { \"PREMIUM_PLUS\": 1 } }\n]\n```\n\n**Trois états, pas deux.** `unlockedAt` absente : le succès est à faire. `unlockedAt` présente et `claimedAt` absente : il est gagné et sa\nrécompense **attend d'être réclamée** — c'est l'entrée à mettre en avant, et la seule sur laquelle proposer le geste. Les deux présentes :\nc'est fini.\n\nNe pas déduire l'obtention de `progress >= threshold` : les succès de collection se mesurent sur un compteur qui **redescend** quand le\njoueur échange ou vend, donc un succès gagné peut afficher un avancement inférieur à son palier. `progress` est plafonné à `threshold`,\npour que la barre soit le simple rapport des deux.\n\nLa récompense est `rewardMoney`, `rewardBoosters`, ou les deux. `rewardBoosters` ne porte que les familles réellement données et est\n**omise** quand la récompense est en argent seul.\n\nIl n'y a **pas d'image** dans la réponse : `icon` est le nom du composant d'icône du front, choisi au back office, et il est omis\nquand aucun n'a été choisi.\n\n`category` vaut `COLLECTION`, `BOOSTER`, `TRADE`, `SALE`, `SOCIAL` ou `MONEY` — **ensemble ouvert**, une valeur inconnue du client doit\naller dans un groupe par défaut plutôt que faire échouer l'écran.\n\nRien n'est à déclencher : un succès est décerné à l'instant où le compteur franchit son palier, dans la transaction de l'action, et le\njoueur reçoit une notification `ACHIEVEMENT_UNLOCKED` dont l'`extId` est celui du succès. Cet endpoint ne fait que lire.",
 				"operationId": "achievements",
 				"responses": {
 					"200": {
@@ -3023,7 +3479,7 @@
 			"get": {
 				"tags": ["Guilds"],
 				"summary": "Liste les membres d'une guilde",
-				"description": "Membres paginés, **propriétaire en premier** puis par ordre alphabétique. Lisible par tout le monde.\n\nParamètre facultatif : `page` (défaut `0`). Taille de page fixée par le serveur (20).\n\n```jsonc\n{\n  \"nbResults\": 7,        // guild.nbMembers, donc lu sur le compteur et pas compté\n  \"page\": 0,\n  \"results\": [\n    { \"id\": 42, \"name\": \"…\", \"imagePageId\": 1234, \"image\": \"https://…\", \"owner\": true, \"joinedAt\": \"2026-08-23T14:31:00\" },\n    { \"id\": 51, \"name\": \"…\", \"owner\": false, \"permissions\": [\"INVITE\",\"KICK\"], \"joinedAt\": \"2026-08-24T10:02:00\" }\n  ]\n}\n```\n\nLa liste ne filtre **pas** les joueurs bloqués, à rebours des autres lectures : `nbMembers` et le contenu de la page doivent être les mêmes\npour tout le monde.\n\nErreurs : `404` / `NOT_FOUND` si la guilde n'existe pas.",
+				"description": "Membres paginés, **propriétaire en premier** puis par ordre alphabétique, l'identifiant départageant. Lisible par tout le monde.\n\nParamètres facultatifs : `q`, un morceau du nom (casse et accents ignorés, 50 caractères au plus, sans minimum — une guilde est\npetite) ; `page` (défaut `0`). Taille de page fixée par le serveur (20).\n\n```jsonc\n{\n  \"nbResults\": 7,        // membres qui passent le filtre q ; sans q, guild.nbMembers\n  \"nbMembers\": 7,        // effectif total de la guilde, filtre ou pas\n  \"page\": 0, \"pageSize\": 20, \"hasNext\": false,\n  \"results\": [\n    { \"id\": 42, \"name\": \"…\", \"imagePageId\": 1234, \"image\": \"https://…\", \"owner\": true, \"joinedAt\": \"2026-08-23T14:31:00\" },\n    { \"id\": 51, \"name\": \"…\", \"owner\": false, \"permissions\": [\"INVITE\",\"KICK\"], \"joinedAt\": \"2026-08-24T10:02:00\" }\n  ]\n}\n```\n\nLa liste ne filtre **pas** les joueurs bloqués, à rebours des autres lectures : `nbMembers` et le contenu de la page doivent être les mêmes\npour tout le monde.\n\nErreurs : `404` / `NOT_FOUND` si la guilde n'existe pas.",
 				"operationId": "members",
 				"parameters": [
 					{
@@ -3033,6 +3489,14 @@
 						"schema": {
 							"type": "integer",
 							"format": "int64"
+						}
+					},
+					{
+						"name": "q",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "string"
 						}
 					},
 					{
@@ -3098,7 +3562,7 @@
 			"get": {
 				"tags": ["Friends"],
 				"summary": "Liste les amis et les demandes en attente",
-				"description": "Renvoie les trois listes de l'écran des amis en un seul appel :\n\n```jsonc\n{\n  \"friends\":  [ /* amitiés acceptées, triées par nom */ ],\n  \"received\": [ /* demandes reçues, à accepter ou refuser, les plus récentes d'abord */ ],\n  \"sent\":     [ /* demandes envoyées, annulables, les plus récentes d'abord */ ]\n}\n```\n\nChaque élément porte `id`, `name`, `imagePageId`, `image` (URL de vignette, `null` sans avatar), `createdAt` — date de la demande pour\nune relation en attente, date de la demande initiale pour une amitié acceptée — et `lastConnection`. Pas de pagination.\n\n`lastConnection` dit à quand remonte la dernière connexion du joueur, par tranches : `TODAY` (moins de 24 h), `THIS_WEEK` (moins de\n7 jours), `THIS_MONTH` (moins de 30 jours), `AWAY` au-delà. La date exacte n'est jamais exposée, et une connexion est aussi bien une\nauthentification par mot de passe qu'un renouvellement de jeton — de quoi savoir si une proposition d'échange a des chances d'être vue.\n\n`received` et `sent` se répondent : accepter se fait depuis `received`, annuler depuis `sent`, et les deux passent par\n`DELETE /friends/{friendId}` pour un refus ou une annulation.\n\nLes joueurs bloqués par l'appelant sont **filtrés des trois listes**. Une demande envoyée par un joueur bloqué existe donc en base sans\njamais apparaître ici, ce qui est voulu : le bloqué ne doit pas pouvoir déduire son blocage.",
+				"description": "Renvoie les trois listes de l'écran des amis en un seul appel :\n\n```jsonc\n{\n  \"friends\":  [ /* amitiés acceptées, triées par nom */ ],\n  \"received\": [ /* demandes reçues, à accepter ou refuser, les plus récentes d'abord */ ],\n  \"sent\":     [ /* demandes envoyées, annulables, les plus récentes d'abord */ ]\n}\n```\n\nChaque élément porte `id`, `name`, `imagePageId`, `image` (URL de vignette, `null` sans avatar), `createdAt` — date de la demande pour\nune relation en attente, date de la demande initiale pour une amitié acceptée — et `lastConnection`. Pas de pagination.\n\n`lastConnection` dit à quand remonte la dernière connexion du joueur, par tranches : `TODAY` (moins de 24 h), `THIS_WEEK` (moins de\n7 jours), `THIS_MONTH` (moins de 30 jours), `AWAY` au-delà. La date exacte n'est jamais exposée, et une connexion est aussi bien une\nauthentification par passkey qu'un renouvellement de jeton — de quoi savoir si une proposition d'échange a des chances d'être vue.\n\n`received` et `sent` se répondent : accepter se fait depuis `received`, annuler depuis `sent`, et les deux passent par\n`DELETE /friends/{friendId}` pour un refus ou une annulation.\n\nLes joueurs bloqués par l'appelant sont **filtrés des trois listes**. Une demande envoyée par un joueur bloqué existe donc en base sans\njamais apparaître ici, ce qui est voulu : le bloqué ne doit pas pouvoir déduire son blocage.",
 				"operationId": "findAll_4",
 				"responses": {
 					"200": {
@@ -3299,7 +3763,7 @@
 			"get": {
 				"tags": ["Collection"],
 				"summary": "Recherche dans la collection du joueur",
-				"description": "Liste paginée des cartes possédées, filtrable et triable. La taille de page est fixée par le serveur (48 cartes aujourd'hui) et n'est pas\nparamétrable : la déduire de `results.length` plutôt que la coder en dur.\n\n**Deux modes de pagination, choisis par le serveur.** Le client n'a pas ce choix à faire, il applique une seule règle après chaque\nréponse :\n\n1. si `hasNext` vaut `false`, il n'y a plus rien à charger ;\n2. sinon, si `nextCursor` n'est pas `null`, rejouer la **même** requête avec `cursor=nextCursor` et **sans** `page` ;\n3. sinon, rejouer la même requête avec `page` incrémenté de 1 et **sans** `cursor`.\n\nNe jamais envoyer `page` et `cursor` ensemble : le mode actif ignore silencieusement le paramètre de l'autre. Le mode curseur ne permet pas\nde sauter à une page arbitraire — une pagination numérotée classique n'est possible qu'en mode page, c'est-à-dire sous recherche texte ou\ntri par nom.\n\nParamètres :\n\n- `sortBy` (**obligatoire**) — `ACQUIRED_DATE` (date d'acquisition décroissante) ou `NAME` (titre croissant). Le sens est figé côté\n  serveur, il n'y a pas de paramètre de direction ;\n- `q` — recherche plein texte sur le titre et la description, **3 caractères minimum** ;\n- `page` — entier ≥ 0, défaut `0`, utilisé en mode page uniquement ;\n- `cursor` — chaîne opaque renvoyée par la réponse précédente, utilisée en mode curseur uniquement ;\n- `variant` — répétable, filtre sur une ou plusieurs variantes (`CardDTO.variantId`, décrites par `GET /variants`) ;\n- `tags` — répétable ; la carte doit porter **tous** les tags demandés. La valeur `-1` demande les cartes **sans aucun tag** et rend les\n  autres identifiants sans effet ;\n- `duplicate`, `protected` — booléens, ne gardent que les doublons / les cartes protégées, ou que leur complément ;\n- `wishlist` — identifiant de joueur ; ne garde que les cartes dont l'article figure dans une de ses wishlists. Doit être soi-même, ou un\n  joueur dont on a accepté au moins un partage de wishlist — l'amitié seule ne suffit pas. Seules les wishlists effectivement partagées\n  avec l'appelant sont croisées, jamais les autres listes de ce joueur.\n\nRéponse :\n\n```jsonc\n{\n  \"nbResults\": 1247,        // -1 quand le total est inconnu\n  \"page\": 0,                // toujours 0 en mode curseur\n  \"sortBy\": \"ACQUIRED_DATE\",\n  \"sortDirection\": \"DESC\",  // informatif, déduit de sortBy\n  \"results\": [ /* CardDTO */ ],\n  \"nextCursor\": \"TC8xNzg3…\", // null en mode page et en fin de liste\n  \"hasNext\": true,\n  \"q\": null\n}\n```\n\n`hasNext` est la **seule** source de vérité pour savoir s'il reste des cartes : ne pas déduire la fin de liste de `results.length < 50`.\n\n`nbResults` vaut `-1` quand le total est inconnu, ce qui est fréquent : le serveur ne le calcule que s'il peut le lire dans des compteurs\ndéjà tenus à jour, donc jamais sous recherche texte ni sous filtre par variante, tag, wishlist, doublon ou protection. L'interface doit\nsavoir afficher une liste sans total.\n\n`nextCursor` est indissociable du tri et des filtres qui l'ont produit : dès que `sortBy`, `q` ou un filtre change, repartir de zéro\n(`page` à `0`, pas de `cursor`). Le serveur détecte un changement de tri et redémarre, mais **pas** un changement de filtre : réutiliser un\ncurseur avec d'autres filtres renvoie une fenêtre incohérente, sans erreur.\n\nEn mode page, le serveur s'arrête au-delà de 10 000 résultats cumulés : il renvoie alors une liste vide avec `hasNext` à `false`. Limite\natteignable seulement en défilement infini très prolongé.\n\nErreurs : `400` / `INVALID_PARAMETER` pour un `q` de 1 ou 2 caractères ou un curseur au contenu incohérent, `404` / `NOT_FOUND` si\n`wishlist` désigne un joueur qui n'est ni soi-même ni un partageur de wishlist accepté. Un curseur illisible ou issu d'un autre tri est\nignoré sans erreur, la première page est renvoyée.\n\nLe détail complet, cas limites et pseudo-code de référence, est dans `docs/collection-pagination.md`.",
+				"description": "Liste paginée des cartes possédées, filtrable et triable. La taille de page est fixée par le serveur (48 cartes aujourd'hui) et n'est pas\nparamétrable : la déduire de `results.length` plutôt que la coder en dur.\n\n**Deux modes de pagination, choisis par le serveur.** Le client n'a pas ce choix à faire, il applique une seule règle après chaque\nréponse :\n\n1. si `hasNext` vaut `false`, il n'y a plus rien à charger ;\n2. sinon, si `nextCursor` n'est pas `null`, rejouer la **même** requête avec `cursor=nextCursor` et **sans** `page` ;\n3. sinon, rejouer la même requête avec `page` incrémenté de 1 et **sans** `cursor`.\n\nNe jamais envoyer `page` et `cursor` ensemble : le mode actif ignore silencieusement le paramètre de l'autre. Le mode curseur ne permet pas\nde sauter à une page arbitraire — une pagination numérotée classique n'est possible qu'en mode page, c'est-à-dire sous recherche texte ou\ntri par nom.\n\n**Disponibilité d'un exemplaire.** `id` est l'exemplaire, `pageId` l'article du catalogue. Trois engagements se lisent sur la carte, tous\nprésents seulement s'ils existent : `pendingTradeId` (réservée par une proposition d'échange de son propriétaire), `saleId` (en vente,\nà passer à `POST /sales/{id}/buy`) et `auctionId` (aux enchères, à ouvrir par `GET /auctions/{id}`). Avec `protected` :\n\n| Action | Refusée si |\n|---|---|\n| mettre en vente (`POST /me/sales`) | `protected`, `saleId` ou `auctionId` |\n| mettre aux enchères (`POST /me/auctions`) | `protected`, `saleId`, `auctionId` ou `pendingTradeId` |\n| proposer dans un échange | `protected`, `pendingTradeId` ou `auctionId` |\n\nUne carte peut être à la fois en vente et réservée par un échange : le premier qui aboutit l'emporte. Le serveur revérifie tout à la\nmutation ; en cas de course, il répond `409` avec le code du domaine. Règlement, annulation et achat libèrent l'exemplaire. Les mêmes\nchamps sont servis sur la collection d'un ami, les ventes et les enchères étant publiques.\n\nParamètres :\n\n- `sortBy` (**obligatoire**) — `ACQUIRED_DATE` (date d'acquisition décroissante) ou `NAME` (titre croissant). Le sens est figé côté\n  serveur, il n'y a pas de paramètre de direction ;\n- `q` — recherche plein texte sur le titre et la description, **3 caractères minimum** ;\n- `page` — entier ≥ 0, défaut `0`, utilisé en mode page uniquement ;\n- `cursor` — chaîne opaque renvoyée par la réponse précédente, utilisée en mode curseur uniquement ;\n- `variant` — répétable, filtre sur une ou plusieurs variantes (`CardDTO.variantId`, décrites par `GET /variants`) ;\n- `tags` — répétable ; la carte doit porter **tous** les tags demandés. La valeur `-1` demande les cartes **sans aucun tag** et rend les\n  autres identifiants sans effet ;\n- `duplicate`, `protected` — booléens, ne gardent que les doublons / les cartes protégées, ou que leur complément ;\n- `wishlist` — identifiant de joueur ; ne garde que les cartes dont l'article figure dans une de ses wishlists. Doit être soi-même, ou un\n  joueur dont on a accepté au moins un partage de wishlist — l'amitié seule ne suffit pas. Seules les wishlists effectivement partagées\n  avec l'appelant sont croisées, jamais les autres listes de ce joueur.\n\nRéponse :\n\n```jsonc\n{\n  \"nbResults\": 1247,        // -1 quand le total est inconnu\n  \"page\": 0,                // toujours 0 en mode curseur\n  \"sortBy\": \"ACQUIRED_DATE\",\n  \"sortDirection\": \"DESC\",  // informatif, déduit de sortBy\n  \"results\": [ /* CardDTO */ ],\n  \"nextCursor\": \"TC8xNzg3…\", // null en mode page et en fin de liste\n  \"hasNext\": true,\n  \"q\": null\n}\n```\n\n`hasNext` est la **seule** source de vérité pour savoir s'il reste des cartes : ne pas déduire la fin de liste de `results.length < 50`.\n\n`nbResults` vaut `-1` quand le total est inconnu, ce qui est fréquent : le serveur ne le calcule que s'il peut le lire dans des compteurs\ndéjà tenus à jour, donc jamais sous recherche texte ni sous filtre par variante, tag, wishlist, doublon ou protection. L'interface doit\nsavoir afficher une liste sans total.\n\n`nextCursor` est indissociable du tri et des filtres qui l'ont produit : dès que `sortBy`, `q` ou un filtre change, repartir de zéro\n(`page` à `0`, pas de `cursor`). Le serveur détecte un changement de tri et redémarre, mais **pas** un changement de filtre : réutiliser un\ncurseur avec d'autres filtres renvoie une fenêtre incohérente, sans erreur.\n\nEn mode page, le serveur s'arrête au-delà de 10 000 résultats cumulés : il renvoie alors une liste vide avec `hasNext` à `false`. Limite\natteignable seulement en défilement infini très prolongé.\n\nErreurs : `400` / `INVALID_PARAMETER` pour un `q` de 1 ou 2 caractères ou un curseur au contenu incohérent, `404` / `NOT_FOUND` si\n`wishlist` désigne un joueur qui n'est ni soi-même ni un partageur de wishlist accepté. Un curseur illisible ou issu d'un autre tri est\nignoré sans erreur, la première page est renvoyée.\n\nLe détail complet, cas limites et pseudo-code de référence, est dans `docs/collection-pagination.md`.",
 				"operationId": "search_4",
 				"parameters": [
 					{
@@ -3434,6 +3898,26 @@
 				}
 			}
 		},
+		"/collection/stats": {
+			"get": {
+				"tags": ["Collection"],
+				"summary": "Progression de la collection",
+				"description": "```jsonc\n{ \"nbCards\": 1520, \"nbDistinctPages\": 1203, \"nbActivePages\": 2712345 }\n```\n\n- `nbCards` — exemplaires possédés, doublons et articles désactivés compris : le `nbCards` de `GET /welcome` et de `GET /me` ;\n- `nbDistinctPages` — articles **différents** possédés, parmi les articles **actifs** seulement : deux exemplaires du même article, ou le\n  même article en deux variantes, comptent une fois ;\n- `nbActivePages` — articles actifs du catalogue, le dénominateur. Même périmètre que le numérateur, donc\n  `nbDistinctPages / nbActivePages` est la couverture du catalogue.\n\nLes variantes ne sont pas comptées à part, et les engagements (vente, enchère, échange) n'y changent rien : un exemplaire engagé est\ntoujours possédé. Les filtres de `GET /collection` ne s'appliquent pas. Valeurs lues à l'instant de l'appel.\n\nCoûteux sur une très grosse collection au premier appel (quelques centaines de millisecondes pour 200 000 cartes, puis en cache jusqu'à\nla prochaine acquisition ou perte de carte) : à appeler sur l'écran qui affiche la progression, pas à chaque navigation.",
+				"operationId": "stats",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"*/*": {
+								"schema": {
+									"$ref": "#/components/schemas/CollectionStatsDTO"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
 		"/boosters": {
 			"get": {
 				"tags": ["Boosters"],
@@ -3481,9 +3965,104 @@
 			"get": {
 				"tags": ["Auctions"],
 				"summary": "Enchères en cours et à venir",
-				"description": "Toutes les enchères ouvertes dont la fin n'est pas passée, **y compris celles qui n'ont pas commencé** (`startsAt` dans le futur) et celles\nde l'appelant, de la plus proche de sa fin à la plus lointaine. 48 par page, `page` à partir de 0.\n\n```jsonc\n{ \"nbResults\": 12, \"page\": 0, \"results\": [ { … } ] }   // chaque élément a la forme de GET /auctions/{id}, sans `bids`\n```\n\nLes enchères des joueurs que l'appelant a bloqués n'y figurent pas.",
-				"operationId": "list",
+				"description": "Les enchères ouvertes dont la fin n'est pas passée, **y compris celles qui n'ont pas commencé** (`startsAt` dans le futur) et celles de\nl'appelant. Les enchères terminées n'y figurent jamais : elles se lisent dans `GET /me/auctions`, `GET /me/bids`,\n`GET /me/auction-favorites` ou par leur identifiant. Les enchères des joueurs que l'appelant a bloqués sont exclues, du total comme des\npages.\n\n```jsonc\n{ \"nbResults\": 12, \"page\": 0, \"pageSize\": 48, \"hasNext\": false, \"results\": [ { … } ] }   // forme de GET /auctions/{id}, sans `bids`\n```\n\n`nbResults` est le total exact des enchères qui passent les filtres, calculé sur le même ensemble que les pages. `hasNext` dit s'il\nreste une page après celle-ci. 48 par page, `page` à partir de 0 ; une page au-delà de la dernière rend une liste vide.\n\nFiltres, tous facultatifs et cumulables :\n\n- `q` — un morceau du titre de l'article, sans tenir compte de la casse ni des accents. Tronqué à 50 caractères ; en dessous de trois\n  caractères, la réponse est une page vide ;\n- `pageId` — l'article du catalogue (`card.pageId`) ;\n- `variant` — répétable, les variantes (`card.variantId`, décrites par `GET /variants`) ;\n- `sellerId` — le vendeur ;\n- `phase` — `UPCOMING` (pas encore commencée) ou `RUNNING` (en cours) ; absent, les deux ;\n- `minPrice`, `maxPrice` — bornes incluses sur le **prix courant**, c'est-à-dire `price` s'il y a eu une mise et `startPrice` sinon ;\n- `wishlist` — identifiant de joueur ; ne garde que les cartes dont l'article figure dans une de ses listes de souhaits. Même règle que le\n  filtre `wishlist` de `GET /collection` : soi-même, un joueur dont on a accepté un partage, ou un membre de sa guilde pour ses listes\n  partagées avec la guilde. Passer son propre identifiant pour « les cartes que je cherche ».\n\nTri : `sortBy` vaut `ENDS_AT` (défaut, fin la plus proche d'abord), `PRICE` (prix courant) ou `CREATION_DATE` (mise en ligne) ;\n`sortDirection` vaut `ASC` (défaut) ou `DESC`. L'identifiant de l'enchère départage, dans le même sens, donc l'ordre est stable.\n\nChaque enchère porte `favorite` (suivie par l'appelant) et `viewerOutcome`, présent seulement si l'appelant vend ou a misé.\n\nErreurs : `400` / `INVALID_PARAMETER` si `minPrice` dépasse `maxPrice`, si un prix est négatif, ou si `sortBy`, `sortDirection` ou\n`phase` ne sont pas une valeur connue ; `404` / `NOT_FOUND` si `wishlist` désigne un joueur dont l'appelant ne peut pas lire les\nlistes.",
+				"operationId": "list_1",
 				"parameters": [
+					{
+						"name": "q",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "pageId",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "integer",
+							"format": "int64"
+						}
+					},
+					{
+						"name": "variant",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "array",
+							"items": {
+								"type": "integer",
+								"format": "int64"
+							},
+							"uniqueItems": true
+						}
+					},
+					{
+						"name": "sellerId",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "integer",
+							"format": "int64"
+						}
+					},
+					{
+						"name": "wishlist",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "integer",
+							"format": "int64"
+						}
+					},
+					{
+						"name": "phase",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "string",
+							"enum": ["UPCOMING", "RUNNING"]
+						}
+					},
+					{
+						"name": "minPrice",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "integer",
+							"format": "int64",
+							"minimum": 0
+						}
+					},
+					{
+						"name": "maxPrice",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "integer",
+							"format": "int64",
+							"minimum": 0
+						}
+					},
+					{
+						"name": "sortBy",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "string",
+							"enum": ["ENDS_AT", "PRICE", "CREATION_DATE"]
+						}
+					},
+					{
+						"name": "sortDirection",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "string",
+							"enum": ["ASC", "DESC"]
+						}
+					},
 					{
 						"name": "page",
 						"in": "query",
@@ -3624,6 +4203,29 @@
 								}
 							}
 						}
+					}
+				}
+			}
+		},
+		"/me/passkeys/{id}": {
+			"delete": {
+				"tags": ["Passkeys"],
+				"summary": "Supprime une passkey",
+				"description": "Supprime la passkey `id` (base64url, tel que servi par `GET /me/passkeys`). Elle ne permet plus de se connecter ; les sessions déjà\nouvertes avec elle ne sont pas fermées — `POST /auth/logout-all` le fait. Il faudra aussi la retirer de l'appareil, le serveur ne pouvant\npas le faire.\n\nLa dernière passkey peut être supprimée : le joueur revient alors par un code de secours ou un lien du back office.\n\nRéponse : `204`. Erreurs : `404` / `NOT_FOUND` si la passkey n'existe pas ou n'est pas à l'appelant.",
+				"operationId": "delete_2",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK"
 					}
 				}
 			}
@@ -3920,6 +4522,14 @@
 						"type": "integer",
 						"format": "int64"
 					},
+					"saleId": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"auctionId": {
+						"type": "integer",
+						"format": "int64"
+					},
 					"ownedCount": {
 						"type": "integer",
 						"format": "int32"
@@ -4050,6 +4660,29 @@
 					}
 				}
 			},
+			"ImageCrop": {
+				"type": "object",
+				"properties": {
+					"x": {
+						"type": "number",
+						"format": "double",
+						"maximum": 100,
+						"minimum": 0
+					},
+					"y": {
+						"type": "number",
+						"format": "double",
+						"maximum": 100,
+						"minimum": 0
+					},
+					"zoom": {
+						"type": "number",
+						"format": "double",
+						"maximum": 5,
+						"minimum": 1
+					}
+				}
+			},
 			"SimpleUserDTO": {
 				"type": "object",
 				"properties": {
@@ -4066,6 +4699,9 @@
 					},
 					"image": {
 						"type": "string"
+					},
+					"imageCrop": {
+						"$ref": "#/components/schemas/ImageCrop"
 					}
 				}
 			},
@@ -4241,6 +4877,147 @@
 				},
 				"required": ["id", "reason", "type"]
 			},
+			"SignupOptionsRequest": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"maxLength": 64,
+						"minLength": 0
+					},
+					"label": {
+						"type": "string",
+						"maxLength": 64,
+						"minLength": 0
+					}
+				},
+				"required": ["name"]
+			},
+			"JsonNode": {
+				"type": "object",
+				"properties": {
+					"empty": {
+						"type": "boolean"
+					},
+					"array": {
+						"type": "boolean"
+					},
+					"null": {
+						"type": "boolean"
+					},
+					"object": {
+						"type": "boolean"
+					},
+					"float": {
+						"type": "boolean"
+					},
+					"pojo": {
+						"type": "boolean"
+					},
+					"floatingPointNumber": {
+						"type": "boolean"
+					},
+					"short": {
+						"type": "boolean"
+					},
+					"int": {
+						"type": "boolean"
+					},
+					"long": {
+						"type": "boolean"
+					},
+					"double": {
+						"type": "boolean"
+					},
+					"bigDecimal": {
+						"type": "boolean"
+					},
+					"bigInteger": {
+						"type": "boolean"
+					},
+					"textual": {
+						"type": "boolean",
+						"deprecated": true
+					},
+					"boolean": {
+						"type": "boolean"
+					},
+					"binary": {
+						"type": "boolean"
+					},
+					"nodeType": {
+						"type": "string",
+						"enum": [
+							"ARRAY",
+							"BINARY",
+							"BOOLEAN",
+							"MISSING",
+							"NULL",
+							"NUMBER",
+							"OBJECT",
+							"POJO",
+							"STRING"
+						]
+					},
+					"string": {
+						"type": "boolean"
+					},
+					"integralNumber": {
+						"type": "boolean"
+					},
+					"valueNode": {
+						"type": "boolean"
+					},
+					"container": {
+						"type": "boolean"
+					},
+					"missingNode": {
+						"type": "boolean"
+					},
+					"number": {
+						"type": "boolean"
+					},
+					"embeddedValue": {
+						"type": "boolean"
+					}
+				}
+			},
+			"PasskeyCeremonyDTO": {
+				"type": "object",
+				"properties": {
+					"requestId": {
+						"type": "string"
+					},
+					"options": {
+						"$ref": "#/components/schemas/JsonNode"
+					}
+				}
+			},
+			"RecoveryOptionsRequest": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"maxLength": 64,
+						"minLength": 0
+					},
+					"code": {
+						"type": "string",
+						"maxLength": 64,
+						"minLength": 0
+					},
+					"token": {
+						"type": "string",
+						"maxLength": 128,
+						"minLength": 0
+					},
+					"label": {
+						"type": "string",
+						"maxLength": 64,
+						"minLength": 0
+					}
+				}
+			},
 			"SaleRequest": {
 				"type": "object",
 				"properties": {
@@ -4333,6 +5110,33 @@
 						"type": "string",
 						"format": "date-time"
 					},
+					"listingFee": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"finalFee": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"favorite": {
+						"type": "boolean"
+					},
+					"viewerOutcome": {
+						"type": "string",
+						"enum": [
+							"SCHEDULED",
+							"RUNNING",
+							"SETTLING",
+							"SOLD",
+							"UNSOLD",
+							"LEADING",
+							"OUTBID",
+							"WON_PENDING",
+							"WON",
+							"LOST",
+							"CANCELLED"
+						]
+					},
 					"bids": {
 						"type": "array",
 						"items": {
@@ -4383,6 +5187,74 @@
 						"items": {
 							"$ref": "#/components/schemas/AuctionDTO"
 						}
+					}
+				}
+			},
+			"ReauthRequest": {
+				"type": "object",
+				"properties": {
+					"requestId": {
+						"type": "string",
+						"maxLength": 64,
+						"minLength": 0
+					},
+					"credential": {
+						"$ref": "#/components/schemas/JsonNode"
+					},
+					"recoveryCode": {
+						"type": "string",
+						"maxLength": 64,
+						"minLength": 0
+					}
+				}
+			},
+			"RecoveryCodesDTO": {
+				"type": "object",
+				"properties": {
+					"codes": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					}
+				}
+			},
+			"PasskeyRegistrationRequest": {
+				"type": "object",
+				"properties": {
+					"label": {
+						"type": "string",
+						"maxLength": 64,
+						"minLength": 0
+					},
+					"credential": {
+						"$ref": "#/components/schemas/JsonNode"
+					},
+					"reauth": {
+						"$ref": "#/components/schemas/ReauthRequest"
+					}
+				},
+				"required": ["credential", "label", "reauth"]
+			},
+			"PasskeyDTO": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"label": {
+						"type": "string"
+					},
+					"synced": {
+						"type": "boolean"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"lastUsedAt": {
+						"type": "string",
+						"format": "date-time"
 					}
 				}
 			},
@@ -4609,6 +5481,9 @@
 					"fromUserId": {
 						"type": "integer",
 						"format": "int64"
+					},
+					"fromUser": {
+						"$ref": "#/components/schemas/SimpleUserDTO"
 					},
 					"type": {
 						"type": "string",
@@ -4844,9 +5719,6 @@
 					"name": {
 						"type": "string"
 					},
-					"email": {
-						"type": "string"
-					},
 					"roles": {
 						"type": "array",
 						"items": {
@@ -4854,12 +5726,19 @@
 							"enum": ["USER", "ADMIN"]
 						}
 					},
+					"recoveryCodes": {
+						"type": "integer",
+						"format": "int32"
+					},
 					"imagePageId": {
 						"type": "integer",
 						"format": "int64"
 					},
 					"image": {
 						"type": "string"
+					},
+					"imageCrop": {
+						"$ref": "#/components/schemas/ImageCrop"
 					},
 					"nsfw": {
 						"type": "boolean"
@@ -4898,6 +5777,10 @@
 						"items": {
 							"$ref": "#/components/schemas/BannerDTO"
 						}
+					},
+					"nameChangeAvailableAt": {
+						"type": "string",
+						"format": "date-time"
 					}
 				}
 			},
@@ -4907,6 +5790,9 @@
 					"imagePageId": {
 						"type": "integer",
 						"format": "int64"
+					},
+					"imageCrop": {
+						"$ref": "#/components/schemas/ImageCrop"
 					}
 				}
 			},
@@ -4998,6 +5884,9 @@
 					},
 					"image": {
 						"type": "string"
+					},
+					"imageCrop": {
+						"$ref": "#/components/schemas/ImageCrop"
 					},
 					"accepted": {
 						"type": "boolean"
@@ -5219,6 +6108,9 @@
 					"image": {
 						"type": "string"
 					},
+					"imageCrop": {
+						"$ref": "#/components/schemas/ImageCrop"
+					},
 					"joinedAt": {
 						"type": "string"
 					},
@@ -5306,6 +6198,20 @@
 						"items": {
 							"$ref": "#/components/schemas/PageDTO"
 						}
+					},
+					"pageSize": {
+						"type": "integer",
+						"format": "int32"
+					},
+					"maxResults": {
+						"type": "integer",
+						"format": "int32"
+					},
+					"truncated": {
+						"type": "boolean"
+					},
+					"hasNext": {
+						"type": "boolean"
 					}
 				}
 			},
@@ -5558,6 +6464,88 @@
 					}
 				}
 			},
+			"AccountDeletionDTO": {
+				"type": "object",
+				"properties": {
+					"canDelete": {
+						"type": "boolean"
+					},
+					"blockers": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/Blocker"
+						}
+					},
+					"consequences": {
+						"$ref": "#/components/schemas/Consequences"
+					}
+				}
+			},
+			"Blocker": {
+				"type": "object",
+				"properties": {
+					"code": {
+						"type": "string",
+						"enum": ["GUILD_OWNER"]
+					},
+					"guildId": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"guildName": {
+						"type": "string"
+					}
+				}
+			},
+			"Consequences": {
+				"type": "object",
+				"properties": {
+					"openTrades": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"openSales": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"openAuctions": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"leadingAuctions": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"refundedAmount": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"friends": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"friendRequests": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"wishlists": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"guildId": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"nbCards": {
+						"type": "integer",
+						"format": "int32"
+					},
+					"money": {
+						"type": "integer",
+						"format": "int64"
+					}
+				}
+			},
 			"MyBidsDTO": {
 				"type": "object",
 				"properties": {
@@ -5565,11 +6553,77 @@
 						"type": "integer",
 						"format": "int64"
 					},
+					"nbResults": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"page": {
+						"type": "integer",
+						"format": "int32"
+					},
+					"pageSize": {
+						"type": "integer",
+						"format": "int32"
+					},
+					"hasNext": {
+						"type": "boolean"
+					},
 					"auctions": {
 						"type": "array",
 						"items": {
 							"$ref": "#/components/schemas/AuctionDTO"
 						}
+					}
+				}
+			},
+			"AuctionsResult": {
+				"type": "object",
+				"properties": {
+					"nbResults": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"page": {
+						"type": "integer",
+						"format": "int32"
+					},
+					"pageSize": {
+						"type": "integer",
+						"format": "int32"
+					},
+					"hasNext": {
+						"type": "boolean"
+					},
+					"results": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/AuctionDTO"
+						}
+					}
+				}
+			},
+			"AuctionFeeDTO": {
+				"type": "object",
+				"properties": {
+					"startPrice": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"feePercent": {
+						"type": "integer",
+						"format": "int32"
+					},
+					"fee": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"alreadyPaid": {
+						"type": "integer",
+						"format": "int64"
+					},
+					"due": {
+						"type": "integer",
+						"format": "int64"
 					}
 				}
 			},
@@ -5587,6 +6641,9 @@
 						"type": "string"
 					},
 					"description": {
+						"type": "string"
+					},
+					"icon": {
 						"type": "string"
 					},
 					"threshold": {
@@ -5664,6 +6721,9 @@
 					"image": {
 						"type": "string"
 					},
+					"imageCrop": {
+						"$ref": "#/components/schemas/ImageCrop"
+					},
 					"nbCards": {
 						"type": "integer",
 						"format": "int32"
@@ -5723,6 +6783,9 @@
 					"image": {
 						"type": "string"
 					},
+					"imageCrop": {
+						"$ref": "#/components/schemas/ImageCrop"
+					},
 					"owner": {
 						"type": "boolean"
 					},
@@ -5746,9 +6809,20 @@
 						"type": "integer",
 						"format": "int64"
 					},
+					"nbMembers": {
+						"type": "integer",
+						"format": "int32"
+					},
 					"page": {
 						"type": "integer",
 						"format": "int32"
+					},
+					"pageSize": {
+						"type": "integer",
+						"format": "int32"
+					},
+					"hasNext": {
+						"type": "boolean"
 					},
 					"results": {
 						"type": "array",
@@ -5775,6 +6849,9 @@
 					"image": {
 						"type": "string"
 					},
+					"imageCrop": {
+						"$ref": "#/components/schemas/ImageCrop"
+					},
 					"invitedAt": {
 						"type": "string",
 						"format": "date-time"
@@ -5797,6 +6874,9 @@
 					},
 					"image": {
 						"type": "string"
+					},
+					"imageCrop": {
+						"$ref": "#/components/schemas/ImageCrop"
 					},
 					"createdAt": {
 						"type": "string",
@@ -5923,6 +7003,23 @@
 					}
 				}
 			},
+			"CollectionStatsDTO": {
+				"type": "object",
+				"properties": {
+					"nbCards": {
+						"type": "integer",
+						"format": "int32"
+					},
+					"nbDistinctPages": {
+						"type": "integer",
+						"format": "int32"
+					},
+					"nbActivePages": {
+						"type": "integer",
+						"format": "int32"
+					}
+				}
+			},
 			"BlockedUserDTO": {
 				"type": "object",
 				"properties": {
@@ -5940,28 +7037,12 @@
 					"image": {
 						"type": "string"
 					},
+					"imageCrop": {
+						"$ref": "#/components/schemas/ImageCrop"
+					},
 					"createdAt": {
 						"type": "string",
 						"format": "date-time"
-					}
-				}
-			},
-			"AuctionsResult": {
-				"type": "object",
-				"properties": {
-					"nbResults": {
-						"type": "integer",
-						"format": "int64"
-					},
-					"page": {
-						"type": "integer",
-						"format": "int32"
-					},
-					"results": {
-						"type": "array",
-						"items": {
-							"$ref": "#/components/schemas/AuctionDTO"
-						}
 					}
 				}
 			}

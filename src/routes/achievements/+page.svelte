@@ -1,4 +1,9 @@
 <script lang="ts">
+	import {
+		realtimeRefresh,
+		refreshIncludes,
+		publishRealtimeRefresh
+	} from '$lib/realtime/resource-refresh';
 	import { onMount } from 'svelte';
 	import { claimAllAchievements } from '$lib/api/achievements';
 	import { _ } from '$lib/i18n';
@@ -51,6 +56,7 @@
 				const session = $currentSession;
 				if (session) persistSession(localStorage, { ...session, user });
 				achievements = refreshedAchievements;
+				publishRealtimeRefresh(['profile', 'boosters']);
 			} catch {
 				claimError ??= 'refresh_error';
 				failed = true;
@@ -61,6 +67,13 @@
 	}
 
 	onMount(() => void load());
+	let revision = 0;
+	$effect(() => {
+		const refresh = $realtimeRefresh;
+		if (revision === refresh.revision || !refreshIncludes(refresh, 'achievements')) return;
+		revision = refresh.revision;
+		void load(true);
+	});
 </script>
 
 <section class="flex flex-col gap-6 pb-12">

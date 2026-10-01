@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { getMyGuild } from '$lib/api/wikiforge';
+	import type { GuildSummary } from '$lib/types';
+	import { operationError } from '$lib/domain/operation-error';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -15,6 +19,20 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { _ } from '$lib/i18n';
 	let { guild, onChanged }: { guild: Guild; onChanged: () => Promise<void> } = $props();
+	let membership = $state<GuildSummary | null>(null);
+	let membershipReady = $state(false);
+	let membershipError = $state('');
+	onMount(() => {
+		void getMyGuild()
+			.then((value) => {
+				membership = value;
+				membershipReady = true;
+			})
+			.catch((cause) => (membershipError = operationError(cause)));
+	});
+	const full = $derived(
+		guild.maxMembers != null && guild.nbMembers != null && guild.nbMembers >= guild.maxMembers
+	);
 	const tab = $derived(page.url.searchParams.get('tab') ?? 'overview');
 	const tabs = $derived(
 		guild.member
@@ -81,7 +99,14 @@
 		/>{:else if tab === 'manage' && guild.member}<GuildManagement {guild} {onChanged} />{:else}<div
 			class="forge-panel flex flex-wrap gap-3 p-5"
 		>
-			{#if !guild.member && guild.joinPolicy === 'PUBLIC'}<ConfirmAction
+			{#if !guild.member && membershipError}<p role="alert">
+					{membershipError}
+				</p>{/if}{#if !guild.member && membership}<p>
+					{$_('plan.guild.alreadyMember', { values: { name: membership.name } })}
+				</p>{/if}{#if !guild.member && full}<p>
+					{$_('plan.guild.full')}
+				</p>{/if}{#if !guild.member && guild.joinPolicy === 'PUBLIC'}<ConfirmAction
+					disabled={!membershipReady || Boolean(membership) || full}
 					label={$_('completion.guild.join')}
 					description={guild.name}
 					onConfirm={() => mutate(() => joinGuild(guild.id))}

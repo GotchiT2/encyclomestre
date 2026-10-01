@@ -1,7 +1,7 @@
 export const TURNSTILE_SITE_KEY = '0x4AAAAAAE-vz1m5zVUnCH2j';
 export const TURNSTILE_TOKEN_HEADER = 'CF-Turnstile-Response';
 
-export type TurnstileAction = 'login' | 'open' | 'passkey';
+export type TurnstileAction = 'signup' | 'recovery' | 'login' | 'open' | 'passkey';
 
 export interface TurnstileRenderOptions {
 	sitekey: string;

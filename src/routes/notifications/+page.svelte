@@ -17,31 +17,13 @@
 	let cursor = $state<string | null>(null);
 	let hasNext = $state(false);
 	let unreadOnly = $state(false);
-	let activeTab = $state<
-		'all' | 'trades' | 'sales' | 'auctions' | 'friends' | 'guilds' | 'achievements'
-	>('all');
 	let loading = $state(true);
 	let loadingMore = $state(false);
 	let failed = $state(false);
 	let notificationsReady = $state(false);
 	let handledRealtimeRevision = 0;
-	const visibleItems = $derived(
-		items.filter((notification) =>
-			activeTab === 'all'
-				? true
-				: activeTab === 'trades'
-					? notification.type.startsWith('TRADE_')
-					: activeTab === 'sales'
-						? notification.type.startsWith('SALE_')
-						: activeTab === 'auctions'
-							? notification.type.startsWith('AUCTION_')
-							: activeTab === 'friends'
-								? notification.type === 'FRIEND_REQUEST' || notification.type === 'FRIEND_ACCEPTED'
-								: activeTab === 'guilds'
-									? notification.type.startsWith('GUILD_')
-									: notification.type === 'ACHIEVEMENT_UNLOCKED'
-		)
-	);
+	let sequence = 0;
+	const visibleItems = $derived(unreadOnly ? items.filter((item) => !item.read) : items);
 
 	function label(notification: AppNotification) {
 		if (notification.type.startsWith('MODERATION_')) return $_('completion.moderation.title');
@@ -74,20 +56,27 @@
 			: $_('notifications.type_unknown');
 	}
 	async function load(append = false) {
+		if (append && (loadingMore || loading || !hasNext)) return;
+		const request = ++sequence;
 		if (append) loadingMore = true;
 		else loading = true;
 		failed = false;
 		try {
 			const page = await getNotifications({ unreadOnly, cursor: append ? cursor : null });
-			items = append ? [...items, ...page.items] : page.items;
+			if (request !== sequence) return;
+			items = append
+				? [...new Map([...items, ...page.items].map((item) => [item.id, item])).values()]
+				: page.items;
 			cursor = page.nextCursor;
 			hasNext = page.hasNext;
 			unreadNotifications.set(page.unread);
 		} catch {
-			failed = true;
+			if (request === sequence) failed = true;
 		} finally {
-			loading = false;
-			loadingMore = false;
+			if (request === sequence) {
+				loading = false;
+				loadingMore = false;
+			}
 		}
 	}
 	const marking = new SvelteSet<string>();
@@ -157,19 +146,6 @@
 			onclick={() => void markAll()}>{$_('notifications.mark_all')}</Button
 		>
 	</div>
-	<div
-		class="grid grid-cols-2 border border-primary/30 bg-card p-1 sm:grid-cols-3 lg:grid-cols-6"
-		role="tablist"
-		aria-label={$_('notifications.tabs')}
-	>
-		{#each ['all', 'trades', 'sales', 'auctions', 'friends', 'guilds', 'achievements'] as tab (tab)}<Button
-				variant={activeTab === tab ? 'default' : 'ghost'}
-				role="tab"
-				aria-selected={activeTab === tab}
-				onclick={() => (activeTab = tab as typeof activeTab)}
-				>{$_(`notifications.tab_${tab}`)}</Button
-			>{/each}
-	</div>
 	{#if loading && !items.length}<p class="forge-label">{$_('notifications.loading')}</p>
 	{:else if failed}<div class="forge-panel-flat flex items-center justify-between gap-3 p-4">
 			<p class="text-destructive">{$_('notifications.error')}</p>
@@ -188,9 +164,12 @@
 							</p>
 						</div>
 						<time class="shrink-0 text-xs text-muted-foreground"
-							>{new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' }).format(
-								new Date(notification.createdAt)
-							)}</time
+							>{Number.isFinite(Date.parse(notification.createdAt))
+								? new Intl.DateTimeFormat('fr-FR', {
+										dateStyle: 'short',
+										timeStyle: 'short'
+									}).format(new Date(notification.createdAt))
+								: $_('plan.unknownDate')}</time
 						>
 					</button>
 				</li>{/each}

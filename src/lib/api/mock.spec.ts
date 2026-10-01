@@ -174,11 +174,13 @@ describe('createMockApiResponse', () => {
 		expect(await response.json()).toMatchObject({ id: 1, status: 'ACCEPTED' });
 	});
 
-	it('retourne les partenaires d’échange sans l’utilisateur courant', async () => {
-		const response = createMockApiResponse({ path: '/users?excludeCurrent=true' });
-		expect(((await response.json()) as { results: { id: string }[] }).results).not.toContainEqual(
-			expect.objectContaining({ id: 'demo-user' })
-		);
+	it('recherche les joueurs par leur nom dans le contrat canonique', async () => {
+		const missing = createMockApiResponse({ path: '/users' });
+		expect(missing.status).toBe(400);
+		expect(await createMockApiResponse({ path: '/users?q=So' }).json()).toEqual([]);
+		const users = await createMockApiResponse({ path: '/users?q=Sone' }).json();
+		expect(users).toEqual([expect.objectContaining({ id: 2, name: 'SoneS9' })]);
+		expect(users).not.toContainEqual(expect.objectContaining({ id: 1 }));
 	});
 
 	it('gère les wishlists WikiForge, leurs pages et leurs invitations', async () => {

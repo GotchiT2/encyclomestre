@@ -10,7 +10,7 @@ import type {
 import { apiRequest, type RequestOptions } from './client';
 import { toPublicPageCardRecord, type WikiForgePublicPageCard } from './pages';
 import { getVariants } from './variants';
-import { wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
+import { wikiForgeNumericId, wikiForgeIsoDate } from './wikiforge-contract';
 
 interface ApiWishlistSummary {
 	sharedWithGuild?: boolean;
@@ -45,6 +45,7 @@ interface ApiWishlistResult {
 }
 
 interface ApiWishlistFollower {
+	imageCrop?: import('$lib/types/user').ImageCrop;
 	id: number;
 	name: string;
 	accepted: boolean;
@@ -70,7 +71,7 @@ function toSummary(wishlist: ApiWishlistSummary, access: WishlistAccess): Wishli
 		imagePageId: wishlist.imagePageId == null ? null : String(wishlist.imagePageId),
 		imageUrl: wishlistImageUrl(wishlist.image),
 		ownerName: wishlist.ownerName ?? null,
-		invitedAt: wishlist.invitedAt ? wikiForgeUtcDate(wishlist.invitedAt).toISOString() : null,
+		invitedAt: wishlist.invitedAt ? (wikiForgeIsoDate(wishlist.invitedAt) ?? '') : null,
 		access
 	};
 }
@@ -122,7 +123,7 @@ export async function getWishlistPage(
 	return {
 		items: results.map((entry) => ({
 			card: toPublicPageCardRecord(entry.page, variants),
-			addedAt: wikiForgeUtcDate(entry.addedAt).toISOString()
+			addedAt: wikiForgeIsoDate(entry.addedAt) ?? ''
 		})),
 		meta: {
 			page: (response?.page ?? Math.max(0, page - 1)) + 1,
@@ -273,6 +274,7 @@ export async function getWishlistFollowers(
 		name: follower.name,
 		imagePageId: follower.imagePageId == null ? null : String(follower.imagePageId),
 		imageUrl: wishlistImageUrl(follower.image),
+		imageCrop: follower.imageCrop,
 		accepted: follower.accepted
 	}));
 }

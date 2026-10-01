@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { operationError } from '$lib/domain/operation-error';
 	import PlayerRelationshipControl from '$lib/components/friends/player-relationship-control.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
@@ -19,6 +20,7 @@
 	} = $props();
 
 	let query = $state('');
+	let error = $state('');
 	let candidates = $state<User[]>([]);
 	let loading = $state(false);
 	let invitingId = $state<string | null>(null);
@@ -40,9 +42,12 @@
 		loading = true;
 		debounceTimer = window.setTimeout(async () => {
 			try {
+				error = '';
 				const users = await loadUsers(normalizedQuery);
 				if (currentRequest !== requestId) return;
 				candidates = users;
+			} catch (cause) {
+				if (currentRequest === requestId) error = operationError(cause);
 			} finally {
 				if (currentRequest === requestId) loading = false;
 			}
@@ -58,6 +63,8 @@
 			await onInvite(user);
 			open = false;
 			query = '';
+		} catch (cause) {
+			error = operationError(cause);
 		} finally {
 			invitingId = null;
 		}
@@ -73,6 +80,7 @@
 			</Dialog.Description>
 		</header>
 		<div class="min-h-0 p-4">
+			{#if error}<p role="alert" class="mb-3 text-destructive">{error}</p>{/if}
 			<Input bind:value={query} placeholder={$_('friends.invite_search_placeholder')} autofocus />
 			{#if query.trim().length < 3}
 				<p class="mt-4 text-sm text-muted-foreground">{$_('friends.invite_min_chars')}</p>
@@ -86,6 +94,7 @@
 						<li class="flex items-center gap-3 border border-primary/25 bg-background p-2">
 							<UserAvatar
 								image={candidate.avatarUrl}
+								crop={candidate.imageCrop}
 								name={candidate.username}
 								lastConnection={candidate.lastConnection}
 							/>

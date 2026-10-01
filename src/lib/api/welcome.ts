@@ -32,19 +32,19 @@ export async function getWikiForgeWelcome(options?: RequestOptions): Promise<Das
 	]);
 	return {
 		collection: {
-			totalCopies: response.collection.nbCards
+			totalCopies: response.collection?.nbCards ?? 0
 		},
 		guild: response.guild,
-		pendingTrades: response.pendingTrades,
+		pendingTrades: response.pendingTrades ?? 0,
 		pendingAuction: response.pendingAuction ?? 0,
 		pendingFriendRequests: response.pendingFriendRequests ?? 0,
 		pendingGuildInvitations: response.pendingGuildInvitations ?? 0,
 		unreadNotifications: response.unreadNotifications ?? 0,
 		unreadMessages: response.unreadMessages ?? 0,
-		rank: response.collection.rank,
+		rank: response.collection?.rank,
 		money: response.money ?? 0,
 		packs: toPackSummaries(response.boosters),
-		recentAcquisitions: response.collection.recent.map((card) =>
+		recentAcquisitions: (response.collection?.recent ?? []).map((card) =>
 			toWikiForgeCollectionCard(card, variants)
 		)
 	};
