@@ -45,11 +45,11 @@
 		display: grid;
 		gap: 2rem;
 		align-items: center;
-		padding: 1rem 0 3rem;
+		padding: 1rem 0 2rem;
 	}
 	.landing-copy h1 {
 		font:
-			900 clamp(3rem, 8vw, 7rem)/0.88 'Barlow Condensed',
+			900 clamp(3rem, 6vw, 6rem)/0.88 'Barlow Condensed',
 			sans-serif;
 		text-transform: uppercase;
 		margin: 1rem 0;
@@ -70,14 +70,14 @@
 	.landing-objects {
 		position: relative;
 		isolation: isolate;
-		height: min(110vw, 480px);
+		height: 300px;
 	}
 	.graphic-print {
 		position: absolute;
 		inset: 0;
 		display: grid;
 		place-items: center;
-		font-size: min(110vw, 600px);
+		font-size: 360px;
 		line-height: 1;
 		color: #e8ef42;
 		z-index: -1;
@@ -86,8 +86,8 @@
 		position: absolute;
 		right: 6%;
 		top: 5%;
-		width: 50%;
-		max-width: 280px;
+		width: 144px;
+		max-width: 144px;
 		transform: rotate(7deg);
 	}
 	.landing-pack {
@@ -96,7 +96,7 @@
 		max-width: 220px;
 		top: 22%;
 		left: 3%;
-		transform: rotate(-10deg);
+		transform: perspective(700px) rotateY(16deg) rotateZ(-10deg);
 	}
 	.landing-loop {
 		display: grid;

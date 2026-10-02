@@ -60,6 +60,10 @@ try {
 		await page.screenshot({ path: join(folder, 'booster-batch-' + width + '.png') });
 		await page.evaluate(() => sessionStorage.removeItem('wikiforge-plan-scenario'));
 		await navigate(page, '/settings');
+		await page
+			.locator('.settings-index')
+			.getByRole('button', { name: 'Profil', exact: true })
+			.click();
 		await page.getByRole('button', { name: 'Selectionner un avatar', exact: true }).click();
 		const dialog = page.getByRole('dialog');
 		await dialog.getByRole('searchbox').fill('2NE1');
@@ -95,6 +99,10 @@ try {
 		await navigate(page, '/profile');
 		await page.locator('img[style*="scale(2.2)"]').first().waitFor();
 		await navigate(page, '/settings');
+		await page
+			.locator('.settings-index')
+			.getByRole('button', { name: 'Sécurité', exact: true })
+			.click();
 		await page.evaluate(() => sessionStorage.setItem('wikiforge-plan-scenario', 'guild-owner'));
 		await page.getByRole('button', { name: 'Voir les conséquences', exact: true }).click();
 		await page

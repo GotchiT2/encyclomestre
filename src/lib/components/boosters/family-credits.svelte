@@ -7,9 +7,9 @@
 
 <div class="flex gap-3 overflow-x-auto pb-1" aria-label={$_('arcade.sharedCredits')}>
 	{#each families as family (family.family)}
-		<div class="min-w-44 flex-1 border border-border bg-card px-4 py-3">
+		<div class="min-w-40 flex-1 border-l-2 border-primary bg-card px-3 py-2">
 			<p class="text-sm font-semibold">{$_('boosters.family.' + family.family)}</p>
-			<p class="mt-1 text-2xl tabular-nums">
+			<p class="text-lg tabular-nums">
 				{family.available} / {family.max}{#if family.bonus}
 					<span class="text-primary">+{family.bonus}</span>{/if}
 			</p>
@@ -23,4 +23,3 @@
 		</div>
 	{/each}
 </div>
-<p class="text-xs text-muted-foreground">{$_('arcade.sharedCredits')}</p>

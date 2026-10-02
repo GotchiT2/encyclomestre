@@ -47,6 +47,7 @@
 	} from '$lib/types';
 
 	let historyCount = $state(20);
+	let ledgerTab = $state('received');
 	let offers = $state<TradeOffer[]>([]);
 	let ownedCards = $state<CardRecord[]>([]);
 	let partnerCards = $state<CardRecord[]>([]);
@@ -375,14 +376,6 @@
 </script>
 
 <section class="flex flex-col gap-6 sm:gap-8">
-	<label class="flex flex-wrap items-center gap-3"
-		>{$_('completion.historyCount')}<select
-			class="min-h-11 border border-border bg-background px-3"
-			bind:value={historyCount}
-			onchange={() => void retryTrades()}
-			>{#each [10, 20, 50] as count (count)}<option value={count}>{count}</option>{/each}</select
-		></label
-	>
 	<MarketNavigation />
 	<PageHeader
 		eyebrow={$_('trades.eyebrow')}
@@ -413,12 +406,20 @@
 			{offers}
 			cardsByOffer={tradeCardsByOffer}
 			{currentUserId}
-			onTabChange={() => undefined}
+			onTabChange={(tab) => (ledgerTab = tab)}
 			onRespond={respond}
 			onCounterOffer={openCounterOffer}
 			onView={(offer) => void openTradeDetail(offer)}
 			onMessage={(participantId) => void openMessage(participantId)}
 		/>{/if}
+	{#if ledgerTab === 'history'}<label class="flex flex-wrap items-center gap-3 text-sm"
+			>{$_('completion.historyCount')}<select
+				class="min-h-11 border border-border bg-background px-3"
+				bind:value={historyCount}
+				onchange={() => void retryTrades()}
+				>{#each [10, 20, 50] as count (count)}<option value={count}>{count}</option>{/each}</select
+			></label
+		>{/if}
 </section>
 
 <TradePartnerPicker

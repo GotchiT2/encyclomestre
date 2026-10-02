@@ -208,9 +208,7 @@
 <SanctionNotice kind="TRADE" />
 
 <section class="flex flex-col gap-6 pb-12">
-	<header
-		class="forge-panel flex flex-col gap-5 overflow-hidden p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6"
-	>
+	<header class="flex flex-wrap items-start gap-4 border-b border-border pb-5">
 		<UserAvatar
 			image={profile.image}
 			crop={profile.imageCrop}
@@ -218,21 +216,21 @@
 			lastConnection={profile.lastConnection}
 			presenceSize="lg"
 			size="lg"
-			class="size-24 text-3xl sm:size-28"
+			class="size-16 text-2xl"
 		/>
-		<div class="min-w-0 flex-1">
+		<div class="min-w-0 flex-[1_1_180px]">
 			<p class="forge-label text-primary">{$_('friends.profile')}</p>
 			<h1 class="mt-1 truncate font-serif text-3xl font-bold sm:text-4xl">{profile.name}</h1>
 			{#if profile.guild}<a
 					class="underline text-primary"
 					href={resolve('/guilds/[id]', { id: String(profile.guild.id) })}>{profile.guild.name}</a
 				>{/if}
-			<div class="mt-4 grid grid-cols-2 gap-2 sm:max-w-md">
-				<div class="border border-primary/25 bg-background/40 px-3 py-2">
+			<div class="mt-2 flex flex-wrap gap-4">
+				<div class="text-sm">
 					<p class="forge-label">{$_('profile.cards_owned')}</p>
 					<p class="mt-1 font-heading text-xl tracking-wider">{profile.nbCards}</p>
 				</div>
-				<div class="border border-primary/25 bg-background/40 px-3 py-2">
+				<div class="text-sm">
 					<p class="forge-label">{$_('profile.member_since')}</p>
 					<p class="mt-1 text-sm font-bold">
 						{profile.joinedAt && Number.isFinite(Date.parse(profile.joinedAt + '-01T00:00:00Z'))
@@ -255,12 +253,14 @@
 					</ul>
 				</div>{/if}
 		</div>
-		<PlayerRelationshipControl status={relationship} busy={inviting} onInvite={invite} />
-		<ReportDialog
-			target={{ type: 'USER', id: Number(profile.id) }}
-			title={profile.name}
-			userId={Number(profile.id)}
-		/>
+		<div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+			<PlayerRelationshipControl status={relationship} busy={inviting} onInvite={invite} />
+			<ReportDialog
+				target={{ type: 'USER', id: Number(profile.id) }}
+				title={profile.name}
+				userId={Number(profile.id)}
+			/>
+		</div>
 	</header>
 
 	<div
@@ -340,7 +340,7 @@
 		</section>{/if}
 
 	{#if relationship === 'friend' && activeTab === 'collection'}
-		<section class="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
+		<section class="grid gap-6">
 			<div>
 				<label class="mb-3 flex items-start gap-2 text-sm"
 					><input type="checkbox" bind:checked={wanted} />{$_('plan.profile.wanted')}</label

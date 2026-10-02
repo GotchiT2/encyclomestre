@@ -4,6 +4,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import BoosterPackArt from './booster-pack-art.svelte';
+	import PackScene from '$lib/card-renderer/pack-scene.svelte';
 	import BoosterRevealCard from './booster-reveal-card.svelte';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import { arcadePreferences, updateArcadePreferences } from '$lib/arcade/preferences';
@@ -77,6 +78,7 @@
 		const id = openingId,
 			result = cards;
 		if (!result?.length) {
+			clearTimeout(dealTimer);
 			phase = 'idle';
 			if (!opening) requested = false;
 			return;
@@ -95,7 +97,7 @@
 			} else if (resume) phase = revealed === result.length ? 'complete' : 'revealing';
 			else {
 				phase = 'dealing';
-				dealTimer = setTimeout(() => (phase = 'revealing'), reduced() ? 0 : 720);
+				if (reduced()) dealTimer = setTimeout(() => (phase = 'revealing'), 0);
 			}
 		});
 	});
@@ -141,7 +143,7 @@
 <div class="opening-controls" data-testid="booster-stage">
 	<div class="opening-settings">
 		<div>
-			{#if creditKnown}<p class="text-sm font-semibold">
+			{#if creditKnown && showPack}<p class="text-sm font-semibold">
 					{$_('boosters.reserve')}
 					<span class="tabular-nums"
 						>{regularAvailable} / {maximum}{#if bonusAvailable}
@@ -150,7 +152,7 @@
 				</p>
 				{#if nextDelay}<p class="text-xs text-muted-foreground">
 						{$_('boosters.nextCharge')} · {nextDelay}
-					</p>{/if}{:else}<p class="text-sm">{$_('arcade.noQuantity')}</p>{/if}
+					</p>{/if}{:else if !creditKnown}<p class="text-sm">{$_('arcade.noQuantity')}</p>{/if}
 		</div>
 		<div class="flex gap-1" aria-label={$_('boosters.quick_mode')}>
 			<Button
@@ -247,15 +249,29 @@
 		{#if phase !== 'complete'}<div class="opening-command">
 				<Button onclick={revealAll} disabled={suspended}>{$_('arcade.revealAll')}</Button>
 			</div>{/if}
-		{#if phase === 'dealing'}<div class="tear-animation">
-				<div class="pack-object">
-					<BoosterPackArt
-						name={packName}
-						renderKey={packRenderKey}
-						cardCount={packCardCount}
-						imageUrl={packImage}
-					/>
-				</div>
+		{#if phase === 'dealing'}<div class="ceremony-stage">
+				<Button
+					variant="outline"
+					class="ceremony-skip"
+					onclick={() => {
+						clearTimeout(dealTimer);
+						phase = 'revealing';
+					}}>{$_('arcade.skipAnimation')}</Button
+				>
+				<PackScene
+					name={packName}
+					image={packImage}
+					brand={$_('navigation.brand')}
+					cardCount={packCardCount}
+					cardsLabel={$_('arcade.cardsLabel')}
+					playing
+					onComplete={() => {
+						if (phase === 'dealing') {
+							clearTimeout(dealTimer);
+							phase = 'revealing';
+						}
+					}}
+				/>
 			</div>
 		{:else if phase === 'revealing' && cards?.[index]}<div
 				class="discovery-stage"
@@ -329,11 +345,21 @@
 >
 
 <style>
+	.ceremony-stage {
+		position: relative;
+		flex: 1;
+		display: grid;
+		align-content: center;
+		min-height: 0;
+	}
+	:global(.ceremony-skip) {
+		justify-self: center;
+	}
 	.pack-tear-handle {
 		display: grid;
 		gap: 0.25rem;
 		place-items: center;
-		min-height: 64px;
+		min-height: 44px;
 		width: 100%;
 		max-width: 320px;
 		touch-action: pan-y;
@@ -358,8 +384,8 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 1rem;
-		padding: 1.5rem 0;
+		gap: 0.6rem;
+		padding: 0;
 	}
 	.pack-object {
 		width: min(58vw, 240px);
@@ -393,8 +419,8 @@
 		touch-action: pan-y;
 	}
 	.discovery-card {
-		width: min(70vw, 260px, calc((100dvh - 18rem) * 0.706));
-		min-width: 140px;
+		width: min(144px, calc((100dvh - 18rem) * 0.706));
+		min-width: 100px;
 	}
 	.discovery-navigation {
 		display: flex;
@@ -416,30 +442,12 @@
 		border-top: 1px solid var(--border);
 		justify-content: center;
 	}
-	.tear-animation {
-		display: grid;
-		place-items: center;
-		padding: 1rem;
-		animation: open-pack 720ms ease-out both;
-	}
 	:global(.arcade-opening-dialog) {
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
 		height: min(90dvh, 900px);
 		max-height: 90dvh;
-	}
-	@keyframes open-pack {
-		0% {
-			transform: scale(1);
-		}
-		45% {
-			transform: rotate(-6deg) scale(1.06);
-		}
-		100% {
-			transform: translateY(-10%) scale(0.7);
-			opacity: 0;
-		}
 	}
 	@media (max-width: 767px) {
 		:global(.arcade-opening-dialog) {
@@ -458,9 +466,15 @@
 			padding-bottom: max(1rem, env(safe-area-inset-bottom));
 		}
 	}
-	@media (prefers-reduced-motion: reduce) {
-		.tear-animation {
-			animation: none;
+	@media (max-width: 1023px) {
+		.sealed-pack :global([data-testid='booster-open-one']) {
+			position: fixed;
+			bottom: calc(72px + env(safe-area-inset-bottom));
+			left: 12px;
+			width: calc(100% - 24px);
+			max-width: none;
+			z-index: 39;
+			box-shadow: 0 -8px 24px var(--background);
 		}
 	}
 </style>

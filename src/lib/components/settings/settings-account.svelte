@@ -7,6 +7,7 @@
 	import { Input } from '$lib/components/ui/input';
 
 	let {
+		view = 'all',
 		username = $bindable(''),
 		nameLocked = false,
 		nameChangeAvailableAt,
@@ -16,6 +17,7 @@
 		onLogout,
 		onLogoutAll
 	}: {
+		view?: 'all' | 'profile' | 'security';
 		username?: string;
 		nameLocked?: boolean;
 		nameChangeAvailableAt?: string;
@@ -28,7 +30,7 @@
 </script>
 
 <div class="flex flex-col gap-4">
-	<section class="border-4 border-double border-primary/30 bg-card p-4">
+	<section hidden={view === 'security'} class="border-b border-border pb-6">
 		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('settings.identity')}
 		</p>
@@ -62,7 +64,7 @@
 				>{/if}
 		</div>
 	</section>
-	<section class="border-4 border-double border-primary/30 bg-card p-4">
+	<section hidden={view === 'profile'} class="border-b border-border py-6">
 		<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
 			{$_('settings.session')}
 		</p>
@@ -76,4 +78,4 @@
 	</section>
 </div>
 
-<AccountDeletion />
+<div hidden={view === 'profile'} class="mt-6"><AccountDeletion /></div>

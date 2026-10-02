@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
-	import { onMount } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import { getVariants } from '$lib/api/variants';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
@@ -26,7 +26,8 @@
 		wishlistOwners = [],
 		tags,
 		onOpenTagEditor,
-		onClear
+		onClear,
+		actions
 	}: {
 		query: string;
 		sortBy: CollectionSort;
@@ -39,6 +40,7 @@
 		tags: CollectionTag[];
 		onOpenTagEditor: () => void;
 		onClear: () => void;
+		actions?: Snippet;
 	} = $props();
 	let variants = $state<VariantDefinition[]>([]);
 	onMount(() => {
@@ -46,7 +48,7 @@
 			.then((value) => (variants = value))
 			.catch(() => undefined);
 	});
-	let panel = $state<'protection' | 'variants' | 'tags' | 'all' | null>(null);
+	let panel = $state<'duplicate' | 'protection' | 'variants' | 'tags' | 'all' | null>(null);
 	const active = $derived(
 		variantIds.length +
 			tagFilterIds.length +
@@ -58,13 +60,15 @@
 </script>
 
 <div class="compact-filters">
-	<Input
-		id="compact-collection-search"
-		bind:value={query}
-		aria-label={$_('collection.search')}
-		placeholder={$_('collection.search')}
-		class="min-h-11"
-	/>
+	<div class="search-line">
+		<Input
+			id="compact-collection-search"
+			bind:value={query}
+			aria-label={$_('collection.search')}
+			placeholder={$_('collection.search')}
+			class="min-h-11 flex-1"
+		/>{#if actions}{@render actions()}{/if}
+	</div>
 	{#if query.trim().length > 0 && query.trim().length < 3}<p
 			class="text-xs text-muted-foreground"
 			role="status"
@@ -79,6 +83,11 @@
 				onclick={() => (duplicate = duplicate === 'yes' ? 'all' : 'yes')}
 				>{$_('collection.duplicate_filter')}{#if duplicate === 'no'}
 					· {$_('plan.filters.no')}{/if}</Button
+			>
+			<Button
+				variant="outline"
+				aria-label={$_('collection.only_duplicates')}
+				onclick={() => (panel = 'duplicate')}>⌄</Button
 			>
 			<Button
 				variant={protection !== 'all' ? 'default' : 'outline'}
@@ -139,7 +148,9 @@
 							? 'collection.tags'
 							: panel === 'protection'
 								? 'collection.protection_filter'
-								: 'arcade.filters'
+								: panel === 'duplicate'
+									? 'collection.duplicate_filter'
+									: 'arcade.filters'
 				)}</Dialog.Title
 			><Dialog.Description>{$_('collection.filtersDescription')}</Dialog.Description></Dialog.Header
 		>
@@ -151,11 +162,15 @@
 				untaggedValue="-1"
 				onCreate={onOpenTagEditor}
 			/>
-		{:else if panel === 'protection'}<div class="flex flex-wrap gap-2">
+		{:else if panel === 'protection' || panel === 'duplicate'}<div class="flex flex-wrap gap-2">
 				{#each ['all', 'yes', 'no'] as value (value)}<Button
-						variant={protection === value ? 'default' : 'outline'}
-						onclick={() => (protection = value as CollectionBooleanFilter)}
-						>{$_('plan.filters.' + value)}</Button
+						variant={(panel === 'duplicate' ? duplicate : protection) === value
+							? 'default'
+							: 'outline'}
+						onclick={() => {
+							if (panel === 'duplicate') duplicate = value as CollectionBooleanFilter;
+							else protection = value as CollectionBooleanFilter;
+						}}>{$_('plan.filters.' + value)}</Button
 					>{/each}
 			</div>
 		{:else}<FilterControls
@@ -178,6 +193,11 @@
 </Dialog.Root>
 
 <style>
+	.search-line {
+		display: flex;
+		gap: 8px;
+		min-width: 0;
+	}
 	.compact-filters {
 		display: grid;
 		gap: 0.6rem;

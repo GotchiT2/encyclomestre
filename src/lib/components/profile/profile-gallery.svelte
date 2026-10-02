@@ -77,7 +77,7 @@
 		{#if allowCardAdd && cards.length < 6}
 			<Button
 				variant="outline"
-				class="wikiforge-card-size aspect-[862/1221] border-dashed"
+				class="w-[144px] aspect-[862/1221] border-dashed"
 				onclick={onAddCard}
 			>
 				<PlusIcon class="size-6" />

@@ -53,6 +53,11 @@
 		}
 	}
 	const board = $derived(cache[cacheKey]);
+	const ownPosition = $derived(
+		[...(board?.top ?? []), ...(board?.around ?? [])].find(
+			(entry) => entry.id === $currentSession?.user.id
+		)
+	);
 	const meInTop = $derived(
 		board?.top.some((entry) => entry.id === $currentSession?.user.id) ?? false
 	);
@@ -86,8 +91,28 @@
 			<p class="text-destructive">{$_('leaderboard.error')}</p>
 			<Button class="mt-3" onclick={() => load(active, true)}>{$_('common.retry')}</Button>
 		</div>{:else if board}
+		<section class="personal-rank" aria-label={$_('leaderboard.your_position')}>
+			<p>{$_('leaderboard.your_position')}</p>
+			{#if ownPosition}<strong>#{ownPosition.rank}</strong><span
+					>{$_('leaderboard.cards', { values: { count: ownPosition.nbCards } })}</span
+				>{:else}<span>{$_('leaderboard.unranked')}</span>{/if}
+		</section>
+		<div class="ranking-leaders">
+			{#each board.top.slice(0, 3) as entry (entry.id)}<a
+					href={resolve('/users/[id]', { id: entry.id })}
+				>
+					<span class="leader-number">{String(entry.rank).padStart(2, '0')}</span><UserAvatar
+						image={entry.image}
+						crop={entry.imageCrop}
+						name={entry.name}
+					/>
+					<strong>{entry.name}</strong><span
+						>{$_('leaderboard.cards', { values: { count: entry.nbCards } })}</span
+					>
+				</a>{/each}
+		</div>
 		<div class="overflow-hidden border border-primary/25 bg-card">
-			{#each board.top as entry (entry.id)}<a
+			{#each board.top.slice(3) as entry (entry.id)}<a
 					href={resolve('/users/[id]', { id: entry.id })}
 					class="min-h-16 grid grid-cols-[2rem_2.5rem_minmax(0,1fr)_auto] items-center gap-3 border-b border-primary/15 px-3 py-2 transition-colors hover:bg-primary/10"
 					class:bg-primary-15={entry.id === $currentSession?.user.id}
@@ -138,3 +163,59 @@
 			</p>{/if}
 	{/if}
 </section>
+
+<style>
+	.personal-rank {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 16px;
+		border-left: 3px solid var(--primary);
+		background: var(--card);
+		padding: 12px;
+	}
+	.personal-rank strong {
+		font-size: 32px;
+		font-variant-numeric: tabular-nums;
+		color: var(--primary);
+	}
+	.ranking-leaders {
+		display: grid;
+		gap: 8px;
+	}
+	.ranking-leaders a {
+		display: grid;
+		grid-template-columns: 48px 40px minmax(0, 1fr) auto;
+		gap: 12px;
+		align-items: center;
+		border-bottom: 1px solid var(--border);
+		padding: 12px;
+	}
+	.ranking-leaders strong {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.ranking-leaders a > span:last-child {
+		font-size: 12px;
+	}
+	.leader-number {
+		font-size: 32px;
+		font-weight: 800;
+		color: var(--primary);
+	}
+	@media (min-width: 1024px) {
+		.ranking-leaders {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 16px;
+		}
+		.ranking-leaders a {
+			grid-template-columns: 40px minmax(0, 1fr);
+			background: var(--card);
+		}
+		.ranking-leaders strong,
+		.ranking-leaders a > span:last-child {
+			grid-column: 2;
+		}
+	}
+</style>

@@ -2,6 +2,7 @@
 	import MarketNavigation from './market-navigation.svelte';
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
+	import { RefreshCw } from '@lucide/svelte';
 	import {
 		auctionTabs,
 		auctionPhase,
@@ -50,14 +51,16 @@
 <MarketNavigation />
 <main class="w-full min-w-0 space-y-5">
 	<header class="space-y-3 border-b border-border pb-4">
-		<p class="forge-label">{$_('auctionHub.eyebrow')}</p>
 		<div class="flex flex-wrap items-end justify-between gap-4">
 			<div>
-				<h1 class="font-heading text-4xl sm:text-5xl">{$_('auctionHub.title')}</h1>
-				<p class="mt-2 max-w-2xl text-sm text-muted-foreground">{$_('auctionHub.intro')}</p>
+				<h1 class="font-heading text-3xl sm:text-4xl">{$_('auctionHub.title')}</h1>
 			</div>
-			<Button variant="outline" disabled={busy} onclick={onRefresh}
-				>{$_(busy ? 'auctionHub.refreshing' : 'auctionHub.refresh')}</Button
+			<Button
+				variant="outline"
+				size="icon"
+				aria-label={$_(busy ? 'auctionHub.refreshing' : 'auctionHub.refresh')}
+				disabled={busy}
+				onclick={onRefresh}><RefreshCw size={16} /></Button
 			>
 		</div>
 		{#if userId}<div class="flex flex-wrap gap-x-6 gap-y-2 border-t border-primary/15 pt-3 text-sm">
@@ -65,13 +68,16 @@
 					{$_('auctionHub.escrow')} :
 					<strong class="text-primary">{$auctionEscrowed.toLocaleString('fr')} ◈</strong>
 				</p>
-				<p>
-					{$_('auctionHub.slots', {
-						values: {
-							count: Math.max(0, 3 - personal.sales.filter((item) => item.status === 'OPEN').length)
-						}
-					})}
-				</p>
+				{#if personal.loaded}<p>
+						{$_('auctionHub.slots', {
+							values: {
+								count: Math.max(
+									0,
+									3 - personal.sales.filter((item) => item.status === 'OPEN').length
+								)
+							}
+						})}
+					</p>{/if}
 			</div>{/if}
 	</header>
 	<nav class="flex gap-2 overflow-x-auto pb-2" aria-label={$_('auctionHub.title')}>

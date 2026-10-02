@@ -60,6 +60,7 @@ try {
 		await newDevice();
 		await page.goto(base + '/register');
 		await page.getByLabel('Pseudonyme', { exact: true }).fill('Account' + width);
+		await page.getByRole('button', { name: 'Continuer', exact: true }).click();
 		await page.getByRole('button', { name: 'Créer une passkey', exact: true }).click();
 		await page.getByRole('heading', { name: 'Codes de secours', exact: true }).waitFor();
 		let codes = await page.locator('ul li').allTextContents();
@@ -67,6 +68,10 @@ try {
 		await acknowledge(page);
 		await page.waitForURL(base + '/collection');
 		await navigate(page, '/settings');
+		await page
+			.locator('.settings-index')
+			.getByRole('button', { name: 'Sécurité', exact: true })
+			.click();
 		await page.getByRole('button', { name: 'Ajouter une passkey', exact: true }).click();
 		const dialog = page.getByRole('dialog');
 		await dialog.getByLabel('Nom de la passkey').fill('Second appareil');
@@ -101,6 +106,10 @@ try {
 		await page.getByRole('button', { name: 'Créer une passkey', exact: true }).click();
 		await page.waitForURL(base + '/collection');
 		await navigate(page, '/settings');
+		await page
+			.locator('.settings-index')
+			.getByRole('button', { name: 'Sécurité', exact: true })
+			.click();
 		await page.getByText('9 codes de secours restants', { exact: true }).waitFor();
 		await page.getByRole('button', { name: 'Déconnexion', exact: true }).last().click();
 		await page.waitForFunction(() => !localStorage.getItem('encyclomestre.auth-session'));
@@ -113,6 +122,10 @@ try {
 		await acknowledge(page);
 		await page.waitForURL(base + '/collection');
 		await navigate(page, '/settings');
+		await page
+			.locator('.settings-index')
+			.getByRole('button', { name: 'Sécurité', exact: true })
+			.click();
 		await page.getByRole('button', { name: 'Supprimer', exact: true }).first().waitFor();
 		assert.equal(
 			await page.getByRole('button', { name: 'Supprimer', exact: true }).count(),
@@ -124,6 +137,10 @@ try {
 		await navigate(page, '/login?redirectTo=/settings');
 		await page.getByRole('button', { name: 'Se connecter avec une passkey', exact: true }).click();
 		await page.waitForURL(base + '/settings');
+		await page
+			.locator('.settings-index')
+			.getByRole('button', { name: 'Sécurité', exact: true })
+			.click();
 		await page.getByRole('button', { name: 'Voir les conséquences', exact: true }).click();
 		await page.getByLabel('Utiliser un code de secours', { exact: true }).check();
 		await page.getByLabel('Code de secours', { exact: true }).fill(codes[0]);

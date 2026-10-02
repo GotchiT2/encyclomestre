@@ -10,9 +10,10 @@
 	let { card }: { card: AuctionCard } = $props();
 </script>
 
-<section class="forge-panel space-y-4 p-4 sm:p-5" aria-label={$_('auctionHub.cardDetails')}>
+<section class="space-y-4" aria-label={$_('auctionHub.cardDetails')}>
 	<div class="mx-auto w-full max-w-80">
 		<CardTile
+			inspection
 			{card}
 			showCollectionState={false}
 			showFriendOwners={false}

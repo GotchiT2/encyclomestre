@@ -1,5 +1,6 @@
 {
 	"arcade": {
+		"inspectFinish": "Faire pivoter la carte",
 		"market": "Marché",
 		"community": "Communauté",
 		"account": "Compte",
@@ -80,7 +81,32 @@
 		"validationPack": "Pack de démonstration",
 		"validationLandscape": "Image paysage et titre long",
 		"validationMissing": "Image, titre et numéro absents",
-		"tearStrip": "Glisser ici pour déchirer"
+		"tearStrip": "Glisser ici pour déchirer",
+		"seeNotifications": "Tout voir",
+		"skipAnimation": "Passer l’animation",
+		"availablePacks": "À ouvrir maintenant",
+		"noAvailablePacks": "Aucun booster ouvrable pour le moment",
+		"inspect": "Inspecter",
+		"yourCopy": "Votre exemplaire",
+		"article": "Article du catalogue",
+		"nextSteps": "À vous de jouer",
+		"backToAlbum": "Retour à l’album",
+		"settingsCategories": {
+			"profile": "Profil",
+			"visibility": "Visibilité et contenus",
+			"security": "Sécurité",
+			"preferences": "Préférences"
+		},
+		"removeSelected": "Retirer {title} de la sélection",
+		"reviewOffer": "Vérifier l’offre",
+		"editOffer": "Modifier l’offre",
+		"completedGoals": "Succès terminés ({count})",
+		"contents": "Sommaire",
+		"friendRequests": "Demandes d’amitié",
+		"createGuild": "Créer une guilde",
+		"stepContinue": "Continuer",
+		"changeName": "Modifier le pseudonyme",
+		"previewCeremony": "Prévisualiser la cérémonie"
 	},
 	"navigation": {
 		"brand": "Encyclomestre"

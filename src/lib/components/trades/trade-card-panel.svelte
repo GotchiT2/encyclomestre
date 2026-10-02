@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
+	import VariantCardFace from '$lib/components/cards/variant-card-face.svelte';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import VariantSelector from '$lib/components/cards/variant-selector.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -27,6 +28,7 @@
 		initialCards = [],
 		loadCards,
 		loadComparisonCounts,
+		onSelectionChange,
 		selectedIds = $bindable<string[]>([])
 	}: {
 		title: string;
@@ -38,6 +40,7 @@
 		initialCards?: CardRecord[];
 		loadCards: (query: TradeCardSearchQuery) => Promise<PaginatedResponse<CardRecord>>;
 		loadComparisonCounts?: (variantIds: string[]) => Promise<Record<string, number>>;
+		onSelectionChange?: (cards: CardRecord[]) => void;
 		selectedIds?: string[];
 	} = $props();
 
@@ -68,6 +71,10 @@
 			.map((id) => knownCards.find((card) => card.id === id))
 			.filter(Boolean) as CardRecord[]
 	);
+
+	$effect(() => {
+		onSelectionChange?.(selectedCards);
+	});
 
 	$effect(() => {
 		if (activeScope === scopeKey) {
@@ -196,32 +203,25 @@
 	{#if showTitle}<h2 class="text-lg font-black uppercase tracking-tight sm:text-xl">
 			{title}
 		</h2>{/if}
-	<div class={`${showTitle ? 'mt-2' : ''} border border-primary/20 bg-card p-2`}>
-		<p class="font-mono text-[9px] uppercase tracking-widest text-primary">
-			{$_('trades.counterparties')}
-		</p>
-		<div class="mt-2 flex flex-wrap gap-1.5">
+	<div class="trade-tray" aria-label={title}>
+		<p class="forge-label">{title} · {selectedIds.length} / 20</p>
+		<div class="tray-cards">
 			{#each selectedCards as card (card.id)}
-				<Button
-					size="xs"
-					variant="outline"
-					class="h-auto max-w-full whitespace-normal break-words text-left"
-					style={`color:${card.variant.color};border-color:${card.variant.color}`}
+				<button
+					class="tray-card"
+					aria-label={$_('arcade.removeSelected', { values: { title: card.title } })}
 					onclick={() => (selectedIds = selectedIds.filter((id) => id !== card.id))}
 				>
-					{card.title}<XIcon data-icon="inline-end" />
-				</Button>
+					<VariantCardFace {card} /><span>{card.title}</span><XIcon class="size-3" />
+				</button>
 			{/each}
-			{#if !selectedCards.length}
-				<span class="text-sm italic text-muted-foreground">
+			{#if !selectedIds.length}<p class="text-sm text-muted-foreground py-3">
 					{$_('trades.no_counterparty')}
-				</span>
-			{/if}
+				</p>{/if}
 		</div>
 	</div>
 
-	<div class="@container forge-panel-flat mt-2 p-3">
-		<p class="forge-label mb-2">{$_('cards.searchPanel')}</p>
+	<div class="@container mt-3">
 		<Field.FieldGroup class="gap-3">
 			<div class="grid gap-2 @md:grid-cols-2">
 				<Field.Field>
@@ -277,7 +277,7 @@
 		<p class="mt-3 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
 			{$_('trades.filtered_card_count', { values: { count: total } })}
 		</p>
-		<div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+		<div class="trade-results">
 			{#each resultCards.filter((card) => !selectedIds.includes(card.id) && !card.userProtected && !card.pendingTradeId && !card.activeAuctionId && !(scopeKey === $currentSession?.user.id && $activeAuctionCardIds.has(card.id))) as card (card.id)}
 				<div class="relative min-w-0">
 					<CardTile
@@ -285,7 +285,9 @@
 						tags={card.collectionTags ?? []}
 						showFriendOwners={false}
 						comparisonOwnership={comparisonOwnership(card)}
-						onOpen={() => (selectedIds = [...selectedIds, card.id])}
+						onOpen={() => {
+							if (selectedIds.length < 20) selectedIds = [...selectedIds, card.id];
+						}}
 					/>
 				</div>
 			{/each}
@@ -299,3 +301,62 @@
 		{/if}
 	{/if}
 </section>
+
+<style>
+	.trade-tray {
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		background: var(--card);
+		border-top: 2px solid var(--primary);
+		padding: 10px;
+	}
+	.tray-cards {
+		display: flex;
+		gap: 8px;
+		overflow-x: auto;
+		min-height: 72px;
+		padding: 6px 0;
+	}
+	.tray-card {
+		flex: 0 0 48px;
+		width: 48px;
+		position: relative;
+		animation: tray-arrival 160ms ease-out;
+	}
+	.tray-card span {
+		display: block;
+		width: 48px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		font-size: 10px;
+	}
+	.tray-card :global(svg) {
+		position: absolute;
+		top: 2px;
+		right: 2px;
+		background: var(--card);
+	}
+	.trade-results {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(136px, 100%), 1fr));
+		gap: 12px 8px;
+		margin-top: 8px;
+	}
+	@keyframes tray-arrival {
+		from {
+			opacity: 0;
+			transform: translateY(12px) scale(0.94);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.tray-card {
+			animation: none;
+		}
+	}
+</style>

@@ -7,17 +7,6 @@
 <section class="forge-panel grid gap-4 p-4">
 	<h2 class="text-2xl">{$_('arcade.preferences')}</h2>
 	<div class="flex flex-wrap items-center justify-between gap-2">
-		<p>{$_('arcade.density')}</p>
-		<div class="flex gap-1">
-			{#each ['grid', 'list'] as density (density)}<Button
-					variant={$arcadePreferences.density === density ? 'default' : 'outline'}
-					aria-pressed={$arcadePreferences.density === density}
-					onclick={() => updateArcadePreferences({ density: density as 'grid' | 'list' })}
-					>{$_('arcade.' + density)}</Button
-				>{/each}
-		</div>
-	</div>
-	<div class="flex flex-wrap items-center justify-between gap-2">
 		<p>{$_('navigation.boosters')}</p>
 		<div class="flex gap-1">
 			{#each ['immersive', 'express'] as opening (opening)}<Button

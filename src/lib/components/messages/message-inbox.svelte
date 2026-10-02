@@ -115,7 +115,7 @@
 	});
 
 	onMount(() => {
-		media = window.matchMedia('(max-width: 767px)');
+		media = window.matchMedia('(max-width: 1023px)');
 		const updateViewport = () => (mobileViewport = media?.matches ?? false);
 		updateViewport();
 		media.addEventListener('change', updateViewport);
@@ -320,11 +320,11 @@
 </div>
 {#if sendError}<p role="alert" class="mb-3 text-destructive">{sendError}</p>{/if}
 <div
-	class="forge-panel-flat min-h-[34rem] overflow-hidden md:grid md:h-[calc(100dvh-16rem)] md:min-h-[34rem] md:grid-cols-[minmax(14rem,30%)_minmax(0,1fr)]"
+	class="message-workbench min-h-0 overflow-hidden lg:grid lg:grid-cols-[280px_minmax(0,1fr)]"
 	data-testid="message-workspace"
 >
 	<ConversationList
-		class="h-[calc(100dvh-13rem)] min-h-[34rem] md:h-full md:min-h-0 md:border-r md:border-border"
+		class="h-[calc(100dvh-17rem)] min-h-0 lg:h-full lg:border-r lg:border-border"
 		{conversations}
 		selectedId={selectedConversationId}
 		bind:query
@@ -334,7 +334,7 @@
 		onLoadMore={() => void loadMoreConversations()}
 		onSelect={(id) => void selectConversation(id)}
 	/>
-	<div class="hidden min-h-0 md:block">
+	<div class="hidden min-h-0 lg:block">
 		{#if selectedConversation}
 			<MessageThread
 				conversation={selectedConversation}
@@ -356,9 +356,9 @@
 {#if mobileThreadOpen && selectedConversation}
 	<Dialog.Root open onOpenChange={(open) => !open && (mobileThreadOpen = false)}>
 		<Dialog.Portal>
-			<Dialog.Overlay class="fixed inset-0 z-[100] bg-black/80 md:hidden" />
+			<Dialog.Overlay class="fixed inset-0 z-[100] bg-black/80 lg:hidden" />
 			<Dialog.Content
-				class="fixed inset-0 z-[101] h-dvh w-full overflow-hidden bg-card md:hidden"
+				class="fixed inset-0 z-[101] h-dvh w-full overflow-hidden bg-card lg:hidden"
 				data-testid="mobile-message-thread"
 			>
 				<Dialog.Title class="sr-only">{selectedConversation.title}</Dialog.Title>
@@ -398,3 +398,15 @@
 		></Dialog.Portal
 	></Dialog.Root
 >
+
+<style>
+	.message-workbench {
+		height: calc(100dvh - 18rem);
+		min-height: 320px;
+	}
+	@media (min-width: 1024px) {
+		.message-workbench {
+			height: calc(100dvh - 15rem);
+		}
+	}
+</style>

@@ -627,18 +627,6 @@ body:has([data-selection-panel]) [data-mobile-tabs] {
 body:has([data-selection-panel]) .arcade-page {
 	padding-bottom: 44dvh;
 }
-.arcade-list {
-	grid-template-columns: 1fr !important;
-}
-.arcade-list .wikiforge-card-size {
-	max-width: none;
-}
-.arcade-list [data-testid='card-tile'] {
-	display: grid;
-	grid-template-columns: minmax(90px, 140px) 1fr;
-	gap: 1rem;
-	align-items: start;
-}
 @media (max-width: 767px) {
 	.arcade-sheet {
 		top: auto !important;
@@ -734,4 +722,124 @@ select,
 summary {
 	min-height: 44px;
 	min-width: 44px;
+}
+
+/* Album layout: every card search shares stable, compact slots. */
+.app-frame {
+	min-height: 100dvh;
+}
+.arcade-page {
+	width: 100%;
+	max-width: 1320px;
+	margin-inline: auto;
+	padding: 20px 12px calc(88px + env(safe-area-inset-bottom));
+}
+.arcade-card-grid,
+.wikiforge-card-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(8.5rem, 100%), 1fr));
+	gap: 20px 12px;
+	align-items: start;
+	justify-items: center;
+}
+.arcade-card-grid > *,
+.wikiforge-card-grid > * {
+	width: 100%;
+	min-width: 0;
+	max-width: 160px;
+}
+html {
+	scroll-padding-top: 80px;
+}
+@media (min-width: 768px) {
+	.arcade-page {
+		padding: 24px 24px 96px;
+	}
+	.arcade-card-grid,
+	.wikiforge-card-grid {
+		grid-template-columns: repeat(auto-fill, minmax(min(8.5rem, 100%), 1fr));
+	}
+}
+@media (min-width: 1024px) {
+	.arcade-page {
+		padding: 28px 24px 48px;
+	}
+	.arcade-card-grid,
+	.wikiforge-card-grid {
+		grid-template-columns: repeat(auto-fill, minmax(min(8.5rem, 100%), 1fr));
+	}
+}
+@media (min-width: 1440px) {
+	.arcade-card-grid,
+	.wikiforge-card-grid {
+		grid-template-columns: repeat(auto-fill, minmax(min(8.5rem, 100%), 1fr));
+	}
+}
+@media (max-width: 340px) {
+	.arcade-card-grid,
+	.wikiforge-card-grid {
+		grid-template-columns: repeat(auto-fit, minmax(min(136px, 100%), 1fr));
+	}
+}
+[data-testid='card-detail-modal'] {
+	animation: inspect-panel 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-slot='dialog-content'],
+[data-slot='dropdown-menu-content'] {
+	animation: panel-enter 180ms ease-out;
+}
+@keyframes inspect-panel {
+	from {
+		opacity: 0;
+		scale: 0.97;
+	}
+	to {
+		opacity: 1;
+		scale: 1;
+	}
+}
+@keyframes panel-enter {
+	from {
+		opacity: 0;
+		translate: 0 8px;
+	}
+	to {
+		opacity: 1;
+		translate: 0 0;
+	}
+}
+
+.album-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	border-bottom: 1px solid var(--border);
+}
+.album-heading .arcade-page-heading {
+	border: 0;
+	padding-bottom: 12px;
+}
+.album-heading > details {
+	max-width: 45%;
+	position: relative;
+	border: 0;
+}
+.album-heading > details[open] {
+	position: static;
+	max-width: none;
+}
+.album-heading > details summary {
+	font-size: 12px;
+}
+[hidden] {
+	display: none !important;
+}
+body:has([data-testid='booster-open-one']) .arcade-page {
+	padding-bottom: 170px;
+}
+@media (min-width: 1024px) {
+	body:has([data-testid='booster-open-one']) .arcade-page {
+		padding-bottom: 48px;
+	}
 }

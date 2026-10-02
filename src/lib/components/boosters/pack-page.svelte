@@ -75,7 +75,10 @@
 				/>
 			</div>
 			<div class="flex flex-col gap-4">
-				<p>{packDescription}</p>
+				<details>
+					<summary class="min-h-11">{$_('boosters.detail.title')}</summary>
+					<p>{packDescription}</p>
+				</details>
 				<p>{$_('boosters.pack_card_count', { values: { count: details.nbCards } })}</p>
 				<p>
 					{$_('boosters.detail.status')} : {[
@@ -88,8 +91,12 @@
 						? $_('boosters.status.' + details.status)
 						: $_('boosters.status.CLOSED')}
 				</p>
-				<p>{date(details.startsAt)} → {date(details.endsAt)}</p>
-				<Button href={'/boosters?pack=' + details.id}>{$_('boosters.title')}</Button>
+				{#if details.startsAt || details.endsAt}<p class="text-sm text-muted-foreground">
+						{date(details.startsAt)} → {date(details.endsAt)}
+					</p>{/if}
+				<Button href={'/boosters?pack=' + details.id}
+					>{$_(details.status === 'OPEN' ? 'boosters.open' : 'arcade.allPacks')}</Button
+				>
 			</div>
 		</div>
 		<PackPoolBrowser {details} />{/if}

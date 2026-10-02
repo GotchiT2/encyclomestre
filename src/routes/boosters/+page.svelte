@@ -339,12 +339,8 @@
 			}
 		)}
 	</p>{/if}
-<section class="flex flex-col gap-8">
-	<PageHeader
-		eyebrow={$_('boosters.eyebrow')}
-		title={$_('boosters.title')}
-		description={$_('boosters.description')}
-	/>
+<section class="flex flex-col gap-4">
+	<PageHeader title={$_('boosters.title')} />
 
 	{#if packs === null}
 		<div class="forge-panel min-h-[24rem] animate-pulse"></div>

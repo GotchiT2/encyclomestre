@@ -30,7 +30,7 @@
 		);
 </script>
 
-<header class="forge-panel space-y-3 p-5 sm:p-7">
+<header class="space-y-2 border-b border-border pb-4">
 	<div class="flex flex-wrap items-center gap-3">
 		<p class="forge-label">{$_('market.auction_details')} · #{auction.id}</p>
 		<AuctionStatus {auction} {now} />
@@ -51,9 +51,9 @@
 		title={auction.seller.name}
 		userId={Number(auction.seller.id)}
 	/>{/if}
-<div class="grid items-start gap-5 lg:grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)]">
+<div class="auction-inspection">
 	<AuctionCardDetail card={auction.card} />
-	<div class="min-w-0 space-y-5">
+	<div class="auction-transaction min-w-0 space-y-5">
 		<section class="forge-panel space-y-5 p-5" aria-label={$_('market.auction_details')}>
 			<div class="flex flex-wrap items-start justify-between gap-4">
 				<div>
@@ -121,8 +121,8 @@
 		{:else if userId && auction.status === 'OPEN'}
 			<AuctionBidPanel {auction} {now} {onUpdated} {onConflict} />
 		{/if}
-		<section class="forge-panel space-y-3 p-5">
-			<h2 class="font-serif text-xl">{$_('auctionHub.bidHistory')}</h2>
+		<details class="space-y-3 border-t border-border pt-4">
+			<summary class="min-h-11 text-xl">{$_('auctionHub.bidHistory')}</summary>
 			<p class="text-xs text-muted-foreground">{$_('auctionHub.bidHistoryLimit')}</p>
 			{#each auction.bids ?? [] as bid, index (index)}
 				<div
@@ -145,6 +145,24 @@
 					</div>
 				</div>
 			{:else}<p class="text-sm text-muted-foreground">{$_('auctionHub.noBids')}</p>{/each}
-		</section>
+		</details>
 	</div>
 </div>
+
+<style>
+	.auction-inspection {
+		display: grid;
+		gap: 24px;
+		align-items: start;
+	}
+	@media (min-width: 1024px) {
+		.auction-inspection {
+			grid-template-columns: minmax(0, 1fr) minmax(360px, 520px);
+			gap: 48px;
+		}
+		.auction-transaction {
+			position: sticky;
+			top: 88px;
+		}
+	}
+</style>

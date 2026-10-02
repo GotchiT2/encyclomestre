@@ -1,6 +1,6 @@
 import { get, writable } from 'svelte/store';
 export type ArcadePreferences = {
-	density: 'grid' | 'list';
+	density: 'grid';
 	opening: 'immersive' | 'express';
 	motion: 'system' | 'reduce';
 };
@@ -14,7 +14,7 @@ export function hydrateArcadePreferences(storage: Storage) {
 	try {
 		const saved = JSON.parse(storage.getItem(key) ?? '{}');
 		arcadePreferences.set({
-			density: saved.density === 'list' ? 'list' : 'grid',
+			density: 'grid',
 			opening: saved.opening === 'express' ? 'express' : 'immersive',
 			motion: saved.motion === 'reduce' ? 'reduce' : 'system'
 		});

@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import TemplateCard from '$lib/card-renderer/template-card.svelte';
+	import PackScene from '$lib/card-renderer/pack-scene.svelte';
 	import ArcadePack from '$lib/card-renderer/arcade-pack.svelte';
 	import { variantDefinition } from '$lib/card-renderer/presentation';
 	import { Button } from '$lib/components/ui/button';
 	import type { CardRecord } from '$lib/types';
 	let { examples }: { examples: CardRecord[] } = $props();
+	let ceremony = $state(false);
 	let source = $state(false),
 		reveal = $state(false);
 	const cases = $derived([
@@ -60,6 +62,18 @@
 			</figcaption>
 		</figure>{/each}
 </div>
+<section class="mt-6 max-w-md">
+	<Button disabled={ceremony} onclick={() => (ceremony = true)}
+		>{$_('arcade.previewCeremony')}</Button
+	>
+	<PackScene
+		name={$_('arcade.validationPack')}
+		brand={$_('arcade.brand')}
+		cardsLabel={$_('arcade.cardsLabel')}
+		playing={ceremony}
+		onComplete={() => (ceremony = false)}
+	/>
+</section>
 <div class="mt-6 max-w-52">
 	<ArcadePack
 		name={$_('arcade.validationPack')}
@@ -71,6 +85,7 @@
 <style>
 	.validation-slot {
 		min-width: 0;
+		max-width: 144px;
 		aspect-ratio: 1/1.416;
 		display: flex;
 		align-items: center;

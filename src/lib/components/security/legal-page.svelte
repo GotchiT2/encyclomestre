@@ -14,8 +14,32 @@
 	<a href={resolve('/')} class="text-sm underline">{$_('plan.legal.home')}</a>
 	<h1 class="text-5xl font-black">{$_('plan.legal.' + kind)}</h1>
 	<p class="border-l-4 border-primary bg-card p-4" role="note">{$_('plan.legal.draft')}</p>
-	{#each sections[kind] as section (section)}<article class="forge-panel space-y-2 p-4">
+	<nav class="legal-contents" aria-label={$_('arcade.contents')}>
+		{#each sections[kind] as section (section)}<a href={'#' + section}
+				>{$_('plan.legal.sections.' + section)}</a
+			>{/each}
+	</nav>
+	{#each sections[kind] as section (section)}<article
+			id={section}
+			class="space-y-2 border-b border-border py-5"
+		>
 			<h2 class="text-xl font-semibold">{$_('plan.legal.sections.' + section)}</h2>
 			<p class="text-muted-foreground">{$_('plan.legal.incomplete')}</p>
 		</article>{/each}<LegalLinks />
 </section>
+
+<style>
+	.legal-contents {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px 20px;
+		border-block: 1px solid var(--border);
+		padding: 12px 0;
+	}
+	.legal-contents a {
+		min-height: 44px;
+		display: flex;
+		align-items: center;
+		text-decoration: underline;
+	}
+</style>

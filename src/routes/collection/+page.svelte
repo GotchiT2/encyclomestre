@@ -8,7 +8,6 @@
 	import CardGrid from '$lib/components/collection/card-grid.svelte';
 	import CollectionResultSummary from '$lib/components/collection/collection-result-summary.svelte';
 	import CompactFilters from '$lib/components/collection/compact-filters.svelte';
-	import { arcadePreferences, updateArcadePreferences } from '$lib/arcade/preferences';
 	import { removeWikiForgeTag } from '$lib/api/wikiforge';
 	import SelectionPanel from '$lib/components/collection/selection-panel.svelte';
 	import TagEditor from '$lib/components/collection/tag-editor.svelte';
@@ -411,13 +410,11 @@
 	};
 </script>
 
-<section class="flex flex-col gap-6 pb-28 sm:gap-8">
-	<PageHeader
-		eyebrow={$_('collection.eyebrow')}
-		title={$_('collection.title')}
-		description={$_('collection.description')}
-	/>
-	<CollectionProgress />
+<section class="album-workspace flex flex-col gap-4 pb-6">
+	<div class="album-heading">
+		<PageHeader eyebrow={$_('collection.eyebrow')} title={$_('collection.title')} />
+		<CollectionProgress />
+	</div>
 	<div class="grid gap-4">
 		<CompactFilters
 			bind:query
@@ -431,11 +428,8 @@
 			{tags}
 			onOpenTagEditor={() => (isTagEditorOpen = true)}
 			onClear={clearFilters}
-		/>
-
-		<div class="flex min-w-0 flex-col gap-3">
-			<div class="flex flex-wrap items-center gap-2">
-				<TagEditor showTrigger={false} bind:open={isTagEditorOpen} bind:tags bind:assignments />
+		>
+			{#snippet actions()}
 				<Button
 					size="sm"
 					variant={isSelectionMode ? 'default' : 'outline'}
@@ -449,18 +443,15 @@
 					}}
 				>
 					{$_('arcade.select')}
-				</Button>
+				</Button>{/snippet}
+		</CompactFilters>
+
+		<div class="flex min-w-0 flex-col gap-3">
+			<div class="flex flex-wrap items-center gap-2">
+				<TagEditor showTrigger={false} bind:open={isTagEditorOpen} bind:tags bind:assignments />
 			</div>
 
 			<div class="flex flex-wrap items-center justify-between gap-2">
-				<div class="flex gap-1" aria-label={$_('arcade.density')}>
-					{#each ['grid', 'list'] as density (density)}<Button
-							variant={$arcadePreferences.density === density ? 'default' : 'outline'}
-							aria-pressed={$arcadePreferences.density === density}
-							onclick={() => updateArcadePreferences({ density: density as 'grid' | 'list' })}
-							>{$_('arcade.' + density)}</Button
-						>{/each}
-				</div>
 				<CollectionResultSummary {total} loaded={cards.length} {hasNext} />
 			</div>
 			{#if loading && !cards.length}
@@ -474,7 +465,6 @@
 				</div>
 			{:else if cards.length}
 				<CardGrid
-					density={$arcadePreferences.density}
 					{cards}
 					{tags}
 					{assignments}

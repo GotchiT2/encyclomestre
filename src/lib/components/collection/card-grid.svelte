@@ -15,7 +15,6 @@
 		isSelectionMode,
 		selectedCardIds,
 		quickActions = false,
-		density = 'grid',
 		onToggleCard,
 		onOpenCard,
 		onProtect,
@@ -28,7 +27,6 @@
 		selectedCardIds: string[];
 		/** Affiche « Protéger » et « À vendre » au survol de la carte. */
 		quickActions?: boolean;
-		density?: 'grid' | 'list';
 		onToggleCard: (cardId: string) => void;
 		onOpenCard?: (card: CardRecord) => void;
 		onProtect?: (card: CardRecord) => void;
@@ -40,7 +38,7 @@
 	}
 </script>
 
-<div class="arcade-card-grid" class:arcade-list={density === 'list'}>
+<div class="arcade-card-grid">
 	{#each cards as card (card.id)}<div class="wikiforge-card-size group relative isolate">
 			<CardTile
 				owned

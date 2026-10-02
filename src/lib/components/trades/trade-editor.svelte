@@ -1,4 +1,5 @@
 <script lang="ts">
+	import TradeReview from './trade-review.svelte';
 	import LocalDraft from '$lib/components/layout/local-draft.svelte';
 	import { draftKey, writeDraft } from '$lib/drafts/storage';
 	import { _ } from '$lib/i18n';
@@ -53,6 +54,9 @@
 	let requestedMoney = $state(0);
 	let error = $state('');
 	let submitting = $state(false);
+	let reviewing = $state(false);
+	let offeredSelection = $state<CardRecord[]>([]);
+	let requestedSelection = $state<CardRecord[]>([]);
 	let activeSide = $state<TradeSide>('offered');
 	let termsExpanded = $state(false);
 	const desktop = new MediaQuery('(min-width: 1024px)');
@@ -60,6 +64,7 @@
 	const partnerName = $derived(partner?.displayName || partner?.username || '');
 	$effect(() => {
 		if (open) {
+			reviewing = false;
 			offeredIds = draft.offeredCardIds ?? [];
 			requestedIds = draft.requestedCardIds ?? [];
 			message = draft.message ?? '';
@@ -157,6 +162,7 @@
 			})}
 		</div>
 		<nav
+			hidden={reviewing}
 			class="grid shrink-0 grid-cols-2 border-b border-primary/25 lg:hidden"
 			aria-label={$_('trades.editor_tabs')}
 		>
@@ -173,7 +179,10 @@
 				>{$_('arcade.iReceive')} · {requestedIds.length}</Button
 			>
 		</nav>
-		<div class="shrink-0 border-b border-primary/20 bg-card/75 px-3 py-2 sm:px-4">
+		<div
+			hidden={reviewing}
+			class="shrink-0 border-b border-primary/20 bg-card/75 px-3 py-2 sm:px-4"
+		>
 			<Button
 				variant="ghost"
 				size="sm"
@@ -224,6 +233,7 @@
 		</div>
 		<div
 			class="min-h-0 flex-1 overflow-y-auto p-2 sm:p-3 lg:grid lg:grid-cols-2 lg:gap-4"
+			hidden={reviewing}
 			data-testid="trade-editor-card-selector"
 		>
 			<div class:hidden={!desktop.current && activeSide !== 'offered'} class="min-w-0">
@@ -235,6 +245,7 @@
 					showTitle={false}
 					scopeKey={currentUserId}
 					active={desktop.current || activeSide === 'offered'}
+					onSelectionChange={(cards) => (offeredSelection = cards)}
 					initialCards={initialOwnedCards}
 					loadCards={loadOwnedCards}
 					bind:selectedIds={offeredIds}
@@ -249,21 +260,40 @@
 					showTitle={false}
 					scopeKey={partner?.id ?? 'no-partner'}
 					active={desktop.current || activeSide === 'requested'}
+					onSelectionChange={(cards) => (requestedSelection = cards)}
 					initialCards={initialPartnerCards}
 					loadCards={loadPartnerCards}
 					bind:selectedIds={requestedIds}
 				/>
 			</div>
 		</div>
+		{#if reviewing}<TradeReview
+				offered={offeredSelection}
+				requested={requestedSelection}
+				{offeredMoney}
+				{requestedMoney}
+				{message}
+			/>{/if}
+
 		{#if error}<p
 				class="shrink-0 border-t border-destructive/40 bg-destructive/10 px-3 py-2 text-sm italic text-destructive sm:px-4"
 			>
 				{error}
 			</p>{/if}
 		<footer class="grid shrink-0 grid-cols-2 gap-2 border-t border-primary/25 bg-card p-3 sm:p-4">
-			<Button variant="outline" onclick={() => (open = false)}>{$_('common.cancel')}</Button>
-			<Button disabled={submitting || $activeRestrictions.includes('TRADE')} onclick={submit}
-				>{$_('trades.send_offer')}</Button
+			<Button
+				variant="outline"
+				onclick={() => {
+					if (reviewing) reviewing = false;
+					else open = false;
+				}}>{reviewing ? $_('arcade.editOffer') : $_('common.cancel')}</Button
+			>
+			<Button
+				disabled={submitting || $activeRestrictions.includes('TRADE')}
+				onclick={() => {
+					if (reviewing) void submit();
+					else reviewing = true;
+				}}>{reviewing ? $_('trades.send_offer') : $_('arcade.reviewOffer')}</Button
 			>
 		</footer>
 	</div>

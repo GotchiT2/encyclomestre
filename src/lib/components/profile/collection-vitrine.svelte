@@ -263,10 +263,14 @@
 		padding: 1rem;
 		background: var(--card);
 		--gap: 0.75rem;
+		width: 100%;
+		max-width: calc(
+			var(--colonnes-max) * 144px + (var(--colonnes-max) - 1) * var(--gap) + 2rem + 2px
+		);
 	}
 	.vitrine__rangee {
 		display: grid;
-		grid-template-columns: repeat(var(--par-ligne), minmax(0, 1fr));
+		grid-template-columns: repeat(var(--par-ligne), minmax(0, 144px));
 		gap: var(--gap);
 		align-items: start;
 		margin-bottom: 1rem;

@@ -25,6 +25,7 @@
 		refreshIncludes,
 		publishRealtimeRefresh
 	} from '$lib/realtime/resource-refresh';
+	let creating = $state(false);
 	let searchRevision = $state(0);
 	let revision = 0;
 	let mine = $state<Guild | null>(null);
@@ -117,15 +118,27 @@
 			>
 		</div>{/if}
 	{#if !ready && busy}<p role="status">{$_('completion.loading')}</p>{/if}
-	{#if tab === 'mine' && ready && !error}{#if mine}<GuildSummary guild={mine} />{:else}<p>
-				{$_('completion.guild.noGuild')}
-			</p>
-			<GuildEditor
-				onSaved={(guild) => {
-					publishRealtimeRefresh(['guild', 'profile']);
-					void goto(resolve('/guilds/[id]', { id: String(guild.id) }));
-				}}
-			/>{/if}
+	{#if tab === 'mine' && ready && !error}{#if mine}<GuildSummary guild={mine} />{:else}<div
+				class="guild-choice"
+			>
+				<p>
+					{$_('completion.guild.noGuild')}
+				</p>
+				<div class="flex flex-wrap gap-3">
+					<Button onclick={() => change({ tab: 'search', page: '0' })}
+						>{$_('completion.guild.search')}</Button
+					>
+					<Button variant="outline" onclick={() => (creating = !creating)}
+						>{$_('arcade.createGuild')}</Button
+					>
+				</div>
+			</div>
+			{#if creating}<GuildEditor
+					onSaved={(guild) => {
+						publishRealtimeRefresh(['guild', 'profile']);
+						void goto(resolve('/guilds/[id]', { id: String(guild.id) }));
+					}}
+				/>{/if}{/if}
 	{:else if tab === 'search'}<form
 			class="flex flex-wrap gap-3"
 			onsubmit={(event) => {
@@ -183,3 +196,18 @@
 					</div>
 				</div>{/if}{:else}<p>{$_('completion.empty')}</p>{/each}{/if}
 </section>
+
+<style>
+	.guild-choice {
+		border-left: 3px solid var(--primary);
+		display: grid;
+		gap: 16px;
+		padding: 24px;
+	}
+	@media (min-width: 1024px) {
+		.guild-choice {
+			max-width: 600px;
+			padding: 32px;
+		}
+	}
+</style>

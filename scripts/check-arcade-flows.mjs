@@ -71,6 +71,10 @@ try {
 			'true'
 		);
 		await page.goto(base + '/settings', { waitUntil: 'domcontentloaded' });
+		await page
+			.locator('.settings-index')
+			.getByRole('button', { name: 'Sécurité', exact: true })
+			.click();
 		await page.getByRole('button', { name: 'Déconnexion', exact: true }).last().click();
 		await page.waitForFunction(() => !localStorage.getItem('encyclomestre.auth-session'));
 		assert.equal(

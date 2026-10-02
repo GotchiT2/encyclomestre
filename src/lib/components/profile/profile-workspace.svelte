@@ -1,5 +1,4 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import ShowcaseEditor from './showcase-editor.svelte';
 	import CollectionVitrine from './collection-vitrine.svelte';
 	import AvatarEditor from '$lib/components/settings/avatar-editor.svelte';
@@ -198,17 +197,10 @@
 </script>
 
 <section class="flex flex-col gap-6 pb-12 sm:gap-8">
-	<PageHeader
-		eyebrow={$_('profile.title')}
-		title={user.username}
-		description={$_('profile.connected_description')}
-	/>
-	<header
-		class="forge-panel flex flex-col gap-5 overflow-hidden p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6"
-	>
+	<header class="flex items-start gap-4 border-b border-border pb-5">
 		<button
 			type="button"
-			class="group relative size-24 shrink-0 overflow-hidden rounded-full border border-primary/40 shadow-[0_12px_24px_rgb(0_0_0_/_35%)] sm:size-28"
+			class="group relative size-16 shrink-0 overflow-hidden rounded-full border border-primary/40 shadow-[0_12px_24px_rgb(0_0_0_/_35%)]"
 			aria-label={$_('settings.choose_avatar')}
 			onclick={() => (avatarPickerOpen = true)}
 		>
@@ -226,13 +218,13 @@
 		</button>
 		<div class="min-w-0 flex-1">
 			<p class="forge-label text-primary">{$_('profile.title')}</p>
-			<h2 class="mt-1 truncate font-serif text-3xl font-bold sm:text-4xl">{user.username}</h2>
-			<div class="mt-4 grid grid-cols-2 gap-2 sm:max-w-md">
-				<div class="border border-primary/25 bg-background/40 px-3 py-2">
+			<h1 class="mt-1 truncate text-3xl">{user.username}</h1>
+			<div class="mt-2 flex flex-wrap gap-4">
+				<div class="text-sm">
 					<p class="forge-label">{$_('profile.cards_owned')}</p>
 					<p class="mt-1 font-heading text-xl tracking-wider">{ownedCards}</p>
 				</div>
-				<div class="border border-primary/25 bg-background/40 px-3 py-2">
+				<div class="text-sm">
 					<p class="forge-label">{$_('profile.member_since')}</p>
 					<p class="mt-1 text-sm font-bold">
 						{user.createdAt && Number.isFinite(Date.parse(user.createdAt))
@@ -261,7 +253,7 @@
 		</div>
 	</header>
 	<div
-		class="grid grid-cols-2 border border-primary/30 bg-card p-1"
+		class="flex flex-wrap gap-2 border-b border-border pb-2"
 		role="tablist"
 		aria-label={$_('profile.tabs_aria')}
 	>

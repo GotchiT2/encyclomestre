@@ -11,7 +11,6 @@
 	} from '$lib/auth/session';
 	import { getCurrentUser } from '$lib/api';
 	import { setNsfwFilterSettings } from '$lib/content/nsfw-filter';
-	import AppSidebar from '$lib/components/layout/app-sidebar.svelte';
 	import MobileTabBar from '$lib/components/layout/mobile-tab-bar.svelte';
 	import MobileTopBar from '$lib/components/layout/mobile-top-bar.svelte';
 	import NotificationStream from '$lib/components/notifications/notification-stream.svelte';
@@ -19,8 +18,6 @@
 	import CardDetailHost from '$lib/components/cards/card-detail-host.svelte';
 	import GlobalBanners from '$lib/components/layout/global-banners.svelte';
 	import { replaceBanners } from '$lib/banners/store';
-	import * as Sidebar from '$lib/components/ui/sidebar';
-	import { SIDEBAR_COOKIE_NAME } from '$lib/components/ui/sidebar/constants';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import { _ } from '$lib/i18n';
 	import { realtimeRefresh, refreshIncludes } from '$lib/realtime/resource-refresh';
@@ -32,10 +29,6 @@
 
 	let { children } = $props();
 
-	// `ssr = false` : le cookie posé par la sidebar est lisible dès l'initialisation.
-	let sidebarOpen = $state(
-		!document.cookie.split('; ').some((entry) => entry === `${SIDEBAR_COOKIE_NAME}=false`)
-	);
 	let handledWelcomeRevision = 0;
 	let lastReceiptAccount: string | null = null;
 	let contextRevision = 0;
@@ -110,23 +103,20 @@
 	<title>{$_('app.title')}</title>
 </svelte:head>
 
-<Sidebar.Provider bind:open={sidebarOpen}>
+<div class="app-frame">
 	<AuctionSession />
-	{#if $currentSession}<AppSidebar />{/if}
 	{#if $currentSession}<NotificationStream />{/if}
 
-	<Sidebar.Inset class="forge-scene bg-transparent">
+	<main class="forge-scene min-w-0 bg-transparent">
 		<MobileTopBar />
 		<GlobalBanners />
-		<div
-			class="mx-auto w-full max-w-screen-2xl arcade-page px-3 pt-20 pb-24 sm:px-5 md:pt-6 md:pb-10 lg:px-8"
-		>
+		<div class="arcade-page">
 			{@render children()}
 		</div>
-	</Sidebar.Inset>
+	</main>
 
 	{#if $currentSession}<MobileTabBar />{/if}
-</Sidebar.Provider>
+</div>
 
 <CardDetailHost />
 <Toaster richColors />

@@ -52,22 +52,23 @@ try {
 			await page.getByRole('dialog').getByRole('button', { name: 'SoneS9', exact: true }).click();
 			dialog = page.getByRole('dialog');
 			const selector = dialog.locator('[data-testid=trade-editor-card-selector]');
-			await selector.locator('[data-testid=card-tile]:visible').first().waitFor();
+			const ownPanel = selector.locator(':scope > div').first();
+			await ownPanel.locator('[data-testid=card-tile]:visible').first().waitFor();
 			await page.evaluate(() => (window.__planRequests = []));
 			if (mode === 'cursor') {
-				await selector.locator('select:visible').first().selectOption('relevance');
+				await ownPanel.locator('select:visible').first().selectOption('relevance');
 				await page.waitForFunction(() =>
 					window.__planRequests.some(
 						(r) => r.path.startsWith('/collection?') && r.path.includes('ACQUIRED_DATE')
 					)
 				);
-				await selector.locator('[data-testid=card-tile]:visible').first().waitFor();
+				await ownPanel.locator('[data-testid=card-tile]:visible').first().waitFor();
 			}
-			const more = selector
+			const more = ownPanel
 				.getByRole('button', { name: 'Charger la suite', exact: true })
 				.filter({ visible: true });
 			for (let i = 0; i < 3; i++) {
-				const count = await selector.locator('[data-testid=card-tile]:visible').count();
+				const count = await ownPanel.locator('[data-testid=card-tile]:visible').count();
 				await more.click();
 				await page.waitForFunction(
 					(count) =>

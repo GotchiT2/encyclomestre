@@ -80,9 +80,11 @@ try {
 	await page.getByRole('link', { name: 'Présentation', exact: true }).click();
 	await page.getByRole('button', { name: 'Quitter la guilde', exact: true }).click();
 	await confirm();
+	await page.getByRole('button', { name: 'Créer une guilde', exact: true }).click();
 	await page.getByLabel('Nom', { exact: true }).fill('Guilde de validation');
 	await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
 	await page.getByRole('heading', { name: 'Guilde de validation', exact: true }).waitFor();
+	await page.getByRole('link', { name: 'Présentation', exact: true }).click();
 	await page.getByRole('button', { name: 'Dissoudre la guilde', exact: true }).click();
 	await confirm();
 	await page.getByRole('button', { name: 'Rechercher une guilde', exact: true }).click();

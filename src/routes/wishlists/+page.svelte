@@ -427,140 +427,156 @@
 					></label
 				>{/if}
 		</div>
-		<WishlistHub
-			{groups}
-			activeId={activeWishlist?.id ?? null}
-			onSelect={selectWishlist}
-			onCreate={() => (createOpen = true)}
-			onEdit={(wishlist) => {
-				editingWishlist = wishlist;
-				editImage = null;
-				editOpen = true;
-			}}
-			onDelete={(wishlist) => {
-				deletingWishlist = wishlist;
-				deleteOpen = true;
-			}}
-			onAccept={(wishlist) =>
-				accept(wishlist).catch((cause) => {
-					toast.error(operationError(cause));
-				})}
-			onDecline={(wishlist) =>
-				leave(wishlist).catch((cause) => {
-					toast.error(operationError(cause));
-				})}
-			onLeave={(wishlist) =>
-				leave(wishlist).catch((cause) => {
-					toast.error(operationError(cause));
-				})}
-		/>
+		<div class="wishlist-workbench">
+			<WishlistHub
+				{groups}
+				activeId={activeWishlist?.id ?? null}
+				onSelect={selectWishlist}
+				onCreate={() => (createOpen = true)}
+				onEdit={(wishlist) => {
+					editingWishlist = wishlist;
+					editImage = null;
+					editOpen = true;
+				}}
+				onDelete={(wishlist) => {
+					deletingWishlist = wishlist;
+					deleteOpen = true;
+				}}
+				onAccept={(wishlist) =>
+					accept(wishlist).catch((cause) => {
+						toast.error(operationError(cause));
+					})}
+				onDecline={(wishlist) =>
+					leave(wishlist).catch((cause) => {
+						toast.error(operationError(cause));
+					})}
+				onLeave={(wishlist) =>
+					leave(wishlist).catch((cause) => {
+						toast.error(operationError(cause));
+					})}
+			/>
 
-		{#if activeWishlist}
-			<section class="grid gap-4 border-t border-primary/25 pt-5">
-				<header class="flex flex-wrap items-end justify-between gap-3">
-					<div>
-						{#if activeWishlist.imageUrl}
-							<img
-								src={activeWishlist.imageUrl}
-								alt=""
-								class="mb-3 h-24 w-full max-w-sm border border-primary/30 object-cover sm:h-28"
-								referrerpolicy="no-referrer"
-							/>
-						{/if}
-						<p class="forge-label">
-							{activeWishlist.access === 'owned'
-								? $_('wishlist.owned_list')
-								: $_('wishlist.shared_list')}
-						</p>
-						<h2 class="text-3xl font-black uppercase">{activeWishlist.title}</h2>
-						{#if activeWishlist.description}<p class="mt-2 italic text-muted-foreground">
-								{activeWishlist.description}
-							</p>{/if}
-					</div>
-					{#if editable}
-						<div class="flex flex-wrap gap-2">
-							<Button variant="outline" onclick={() => void openAccess()}
-								>{$_('wishlist.manage_access')}</Button
-							>
-							<Button onclick={openPicker}>{$_('wishlist.add_card_action')}</Button>
-							<Button variant="outline" onclick={() => (selectionMode = !selectionMode)}
-								>{selectionMode
-									? $_('wishlist.cancel_selection')
-									: $_('wishlist.select_cards')}</Button
-							>
-							<Button
-								variant="outline"
-								disabled={cleaningOwned}
-								onclick={() => void cleanOwnedCards()}>{$_('wishlist.clean_owned')}</Button
-							>
-						</div>
-					{/if}
-				</header>
-
-				<div class="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
-					<FilterShell activeCount={activeFilterCount}>
-						<WishlistListControls bind:query bind:sortBy bind:sortDirection onChange={resetPage} />
-					</FilterShell>
-
-					<div class="flex min-w-0 flex-col gap-4">
-						<p class="forge-label">{$_('wishlist.results_count', { values: { count: total } })}</p>
-						{#if listLoading && !entries.length}
-							<p class="forge-label">{$_('wishlist.loading')}</p>
-						{:else if entriesFailed}
-							<div class="forge-panel-flat flex flex-wrap items-center justify-between gap-3 p-4">
-								<p class="text-destructive">{$_('wishlist.cards_load_error')}</p>
-								<Button variant="outline" onclick={() => void loadEntries()}
-									>{$_('common.retry')}</Button
-								>
+			<div class="wishlist-content">
+				{#if activeWishlist}
+					<section class="grid gap-4 border-t border-primary/25 pt-5">
+						<header class="flex flex-wrap items-end justify-between gap-3">
+							<div>
+								{#if activeWishlist.imageUrl}
+									<img
+										src={activeWishlist.imageUrl}
+										alt=""
+										class="mb-2 size-12 border border-primary/30 object-cover"
+										referrerpolicy="no-referrer"
+									/>
+								{/if}
+								<p class="forge-label">
+									{activeWishlist.access === 'owned'
+										? $_('wishlist.owned_list')
+										: $_('wishlist.shared_list')}
+								</p>
+								<h2 class="text-3xl font-black uppercase">{activeWishlist.title}</h2>
+								{#if activeWishlist.description}<p class="mt-2 italic text-muted-foreground">
+										{activeWishlist.description}
+									</p>{/if}
 							</div>
-						{:else}
-							<WishlistSocialGrid
-								{entries}
-								{editable}
-								{selectionMode}
-								{selectedPageIds}
-								onRemove={(id) =>
-									removeCard(id).catch((cause) => {
-										toast.error(operationError(cause));
-									})}
-								onToggleSelection={toggleSelection}
-								onOpen={(entry) => (selectedCard = entry.card)}
-							/>
-							{#if selectionMode}
-								<div
-									class="flex items-center justify-between gap-3 border border-energy/30 bg-energy/10 p-3"
-								>
-									<p class="forge-label text-energy">
-										{$_('wishlist.selected_cards', { values: { count: selectedPageIds.length } })}
-									</p>
+							{#if editable}
+								<div class="flex flex-wrap gap-2">
+									<Button variant="outline" onclick={() => void openAccess()}
+										>{$_('wishlist.manage_access')}</Button
+									>
+									<Button onclick={openPicker}>{$_('wishlist.add_card_action')}</Button>
+									<Button variant="outline" onclick={() => (selectionMode = !selectionMode)}
+										>{selectionMode
+											? $_('wishlist.cancel_selection')
+											: $_('wishlist.select_cards')}</Button
+									>
 									<Button
-										variant="destructive"
-										disabled={!selectedPageIds.length || removingSelection}
-										onclick={() => void removeSelection()}>{$_('wishlist.remove_selected')}</Button
+										variant="outline"
+										disabled={cleaningOwned}
+										onclick={() => void cleanOwnedCards()}>{$_('wishlist.clean_owned')}</Button
 									>
 								</div>
 							{/if}
-							<nav
-								class="flex items-center justify-between border-t border-primary/20 pt-4"
-								aria-label={$_('wishlist.page')}
-							>
-								<Button
-									variant="outline"
-									disabled={listLoading || page <= 1}
-									onclick={() => (page -= 1)}>{$_('common.previous')}</Button
-								>
-								<span class="forge-label">{page} / {totalPages}</span>
-								<Button
-									variant="outline"
-									disabled={listLoading || page >= totalPages}
-									onclick={() => (page += 1)}>{$_('common.next')}</Button
-								>
-							</nav>
-						{/if}
-					</div>
-				</div>
-			</section>
-		{/if}
+						</header>
+
+						<div class="grid gap-6">
+							<FilterShell activeCount={activeFilterCount}>
+								<WishlistListControls
+									bind:query
+									bind:sortBy
+									bind:sortDirection
+									onChange={resetPage}
+								/>
+							</FilterShell>
+
+							<div class="flex min-w-0 flex-col gap-4">
+								<p class="forge-label">
+									{$_('wishlist.results_count', { values: { count: total } })}
+								</p>
+								{#if listLoading && !entries.length}
+									<p class="forge-label">{$_('wishlist.loading')}</p>
+								{:else if entriesFailed}
+									<div
+										class="forge-panel-flat flex flex-wrap items-center justify-between gap-3 p-4"
+									>
+										<p class="text-destructive">{$_('wishlist.cards_load_error')}</p>
+										<Button variant="outline" onclick={() => void loadEntries()}
+											>{$_('common.retry')}</Button
+										>
+									</div>
+								{:else}
+									<WishlistSocialGrid
+										{entries}
+										{editable}
+										{selectionMode}
+										{selectedPageIds}
+										onRemove={(id) =>
+											removeCard(id).catch((cause) => {
+												toast.error(operationError(cause));
+											})}
+										onToggleSelection={toggleSelection}
+										onOpen={(entry) => (selectedCard = entry.card)}
+									/>
+									{#if selectionMode}
+										<div
+											class="flex items-center justify-between gap-3 border border-energy/30 bg-energy/10 p-3"
+										>
+											<p class="forge-label text-energy">
+												{$_('wishlist.selected_cards', {
+													values: { count: selectedPageIds.length }
+												})}
+											</p>
+											<Button
+												variant="destructive"
+												disabled={!selectedPageIds.length || removingSelection}
+												onclick={() => void removeSelection()}
+												>{$_('wishlist.remove_selected')}</Button
+											>
+										</div>
+									{/if}
+									<nav
+										class="flex items-center justify-between border-t border-primary/20 pt-4"
+										aria-label={$_('wishlist.page')}
+									>
+										<Button
+											variant="outline"
+											disabled={listLoading || page <= 1}
+											onclick={() => (page -= 1)}>{$_('common.previous')}</Button
+										>
+										<span class="forge-label">{page} / {totalPages}</span>
+										<Button
+											variant="outline"
+											disabled={listLoading || page >= totalPages}
+											onclick={() => (page += 1)}>{$_('common.next')}</Button
+										>
+									</nav>
+								{/if}
+							</div>
+						</div>
+					</section>
+				{/if}
+			</div>
+		</div>
 	{/if}
 </section>
 
@@ -614,3 +630,23 @@
 		onClose={() => (selectedCard = null)}
 	/>
 {/if}
+
+<style>
+	.wishlist-workbench {
+		display: grid;
+		gap: 24px;
+		min-width: 0;
+	}
+	.wishlist-content {
+		min-width: 0;
+	}
+	.wishlist-content :global(.wikiforge-card-grid) {
+		grid-template-columns: repeat(auto-fill, minmax(min(136px, 100%), 1fr));
+	}
+	@media (min-width: 1024px) {
+		.wishlist-workbench {
+			grid-template-columns: 240px minmax(0, 1fr);
+			align-items: start;
+		}
+	}
+</style>

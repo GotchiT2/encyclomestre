@@ -8,6 +8,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { getNotifications, markAllNotificationsRead, markNotificationRead } from '$lib/api';
 	import { unreadNotifications } from '$lib/notifications/store';
+	import { currentSession } from '$lib/auth/session';
 	import { realtimeRefresh, refreshIncludes } from '$lib/realtime/resource-refresh';
 	import { _ } from '$lib/i18n';
 	import type { AppNotification } from '$lib/types';
@@ -23,6 +24,7 @@
 	let notificationsReady = $state(false);
 	let handledRealtimeRevision = 0;
 	let sequence = 0;
+	let disposed = false;
 	const visibleItems = $derived(unreadOnly ? items.filter((item) => !item.read) : items);
 
 	function label(notification: AppNotification) {
@@ -57,13 +59,14 @@
 	}
 	async function load(append = false) {
 		if (append && (loadingMore || loading || !hasNext)) return;
-		const request = ++sequence;
+		const request = ++sequence,
+			account = $currentSession?.user.id;
 		if (append) loadingMore = true;
 		else loading = true;
 		failed = false;
 		try {
 			const page = await getNotifications({ unreadOnly, cursor: append ? cursor : null });
-			if (request !== sequence) return;
+			if (disposed || request !== sequence || account !== $currentSession?.user.id) return;
 			items = append
 				? [...new Map([...items, ...page.items].map((item) => [item.id, item])).values()]
 				: page.items;
@@ -81,14 +84,16 @@
 	}
 	const marking = new SvelteSet<string>();
 	async function open(notification: AppNotification) {
+		const account = $currentSession?.user.id;
 		if (!notification.read && !marking.has(notification.id)) {
 			marking.add(notification.id);
 			void markNotificationRead(notification.id)
 				.then(() => {
+					if (disposed || account !== $currentSession?.user.id) return;
 					items = items.map((item) =>
 						item.id === notification.id ? { ...item, read: true } : item
 					);
-					unreadNotifications.update((count) => Math.max(0, count - 1));
+					void load();
 				})
 				.catch(() => toast.error($_('ux.readFailed')))
 				.finally(() => marking.delete(notification.id));
@@ -102,11 +107,13 @@
 	let markingAll = $state(false);
 	async function markAll() {
 		if (markingAll) return;
+		const account = $currentSession?.user.id;
 		markingAll = true;
 		try {
 			await markAllNotificationsRead();
+			if (disposed || account !== $currentSession?.user.id) return;
 			items = items.map((item) => ({ ...item, read: true }));
-			unreadNotifications.set(0);
+			void load();
 		} catch {
 			toast.error($_('notifications.error'));
 		} finally {
@@ -115,6 +122,10 @@
 	}
 	onMount(() => {
 		void load().finally(() => (notificationsReady = true));
+		return () => {
+			disposed = true;
+			sequence++;
+		};
 	});
 	$effect(() => {
 		const refresh = $realtimeRefresh;
@@ -129,12 +140,8 @@
 	});
 </script>
 
-<section class="flex flex-col gap-6 pb-12">
-	<PageHeader
-		eyebrow={$_('notifications.eyebrow')}
-		title={$_('notifications.title')}
-		description={$_('notifications.description')}
-	/>
+<section class="mx-auto flex w-full max-w-4xl flex-col gap-4 pb-12">
+	<PageHeader eyebrow={$_('notifications.eyebrow')} title={$_('notifications.title')} />
 	<div class="flex flex-wrap items-center justify-between gap-3">
 		<div class="flex gap-1" aria-label={$_('notifications.title')}>
 			<Button
@@ -172,7 +179,9 @@
 						onclick={() => void open(notification)}
 					>
 						<div class="min-w-0 basis-48 flex-1">
-							<p class="font-bold">{label(notification)}</p>
+							<p class="font-bold flex justify-between gap-2">
+								<span>{label(notification)}</span><span aria-hidden="true">↗</span>
+							</p>
 							<p class="mt-1 text-sm text-muted-foreground">
 								{notification.actor ? notification.actor.name : $_('notifications.system')}
 							</p>

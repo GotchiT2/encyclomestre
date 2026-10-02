@@ -22,6 +22,7 @@
 	import RecoveryCodes from './recovery-codes.svelte';
 	import LegalLinks from './legal-links.svelte';
 	let { recovery = false }: { recovery?: boolean } = $props();
+	let nameConfirmed = $state(false);
 	let name = $state('');
 	let code = $state('');
 	let busy = $state(false);
@@ -98,8 +99,10 @@
 		>
 			{#each ['stepName', 'stepPasskey', 'stepCodes', 'stepCollection'] as step, index (step)}<li
 					class="grid gap-2"
-					class:text-primary={(codes.length ? 2 : busy ? 1 : 0) === index}
-					aria-current={(codes.length ? 2 : busy ? 1 : 0) === index ? 'step' : undefined}
+					class:text-primary={(codes.length ? 2 : busy || nameConfirmed ? 1 : 0) === index}
+					aria-current={(codes.length ? 2 : busy || nameConfirmed ? 1 : 0) === index
+						? 'step'
+						: undefined}
 				>
 					<span class="font-heading text-2xl font-black">0{index + 1}</span><span
 						>{$_('arcade.' + step)}</span
@@ -123,14 +126,22 @@
 						: 'plan.account.signupInfo'
 				)}
 			</p>
-			<form class="space-y-4" onsubmit={submit}>
+			<form
+				class="space-y-4"
+				onsubmit={(event) => {
+					if (!recovery && !nameConfirmed) {
+						event.preventDefault();
+						nameConfirmed = true;
+					} else void submit(event);
+				}}
+			>
 				{#if !recovery || !token}<label class="block space-y-2"
 						><span>{$_('plan.account.name')}</span><Input
 							bind:value={name}
 							maxlength={64}
 							autocomplete="username"
 							required
-							disabled={busy}
+							disabled={busy || (!recovery && nameConfirmed)}
 						/></label
 					>{/if}
 				{#if recovery && !token}<label class="block space-y-2"
@@ -149,9 +160,19 @@
 					/>{/if}
 				{#if error}<p role="alert" class="text-sm text-destructive">{$_(error)}</p>{/if}
 				<Button type="submit" class="w-full" disabled={busy}
-					>{$_(busy ? 'passkeys.waiting' : 'plan.account.createPasskey')}</Button
+					>{$_(
+						busy
+							? 'passkeys.waiting'
+							: !recovery && !nameConfirmed
+								? 'arcade.stepContinue'
+								: 'plan.account.createPasskey'
+					)}</Button
 				>
 			</form>
+			{#if !recovery && nameConfirmed && !busy}<Button
+					variant="ghost"
+					onclick={() => (nameConfirmed = false)}>{$_('arcade.changeName')}</Button
+				>{/if}
 			<Button href="/login" variant="link">{$_('plan.account.login')}</Button>
 		{/if}
 	</div>

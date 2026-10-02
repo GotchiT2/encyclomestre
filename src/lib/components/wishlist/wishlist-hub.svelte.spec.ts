@@ -1,5 +1,5 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import '$lib/i18n';
 import WishlistHub from './wishlist-hub.svelte';
@@ -42,11 +42,13 @@ const groups: WishlistGroups = {
 };
 
 describe('WishlistHub', () => {
+	afterEach(async () => page.viewport(1280, 720));
 	it('separates owned, shared and pending lists with their permitted actions', async () => {
-		const onSelect = vi.fn();
-		const onAccept = vi.fn();
-		const onLeave = vi.fn();
-		render(WishlistHub, {
+		await page.viewport(1440, 950);
+		const onSelect = vi.fn(),
+			onAccept = vi.fn(),
+			onLeave = vi.fn();
+		const props = {
 			groups,
 			activeId: '1',
 			onSelect,
@@ -56,15 +58,17 @@ describe('WishlistHub', () => {
 			onAccept,
 			onDecline: vi.fn(),
 			onLeave
-		});
-
+		};
+		const view = render(WishlistHub, props);
 		await expect.element(page.getByText('Partagées avec moi')).toBeVisible();
-		await expect.element(page.getByText('Invitations en attente')).toBeVisible();
 		await page.getByRole('button', { name: 'Ma liste' }).click();
 		expect(onSelect).toHaveBeenCalledWith(groups.owned[0]);
+		await page.getByText('Invitations en attente').click();
 		await page.getByRole('button', { name: 'Accepter l’invitation' }).click();
 		expect(onAccept).toHaveBeenCalledWith(groups.pending[0]);
-		await page.getByRole('button', { name: 'Quitter' }).click();
+		expect(page.getByRole('button', { name: 'Quitter', exact: true }).elements()).toHaveLength(0);
+		await view.rerender({ ...props, activeId: '2' });
+		await page.getByRole('button', { name: 'Quitter', exact: true }).click();
 		expect(onLeave).toHaveBeenCalledWith(groups.shared[0]);
 	});
 

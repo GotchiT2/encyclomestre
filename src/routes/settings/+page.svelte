@@ -24,6 +24,8 @@
 	import { Button } from '$lib/components/ui/button';
 	import type { ProfileSettings } from '$lib/types';
 
+	let category = $state<'profile' | 'visibility' | 'security' | 'preferences'>('profile');
+	let categoryOpen = $state(false);
 	let profile = $state<ProfileSettings | null>(null);
 	let loading = $state(true);
 	let saving = $state(false);
@@ -126,38 +128,64 @@
 	}
 </script>
 
-<section class="flex flex-col gap-6">
-	<PageHeader
-		eyebrow={$_('settings.eyebrow')}
-		title={$_('settings.title')}
-		description={$_('settings.description')}
-	>
-		{#snippet actions()}{#if !loading && profile}<Button disabled={saving} onclick={save}
-					>{$_('common.save')}</Button
-				>{/if}{/snippet}
-	</PageHeader>
-	<ArcadePreferences />
-	{#if saveError}<p role="alert" class="forge-panel p-4 text-destructive">{saveError}</p>{/if}
+<section class="settings-workbench">
+	<PageHeader eyebrow={$_('settings.eyebrow')} title={$_('settings.title')} />
+	{#if saveError}<p role="alert" class="text-destructive">{saveError}</p>{/if}
 	{#if saved}<p role="status">{$_('settings.saved')}</p>{/if}
-	{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">
-			{$_('settings.loading')}
-		</p>{:else if profile}<SettingsPreferences
-			bind:nsfwEnabled={profile.nsfwEnabled}
-			bind:visibility={profile.visibility}
-			bind:mutedNotifications={profile.mutedNotifications}
-		/>
-		<CensoredKeywords bind:keywords={profile.censoredKeywords} /><SettingsAccount
-			bind:username={profile.username}
-			{nameLocked}
-			{nameChangeAvailableAt}
-			avatarUrl={avatarImageUrl}
-			onChooseAvatar={() => (avatarPickerOpen = true)}
-			onRemoveAvatar={removeAvatar}
-			onLogout={logoutFromSettings}
-			onLogoutAll={logoutFromAllDevices}
-		/>
-		<PasskeyManager onLogoutAll={logoutFromAllDevices} />
-	{/if}
+	<div class="settings-layout" class:category-open={categoryOpen}>
+		<nav aria-label={$_('settings.title')} class="settings-index">
+			{#each ['profile', 'visibility', 'security', 'preferences'] as item (item)}
+				<Button
+					variant={category === item ? 'default' : 'ghost'}
+					aria-current={category === item ? 'page' : undefined}
+					onclick={() => {
+						category = item as typeof category;
+						categoryOpen = true;
+					}}
+				>
+					{$_('arcade.settingsCategories.' + item)}
+				</Button>
+			{/each}
+		</nav>
+		<div class="settings-content">
+			<Button class="settings-back" variant="ghost" onclick={() => (categoryOpen = false)}
+				>← {$_('settings.title')}</Button
+			>
+			<h2 class="text-2xl mb-5">{$_('arcade.settingsCategories.' + category)}</h2>
+			{#if loading}<p role="status">{$_('settings.loading')}</p>{:else if profile}
+				<div hidden={category !== 'profile' && category !== 'security'}>
+					<SettingsAccount
+						bind:username={profile.username}
+						{nameLocked}
+						{nameChangeAvailableAt}
+						view={category === 'security' ? 'security' : 'profile'}
+						avatarUrl={avatarImageUrl}
+						onChooseAvatar={() => (avatarPickerOpen = true)}
+						onRemoveAvatar={removeAvatar}
+						onLogout={logoutFromSettings}
+						onLogoutAll={logoutFromAllDevices}
+					/>
+				</div>
+				<div hidden={category !== 'visibility'} class="space-y-6">
+					<SettingsPreferences
+						bind:nsfwEnabled={profile.nsfwEnabled}
+						bind:visibility={profile.visibility}
+						bind:mutedNotifications={profile.mutedNotifications}
+					/>
+					<CensoredKeywords bind:keywords={profile.censoredKeywords} />
+				</div>
+				<div hidden={category !== 'security'}>
+					<PasskeyManager onLogoutAll={logoutFromAllDevices} />
+				</div>
+				<div hidden={category !== 'preferences'}><ArcadePreferences /></div>
+				{#if category === 'profile' || category === 'visibility'}
+					<footer class="settings-save">
+						<Button disabled={saving} onclick={save}>{$_('common.save')}</Button>
+					</footer>
+				{/if}
+			{/if}
+		</div>
+	</div>
 </section>
 
 <AvatarEditor
@@ -168,3 +196,60 @@
 		nameChangeAvailableAt = user.nameChangeAvailableAt;
 	}}
 />
+
+<style>
+	.settings-layout {
+		display: grid;
+		gap: 24px;
+	}
+	.settings-index {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 4px;
+	}
+	.settings-index :global(button) {
+		justify-content: flex-start;
+	}
+	.settings-content {
+		display: none;
+		min-width: 0;
+	}
+	.category-open .settings-index {
+		display: none;
+	}
+	.category-open .settings-content {
+		display: block;
+	}
+	:global(.settings-back) {
+		margin-bottom: 16px;
+	}
+	.settings-save {
+		position: sticky;
+		bottom: 80px;
+		background: var(--background);
+		padding: 12px 0;
+		margin-top: 16px;
+	}
+	@media (min-width: 1024px) {
+		.settings-layout {
+			grid-template-columns: 220px minmax(0, 760px);
+		}
+		.settings-index,
+		.category-open .settings-index {
+			display: flex;
+			align-self: start;
+			position: sticky;
+			top: 88px;
+		}
+		.settings-content {
+			display: block;
+		}
+		:global(.settings-back) {
+			display: none;
+		}
+		.settings-save {
+			bottom: 0;
+		}
+	}
+</style>

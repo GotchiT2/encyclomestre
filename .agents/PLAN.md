@@ -576,3 +576,19 @@ Validation finale : checks FO/BO sans diagnostic ; 305 tests FO et 77 tests BO, 
 Les certificats et `vite.config.ts` sont conservés. GitNexus : index FO reconstruit après corruption FTS ; contrôle des changements avant commit. Aucun push, déploiement ou publication réelle de modèle.
 
 Sujet Conventional Commit : `feat(ui): redesign player experience with Arcade identity`.
+
+## Plan 2 révisé — Arcade réinventée
+
+Branche : `feat/arcade-experience`. Le skill encyclomestre-ui est exclu. Validation avec mocks ; configuration HTTPS et certificats locaux conservés.
+
+- [x] Navigation horizontale, cartes standard/full art et moteur partagé ; studio adapté.
+- [x] Album, catalogue, inspection contextuelle, souhaits et filtres compacts.
+- [x] Packs ouvrables prioritaires, cérémonie 3D, Express et reprise.
+- [x] Plateaux d’échange, marché et vitrines.
+- [x] Communauté, compte, progression et notifications recomposés.
+- [x] Validation aux cinq largeurs, clavier, mouvements réduits, checks, tests et builds FO/BO.
+
+
+Validation : checks FO/BO sans diagnostic ; 307 tests FO, 77 tests BO et 33 scénarios du studio. Parcours aux cinq largeurs, WebGL et repli, compte, transactions, communauté et compteur de notifications concurrent ; lint ciblé, builds sans mocks, parité du moteur et diff validés. Voir `docs/plan-2-revised-validation.md`.
+
+Sujet Conventional Commit : `feat(ui): reinvent Arcade navigation and player journeys`.

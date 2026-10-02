@@ -10,7 +10,7 @@
 <div class="flex flex-col gap-3">
 	{#each cases as item (item.id)}<a
 			href={resolve('/moderation/[id]', { id: String(item.id) })}
-			class="forge-panel flex flex-wrap items-center justify-between gap-4 p-5"
+			class="flex flex-wrap items-center justify-between gap-3 border-b border-border py-4"
 			><div class="flex min-w-0 flex-col gap-2">
 				<h2 class="break-words font-heading text-xl">{item.subject}</h2>
 				{#if item.lastMessageAt}<p class="text-sm text-muted-foreground">
