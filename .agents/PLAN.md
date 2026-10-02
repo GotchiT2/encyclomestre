@@ -627,3 +627,12 @@ Sujet Conventional Commit : `fix(boosters): hide variant names in opening result
 - [x] Contrôler l'origine et les dimensions de la fenêtre dans le scénario navigateur existant pendant la requête et après la cérémonie. Les 26 scénarios passent aux cinq largeurs ; 348 images contrôlées en émulation mobile Chromium/WebKit après navigation, défilement et rotation, mouvements ordinaires/réduits. Sept tests ciblés, Svelte, lint, formatage, build FO et diff validés. GitNexus avant modification et avant commit.
 
 Sujet Conventional Commit : `fix(boosters): anchor opening dialog to mobile viewport`.
+
+## Enchère depuis une carte et navigation continue des boosters
+
+- [x] Le formulaire charge ses prérequis par compte, indépendamment de la validation globale de la session restaurée. Lectures partagées, reprise explicite des erreurs et garde contre les données d'un autre compte ; frais et confirmation conservés.
+- [x] Remplacer les remontages SVG/WebGL entre packs par un carrousel de dessins persistants avec relief CSS. Déplacement horizontal continu, gestes tactiles, sélection directe, dock et clavier ; arrêt immédiat de l'inertie en mouvements réduits. La cérémonie d'ouverture conserve Three.js.
+- [x] Cinq régressions du formulaire, contrôles navigateur des 20 combinaisons Chromium/WebKit, cinq largeurs et deux modes de mouvement ; aucun saut vertical, objet remplacé ou acquisition pendant la navigation. Création depuis la fiche à 390/1440 px, 26 scénarios d'ouverture et changements rapides à 1868 px validés en mocks.
+- [x] Svelte sans diagnostic, 16 tests ciblés, ESLint et Prettier ciblés, build FO sans mocks et contrôle du diff réussis ; index GitNexus actualisé et changements contrôlés avant commit. 5 791 images du carrousel vérifiées.
+
+Sujet Conventional Commit : `fix(ui): unblock card auctions and smooth booster navigation`.

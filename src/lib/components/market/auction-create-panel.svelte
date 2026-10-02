@@ -1,11 +1,18 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
+	import { untrack } from 'svelte';
+	import { currentSession } from '$lib/auth/session';
 	import SanctionNotice from '$lib/components/moderation/sanction-notice.svelte';
 	import { activeRestrictions } from '$lib/moderation/state';
 	import { page } from '$app/state';
 	import type { CardRecord } from '$lib/types';
 	import { createAuction, getAuctionFee, type AuctionFee } from '$lib/api/auctions';
-	import { activeAuctionByCard, personalAuctions, recordOwnAuction } from '$lib/auctions/store';
+	import {
+		activeAuctionByCard,
+		personalAuctions,
+		recordOwnAuction,
+		refreshPersonalAuctions
+	} from '$lib/auctions/store';
 	import { publishRealtimeRefresh } from '$lib/realtime/resource-refresh';
 	import { validAmount, validAuctionPeriod, creationFee } from '$lib/auctions/presentation';
 	import { auctionErrorKey } from '$lib/auctions/errors';
@@ -20,9 +27,30 @@
 	let confirm = $state(false);
 	let quote = $state<AuctionFee>();
 	let error = $state('');
-	const existing = $derived(card.activeAuctionId ?? $activeAuctionByCard.get(card.id));
+	let loading = $state(false);
+	const userId = $derived($currentSession?.user.id);
+	const sameAccount = $derived(Boolean(userId && $personalAuctions.userId === userId));
+	const existing = $derived(
+		card.activeAuctionId ?? (sameAccount ? $activeAuctionByCard.get(card.id) : undefined)
+	);
+	$effect(() => {
+		const id = userId;
+		if (id && (!sameAccount || (!$personalAuctions.loaded && !$personalAuctions.error)))
+			untrack(() => void loadAuctions(id));
+	});
+	async function loadAuctions(id: string) {
+		loading = true;
+		try {
+			await refreshPersonalAuctions(id);
+		} catch {
+			// The shared store exposes the read failure; retry only these reads.
+		} finally {
+			loading = false;
+		}
+	}
 	const available = $derived(
-		$personalAuctions.loaded &&
+		sameAccount &&
+			$personalAuctions.loaded &&
 			!$personalAuctions.error &&
 			!existing &&
 			!card.userProtected &&
@@ -147,15 +175,21 @@
 				>{$_('market.confirm_sale')}</Button
 			>
 		</form>
-	{:else}<p class="text-sm text-muted-foreground">
+	{:else}<p class="text-sm text-muted-foreground" role="status">
 			{$_(
-				$personalAuctions.error
+				sameAccount && $personalAuctions.error && !loading
 					? 'auctionHub.personalError'
-					: !$personalAuctions.loaded
+					: !sameAccount || !$personalAuctions.loaded || loading
 						? 'auctionHub.loading'
 						: 'market.auction_card_locked'
 			)}
-		</p>{/if}
+		</p>
+		{#if sameAccount && $personalAuctions.error && userId}
+			<Button variant="outline" disabled={loading} onclick={() => userId && loadAuctions(userId)}
+				>{$_('auctionHub.retry')}</Button
+			>
+		{/if}
+	{/if}
 	{#if error}<p role="alert" class="text-sm text-destructive">{error}</p>{/if}
 </section>
 <AuctionConfirmation

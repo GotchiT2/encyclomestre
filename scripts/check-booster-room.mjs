@@ -138,8 +138,7 @@ try {
 			await page.screenshot({ path: join(output, `reserve-${width}-${motion}.png`) });
 			await page.locator('.family-credit').first().waitFor();
 			assert.equal(await page.locator('.family-credit').count(), 3, 'one reserve per family');
-			if (motion === 'no-preference')
-				await page.locator('[data-testid=pack-scene][data-renderer=webgl]').waitFor();
+			await page.locator('[data-testid=pack-carousel][data-ready=true]').waitFor();
 			await page.getByTestId('booster-open-one').evaluate((button) => {
 				button.click();
 				button.click();
@@ -325,9 +324,7 @@ try {
 		const state = await setup({ express: true }),
 			{ page } = state;
 		await page.locator(`[data-pack-id="${pack.id}"]`).click();
-		await page
-			.locator(`[data-testid=pack-scene][data-visual=${pack.visual}][data-renderer=webgl]`)
-			.waitFor();
+		await page.locator(`.hero-lane .pack-object.chosen [data-visual=${pack.visual}]`).waitFor();
 		await page.getByTestId('booster-open-one').click();
 		await page.getByText('Les cartes sont dans votre collection', { exact: true }).waitFor();
 		assert.equal(
@@ -361,17 +358,18 @@ try {
 			{ page } = state;
 		const lane = page.locator('.hero-lane'),
 			box = await lane.boundingBox();
-		await lane.dispatchEvent('pointerdown', {
-			pointerType: 'touch',
-			clientX: box.x + 170,
-			clientY: box.y + box.height * 0.65
+		const touch = await state.context.newCDPSession(page);
+		await touch.send('Input.dispatchTouchEvent', {
+			type: 'touchStart',
+			touchPoints: [{ x: box.x + 200, y: box.y + box.height * 0.65 }]
 		});
-		await lane.dispatchEvent('pointerup', {
-			pointerType: 'touch',
-			clientX: box.x + 80,
-			clientY: box.y + box.height * 0.65
-		});
-		await page.locator('[data-testid=pack-scene][data-visual=circuit]').waitFor();
+		for (let x = 180; x >= 80; x -= 20)
+			await touch.send('Input.dispatchTouchEvent', {
+				type: 'touchMove',
+				touchPoints: [{ x: box.x + x, y: box.y + box.height * 0.65 }]
+			});
+		await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+		await page.locator('.hero-lane .pack-object.chosen [data-visual=circuit]').waitFor();
 		assert.equal(await posts(page), 0, 'swiping the reserve does not acquire');
 		await page
 			.locator('.pack-navigation')

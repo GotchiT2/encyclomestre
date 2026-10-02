@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
-	import { fly } from 'svelte/transition';
-	import type { Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
+	import emblaCarouselSvelte from 'embla-carousel-svelte';
+	import type { EmblaCarouselType, EmblaOptionsType } from 'embla-carousel';
 	import { Button } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { arcadePreferences } from '$lib/arcade/preferences';
 	import BoosterPackArt from './booster-pack-art.svelte';
-	import BoosterScene from './booster-scene.svelte';
 	import PackCatalogue from './pack-catalogue.svelte';
 	import { packNameKey } from './pack-labels';
 	import type { PackCatalogueItem } from '$lib/types';
@@ -32,23 +32,63 @@
 		credits?: Snippet;
 	} = $props();
 	let allOpen = $state(false);
+	let carousel = $state.raw<EmblaCarouselType>();
+	let systemReduced = $state(false);
 	let gesture: { x: number; y: number; tear: boolean } | null = null;
 	const available = $derived(
 		packs.filter((pack) => pack.status === 'OPEN' && (pack.credit?.available ?? 0) > 0)
 	);
 	const selected = $derived(packs.find((pack) => pack.id === selectedId));
-	const selectedIndex = $derived(available.findIndex((pack) => pack.id === selectedId));
-	const previous = $derived(available[selectedIndex - 1]);
-	const next = $derived(available[selectedIndex + 1]);
+	const slides = $derived(
+		selected && !available.some((pack) => pack.id === selected.id)
+			? [...available, selected]
+			: available
+	);
+	const selectedIndex = $derived(slides.findIndex((pack) => pack.id === selectedId));
+	const previous = $derived(slides[selectedIndex - 1]);
+	const next = $derived(slides[selectedIndex + 1]);
+	const reduced = $derived($arcadePreferences.motion === 'reduce' || systemReduced);
+	const carouselOptions: EmblaOptionsType = $derived({
+		align: 'center',
+		containScroll: false,
+		loop: false,
+		duration: reduced ? 0 : 24,
+		watchDrag: (_api, event) => {
+			const point = 'touches' in event ? event.touches[0] : event;
+			const box = _api.rootNode().getBoundingClientRect();
+			return Boolean(active && !locked && point && point.clientY >= box.top + box.height * 0.28);
+		}
+	});
+	onMount(() => {
+		const media = matchMedia('(prefers-reduced-motion: reduce)');
+		const update = () => (systemReduced = media.matches);
+		update();
+		media.addEventListener('change', update);
+		return () => media.removeEventListener('change', update);
+	});
+	function initCarousel(event: CustomEvent<EmblaCarouselType>) {
+		carousel = event.detail;
+		carousel.scrollTo(Math.max(0, selectedIndex), true);
+		carousel.on('select', (api) => {
+			const pack = slides[api.selectedScrollSnap()];
+			if (pack && pack.id !== selectedId && active && !locked) onSelect(pack);
+		});
+		carousel.on('pointerUp', (api) => {
+			if (reduced) api.scrollTo(api.selectedScrollSnap(), true);
+		});
+		carousel.on('reInit', (api) => {
+			if (selectedIndex >= 0) api.scrollTo(selectedIndex, true);
+		});
+	}
+	$effect(() => {
+		const api = carousel;
+		const index = selectedIndex;
+		if (api && index >= 0 && index !== api.selectedScrollSnap()) api.scrollTo(index, reduced);
+	});
 	const name = (pack: PackCatalogueItem) => {
 		const key = packNameKey(pack.name);
 		return key ? $_(key) : pack.name;
 	};
-	const duration = () =>
-		$arcadePreferences.motion === 'reduce' ||
-		(typeof window !== 'undefined' && matchMedia('(prefers-reduced-motion:reduce)').matches)
-			? 0
-			: 220;
 	function endGesture(event: PointerEvent) {
 		if (!gesture || locked) {
 			gesture = null;
@@ -58,8 +98,6 @@
 			dy = event.clientY - gesture.y;
 		if (Math.abs(dx) >= 70 && Math.abs(dy) < 70) {
 			if (gesture.tear && selected?.status === 'OPEN' && selected.credit?.available) onTear();
-			else if (dx < 0 && next) onSelect(next);
-			else if (dx > 0 && previous) onSelect(previous);
 		}
 		gesture = null;
 	}
@@ -93,6 +131,7 @@
 		</div>
 		<div
 			class="hero-lane"
+			class:reduced
 			role="presentation"
 			onpointerdown={(event) => {
 				const box = event.currentTarget.getBoundingClientRect();
@@ -105,43 +144,36 @@
 			onpointerup={endGesture}
 			onpointercancel={() => (gesture = null)}
 		>
-			{#if previous}<button
-					class="neighbor previous"
-					aria-label={$_('arcade.previousPack')}
-					disabled={locked}
-					onclick={() => onSelect(previous)}
-					><BoosterPackArt
-						name={name(previous)}
-						renderKey={previous.renderKey}
-						family={previous.family}
-					/></button
-				>{/if}
-			<div class="selected-pack">
-				{#if selected}{#key selected.id}<div
-							class="hero-pack"
-							in:fly={{ x: 45, duration: duration() }}
-							out:fly={{ x: -45, duration: duration() }}
-						>
-							<BoosterScene
-								name={name(selected)}
-								renderKey={selected.renderKey}
-								family={selected.family}
-								count={selected.nbCards}
-								{active}
-							/>
-						</div>{/key}{/if}
+			<div
+				class="pack-viewport"
+				data-testid="pack-carousel"
+				data-ready={Boolean(carousel)}
+				use:emblaCarouselSvelte={{ options: carouselOptions, plugins: [] }}
+				onemblaInit={initCarousel}
+			>
+				<div class="pack-track">
+					{#each slides as pack (pack.id)}
+						<div class="pack-slide" data-slide-id={pack.id}>
+							<button
+								type="button"
+								class="pack-object"
+								class:chosen={pack.id === selectedId}
+								aria-label={name(pack)}
+								aria-pressed={pack.id === selectedId}
+								disabled={locked}
+								onclick={() => pack.id !== selectedId && onSelect(pack)}
+							>
+								<BoosterPackArt
+									name={name(pack)}
+									renderKey={pack.renderKey}
+									family={pack.family}
+									cardCount={pack.nbCards}
+								/>
+							</button>
+						</div>
+					{/each}
+				</div>
 			</div>
-			{#if next}<button
-					class="neighbor next"
-					aria-label={$_('arcade.nextPack')}
-					disabled={locked}
-					onclick={() => onSelect(next)}
-					><BoosterPackArt
-						name={name(next)}
-						renderKey={next.renderKey}
-						family={next.family}
-					/></button
-				>{/if}
 		</div>
 		{#if selected?.status === 'OPEN' && selected.credit?.available}<button
 				class="tear-invitation"
@@ -288,40 +320,52 @@
 		height: clamp(310px, 42dvh, 450px);
 		touch-action: pan-y;
 	}
-	.selected-pack {
-		position: absolute;
-		inset: 0;
+	.pack-viewport {
+		height: 100%;
+		overflow: hidden;
 	}
-	.hero-pack {
-		position: absolute;
-		inset: 0;
+	.pack-track {
+		display: flex;
+		height: 100%;
+		touch-action: pan-y pinch-zoom;
 	}
-	.neighbor {
-		display: none;
-		position: absolute;
-		width: 92px;
-		top: 24%;
+	.pack-slide {
+		flex: 0 0 36%;
+		min-width: 0;
+		display: grid;
+		place-items: center;
+		padding: 16px;
+	}
+	.pack-object {
+		width: min(100%, 210px);
+		min-height: 44px;
+		padding: 0;
 		border: 0;
 		background: none;
-		opacity: 0.5;
-		z-index: 3;
-		min-height: 44px;
+		position: relative;
+		transform: perspective(900px) rotateY(-8deg);
+		opacity: 0.55;
 		transition: opacity 160ms;
 	}
-	.neighbor:hover {
+	.pack-object:focus-visible {
+		outline: 2px solid #e8ef42;
+		outline-offset: 7px;
+	}
+	.pack-object.chosen {
 		opacity: 1;
 	}
-	.neighbor:focus-visible {
-		outline: 2px solid #e8ef42;
-		outline-offset: 5px;
+	.pack-object::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(110deg, #fff0 20%, #ffffff12 42%, #fff0 64%);
+		border-right: 3px solid #efebd936;
+		border-radius: 3px;
+		pointer-events: none;
 	}
-	.previous {
-		left: 9%;
-		transform: perspective(800px) rotateY(18deg) rotateZ(-8deg);
-	}
-	.next {
-		right: 9%;
-		transform: perspective(800px) rotateY(-18deg) rotateZ(8deg);
+	.hero-lane.reduced .pack-object {
+		transform: none;
+		transition: none;
 	}
 	.tear-invitation {
 		display: block;
@@ -418,9 +462,6 @@
 		color: #efebd999;
 	}
 	@media (min-width: 768px) {
-		.neighbor {
-			display: block;
-		}
 		.reserve-dock button {
 			flex-basis: 165px;
 		}
@@ -446,16 +487,12 @@
 		.hero-lane {
 			height: 210px;
 		}
-		.neighbor {
-			display: block;
-			width: 70px;
-			top: 30%;
+		.pack-slide {
+			flex-basis: 60%;
+			padding: 12px;
 		}
-		.previous {
-			left: -34px;
-		}
-		.next {
-			right: -34px;
+		.pack-object {
+			width: min(100%, 120px);
 		}
 		.plateau-base {
 			display: grid;
