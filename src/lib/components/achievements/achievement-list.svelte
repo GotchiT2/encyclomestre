@@ -36,6 +36,7 @@
 		<article
 			class:opacity-70={state === 'LOCKED'}
 			class="forge-panel-flat relative overflow-hidden p-4"
+			data-reward-state={state}
 		>
 			<div class="flex items-start gap-3">
 				<span
@@ -47,7 +48,7 @@
 				</span>
 				<div class="min-w-0 flex-1">
 					<p class="forge-label">{categoryLabel(achievement.category)}</p>
-					<h2 class="mt-1 font-title text-lg leading-tight">{achievement.name}</h2>
+					<h2 class="mt-1 font-title text-2xl leading-tight">{achievement.name}</h2>
 					{#if achievement.description}<p class="mt-1 text-sm text-muted-foreground">
 							{achievement.description}
 						</p>{/if}

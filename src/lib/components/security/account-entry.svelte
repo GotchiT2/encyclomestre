@@ -92,12 +92,26 @@
 </script>
 
 <section class="mx-auto w-full max-w-lg space-y-6 py-8">
-	<div class="forge-panel space-y-5 rounded-lg border bg-card p-4 sm:p-6">
+	{#if !recovery}<ol
+			class="grid grid-cols-4 gap-1 border-b border-border pb-4 text-xs"
+			aria-label={$_('arcade.accountSteps')}
+		>
+			{#each ['stepName', 'stepPasskey', 'stepCodes', 'stepCollection'] as step, index (step)}<li
+					class="grid gap-2"
+					class:text-primary={(codes.length ? 2 : busy ? 1 : 0) === index}
+					aria-current={(codes.length ? 2 : busy ? 1 : 0) === index ? 'step' : undefined}
+				>
+					<span class="font-heading text-2xl font-black">0{index + 1}</span><span
+						>{$_('arcade.' + step)}</span
+					>
+				</li>{/each}
+		</ol>{/if}
+	<div class="forge-panel space-y-5 border bg-card p-4 sm:p-6">
 		{#if codes.length}<RecoveryCodes {codes} onDone={enter} />{#if error}<p role="alert">
 					{$_(error)}
 				</p>{/if}{:else if pendingTokens}<p role="alert">{$_('passkeys.errors.finalize')}</p>
 			<Button onclick={enter}>{$_('completion.retry')}</Button>{:else}
-			<h1 class="text-2xl font-semibold">
+			<h1 class="text-4xl font-black">
 				{$_(recovery ? 'plan.account.recoverTitle' : 'plan.account.signupTitle')}
 			</h1>
 			<p class="text-sm text-muted-foreground">

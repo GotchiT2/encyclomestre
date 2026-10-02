@@ -16,8 +16,8 @@ async function navigate(page, path) {
 }
 async function acknowledge(page) {
 	const codes = (await page.getByRole('dialog').count())
-		? await page.getByRole('dialog').locator('li').allTextContents()
-		: await page.locator('li').allTextContents();
+		? await page.getByRole('dialog').locator('ul li').allTextContents()
+		: await page.locator('ul li').allTextContents();
 	await page.getByLabel('J’ai conservé mes codes dans un endroit sûr.').check();
 	await page.getByRole('button', { name: 'Entrer dans le jeu', exact: true }).click();
 	return codes;
@@ -62,10 +62,10 @@ try {
 		await page.getByLabel('Pseudonyme', { exact: true }).fill('Account' + width);
 		await page.getByRole('button', { name: 'Créer une passkey', exact: true }).click();
 		await page.getByRole('heading', { name: 'Codes de secours', exact: true }).waitFor();
-		let codes = await page.locator('li').allTextContents();
+		let codes = await page.locator('ul li').allTextContents();
 		assert.equal(codes.length, 10);
 		await acknowledge(page);
-		await page.waitForURL(base + '/');
+		await page.waitForURL(base + '/collection');
 		await navigate(page, '/settings');
 		await page.getByRole('button', { name: 'Ajouter une passkey', exact: true }).click();
 		const dialog = page.getByRole('dialog');
@@ -82,7 +82,7 @@ try {
 			.getByRole('button', { name: 'Générer de nouveaux codes', exact: true })
 			.click();
 		await page.getByLabel('J’ai conservé mes codes dans un endroit sûr.').waitFor();
-		codes = await page.getByRole('dialog').locator('li').allTextContents();
+		codes = await page.getByRole('dialog').locator('ul li').allTextContents();
 		assert.equal(codes.length, 10);
 		await acknowledge(page);
 		const persisted = await page.evaluate(() =>
@@ -99,7 +99,7 @@ try {
 		await page.getByLabel('Code de secours', { exact: true }).fill(codes[0]);
 		await newDevice();
 		await page.getByRole('button', { name: 'Créer une passkey', exact: true }).click();
-		await page.waitForURL(base + '/');
+		await page.waitForURL(base + '/collection');
 		await navigate(page, '/settings');
 		await page.getByText('9 codes de secours restants', { exact: true }).waitFor();
 		await page.getByRole('button', { name: 'Déconnexion', exact: true }).last().click();
@@ -109,9 +109,9 @@ try {
 		await newDevice();
 		await page.getByRole('button', { name: 'Créer une passkey', exact: true }).click();
 		await page.getByLabel('J’ai conservé mes codes dans un endroit sûr.').waitFor();
-		codes = await page.locator('li').allTextContents();
+		codes = await page.locator('ul li').allTextContents();
 		await acknowledge(page);
-		await page.waitForURL(base + '/');
+		await page.waitForURL(base + '/collection');
 		await navigate(page, '/settings');
 		await page.getByRole('button', { name: 'Supprimer', exact: true }).first().waitFor();
 		assert.equal(

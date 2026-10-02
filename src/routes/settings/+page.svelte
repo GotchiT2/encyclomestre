@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ArcadePreferences from '$lib/components/settings/arcade-preferences.svelte';
 	import AvatarEditor from '$lib/components/settings/avatar-editor.svelte';
 	import PasskeyManager from '$lib/components/security/passkey-manager.svelte';
 	import { nameChangeLocked, nameChangeRefusal } from '$lib/domain/name-change';
@@ -135,6 +136,7 @@
 					>{$_('common.save')}</Button
 				>{/if}{/snippet}
 	</PageHeader>
+	<ArcadePreferences />
 	{#if saveError}<p role="alert" class="forge-panel p-4 text-destructive">{saveError}</p>{/if}
 	{#if saved}<p role="status">{$_('settings.saved')}</p>{/if}
 	{#if loading}<p class="font-mono text-[10px] uppercase tracking-widest text-primary">

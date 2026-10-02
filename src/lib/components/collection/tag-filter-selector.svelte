@@ -10,6 +10,7 @@
 		tags,
 		untaggedValue,
 		allowCreation = true,
+		inline = false,
 		onChange,
 		onCreate
 	}: {
@@ -17,6 +18,7 @@
 		tags: CollectionTag[];
 		untaggedValue?: string;
 		allowCreation?: boolean;
+		inline?: boolean;
 		onChange?: () => void;
 		onCreate?: () => void;
 	} = $props();
@@ -45,50 +47,72 @@
 </script>
 
 <div data-testid="tag-filter-selector">
-	<DropdownMenu.Root>
-		<DropdownMenu.Trigger
-			class="forge-control flex cursor-pointer items-center justify-between gap-3"
-		>
-			<span class="truncate">
-				{values.length
-					? $_('collection.selectedTagCount', { values: { count: values.length } })
-					: $_('collection.allTags')}
-			</span>
-			<ChevronDownIcon class="shrink-0 text-primary" />
-		</DropdownMenu.Trigger>
-		<DropdownMenu.Content
-			preventScroll={false}
-			align="start"
-			sideOffset={8}
-			class="max-h-72 border border-primary/35 bg-popover p-2 shadow-2xl"
-		>
-			<DropdownMenu.CheckboxGroup bind:value={values} onValueChange={selectionChanged}>
-				{#each options as option (option.id)}
-					<DropdownMenu.CheckboxItem
-						value={option.id}
-						checked={values.includes(option.id)}
-						closeOnSelect={false}
-						class="min-h-11"
-					>
-						<span
-							class="size-3 shrink-0 border"
-							style={`border-color:${option.color};background:${values.includes(option.id) ? option.color : 'transparent'}`}
-						></span>
-						<span class="truncate">{option.name}</span>
-					</DropdownMenu.CheckboxItem>
-				{/each}
-			</DropdownMenu.CheckboxGroup>
-			{#if allowCreation}
-				<DropdownMenu.Separator />
-				<DropdownMenu.Group>
-					<DropdownMenu.Item onSelect={() => onCreate?.()}>
-						<PlusIcon data-icon="inline-start" />
-						{$_('collection.addTagOption')}
-					</DropdownMenu.Item>
-				</DropdownMenu.Group>
-			{/if}
-		</DropdownMenu.Content>
-	</DropdownMenu.Root>
+	{#if inline}<div class="grid gap-1" role="group" aria-label={$_('collection.tags')}>
+			{#each options as option (option.id)}<button
+					type="button"
+					class="flex min-h-11 items-center gap-2 px-3 text-left hover:bg-secondary"
+					aria-pressed={values.includes(option.id)}
+					onclick={() => {
+						values = values.includes(option.id)
+							? values.filter((id) => id !== option.id)
+							: [...values, option.id];
+						selectionChanged();
+					}}
+					><span aria-hidden="true">{values.includes(option.id) ? '✓' : '○'}</span><span
+						>{option.name}</span
+					></button
+				>{/each}
+			{#if allowCreation}<button
+					type="button"
+					class="min-h-11 border border-border px-3 text-left"
+					onclick={onCreate}>{$_('collection.addTagOption')}</button
+				>{/if}
+		</div>{:else}
+		<DropdownMenu.Root>
+			<DropdownMenu.Trigger
+				class="forge-control flex cursor-pointer items-center justify-between gap-3"
+			>
+				<span class="truncate">
+					{values.length
+						? $_('collection.selectedTagCount', { values: { count: values.length } })
+						: $_('collection.allTags')}
+				</span>
+				<ChevronDownIcon class="shrink-0 text-primary" />
+			</DropdownMenu.Trigger>
+			<DropdownMenu.Content
+				preventScroll={false}
+				align="start"
+				sideOffset={8}
+				class="max-h-72 border border-primary/35 bg-popover p-2 shadow-2xl"
+			>
+				<DropdownMenu.CheckboxGroup bind:value={values} onValueChange={selectionChanged}>
+					{#each options as option (option.id)}
+						<DropdownMenu.CheckboxItem
+							value={option.id}
+							checked={values.includes(option.id)}
+							closeOnSelect={false}
+							class="min-h-11"
+						>
+							<span
+								class="size-3 shrink-0 border"
+								style={`border-color:${option.color};background:${values.includes(option.id) ? option.color : 'transparent'}`}
+							></span>
+							<span class="truncate">{option.name}</span>
+						</DropdownMenu.CheckboxItem>
+					{/each}
+				</DropdownMenu.CheckboxGroup>
+				{#if allowCreation}
+					<DropdownMenu.Separator />
+					<DropdownMenu.Group>
+						<DropdownMenu.Item onSelect={() => onCreate?.()}>
+							<PlusIcon data-icon="inline-start" />
+							{$_('collection.addTagOption')}
+						</DropdownMenu.Item>
+					</DropdownMenu.Group>
+				{/if}
+			</DropdownMenu.Content>
+		</DropdownMenu.Root>
+	{/if}
 	{#if values.length}
 		<div class="mt-2 flex flex-wrap gap-1.5">
 			{#each values as value (value)}

@@ -1,71 +1,135 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { Button } from '$lib/components/ui/button';
-	import CardTile from '$lib/components/card-tile.svelte';
-	import ForgePanel from '$lib/components/layout/forge-panel.svelte';
+	import VariantCardFace from '$lib/components/cards/variant-card-face.svelte';
+	import BoosterPackArt from '$lib/components/boosters/booster-pack-art.svelte';
 	import LegalLinks from '$lib/components/security/legal-links.svelte';
 	import { _ } from '$lib/i18n';
-	import ArrowUpRightIcon from '@lucide/svelte/icons/arrow-up-right';
-	import BookOpenIcon from '@lucide/svelte/icons/book-open';
-	import PackageOpenIcon from '@lucide/svelte/icons/package-open';
 	import type { CardRecord } from '$lib/types';
-
 	let { showcaseCard }: { showcaseCard: CardRecord | null } = $props();
 </script>
 
-<section
-	class="bg-red relative grid min-h-[calc(100dvh-9rem)] items-center gap-10 overflow-hidden py-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(24rem,0.8fr)] lg:gap-14"
->
-	<div class="relative z-10 flex flex-col gap-7">
-		<div>
-			<p class="forge-label">{$_('landing.eyebrow')}</p>
-			<p class="forge-wordmark mt-4 text-5xl sm:text-7xl lg:text-8xl">WikiForge</p>
-			<h1
-				class="mt-4 max-w-3xl font-serif text-4xl leading-[0.95] font-bold tracking-tight sm:text-6xl"
-			>
-				{$_('landing.title')}
-			</h1>
-			<p class="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-				{$_('landing.manifest')}
-			</p>
-		</div>
-		<div class="flex flex-col gap-3 sm:flex-row">
-			<Button href="/register" size="lg"><ArrowUpRightIcon />{$_('landing.primaryCta')}</Button>
-			<Button href="/login" variant="outline" size="lg"
-				><BookOpenIcon />{$_('plan.account.login')}</Button
+<section class="arcade-landing">
+	<div class="landing-copy">
+		<p class="forge-label">{$_('landing.eyebrow')}</p>
+		<h1>{$_('landing.title')}</h1>
+		<p class="manifest">{$_('landing.manifest')}</p>
+		<div class="landing-actions">
+			<Button href={resolve('/register')} size="lg">{$_('landing.primaryCta')}</Button><Button
+				href={resolve('/login')}
+				variant="outline"
+				size="lg">{$_('plan.account.login')}</Button
 			>
 		</div>
 	</div>
-
-	<div
-		class="relative mx-auto flex w-full max-w-xl items-center justify-center pb-8 sm:min-h-[38rem]"
-	>
-		<div class="forge-energy-orbit absolute inset-0"></div>
-		<div class="absolute right-0 bottom-0 z-20 w-32 rotate-8 sm:w-44">
-			<img src="/images/booster.png" alt="" class="forge-booster-idle w-full" />
+	<div class="landing-objects">
+		<div class="graphic-print" aria-hidden="true">✦</div>
+		<div class="landing-pack">
+			<BoosterPackArt name={$_('navigation.brand')} renderKey="standard" />
 		</div>
-		{#if showcaseCard}<div class="relative z-10 max-w-sm -rotate-2" data-testid="full-art-frame">
-				<CardTile card={showcaseCard} showFriendOwners={false} />
-			</div>{/if}
-		<ForgePanel class="absolute right-3 bottom-4 z-30 hidden p-3 sm:block">
-			<a
-				href={resolve('/boosters')}
-				class="flex items-center gap-2 text-[10px] font-bold tracking-widest text-primary uppercase"
-			>
-				<PackageOpenIcon class="size-4" />{$_('landing.openPack')}
-			</a>
-		</ForgePanel>
+		{#if showcaseCard}<div class="landing-card"><VariantCardFace card={showcaseCard} /></div>{/if}
 	</div>
 </section>
-
-<section class="grid gap-4 py-12 sm:grid-cols-3">
-	{#each ['landing.loopDiscover', 'landing.loopCollect', 'landing.loopTrade'] as key, index (key)}
-		<ForgePanel class="min-h-40 p-5">
-			<p class="font-heading text-4xl text-primary/35">0{index + 1}</p>
-			<h2 class="mt-4 text-xl font-bold">{$_(`${key}Title`)}</h2>
-			<p class="mt-2 text-sm leading-relaxed text-muted-foreground">{$_(`${key}Body`)}</p>
-		</ForgePanel>
-	{/each}
+<section class="landing-loop">
+	{#each ['landing.loopDiscover', 'landing.loopCollect', 'landing.loopTrade'] as key, index (key)}<article
+		>
+			<span class="loop-number">0{index + 1}</span>
+			<h2>{$_(key + 'Title')}</h2>
+			<p>{$_(key + 'Body')}</p>
+		</article>{/each}
 </section>
-
 <LegalLinks />
+
+<style>
+	.arcade-landing {
+		display: grid;
+		gap: 2rem;
+		align-items: center;
+		padding: 1rem 0 3rem;
+	}
+	.landing-copy h1 {
+		font:
+			900 clamp(3rem, 8vw, 7rem)/0.88 'Barlow Condensed',
+			sans-serif;
+		text-transform: uppercase;
+		margin: 1rem 0;
+		max-width: 10ch;
+	}
+	.manifest {
+		max-width: 34rem;
+		color: var(--muted-foreground);
+		line-height: 1.5;
+		font-size: 1.125rem;
+	}
+	.landing-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		margin-top: 1.5rem;
+	}
+	.landing-objects {
+		position: relative;
+		isolation: isolate;
+		height: min(110vw, 480px);
+	}
+	.graphic-print {
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-items: center;
+		font-size: min(110vw, 600px);
+		line-height: 1;
+		color: #e8ef42;
+		z-index: -1;
+	}
+	.landing-card {
+		position: absolute;
+		right: 6%;
+		top: 5%;
+		width: 50%;
+		max-width: 280px;
+		transform: rotate(7deg);
+	}
+	.landing-pack {
+		position: absolute;
+		width: 40%;
+		max-width: 220px;
+		top: 22%;
+		left: 3%;
+		transform: rotate(-10deg);
+	}
+	.landing-loop {
+		display: grid;
+		gap: 1rem;
+		margin-bottom: 3rem;
+	}
+	.landing-loop article {
+		padding: 1.25rem;
+		border-top: 1px solid var(--border);
+		background: var(--card);
+	}
+	.loop-number {
+		font:
+			900 2rem 'Barlow Condensed',
+			sans-serif;
+		color: var(--primary);
+	}
+	.landing-loop h2 {
+		font-size: 1.75rem;
+		margin: 0.5rem 0;
+	}
+	.landing-loop p {
+		font-size: 0.95rem;
+		line-height: 1.5;
+		color: var(--muted-foreground);
+	}
+	@media (min-width: 768px) {
+		.arcade-landing {
+			grid-template-columns: 1fr 1fr;
+			min-height: 70dvh;
+		}
+		.landing-loop {
+			grid-template-columns: repeat(3, 1fr);
+		}
+	}
+</style>

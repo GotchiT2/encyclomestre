@@ -1,4 +1,5 @@
 <script lang="ts">
+	import MarketNavigation from './market-navigation.svelte';
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
 	import {
@@ -46,12 +47,13 @@
 	);
 </script>
 
+<MarketNavigation />
 <main class="w-full min-w-0 space-y-5">
-	<header class="forge-panel space-y-4 p-5 sm:p-7">
+	<header class="space-y-3 border-b border-border pb-4">
 		<p class="forge-label">{$_('auctionHub.eyebrow')}</p>
 		<div class="flex flex-wrap items-end justify-between gap-4">
 			<div>
-				<h1 class="font-serif text-3xl sm:text-4xl">{$_('auctionHub.title')}</h1>
+				<h1 class="font-heading text-4xl sm:text-5xl">{$_('auctionHub.title')}</h1>
 				<p class="mt-2 max-w-2xl text-sm text-muted-foreground">{$_('auctionHub.intro')}</p>
 			</div>
 			<Button variant="outline" disabled={busy} onclick={onRefresh}
@@ -72,7 +74,7 @@
 				</p>
 			</div>{/if}
 	</header>
-	<nav class="grid grid-cols-2 gap-2 sm:grid-cols-5" aria-label={$_('auctionHub.title')}>
+	<nav class="flex gap-2 overflow-x-auto pb-2" aria-label={$_('auctionHub.title')}>
 		{#each auctionTabs as tab (tab)}
 			<Button
 				variant="outline"

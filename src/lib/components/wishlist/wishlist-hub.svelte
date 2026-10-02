@@ -54,18 +54,14 @@
 				/>
 			{/if}
 			<span class="min-w-0">
-				<span class="block truncate text-sm font-black uppercase tracking-tight">
+				<span class="block truncate font-heading text-2xl font-bold">
 					{wishlist.title}
 				</span>
-				{#if wishlist.cardCount !== null}<span
-						class="mt-1 block font-mono text-[9px] uppercase tracking-widest text-primary"
-					>
+				{#if wishlist.cardCount !== null}<span class="mt-1 block text-xs text-primary">
 						{$_('wishlist.total', { values: { count: wishlist.cardCount } })}
 					</span>{/if}
 				{#if wishlist.ownerName}
-					<span
-						class="mt-1 block truncate font-mono text-[9px] uppercase tracking-widest text-muted-foreground"
-					>
+					<span class="mt-1 block truncate text-xs text-muted-foreground">
 						{$_('wishlist.owner_name', { values: { owner: wishlist.ownerName } })}
 					</span>
 				{/if}
@@ -99,7 +95,7 @@
 {/snippet}
 
 <section class="grid min-w-0 grid-cols-1 gap-4" data-testid="wishlist-hub">
-	<div class="min-w-0 border-4 border-double border-primary/30 bg-card p-3">
+	<div class="min-w-0 border border-border bg-card p-3">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<p class="forge-label">{$_('wishlist.owned_lists')}</p>
 			<Button size="sm" onclick={onCreate}>{$_('wishlist.create_btn')}</Button>

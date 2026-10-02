@@ -39,20 +39,23 @@ try {
 		page.on('pageerror', (error) => errors.push(error.message));
 		await page.goto(base + '/collection');
 		await page.locator('[data-testid=card-tile]').first().waitFor();
-		const target = page
-			.locator('button[aria-label^="Protéger "]:not([disabled])')
-			.filter({ visible: true })
-			.first();
-		await target.waitFor();
-
-		const title = (await target.getAttribute('aria-label')).slice('Protéger '.length);
-		if (width > 768) await target.locator('..').locator('..').hover();
+		const actions = page.getByTestId('card-quick-actions');
+		let target;
+		for (const button of await actions.all()) {
+			await button.click();
+			const protect = page.getByRole('menuitem', { name: 'Protéger', exact: true });
+			if ((await protect.count()) && (await protect.isEnabled())) {
+				target = button;
+				break;
+			}
+			await page.keyboard.press('Escape');
+		}
+		assert.ok(target, 'An available exemplar can be protected');
+		await page.getByRole('menuitem', { name: 'Protéger', exact: true }).click();
 		await target.click();
-		const unprotect = page.getByRole('button', { name: 'Déprotéger ' + title, exact: true });
-		await unprotect.waitFor();
-		await unprotect.click();
-		await page.getByRole('button', { name: 'Protéger ' + title, exact: true }).waitFor();
-		await page.getByRole('button', { name: 'Mettre ' + title + ' en vente', exact: true }).click();
+		await page.getByRole('menuitem', { name: 'Retirer la protection', exact: true }).click();
+		await target.click();
+		await page.getByRole('menuitem', { name: 'À vendre', exact: true }).click();
 		const dialog = page.getByRole('dialog');
 		await dialog.getByLabel('Prix', { exact: true }).fill('123');
 		await page.evaluate(() => {

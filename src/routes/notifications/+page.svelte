@@ -136,10 +136,24 @@
 		description={$_('notifications.description')}
 	/>
 	<div class="flex flex-wrap items-center justify-between gap-3">
-		<label class="flex items-center gap-2 text-sm"
-			><input type="checkbox" bind:checked={unreadOnly} onchange={() => void load(false)} />
-			{$_('notifications.unread_only')}</label
-		>
+		<div class="flex gap-1" aria-label={$_('notifications.title')}>
+			<Button
+				variant={!unreadOnly ? 'default' : 'outline'}
+				aria-pressed={!unreadOnly}
+				onclick={() => {
+					unreadOnly = false;
+					void load(false);
+				}}>{$_('arcade.allNotifications')}</Button
+			>
+			<Button
+				variant={unreadOnly ? 'default' : 'outline'}
+				aria-pressed={unreadOnly}
+				onclick={() => {
+					unreadOnly = true;
+					void load(false);
+				}}>{$_('arcade.unreadNotifications')}</Button
+			>
+		</div>
 		<Button
 			variant="outline"
 			disabled={markingAll || $unreadNotifications === 0}
@@ -154,10 +168,10 @@
 	{:else if visibleItems.length}<ul class="divide-y divide-primary/15 border-y border-primary/20">
 			{#each visibleItems as notification (notification.id)}<li>
 					<button
-						class={`flex w-full gap-3 px-3 py-4 text-left hover:bg-primary/8 ${!notification.read ? 'bg-primary/10' : ''}`}
+						class={`flex w-full flex-wrap gap-3 px-3 py-4 text-left hover:bg-primary/8 ${!notification.read ? 'bg-primary/10' : ''}`}
 						onclick={() => void open(notification)}
 					>
-						<div class="min-w-0 flex-1">
+						<div class="min-w-0 basis-48 flex-1">
 							<p class="font-bold">{label(notification)}</p>
 							<p class="mt-1 text-sm text-muted-foreground">
 								{notification.actor ? notification.actor.name : $_('notifications.system')}

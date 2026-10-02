@@ -80,27 +80,64 @@ describe('shared card renderer', () => {
 	});
 });
 
-describe('editable template surfaces',()=>{
- it.each(themes.filter(t=>t!=='classic').flatMap(theme=>[false,true].map(fullArt=>({theme,fullArt}))))('renders $theme fullArt=$fullArt without editing controls',async({theme,fullArt})=>{
-  const definition=presetDefinition(theme);definition.design.orientation='landscape';
-  render(TemplateCard,{definition,data:{title:'Une très longue légende de carte pour vérifier le cartouche',image:'',variantName:'Do not print',fullArt,serial:1000000,maximum:1000000,boosterLogo:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j5WQAAAAASUVORK5CYII='},labels});
-  await expect.element(page.getByTestId('card-serial')).toHaveTextContent('1000000/1000000');
-  const face=document.querySelector<HTMLElement>('[data-card-zone="frame"]')!;
-  expect(getComputedStyle(face).borderRadius).toBe('0px');
-  expect(document.querySelector('[data-zone-trigger]')).toBeNull();
-  expect(document.querySelector('[data-card-zone="logo"] img')).not.toBeNull();
-  expect(face.textContent).not.toContain('Do not print');
-  face.parentElement!.style.width='150px';expect(face.getBoundingClientRect().width).toBeLessThanOrEqual(150);
-  face.parentElement!.style.width='380px';expect(face.getBoundingClientRect().width).toBeLessThanOrEqual(380);
- });
+describe('editable template surfaces', () => {
+	it.each(
+		themes
+			.filter((t) => t !== 'classic')
+			.flatMap((theme) => [false, true].map((fullArt) => ({ theme, fullArt })))
+	)('renders $theme fullArt=$fullArt without editing controls', async ({ theme, fullArt }) => {
+		const definition = presetDefinition(theme);
+		definition.design.orientation = 'landscape';
+		render(TemplateCard, {
+			profile: 'source',
+			definition,
+			data: {
+				title: 'Une très longue légende de carte pour vérifier le cartouche',
+				image: '',
+				variantName: 'Do not print',
+				fullArt,
+				serial: 1000000,
+				maximum: 1000000,
+				boosterLogo:
+					'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j5WQAAAAASUVORK5CYII='
+			},
+			labels
+		});
+		await expect.element(page.getByTestId('card-serial')).toHaveTextContent('1000000/1000000');
+		const face = document.querySelector<HTMLElement>('[data-card-zone="frame"]')!;
+		expect(getComputedStyle(face).borderRadius).toBe('0px');
+		expect(document.querySelector('[data-zone-trigger]')).toBeNull();
+		expect(document.querySelector('[data-card-zone="logo"] img')).not.toBeNull();
+		expect(face.textContent).not.toContain('Do not print');
+		face.parentElement!.style.width = '150px';
+		expect(face.getBoundingClientRect().width).toBeLessThanOrEqual(150);
+		face.parentElement!.style.width = '380px';
+		expect(face.getBoundingClientRect().width).toBeLessThanOrEqual(380);
+	});
 });
 
-it('moves the neon highlight with the pointer independently of image finish',async()=>{
- const definition=presetDefinition('cyberpunk');definition.layout!.frameFinish.motion='pointer';definition.layout!.imageFinish.type='glitter';
- render(TemplateCard,{definition,data:{title:'Neon',image:'',variantName:'',fullArt:true},labels});
- const canvas=document.querySelector<HTMLElement>('[data-testid="template-card"]')!;canvas.style.width='380px';
- const finish=canvas.querySelector<HTMLElement>('.finish.frame')!;const before=getComputedStyle(finish,'::after').backgroundImage;
- const rect=canvas.getBoundingClientRect();canvas.dispatchEvent(new PointerEvent('pointermove',{pointerType:'mouse',clientX:rect.left+rect.width*.8,bubbles:true}));
- await expect.poll(()=>getComputedStyle(finish,'::after').backgroundImage).not.toBe(before);
- expect(canvas.querySelector('.picture .finish')?.getAttribute('data-type')).toBe('glitter');
+it('moves the neon highlight with the pointer independently of image finish', async () => {
+	const definition = presetDefinition('cyberpunk');
+	definition.layout!.frameFinish.motion = 'pointer';
+	definition.layout!.imageFinish.type = 'glitter';
+	render(TemplateCard, {
+		profile: 'source',
+		definition,
+		data: { title: 'Neon', image: '', variantName: '', fullArt: true },
+		labels
+	});
+	const canvas = document.querySelector<HTMLElement>('[data-testid="template-card"]')!;
+	canvas.style.width = '380px';
+	const finish = canvas.querySelector<HTMLElement>('.finish.frame')!;
+	const before = getComputedStyle(finish, '::after').backgroundImage;
+	const rect = canvas.getBoundingClientRect();
+	canvas.dispatchEvent(
+		new PointerEvent('pointermove', {
+			pointerType: 'mouse',
+			clientX: rect.left + rect.width * 0.8,
+			bubbles: true
+		})
+	);
+	await expect.poll(() => getComputedStyle(finish, '::after').backgroundImage).not.toBe(before);
+	expect(canvas.querySelector('.picture .finish')?.getAttribute('data-type')).toBe('glitter');
 });

@@ -36,7 +36,7 @@
 </script>
 
 <details
-	class="forge-panel p-4"
+	class="border-b border-border px-1"
 	ontoggle={(event) => {
 		expanded = event.currentTarget.open;
 		if (expanded && !stats) void load();

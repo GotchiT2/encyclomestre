@@ -4,6 +4,7 @@
 	import { getPacks } from '$lib/api/boosters';
 	import { packNameKey } from '$lib/components/boosters/pack-labels';
 	import { _ } from '$lib/i18n';
+	import { articleContexts } from '$lib/arcade/article-context';
 	import { cardNumberLabel, type CardRecord } from '$lib/types';
 	let { card, publicView = false }: { card: CardRecord; publicView?: boolean } = $props();
 	let packName = $state('');
@@ -28,11 +29,20 @@
 			alive = false;
 		};
 	});
+	const articleContext = $derived(
+		$articleContexts[String(card.baseCardId ?? card.catalogueId ?? card.id)]
+	);
 	const facts = $derived([
 		{ label: $_('collection.variants'), value: card.variant.name },
-		{ label: $_('auctionHub.attack'), value: card.attack },
+		...(articleContext?.global != null
+			? [{ label: $_('arcade.globalCopies'), value: articleContext.global }]
+			: []),
 		...(!publicView && card.packId == null
-			? [{ label: $_('codex.owned'), value: card.ownedCount }]
+			? [
+					...(articleContext?.owned != null
+						? [{ label: $_('codex.owned'), value: articleContext.owned }]
+						: [])
+				]
 			: []),
 		...(cardNumberLabel(card)
 			? [{ label: $_('auctionHub.number'), value: cardNumberLabel(card) }]

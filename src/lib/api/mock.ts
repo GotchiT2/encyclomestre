@@ -25,6 +25,7 @@ import { mockCards, mockVariants } from './mocks/cards';
 import { mockCollectionTags } from './mocks/collection-tags';
 import { createAuctionMocks } from './mocks/auctions';
 import { createCommunityMocks } from './mocks/community';
+import type { WikiForgeCardDto } from './cards';
 
 export interface MockApiRequest {
 	path: string;
@@ -41,7 +42,40 @@ const mockTags = new Map(
 	mockCollectionTags.map((tag, index) => [index + 1, { ...tag, id: index + 1 }])
 );
 let nextTagId = mockTags.size + 1;
-let limitedPackExhausted = false;
+function savedMockOpenings():
+	| {
+			cards: WikiForgeCardDto[];
+			reserve: { available: number; bonus: number; lastRechargeAt: number };
+			premiumPlus: { available: number; bonus: number };
+			exhausted: boolean;
+	  }
+	| undefined {
+	try {
+		if (typeof sessionStorage === 'undefined') return;
+		const saved = JSON.parse(sessionStorage.getItem('wikiforge-arcade-mock-opened') ?? 'null');
+		if (
+			!saved ||
+			!Array.isArray(saved.cards) ||
+			!saved.cards.every(
+				(card: WikiForgeCardDto) =>
+					Number.isSafeInteger(card.id) && Number.isSafeInteger(card.pageId)
+			) ||
+			!Number.isFinite(saved.reserve?.available) ||
+			!Number.isFinite(saved.reserve?.lastRechargeAt) ||
+			!Number.isFinite(saved.premiumPlus?.available)
+		)
+			return;
+		return saved;
+	} catch {
+		return;
+	}
+}
+const savedOpenings = savedMockOpenings();
+let limitedPackExhausted = savedOpenings?.exhausted ?? false;
+const openedCards = new Map<number, WikiForgeCardDto>(
+	(savedOpenings?.cards ?? []).map((card) => [card.id, card])
+);
+let nextOpenedCardId = Math.max(99_999, ...openedCards.keys()) + 1;
 const fixtureDate = (days: number) => new Date(Date.now() + days * 86400000).toISOString();
 const mockNotifications = [
 	{
@@ -517,11 +551,13 @@ const friendships = new Map<string, Friendship[]>();
 const boosterReserve = new Map<
 	string,
 	{ available: number; bonus: number; lastRechargeAt: number }
->([['demo-user', { available: 10, bonus: 1, lastRechargeAt: Date.now() }]]);
+>([
+	['demo-user', savedOpenings?.reserve ?? { available: 10, bonus: 1, lastRechargeAt: Date.now() }]
+]);
 
 const mockPremiumCredits = {
 	PREMIUM: { available: 1, bonus: 0 },
-	PREMIUM_PLUS: { available: 0, bonus: 1 }
+	PREMIUM_PLUS: savedOpenings?.premiumPlus ?? { available: 0, bonus: 1 }
 };
 
 const mockPackCatalogue = [
@@ -1497,36 +1533,55 @@ export function createMockApiResponse({
 					(protection === null || String(Boolean(card.userProtected)) === protection) &&
 					(!wishlistOwner || wishedCardIds.has(card.id))
 			);
-		const pageItems = items.slice(page * pageSize, (page + 1) * pageSize);
-		const hasNext = (page + 1) * pageSize < items.length;
+		const extra = [...openedCards.values()].filter(
+			(card) =>
+				(!query || card.title.toLocaleLowerCase('fr-FR').includes(query)) &&
+				(!variantIds.length || variantIds.includes(card.variantId)) &&
+				(!tagIds.length ||
+					(tagIds.includes('-1')
+						? !card.tagIds?.length
+						: tagIds.every((id) => card.tagIds?.includes(Number(id))))) &&
+				(duplicate === null || String(Boolean(card.duplicate)) === duplicate) &&
+				(protection === null || String(Boolean(card.protected)) === protection) &&
+				(!wishlistOwner ||
+					mockCards.some((item) => item.baseCardId === card.pageId && wishedCardIds.has(item.id)))
+		);
+		const pageItems = items.slice(
+			Math.max(0, page * pageSize - extra.length),
+			Math.max(0, (page + 1) * pageSize - extra.length)
+		);
+		const hasNext = (page + 1) * pageSize < items.length + extra.length;
 		return json({
-			results: pageItems.map(({ card, index, tagIds: cardTagIds }) => ({
-				id: index + 1,
-				pageId: card.baseCardId ?? index + 1,
-				title: card.title,
-				description: card.longDescription || card.shortDescription,
-				image: card.imageUrl,
-				nsfw: card.nsfw,
-				variantId: card.variantId,
-				packId: card.packId ?? 1,
-				serialNumber: card.serialNumber,
-				maxCopies: card.maxCopies,
-				atk: card.attack,
-				ownedCount: card.ownedCount,
-				saleId: card.saleId ? Number(card.saleId) : undefined,
-				auctionId: card.activeAuctionId ? Number(card.activeAuctionId) : undefined,
-				duplicate: card.ownedCount > 1,
-				protected: Boolean(card.userProtected),
-				tagIds: cardTagIds,
-				acquiredDate: card.acquiredAt ?? now,
-				creationDate: now,
-				pendingTradeId: null
-			})),
+			results: [
+				...extra.slice(page * pageSize, (page + 1) * pageSize),
+				...pageItems.map(({ card, index, tagIds: cardTagIds }) => ({
+					id: index + 1,
+					pageId: card.baseCardId ?? index + 1,
+					title: card.title,
+					description: card.longDescription || card.shortDescription,
+					image: card.imageUrl,
+					nsfw: card.nsfw,
+					variantId: card.variantId,
+					packId: card.packId ?? 1,
+					serialNumber: card.serialNumber,
+					maxCopies: card.maxCopies,
+					atk: card.attack,
+					ownedCount: card.ownedCount,
+					saleId: card.saleId ? Number(card.saleId) : undefined,
+					auctionId: card.activeAuctionId ? Number(card.activeAuctionId) : undefined,
+					duplicate: card.ownedCount > 1,
+					protected: Boolean(card.userProtected),
+					tagIds: cardTagIds,
+					acquiredDate: card.acquiredAt ?? now,
+					creationDate: now,
+					pendingTradeId: null
+				}))
+			],
 			page,
 			nbResults:
 				query || variantIds.length || tagIds.length || duplicate || protection || wishlistOwner
 					? -1
-					: items.length,
+					: items.length + extra.length,
 			sortBy: url.searchParams.get('sortBy') ?? 'ACQUIRED_DATE',
 			sortDirection: 'DESC',
 			nextCursor:
@@ -1578,6 +1633,11 @@ export function createMockApiResponse({
 	}
 
 	if (/^\/collection\/\d+\/(?:protect|unprotect)$/.test(pathname) && normalizedMethod === 'PUT') {
+		const opened = openedCards.get(Number(pathname.split('/')[2]));
+		if (opened) {
+			opened.protected = pathname.endsWith('/protect');
+			return json(undefined, 204);
+		}
 		const index = Number(pathname.split('/')[2]) - 1;
 		const card = mockCards[index];
 		if (!card) return error(404, 'Carte introuvable.', 'NOT_FOUND');
@@ -1598,6 +1658,8 @@ export function createMockApiResponse({
 	}
 	const collectionDetailMatch = /^\/collection\/(\d+)$/.exec(pathname);
 	if (normalizedMethod === 'GET' && collectionDetailMatch) {
+		const opened = openedCards.get(Number(collectionDetailMatch[1]));
+		if (opened) return json(opened);
 		const cardIndex = Number(collectionDetailMatch[1]) - 1;
 		const card =
 			planScenario === 'many' && cardIndex >= 0 && cardIndex < 145
@@ -1612,6 +1674,15 @@ export function createMockApiResponse({
 	}
 	const collectionCardTagMatch = /^\/collection\/(\d+)\/tags\/(\d+)$/.exec(pathname);
 	if (collectionCardTagMatch && (normalizedMethod === 'PUT' || normalizedMethod === 'DELETE')) {
+		const opened = openedCards.get(Number(collectionCardTagMatch[1]));
+		if (opened) {
+			const tagId = Number(collectionCardTagMatch[2]);
+			opened.tagIds =
+				normalizedMethod === 'PUT'
+					? [...new Set([...(opened.tagIds ?? []), tagId])]
+					: (opened.tagIds ?? []).filter((id) => id !== tagId);
+			return json(opened);
+		}
 		const cardIndex = Number(collectionCardTagMatch[1]) - 1;
 		const card = mockCards[cardIndex];
 		const id = cardIndex + 1;
@@ -2320,7 +2391,7 @@ export function createMockApiResponse({
 			const card = mockCards[Math.floor(Math.random() * mockCards.length)];
 			card.ownedCount += 1;
 			return {
-				id: Date.now() + index,
+				id: nextOpenedCardId++,
 				pageId: card.baseCardId ?? (Number.parseInt(card.id.replace(/\D/g, ''), 10) || index + 1),
 				title: card.title,
 				description: card.longDescription || card.shortDescription,
@@ -2331,8 +2402,8 @@ export function createMockApiResponse({
 				maxCopies: card.maxCopies,
 				atk: card.attack,
 				ownedCount: card.ownedCount,
-				saleId: card.saleId ? Number(card.saleId) : undefined,
-				auctionId: card.activeAuctionId ? Number(card.activeAuctionId) : undefined,
+				saleId: undefined,
+				auctionId: undefined,
 				duplicate: card.ownedCount > 1,
 				protected: false,
 				tagIds: [],
@@ -2341,6 +2412,23 @@ export function createMockApiResponse({
 				pendingTradeId: null
 			};
 		});
+		cards.forEach((card) => openedCards.set(card.id, card));
+		try {
+			if (typeof sessionStorage !== 'undefined')
+				sessionStorage.setItem(
+					'wikiforge-arcade-mock-opened',
+					JSON.stringify({
+						cards: [...openedCards.values()],
+						reserve: boosterReserve.get(userId),
+						premiumPlus: mockPremiumCredits.PREMIUM_PLUS,
+						exhausted: limitedPackExhausted
+					})
+				);
+		} catch {
+			/* Optional mock persistence. */
+		}
+		if (planScenario === 'uncertain-opening')
+			throw new TypeError('Mock response lost after opening');
 		return json({
 			packId,
 			cards

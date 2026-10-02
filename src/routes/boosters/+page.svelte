@@ -6,6 +6,7 @@
 		refreshIncludes
 	} from '$lib/realtime/resource-refresh';
 	import { onMount } from 'svelte';
+	import { invalidateArticleContexts } from '$lib/arcade/article-context';
 	import { _ } from '$lib/i18n';
 	import {
 		ApiError,
@@ -27,7 +28,16 @@
 	import { resolvePackDefinition, type ResolvedPackDefinition } from '$lib/api/boosters';
 	import { wikiForgeApiErrorCode } from '$lib/api/wikiforge-contract';
 	import BoosterOpeningStage from '$lib/components/boosters/booster-opening-stage.svelte';
-	import PackCatalogue from '$lib/components/boosters/pack-catalogue.svelte';
+	import FamilyCredits from '$lib/components/boosters/family-credits.svelte';
+	import PackGallery from '$lib/components/boosters/pack-gallery.svelte';
+	import { currentSession } from '$lib/auth/session';
+	import { getWikiForgeCollectionCard } from '$lib/api/collection';
+	import {
+		readOpeningReceipt,
+		saveOpeningReceipt,
+		restoreOpeningCards,
+		type OpeningReceipt
+	} from '$lib/arcade/opening-receipt';
 	import PackDetailDialog from '$lib/components/boosters/pack-detail-dialog.svelte';
 	import { packNameKey } from '$lib/components/boosters/pack-labels';
 	import {
@@ -56,6 +66,10 @@
 	let catalogueLoading = $state(false);
 	let revision = 0;
 	let openedCount = $state(0);
+	let receipt = $state<OpeningReceipt | null>(null);
+	let resumeProgress = $state<{ revealed: number; index: number } | null>(null);
+	let resuming = $state(false),
+		resumeError = $state(false);
 	let credits = $state<PackSummary[]>([]);
 	let families = $state<BoosterFamilyDto[]>([]);
 	let variants = $state<VariantDefinition[]>([]);
@@ -143,7 +157,11 @@
 				const pack = packs?.find(
 					(p) => p.id === requested && p.status === 'OPEN' && p.credit?.available
 				);
-				if (pack) selectPack(pack);
+				const initial =
+					pack ?? packs?.find((p) => p.status === 'OPEN' && p.credit?.available) ?? packs?.[0];
+				if (initial) selectPack(initial);
+				const account = $currentSession?.user.id;
+				if (account) receipt = readOpeningReceipt(sessionStorage, account);
 			})
 			.catch(() => undefined);
 		return () => window.clearInterval(clock);
@@ -163,17 +181,33 @@
 
 	async function open(all = false) {
 		if (!selectedPack?.credit?.available || selectedPack.status !== 'OPEN' || opening) return;
+		const openingPack = selectedPack;
 		opening = true;
 		result = null;
 		openingError = null;
+		resumeProgress = null;
+		const account = $currentSession?.user.id;
 		try {
 			if (!turnstile) throw new Error('Turnstile unavailable');
 			const turnstileToken = await turnstile.verify();
+			if ($currentSession?.user.id !== account) return;
 			const opened = all
-				? await openAllBoosters(selectedPack.id, turnstileToken)
-				: await openBooster(selectedPack.id, turnstileToken);
+				? await openAllBoosters(openingPack.id, turnstileToken)
+				: await openBooster(openingPack.id, turnstileToken);
+			if ($currentSession?.user.id !== account) return;
 			result = opened.cards;
-			openedCount = Math.floor(opened.cards.length / Math.max(1, selectedPack.nbCards));
+			openedCount = Math.floor(opened.cards.length / Math.max(1, openingPack.nbCards));
+			if (account && result.length) {
+				receipt = {
+					accountId: account,
+					packId: openingPack.id,
+					cardIds: result.map((card) => card.id),
+					openedCount,
+					revealed: 0,
+					index: 0
+				};
+				saveOpeningReceipt(sessionStorage, receipt);
+			}
 			publishRealtimeRefresh(['collection', 'profile', 'achievements', 'boosters']);
 			openingId += 1;
 		} catch (error) {
@@ -191,6 +225,7 @@
 				: captchaRejected || (error instanceof Error && error.message.includes('Turnstile'))
 					? 'CAPTCHA'
 					: 'UNKNOWN';
+			if (openingError === 'UNKNOWN') publishRealtimeRefresh(['collection', 'profile', 'boosters']);
 		} finally {
 			turnstile?.reset();
 			resetPackDetailsCache();
@@ -200,10 +235,41 @@
 	}
 
 	function selectPack(pack: PackCatalogueItem) {
+		if (opening || resuming) return;
 		selectedPackId = pack.id;
 		selectedPackSnapshot = pack;
 		openingError = null;
 		result = null;
+	}
+
+	async function resumeOpening() {
+		if (!receipt || resuming || opening) return;
+		const account = $currentSession?.user.id,
+			saved = receipt;
+		resuming = true;
+		resumeError = false;
+		try {
+			const restored = await restoreOpeningCards(saved, getWikiForgeCollectionCard);
+			if ($currentSession?.user.id !== account) return;
+			const pack = packs?.find((item) => item.id === saved.packId);
+			if (!pack) throw new Error('PACK_UNAVAILABLE');
+			selectedPackId = pack.id;
+			selectedPackSnapshot = pack;
+			openingError = null;
+			result = restored;
+			openedCount = saved.openedCount;
+			resumeProgress = { revealed: saved.revealed, index: saved.index };
+			openingId++;
+		} catch {
+			resumeError = true;
+		} finally {
+			resuming = false;
+		}
+	}
+	function saveProgress(revealed: number, index: number) {
+		if (!receipt || $currentSession?.user.id !== receipt.accountId) return;
+		receipt = { ...receipt, revealed, index };
+		saveOpeningReceipt(sessionStorage, receipt);
 	}
 
 	async function showDetails(pack: PackCatalogueItem) {
@@ -247,9 +313,16 @@
 			String(card.baseCardId ?? card.catalogueId ?? card.id)
 		);
 		wishlists = await getWishlists();
+		invalidateArticleContexts();
 	}
 </script>
 
+{#if receipt && !result}<div
+		class="mb-4 flex flex-wrap items-center gap-3 border border-primary p-3"
+	>
+		<Button disabled={resuming} onclick={resumeOpening}>{$_('arcade.resume')}</Button
+		>{#if resumeError}<p role="alert">{$_('arcade.receiptUnavailable')}</p>{/if}
+	</div>{/if}
 {#if catalogueError}<div role="alert" class="forge-panel mb-4 p-4">
 		<p>{$_('plan.loadError')}</p>
 		<Button disabled={catalogueLoading} onclick={() => void refreshPacks().catch(() => undefined)}
@@ -257,9 +330,14 @@
 		>
 	</div>{/if}
 {#if result && !opening}<p role="status" class="mb-4">
-		{$_(catalogueError ? 'plan.boosters.openedUnknownCredits' : 'plan.boosters.opened', {
-			values: { count: openedCount, remaining: selectedPack?.credit?.available ?? 0 }
-		})}
+		{$_(
+			catalogueError || selectedPack?.credit == null
+				? 'plan.boosters.openedUnknownCredits'
+				: 'plan.boosters.opened',
+			{
+				values: { count: openedCount, remaining: selectedPack?.credit?.available ?? 0 }
+			}
+		)}
 	</p>{/if}
 <section class="flex flex-col gap-8">
 	<PageHeader
@@ -274,60 +352,60 @@
 		<div class="forge-panel grid min-h-64 place-items-center p-8 text-center text-muted-foreground">
 			{$_('boosters.no_active_packs')}
 		</div>
-	{:else if !selectedPack}
-		<PackCatalogue {packs} onDetails={showDetails} onOpen={selectPack} />
 	{:else}
-		<div class="mx-auto w-full max-w-sm">
-			<TurnstileWidget
-				mock={isMockApiEnabled()}
-				bind:this={turnstile}
-				action="open"
-				onError={() => (openingError = 'CAPTCHA')}
-			/>
-		</div>
-		<div class="flex items-center justify-between gap-4">
-			<Button
-				variant="outline"
-				onclick={() => {
-					selectedPackId = null;
-					selectedPackSnapshot = null;
-					result = null;
-				}}
-			>
-				{$_('boosters.back_to_packs')}
-			</Button>
-			{#if openingError}
-				<p class="text-sm text-destructive" role="alert">
-					{$_(`boosters.errors.${openingError}`)}
-				</p>
-			{/if}
-		</div>
+		{#if families.length}<FamilyCredits {families} {now} />{/if}
+		<PackGallery {packs} selectedId={selectedPackId} onDetails={showDetails} onSelect={selectPack}>
+			{#snippet actions()}{#if selectedPack}
+					<div class="mx-auto w-full max-w-sm">
+						<TurnstileWidget
+							mock={isMockApiEnabled()}
+							bind:this={turnstile}
+							action="open"
+							onError={() => (openingError = 'CAPTCHA')}
+						/>
+					</div>
+					{#if openingError}<p class="text-sm text-destructive" role="alert">
+							{$_(
+								openingError === 'UNKNOWN'
+									? 'arcade.uncertainOpening'
+									: `boosters.errors.${openingError}`
+							)}
+						</p>{/if}
 
-		<BoosterOpeningStage
-			available={selectedPack.credit?.available ?? 0}
-			regularAvailable={selectedPack.credit?.regularAvailable ?? 0}
-			bonusAvailable={selectedPack.credit?.bonus ?? 0}
-			maximum={selectedPack.credit?.max ?? 0}
-			{nextDelay}
-			packName={selectedPackName}
-			packImage={selectedPack.imageUrl ?? selectedPack.credit?.imageUrl ?? '/images/booster.png'}
-			packRenderKey={selectedPack.renderKey ?? 'standard'}
-			packCardCount={selectedPack.nbCards}
-			{opening}
-			canOpenAll={selectedPack.openAll}
-			canOpen={selectedPack.status === 'OPEN'}
-			{openingId}
-			cards={result}
-			error={Boolean(openingError)}
-			suspended={Boolean(selectedCard)}
-			onOpen={() => void open(false)}
-			onOpenAll={() => void open(true)}
-			onOpenCard={openCardDetail}
-			onReset={() => {
-				result = null;
-				openingError = null;
-			}}
-		/>
+					<BoosterOpeningStage
+						showPack={false}
+						{openedCount}
+						creditKnown={selectedPack.credit != null}
+						resume={resumeProgress}
+						onProgress={saveProgress}
+						available={selectedPack.credit?.available ?? 0}
+						regularAvailable={selectedPack.credit?.regularAvailable ?? 0}
+						bonusAvailable={selectedPack.credit?.bonus ?? 0}
+						maximum={selectedPack.credit?.max ?? 0}
+						{nextDelay}
+						packName={selectedPackName}
+						packImage={selectedPack.imageUrl ??
+							selectedPack.credit?.imageUrl ??
+							'/images/booster.png'}
+						packRenderKey={selectedPack.renderKey ?? 'standard'}
+						packCardCount={selectedPack.nbCards}
+						{opening}
+						canOpenAll={selectedPack.openAll}
+						canOpen={selectedPack.status === 'OPEN'}
+						{openingId}
+						cards={result}
+						error={Boolean(openingError)}
+						suspended={Boolean(selectedCard)}
+						onOpen={() => void open(false)}
+						onOpenAll={() => void open(true)}
+						onOpenCard={openCardDetail}
+						onReset={() => {
+							result = null;
+							openingError = null;
+						}}
+					/>
+				{/if}{/snippet}</PackGallery
+		>
 	{/if}
 </section>
 

@@ -1,39 +1,72 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { currentSession } from '$lib/auth/session';
-	import * as Sidebar from '$lib/components/ui/sidebar';
-	import UserPresence from '$lib/components/users/user-presence.svelte';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import UserAvatar from '$lib/components/users/user-avatar.svelte';
 	import { _ } from '$lib/i18n';
+	import UsersIcon from '@lucide/svelte/icons/users';
 	import LogInIcon from '@lucide/svelte/icons/log-in';
-	import UserRoundIcon from '@lucide/svelte/icons/user-round';
 	import PlayerMoney from './player-money.svelte';
 	import NotificationBell from '$lib/components/notifications/notification-bell.svelte';
+	import { communityNavigation, progressionNavigation } from './nav-items';
 </script>
 
-<!-- La barre d'onglets couvre les destinations principales : ce bandeau ne porte que
-     l'identité et l'accès au tiroir de navigation complet. -->
 <header
-	class="fixed inset-x-0 top-0 z-40 flex h-16 items-center gap-2 border-b border-primary/20 bg-background/88 px-3 backdrop-blur-xl md:hidden"
+	class="arcade-header fixed inset-x-0 top-0 z-40 flex h-16 items-center gap-2 border-b border-border bg-background px-3 md:sticky md:gap-3 md:px-6"
 >
-	{#if $currentSession}
-		<Sidebar.Trigger
-			class="size-10 border border-primary/35 text-primary"
-			aria-label={$_('navigation.openMenu')}
-		/>
-	{/if}
-	<a href={resolve('/')} class="min-w-0 flex-1" aria-label={$_('navigation.home')}>
-		<span class="forge-wordmark block truncate text-lg leading-none">{$_('navigation.brand')}</span>
-	</a>
-	<PlayerMoney />
-	{#if $currentSession}<NotificationBell compact />{/if}
 	<a
-		href={$currentSession ? resolve('/profile') : resolve('/login')}
-		class="grid size-10 shrink-0 place-items-center border border-primary/35 text-primary"
-		aria-label={$currentSession ? $_('navigation.profile') : $_('navigation.login')}
+		href={$currentSession ? resolve('/welcome') : resolve('/')}
+		class="min-w-0 flex-1 md:hidden"
+		aria-label={$_('arcade.recap')}
+		><span class="forge-wordmark block truncate text-lg">{$_('navigation.brand')}</span></a
 	>
-		{#if $currentSession}<span class="relative">
-				<UserRoundIcon class="size-5" />
-				<UserPresence value={$currentSession.user.lastConnection} size="sm" />
-			</span>{:else}<LogInIcon class="size-5" />{/if}
-	</a>
+	<div class="hidden min-w-0 flex-1 md:block"></div>
+	<PlayerMoney />
+	{#if $currentSession}
+		<DropdownMenu.Root>
+			<DropdownMenu.Trigger
+				class="grid size-11 shrink-0 place-items-center border border-border hover:border-primary"
+				aria-label={$_('arcade.community')}><UsersIcon class="size-5" /></DropdownMenu.Trigger
+			>
+			<DropdownMenu.Content align="end" class="min-w-56">
+				<DropdownMenu.Label>{$_('arcade.community')}</DropdownMenu.Label>
+				{#each communityNavigation as item (item.href)}<DropdownMenu.Item
+						class="min-h-11"
+						onSelect={() => void goto(resolve(item.href))}
+						><item.icon />{$_(item.label)}</DropdownMenu.Item
+					>{/each}
+			</DropdownMenu.Content>
+		</DropdownMenu.Root>
+		<NotificationBell compact />
+		<DropdownMenu.Root>
+			<DropdownMenu.Trigger
+				class="grid size-11 shrink-0 place-items-center"
+				aria-label={$_('arcade.account')}
+				><UserAvatar
+					name={$currentSession.user.username}
+					image={$currentSession.user.avatarUrl}
+					crop={$currentSession.user.imageCrop}
+				/></DropdownMenu.Trigger
+			>
+			<DropdownMenu.Content align="end" class="min-w-56">
+				<DropdownMenu.Label>{$currentSession.user.username}</DropdownMenu.Label>
+				<DropdownMenu.Item class="min-h-11" onSelect={() => void goto(resolve('/profile'))}
+					>{$_('navigation.profile')}</DropdownMenu.Item
+				>
+				{#each progressionNavigation as item (item.href)}<DropdownMenu.Item
+						class="min-h-11"
+						onSelect={() => void goto(resolve(item.href))}
+						><item.icon />{$_(item.label)}</DropdownMenu.Item
+					>{/each}
+				<DropdownMenu.Item class="min-h-11" onSelect={() => void goto(resolve('/settings'))}
+					>{$_('navigation.settings')}</DropdownMenu.Item
+				>
+			</DropdownMenu.Content>
+		</DropdownMenu.Root>
+	{:else}<a
+			href={resolve('/login')}
+			class="grid size-11 place-items-center border border-border"
+			aria-label={$_('navigation.login')}><LogInIcon class="size-5" /></a
+		>{/if}
 </header>

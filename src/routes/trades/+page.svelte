@@ -34,6 +34,7 @@
 	import TradeEditor from '$lib/components/trades/trade-editor.svelte';
 	import TradePartnerPicker from '$lib/components/trades/trade-partner-picker.svelte';
 	import TradeLedger from '$lib/components/trades/trade-ledger.svelte';
+	import MarketNavigation from '$lib/components/market/market-navigation.svelte';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import type {
@@ -382,6 +383,7 @@
 			>{#each [10, 20, 50] as count (count)}<option value={count}>{count}</option>{/each}</select
 		></label
 	>
+	<MarketNavigation />
 	<PageHeader
 		eyebrow={$_('trades.eyebrow')}
 		title={$_('trades.title')}

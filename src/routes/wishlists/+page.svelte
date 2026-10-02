@@ -35,6 +35,7 @@
 	import WishlistPicker from '$lib/components/wishlist/wishlist-picker.svelte';
 	import WishlistRegistryDrawers from '$lib/components/wishlist/wishlist-registry-drawers.svelte';
 	import WishlistSocialGrid from '$lib/components/wishlist/wishlist-social-grid.svelte';
+	import { invalidateArticleContexts } from '$lib/arcade/article-context';
 	import { _ } from '$lib/i18n';
 	import { toast } from 'svelte-sonner';
 	import type { CardQuery } from '$lib/api';
@@ -92,6 +93,7 @@
 
 	async function refreshGroups(preferredId = activeWishlist?.id) {
 		groups = await getWishlistGroups();
+		invalidateArticleContexts();
 		const selectable = [...groups.owned, ...groups.shared];
 		activeWishlist =
 			selectable.find((wishlist) => wishlist.id === preferredId) ?? selectable[0] ?? null;

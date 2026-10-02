@@ -11,6 +11,7 @@ import TrophyIcon from '@lucide/svelte/icons/trophy';
 
 export type NavHref =
 	| '/'
+	| '/welcome'
 	| '/cards'
 	| '/collection'
 	| '/market'
@@ -32,9 +33,9 @@ export type NavItem = {
 
 export const exploreNavigation: NavItem[] = [
 	{ href: '/collection', label: 'navigation.collection', icon: LibraryBigIcon },
-	{ href: '/boosters', label: 'navigation.boosters', icon: PackageOpenIcon },
-	{ href: '/wishlists', label: 'navigation.wishlist', icon: HeartIcon },
-	{ href: '/cards', label: 'navigation.cards', icon: BookOpenIcon }
+	{ href: '/boosters', label: 'arcade.boosters', icon: PackageOpenIcon },
+	{ href: '/wishlists', label: 'arcade.wishlists', icon: HeartIcon },
+	{ href: '/cards', label: 'arcade.catalogue', icon: BookOpenIcon }
 ];
 export const transactionNavigation: NavItem[] = [
 	{ href: '/market', label: 'navigation.auctions', icon: GavelIcon },

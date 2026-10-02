@@ -1,6 +1,7 @@
 <script lang="ts">
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import ShowcaseEditor from './showcase-editor.svelte';
+	import CollectionVitrine from './collection-vitrine.svelte';
 	import AvatarEditor from '$lib/components/settings/avatar-editor.svelte';
 	import UserAvatar from '$lib/components/users/user-avatar.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
@@ -40,6 +41,7 @@
 		initialSales: SalesResult;
 	} = $props();
 	let activeTab = $state<'showcase' | 'sales'>('showcase');
+	let managingShowcase = $state(false);
 	let showcase = $state(untrack(() => initialShowcase));
 	let sales = $state(untrack(() => initialSales));
 	let collection = $state(untrack(() => initialCollection.items));
@@ -276,20 +278,40 @@
 			onclick={() => (activeTab = 'sales')}>{$_('profile.tab_sales')}</Button
 		>
 	</div>
-	{#if activeTab === 'showcase'}<ShowcaseEditor
-			{showcase}
-			{collection}
-			{tags}
-			{money}
-			{saving}
-			buying={buyingSlot}
-			onSave={saveShowcase}
-			onBuySlot={() => (buySlotOpen = true)}
-			hasMoreCards={collectionHasNext}
-			loadingMoreCards={collectionLoading}
-			onLoadMoreCards={loadMoreCollection}
-			onFiltersChange={refreshPickerCollection}
-		/>{:else}<InstantSalesManager
+	{#if activeTab === 'showcase'}
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<h2 class="text-2xl">{$_('profile.tab_showcase')}</h2>
+			<Button
+				variant={managingShowcase ? 'default' : 'outline'}
+				onclick={() => (managingShowcase = !managingShowcase)}
+				>{$_(managingShowcase ? 'arcade.finishManaging' : 'arcade.manageShowcase')}</Button
+			>
+		</div>
+		{#if !managingShowcase}
+			{#each showcase.lines as line, index (index)}<CollectionVitrine
+					title={line.title}
+					cards={line.cards}
+					owned
+				/>{/each}
+			{#if !showcase.lines.length}<p
+					class="border border-dashed border-border p-8 text-center text-muted-foreground"
+				>
+					{$_('arcade.emptyShowcase')}
+				</p>{/if}
+		{:else}<ShowcaseEditor
+				{showcase}
+				{collection}
+				{tags}
+				{money}
+				{saving}
+				buying={buyingSlot}
+				onSave={saveShowcase}
+				onBuySlot={() => (buySlotOpen = true)}
+				hasMoreCards={collectionHasNext}
+				loadingMoreCards={collectionLoading}
+				onLoadMoreCards={loadMoreCollection}
+				onFiltersChange={refreshPickerCollection}
+			/>{/if}{:else}<InstantSalesManager
 			{sales}
 			{collection}
 			busy={salesBusy}

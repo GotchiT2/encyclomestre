@@ -61,7 +61,7 @@
 	<header class="forge-panel flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
 		{#if guild.image}<img src={guild.image} alt="" class="size-24 object-cover" />{/if}
 		<div class="flex min-w-0 flex-1 flex-col gap-3">
-			<h1 class="break-words font-title text-3xl">{guild.name}</h1>
+			<h1 class="break-words font-title text-4xl uppercase">{guild.name}</h1>
 			<div class="flex flex-wrap gap-2">
 				<Badge variant="outline">{$_('completion.guild.' + guild.joinPolicy)}</Badge><Badge
 					variant="outline"
@@ -82,7 +82,7 @@
 				userId={guild.owner?.id}
 			/>{/if}
 	</header>
-	<nav class="flex flex-wrap gap-2" aria-label={$_('completion.guild.title')}>
+	<nav class="flex gap-2 overflow-x-auto pb-1" aria-label={$_('completion.guild.title')}>
 		{#each tabs as value (value)}<Button
 				variant={tab === value ? 'default' : 'outline'}
 				href={resolve('/guilds/[id]', { id: String(guild.id) }) + '?tab=' + value}

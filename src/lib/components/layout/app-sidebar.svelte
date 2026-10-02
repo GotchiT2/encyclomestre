@@ -32,13 +32,14 @@
 
 {#snippet navGroup(label: string, items: NavItem[])}
 	<Sidebar.Group>
-		<Sidebar.GroupLabel class="forge-label">{$_(label)}</Sidebar.GroupLabel>
+		<Sidebar.GroupLabel class="forge-label text-muted-foreground">{$_(label)}</Sidebar.GroupLabel>
 		<Sidebar.GroupContent>
 			<Sidebar.Menu>
 				{#each items as item (item.href)}
 					<Sidebar.MenuItem>
 						<Sidebar.MenuButton
 							isActive={isActiveRoute(page.url.pathname, item.href)}
+							class="min-h-11 text-sm"
 							tooltipContent={$_(item.label)}
 						>
 							{#snippet child({ props })}
@@ -66,7 +67,7 @@
 			class="flex items-center gap-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-3"
 		>
 			<a
-				href={resolve('/')}
+				href={resolve('/welcome')}
 				onclick={closeOnMobile}
 				class="flex min-w-0 items-center gap-3"
 				aria-label={$_('navigation.home')}
@@ -81,11 +82,6 @@
 					<span class="forge-wordmark block truncate text-lg leading-none"
 						>{$_('navigation.brand')}</span
 					>
-					<span
-						class="mt-1 block truncate text-[8px] font-bold tracking-[0.25em] text-[var(--energy-soft)] uppercase"
-					>
-						{$_('navigation.forgeNetwork')}
-					</span>
 				</span>
 			</a>
 			<Sidebar.Trigger
@@ -107,7 +103,7 @@
 		<Sidebar.Menu>
 			<Sidebar.MenuItem>
 				<Sidebar.MenuButton
-					class="forge-sidebar-cta"
+					class="forge-sidebar-cta min-h-11"
 					isActive={isActiveRoute(page.url.pathname, '/boosters')}
 					tooltipContent={$_('navigation.openBooster')}
 				>

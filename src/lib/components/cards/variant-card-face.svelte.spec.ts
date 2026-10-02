@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { page } from '@vitest/browser/context';
+import { page } from 'vitest/browser';
 import { mockCards } from '$lib/api/mocks/cards';
 import VariantCardFace from './variant-card-face.svelte';
 
 describe('VariantCardFace', () => {
-	it('shows the card description on Standard and hides it on Full art', async () => {
+	it('keeps descriptions in the detail, outside Standard and Full art objects', async () => {
 		const standard = mockCards.find((card) => card.variant.styles.includes('NORMAL'))!;
 		const fullArt = mockCards.find((card) => card.variant.styles.includes('FULL_ART'))!;
 		const result = render(VariantCardFace, { card: standard });
-		await expect.element(page.getByText(standard.shortDescription)).toBeVisible();
+		await expect.element(page.getByText(standard.shortDescription)).not.toBeInTheDocument();
 		result.unmount();
 		render(VariantCardFace, { card: fullArt });
 		await expect.element(page.getByText(fullArt.shortDescription)).not.toBeInTheDocument();

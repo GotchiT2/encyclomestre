@@ -2,12 +2,14 @@
 	import { currentSession } from '$lib/auth/session';
 	import { getWikiForgePublicPages, toPublicPage } from '$lib/api';
 	import GuestLanding from '$lib/components/landing/guest-landing.svelte';
-	import PlayerDashboard from '$lib/components/landing/player-dashboard.svelte';
-	import { Button } from '$lib/components/ui/button';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { _ } from '$lib/i18n';
 	import type { CardRecord } from '$lib/types';
-	import { currentWelcome, welcomeError, refreshCurrentWelcome } from '$lib/welcome/store';
 
+	$effect(() => {
+		if ($currentSession) void goto(resolve('/collection'), { replaceState: true });
+	});
 	let showcaseCard = $state<CardRecord | null>(null);
 	let hasLoadedShowcase = $state(false);
 
@@ -22,12 +24,6 @@
 
 <svelte:head><title>{$_('app.title')}</title></svelte:head>
 
-{#if $currentSession}
-	{#if $welcomeError}<p role="alert">{$_('plan.loadError')}</p>
-		<Button onclick={() => void refreshCurrentWelcome().catch(() => undefined)}
-			>{$_('completion.retry')}</Button
-		>{:else if !$currentWelcome}<p role="status">{$_('completion.loading')}</p>{/if}
-	<PlayerDashboard username={$currentSession.user.username} dashboard={$currentWelcome} />
-{:else}
+{#if !$currentSession}
 	<GuestLanding {showcaseCard} />
 {/if}

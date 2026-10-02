@@ -9,13 +9,12 @@
 	}: { eyebrow: string; title: string; description?: string; actions?: Snippet } = $props();
 </script>
 
-<header class="forge-divider relative overflow-hidden pt-1 sm:pt-3">
-	<div class="absolute top-0 left-0 h-px w-28 bg-gradient-to-r from-primary to-transparent"></div>
+<header class="arcade-page-heading border-b border-border pb-4 pt-1">
 	<div class="flex flex-wrap items-end justify-between gap-3 sm:gap-4">
 		<div class="min-w-0 max-w-3xl">
 			<p class="forge-label">{eyebrow}</p>
 			<h1
-				class="mt-1.5 font-serif text-3xl leading-none font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl"
+				class="mt-1.5 font-heading text-4xl leading-none font-black tracking-tight text-foreground sm:text-5xl lg:text-6xl"
 			>
 				{title}
 			</h1>

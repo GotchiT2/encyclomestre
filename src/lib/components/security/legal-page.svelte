@@ -10,10 +10,10 @@
 	} as const;
 </script>
 
-<section class="mx-auto max-w-3xl space-y-6 py-8">
+<section class="mx-auto max-w-3xl space-y-8 leading-relaxed py-8">
 	<a href={resolve('/')} class="text-sm underline">{$_('plan.legal.home')}</a>
-	<h1 class="text-3xl font-semibold">{$_('plan.legal.' + kind)}</h1>
-	<p class="rounded border border-primary/40 p-4" role="note">{$_('plan.legal.draft')}</p>
+	<h1 class="text-5xl font-black">{$_('plan.legal.' + kind)}</h1>
+	<p class="border-l-4 border-primary bg-card p-4" role="note">{$_('plan.legal.draft')}</p>
 	{#each sections[kind] as section (section)}<article class="forge-panel space-y-2 p-4">
 			<h2 class="text-xl font-semibold">{$_('plan.legal.sections.' + section)}</h2>
 			<p class="text-muted-foreground">{$_('plan.legal.incomplete')}</p>

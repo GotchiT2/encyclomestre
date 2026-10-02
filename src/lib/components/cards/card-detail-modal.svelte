@@ -245,10 +245,8 @@
 						<CardTile
 							interactive={false}
 							{card}
-							stateIndicatorsOffset={10}
 							tags={tags.filter((tag) => (assignments[card.id] ?? []).includes(tag.id))}
 							showFriendOwners
-							tagDisplay="full"
 							onOrientationChange={(landscape) => (landscapePreview = landscape)}
 						/>
 					</div>

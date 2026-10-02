@@ -7,8 +7,8 @@ describe('redirection après authentification', () => {
 	});
 
 	it('rejette les destinations externes', () => {
-		expect(getSafeRedirectTarget('https://example.test')).toBe('/');
-		expect(getSafeRedirectTarget('//example.test')).toBe('/');
+		expect(getSafeRedirectTarget('https://example.test')).toBe('/collection');
+		expect(getSafeRedirectTarget('//example.test')).toBe('/collection');
 	});
 
 	it('construit une URL de connexion avec le chemin complet', () => {

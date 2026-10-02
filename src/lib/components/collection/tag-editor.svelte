@@ -8,10 +8,12 @@
 
 	let {
 		open = $bindable(false),
+		showTrigger = true,
 		tags = $bindable<CollectionTag[]>([]),
 		assignments = $bindable<CollectionTagAssignments>({})
 	}: {
 		open: boolean;
+		showTrigger?: boolean;
 		tags: CollectionTag[];
 		assignments: CollectionTagAssignments;
 	} = $props();
@@ -65,9 +67,9 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Trigger class={buttonVariants({ variant: 'outline', size: 'sm' })}
-		>{$_('collection.editTags')}</Dialog.Trigger
-	>
+	{#if showTrigger}<Dialog.Trigger class={buttonVariants({ variant: 'outline', size: 'sm' })}
+			>{$_('collection.editTags')}</Dialog.Trigger
+		>{/if}
 	<Dialog.Content
 		class="max-h-[calc(100dvh-2rem)] max-w-2xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0"
 	>

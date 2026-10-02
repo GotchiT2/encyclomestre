@@ -559,3 +559,20 @@ Détail par page et commandes : `docs/plan-1-validation.md`. Les écritures de v
 
 Validation : check, ESLint, 282 tests (84 fichiers, composants navigateur compris), build sans `_app/env.js`, garde-fous du script testés avec un `.env` factice sans action distante.
 Sujet Conventional Commit proposé : `fix(deploy): inline public env at build time and harden deploy script`.
+
+
+## Plan 2 — Arcade contemporaine
+
+Plan approuvé : nouveau rendu de toutes les cartes, interface mobile, boosters immersifs silencieux et éditeur BO commun. Skill encyclomestre-ui exclu. Branche feat/arcade-redesign ; aucun déploiement ni publication serveur.
+
+- [x] Identité, composants, rendu commun et éditeur BO.
+- [x] Collection, catalogue, fiches, sélection et filtres compacts.
+- [x] Galerie de boosters, cérémonie, Express et reprise.
+- [x] Transactions, communauté, compte et progression.
+- [x] Mocks, scénarios aux cinq largeurs, contrôles FO/BO et parité du moteur.
+
+Validation finale : checks FO/BO sans diagnostic ; 305 tests FO et 77 tests BO, 62 scénarios BO ; parcours FO aux cinq largeurs, cibles tactiles, texte agrandi, sélection, filtres directs, ouvertures, reprise, conflits, compte et avatar. ESLint ciblé, builds statiques sans mocks, parité du moteur et diff validés. Voir `docs/plan-2-validation.md`.
+
+Les certificats et `vite.config.ts` sont conservés. GitNexus : index FO reconstruit après corruption FTS ; contrôle des changements avant commit. Aucun push, déploiement ou publication réelle de modèle.
+
+Sujet Conventional Commit : `feat(ui): redesign player experience with Arcade identity`.

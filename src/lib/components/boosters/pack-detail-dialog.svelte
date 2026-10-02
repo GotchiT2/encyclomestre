@@ -30,8 +30,8 @@
 	const displayDescription = $derived(knownDescription ? $_(knownDescription) : pack.description);
 	const canOpen = $derived(pack.status === 'OPEN' && Boolean(pack.credit?.available));
 	const date = (value?: string) =>
-		value
-			? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeZone: 'UTC' }).format(
+		value && Number.isFinite(Date.parse(value))
+			? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeStyle: 'short' }).format(
 					new Date(value)
 				)
 			: null;

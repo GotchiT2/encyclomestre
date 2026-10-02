@@ -8,6 +8,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import CoinsIcon from '@lucide/svelte/icons/coins';
+	import { MediaQuery } from 'svelte/reactivity';
 	import type {
 		CardRecord,
 		CreateTradeOfferInput,
@@ -54,6 +55,7 @@
 	let submitting = $state(false);
 	let activeSide = $state<TradeSide>('offered');
 	let termsExpanded = $state(false);
+	const desktop = new MediaQuery('(min-width: 1024px)');
 	const offeredMoneyTooHigh = $derived(offeredMoney > availableMoney);
 	const partnerName = $derived(partner?.displayName || partner?.username || '');
 	$effect(() => {
@@ -155,20 +157,20 @@
 			})}
 		</div>
 		<nav
-			class="grid shrink-0 grid-cols-2 border-b border-primary/25"
+			class="grid shrink-0 grid-cols-2 border-b border-primary/25 lg:hidden"
 			aria-label={$_('trades.editor_tabs')}
 		>
 			<Button
 				variant={activeSide === 'offered' ? 'default' : 'ghost'}
 				class="min-w-0 rounded-none py-4 text-xs sm:text-sm"
 				aria-selected={activeSide === 'offered'}
-				onclick={() => (activeSide = 'offered')}>{$_('trades.my_cards')}</Button
+				onclick={() => (activeSide = 'offered')}>{$_('arcade.iGive')} · {offeredIds.length}</Button
 			><Button
 				variant={activeSide === 'requested' ? 'default' : 'ghost'}
 				class="min-w-0 truncate rounded-none py-4 text-xs sm:text-sm"
 				aria-selected={activeSide === 'requested'}
 				onclick={() => (activeSide = 'requested')}
-				>{$_('trades.partner_cards', { values: { user: partnerName } })}</Button
+				>{$_('arcade.iReceive')} · {requestedIds.length}</Button
 			>
 		</nav>
 		<div class="shrink-0 border-b border-primary/20 bg-card/75 px-3 py-2 sm:px-4">
@@ -220,24 +222,33 @@
 				</div>
 			{/if}
 		</div>
-		<div class="min-h-0 flex-1 overflow-y-auto p-2 sm:p-3" data-testid="trade-editor-card-selector">
-			<div class:hidden={activeSide !== 'offered'}>
+		<div
+			class="min-h-0 flex-1 overflow-y-auto p-2 sm:p-3 lg:grid lg:grid-cols-2 lg:gap-4"
+			data-testid="trade-editor-card-selector"
+		>
+			<div class:hidden={!desktop.current && activeSide !== 'offered'} class="min-w-0">
+				<h3 class="mb-3 hidden border-b border-border pb-2 text-2xl lg:block">
+					{$_('arcade.iGive')} · {offeredIds.length}
+				</h3>
 				<TradeCardPanel
 					title={$_('trades.your_panel')}
 					showTitle={false}
 					scopeKey={currentUserId}
-					active={activeSide === 'offered'}
+					active={desktop.current || activeSide === 'offered'}
 					initialCards={initialOwnedCards}
 					loadCards={loadOwnedCards}
 					bind:selectedIds={offeredIds}
 				/>
 			</div>
-			<div class:hidden={activeSide !== 'requested'}>
+			<div class:hidden={!desktop.current && activeSide !== 'requested'} class="min-w-0">
+				<h3 class="mb-3 hidden border-b border-border pb-2 text-2xl lg:block">
+					{$_('arcade.iReceive')} · {requestedIds.length}
+				</h3>
 				<TradeCardPanel
 					title={$_('trades.partner_panel')}
 					showTitle={false}
 					scopeKey={partner?.id ?? 'no-partner'}
-					active={activeSide === 'requested'}
+					active={desktop.current || activeSide === 'requested'}
 					initialCards={initialPartnerCards}
 					loadCards={loadPartnerCards}
 					bind:selectedIds={requestedIds}

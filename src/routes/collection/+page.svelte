@@ -7,8 +7,8 @@
 	import CardDetailModal from '$lib/components/cards/card-detail-modal.svelte';
 	import CardGrid from '$lib/components/collection/card-grid.svelte';
 	import CollectionResultSummary from '$lib/components/collection/collection-result-summary.svelte';
-	import FilterControls from '$lib/components/collection/filter-controls.svelte';
-	import FilterShell from '$lib/components/layout/filter-shell.svelte';
+	import CompactFilters from '$lib/components/collection/compact-filters.svelte';
+	import { arcadePreferences, updateArcadePreferences } from '$lib/arcade/preferences';
 	import { removeWikiForgeTag } from '$lib/api/wikiforge';
 	import SelectionPanel from '$lib/components/collection/selection-panel.svelte';
 	import TagEditor from '$lib/components/collection/tag-editor.svelte';
@@ -31,6 +31,7 @@
 		unprotectWikiForgeCard,
 		unprotectWikiForgeCards
 	} from '$lib/api';
+	import { invalidateArticleContexts } from '$lib/arcade/article-context';
 	import { _ } from '$lib/i18n';
 	import { realtimeRefresh, refreshIncludes } from '$lib/realtime/resource-refresh';
 	import type {
@@ -84,15 +85,6 @@
 	onDestroy(() => requestController?.abort());
 	let requestController: AbortController | null = null;
 	let handledRealtimeRevision = 0;
-	const activeFilterCount = $derived(
-		(query ? 1 : 0) +
-			variantIds.length +
-			tagFilterIds.length +
-			(sortBy !== 'acquiredDate' ? 1 : 0) +
-			(duplicate !== 'all' ? 1 : 0) +
-			(protection !== 'all' ? 1 : 0) +
-			(wishlistOwnerId ? 1 : 0)
-	);
 	const selectedUnprotectedCount = $derived(
 		cards.filter((card) => selectedCardIds.includes(card.id) && !card.userProtected).length
 	);
@@ -338,6 +330,7 @@
 			String(card.baseCardId ?? card.catalogueId ?? card.id)
 		);
 		wishlists = await getWishlists();
+		invalidateArticleContexts();
 	}
 
 	async function toggleProtection(card: CardRecord) {
@@ -425,28 +418,24 @@
 		description={$_('collection.description')}
 	/>
 	<CollectionProgress />
-	<div class="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
-		<FilterShell activeCount={activeFilterCount} description={$_('collection.filtersDescription')}>
-			<FilterControls
-				bind:query
-				bind:sortBy
-				bind:variantIds
-				bind:tagFilterIds
-				bind:duplicate
-				bind:protected={protection}
-				bind:wishlistOwnerId
-				{wishlistOwners}
-				{tags}
-				untaggedOption="-1"
-				canonical
-				onOpenTagEditor={() => (isTagEditorOpen = true)}
-				onClear={clearFilters}
-			/>
-		</FilterShell>
+	<div class="grid gap-4">
+		<CompactFilters
+			bind:query
+			bind:sortBy
+			bind:variantIds
+			bind:tagFilterIds
+			bind:duplicate
+			bind:protected={protection}
+			bind:wishlistOwnerId
+			{wishlistOwners}
+			{tags}
+			onOpenTagEditor={() => (isTagEditorOpen = true)}
+			onClear={clearFilters}
+		/>
 
-		<div class="flex min-w-0 flex-col gap-6">
+		<div class="flex min-w-0 flex-col gap-3">
 			<div class="flex flex-wrap items-center gap-2">
-				<TagEditor bind:open={isTagEditorOpen} bind:tags bind:assignments />
+				<TagEditor showTrigger={false} bind:open={isTagEditorOpen} bind:tags bind:assignments />
 				<Button
 					size="sm"
 					variant={isSelectionMode ? 'default' : 'outline'}
@@ -459,11 +448,21 @@
 						}
 					}}
 				>
-					{$_('collection.selectCards')}
+					{$_('arcade.select')}
 				</Button>
 			</div>
 
-			<CollectionResultSummary {total} loaded={cards.length} {hasNext} />
+			<div class="flex flex-wrap items-center justify-between gap-2">
+				<div class="flex gap-1" aria-label={$_('arcade.density')}>
+					{#each ['grid', 'list'] as density (density)}<Button
+							variant={$arcadePreferences.density === density ? 'default' : 'outline'}
+							aria-pressed={$arcadePreferences.density === density}
+							onclick={() => updateArcadePreferences({ density: density as 'grid' | 'list' })}
+							>{$_('arcade.' + density)}</Button
+						>{/each}
+				</div>
+				<CollectionResultSummary {total} loaded={cards.length} {hasNext} />
+			</div>
 			{#if loading && !cards.length}
 				<p class="forge-label">{$_('collection.loading')}</p>
 			{:else if failed}
@@ -475,6 +474,7 @@
 				</div>
 			{:else if cards.length}
 				<CardGrid
+					density={$arcadePreferences.density}
 					{cards}
 					{tags}
 					{assignments}

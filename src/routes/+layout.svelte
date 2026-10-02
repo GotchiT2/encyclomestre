@@ -1,8 +1,5 @@
 <script lang="ts">
 	import '$lib/i18n';
-	import '@fontsource-variable/inter/wght.css';
-	import '@fontsource-variable/source-sans-3/wght.css';
-	import '@fontsource-variable/source-sans-3/wght-italic.css';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import {
@@ -15,11 +12,9 @@
 	import { getCurrentUser } from '$lib/api';
 	import { setNsfwFilterSettings } from '$lib/content/nsfw-filter';
 	import AppSidebar from '$lib/components/layout/app-sidebar.svelte';
-	import ForgeStarfield from '$lib/components/layout/forge-starfield.svelte';
 	import MobileTabBar from '$lib/components/layout/mobile-tab-bar.svelte';
 	import MobileTopBar from '$lib/components/layout/mobile-top-bar.svelte';
 	import NotificationStream from '$lib/components/notifications/notification-stream.svelte';
-	import PlayerMoney from '$lib/components/layout/player-money.svelte';
 	import AuctionSession from '$lib/components/market/auction-session.svelte';
 	import CardDetailHost from '$lib/components/cards/card-detail-host.svelte';
 	import GlobalBanners from '$lib/components/layout/global-banners.svelte';
@@ -31,6 +26,9 @@
 	import { realtimeRefresh, refreshIncludes } from '$lib/realtime/resource-refresh';
 	import { clearCurrentWelcome, refreshCurrentWelcome } from '$lib/welcome/store';
 	import { onMount } from 'svelte';
+	import { hydrateArcadePreferences } from '$lib/arcade/preferences';
+	import { clearOpeningReceipts } from '$lib/arcade/opening-receipt';
+	import { invalidateArticleContexts } from '$lib/arcade/article-context';
 
 	let { children } = $props();
 
@@ -39,6 +37,19 @@
 		!document.cookie.split('; ').some((entry) => entry === `${SIDEBAR_COOKIE_NAME}=false`)
 	);
 	let handledWelcomeRevision = 0;
+	let lastReceiptAccount: string | null = null;
+	let contextRevision = 0;
+	$effect(() => {
+		const account = $currentSession?.user.id ?? null;
+		if (lastReceiptAccount && lastReceiptAccount !== account) clearOpeningReceipts(sessionStorage);
+		lastReceiptAccount = account;
+	});
+	$effect(() => {
+		const refresh = $realtimeRefresh;
+		if (refresh.revision === contextRevision) return;
+		contextRevision = refresh.revision;
+		if (refreshIncludes(refresh, 'collection')) invalidateArticleContexts();
+	});
 	let welcomeLoadedForUserId: string | null = null;
 
 	async function refreshWelcomeForSession(force = false) {
@@ -53,6 +64,7 @@
 	}
 
 	onMount(() => {
+		hydrateArcadePreferences(localStorage);
 		const session = hydrateSession(localStorage);
 		if (!session) return;
 		void getCurrentUser()
@@ -94,7 +106,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<meta name="theme-color" content="#071638" />
+	<meta name="theme-color" content="#171918" />
 	<title>{$_('app.title')}</title>
 </svelte:head>
 
@@ -102,15 +114,13 @@
 	<AuctionSession />
 	{#if $currentSession}<AppSidebar />{/if}
 	{#if $currentSession}<NotificationStream />{/if}
-	<MobileTopBar />
 
 	<Sidebar.Inset class="forge-scene bg-transparent">
-		<ForgeStarfield />
+		<MobileTopBar />
 		<GlobalBanners />
-		<div class="pointer-events-none fixed top-4 right-5 z-30 hidden md:block lg:right-8">
-			<div class="pointer-events-auto"><PlayerMoney /></div>
-		</div>
-		<div class="mx-auto w-full max-w-screen-2xl px-4 pt-20 pb-28 sm:px-5 md:pt-8 md:pb-10 lg:px-8">
+		<div
+			class="mx-auto w-full max-w-screen-2xl arcade-page px-3 pt-20 pb-24 sm:px-5 md:pt-6 md:pb-10 lg:px-8"
+		>
 			{@render children()}
 		</div>
 	</Sidebar.Inset>

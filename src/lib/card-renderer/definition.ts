@@ -65,6 +65,7 @@ export interface RenderData {
   maximum?: number;
   blurred?: boolean;
   boosterLogo?: string;
+  edition?: string;
 }
 export const designOptions = {
   theme: themes,

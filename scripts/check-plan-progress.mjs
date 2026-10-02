@@ -39,40 +39,23 @@ try {
 					user: { id: '1', username: 'Demo', role: 'user', money: 10000 }
 				})
 			);
-			localStorage.setItem('wikiforge.booster.quick-opening', 'true');
+			localStorage.setItem(
+				'encyclomestre.arcade.preferences',
+				JSON.stringify({ opening: 'express' })
+			);
 			sessionStorage.setItem('wikiforge-plan-scenario', 'stock-limited');
 		});
 		const page = await context.newPage();
 		page.setDefaultTimeout(15000);
 		page.on('pageerror', (error) => errors.push(error.message));
 		await page.goto(base + '/boosters?pack=1');
-		await page.getByRole('button', { name: /Tout ouvrir/ }).click();
-		await page.getByText('2 boosters ouverts · 9 crédits restants', { exact: true }).waitFor();
-		assert.ok(
-			await page
-				.getByRole('button', { name: 'Ouvrir le booster suivant', exact: true })
-				.isDisabled()
-		);
-		const deck = page.locator('.booster-deck');
-		assert.equal(await deck.locator('[data-slot-index]').count(), 10);
-		await deck.evaluate((el) => el.scrollTo({ left: el.scrollWidth, behavior: 'instant' }));
-		await page.getByText('Carte 10 / 10', { exact: true }).waitFor();
-		if (width <= 768)
-			for (const button of await page
-				.locator(
-					'.booster-stage [data-booster-interactive] > button, .booster-mobile-navigation button'
-				)
-				.all()) {
-				const box = await button.boundingBox();
-				if (box)
-					assert.ok(
-						box.x >= 0 &&
-							box.x + box.width <= width + 1 &&
-							box.y >= 64 &&
-							box.y + box.height <= 870,
-						'Opening controls clear the mobile bars'
-					);
-			}
+		await page.getByRole('button', { name: 'Ouvrir le lot disponible', exact: true }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Confirmer', exact: true }).click();
+		const summary = page.getByRole('dialog');
+		await summary.getByText('2 boosters ouverts · 9 crédits restants', { exact: true }).waitFor();
+		assert.equal(await summary.getByTestId('card-tile').count(), 10);
+		await summary.getByRole('button', { name: 'Quitter', exact: true }).click();
+		assert.ok(await page.getByTestId('booster-open-one').isDisabled());
 		assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
 		await page.screenshot({ path: join(folder, 'booster-batch-' + width + '.png') });
 		await page.evaluate(() => sessionStorage.removeItem('wikiforge-plan-scenario'));

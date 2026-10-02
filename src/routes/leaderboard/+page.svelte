@@ -89,7 +89,7 @@
 		<div class="overflow-hidden border border-primary/25 bg-card">
 			{#each board.top as entry (entry.id)}<a
 					href={resolve('/users/[id]', { id: entry.id })}
-					class="grid grid-cols-[3rem_2.5rem_minmax(0,1fr)_auto] items-center gap-3 border-b border-primary/15 px-3 py-2 transition-colors hover:bg-primary/10"
+					class="min-h-16 grid grid-cols-[2rem_2.5rem_minmax(0,1fr)_auto] items-center gap-3 border-b border-primary/15 px-3 py-2 transition-colors hover:bg-primary/10"
 					class:bg-primary-15={entry.id === $currentSession?.user.id}
 					><strong class="text-center font-heading text-xl text-primary">{entry.rank}</strong
 					><UserAvatar image={entry.image} crop={entry.imageCrop} name={entry.name} /><span
@@ -123,7 +123,7 @@
 				<div class="border border-energy/35 bg-card">
 					{#each board.around as entry (entry.id)}<a
 							href={resolve('/users/[id]', { id: entry.id })}
-							class="grid grid-cols-[3rem_2.5rem_minmax(0,1fr)_auto] items-center gap-3 border-b border-primary/15 px-3 py-2"
+							class="min-h-16 grid grid-cols-[2rem_2.5rem_minmax(0,1fr)_auto] items-center gap-3 border-b border-primary/15 px-3 py-2"
 							class:bg-primary-15={entry.id === $currentSession?.user.id}
 							><strong class="text-center font-heading text-xl text-primary">{entry.rank}</strong
 							><UserAvatar image={entry.image} crop={entry.imageCrop} name={entry.name} /><span

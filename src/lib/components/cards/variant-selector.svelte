@@ -11,6 +11,7 @@
 		selected = $bindable<number[]>([]),
 		name = 'variant',
 		compact = false,
+		inline = false,
 		multiple = true,
 		options,
 		onChange
@@ -18,6 +19,7 @@
 		selected?: number[];
 		name?: string;
 		compact?: boolean;
+		inline?: boolean;
 		multiple?: boolean;
 		options?: VariantDefinition[];
 		onChange?: () => void;
@@ -83,56 +85,69 @@
 	}
 </script>
 
-<Popover.Root bind:open>
-	<Popover.Trigger>
-		{#snippet child({ props })}<Button
-				{...props}
-				variant="outline"
-				size={compact ? 'sm' : 'default'}
-				class="max-w-full min-w-0 justify-between"
-				aria-label={$_('ux.variants') + ': ' + label}
-				><span class="truncate">{label}</span><ChevronDownIcon /></Button
-			>{/snippet}
-	</Popover.Trigger>
-	<Popover.Portal>
-		<Popover.Content
-			align="start"
-			sideOffset={4}
-			style={modalZIndex(layer + 2)}
-			class="w-72 max-w-[calc(100vw-2rem)] border border-primary/30 bg-card p-3 shadow-xl"
-			onkeydown={move}
+{#snippet selector()}
+	<div class="flex flex-col gap-2">
+		<input
+			type="search"
+			bind:value={search}
+			aria-label={$_('ux.variantSearch')}
+			placeholder={$_('ux.variantSearch')}
+			class="h-11 min-w-0 border border-border bg-background px-3"
+		/>
+		<Button
+			variant="ghost"
+			onclick={() => {
+				selected = [];
+				onChange?.();
+			}}>{$_('ux.clear')}</Button
 		>
-			<div class="flex flex-col gap-2">
-				<input
-					type="search"
-					bind:value={search}
-					aria-label={$_('ux.variantSearch')}
-					placeholder={$_('ux.variantSearch')}
-					class="h-11 min-w-0 border border-border bg-background px-3"
-				/>
-				<Button
-					variant="ghost"
-					onclick={() => {
-						selected = [];
-						onChange?.();
-					}}>{$_('ux.clear')}</Button
-				>
-				{#if error}<Button variant="outline" onclick={load}>{$_('completion.retry')}</Button>{/if}
-				<div class="max-h-64 overflow-y-auto" role="group" aria-label={$_('ux.variants')}>
-					{#each choices as variant (variant.id)}<button
-							type="button"
-							data-variant-option
-							class="flex min-h-11 w-full items-center gap-2 px-2 text-left hover:bg-secondary focus-visible:outline-2 focus-visible:outline-primary"
-							aria-pressed={selected.includes(variant.id)}
-							onclick={() => toggle(variant.id)}
-							><span aria-hidden="true">{selected.includes(variant.id) ? '✓' : '○'}</span><span
-								class="size-3 shrink-0 border"
-								style:background={variant.color}
-							></span><span class="break-words">{variant.name}</span></button
-						>{:else}<p class="p-2 text-sm text-muted-foreground">{$_('ux.noVariants')}</p>{/each}
-				</div>
-			</div>
-		</Popover.Content>
-	</Popover.Portal>
-</Popover.Root>
+		{#if error}<Button variant="outline" onclick={load}>{$_('completion.retry')}</Button>{/if}
+		<div class="max-h-64 overflow-y-auto" role="group" aria-label={$_('ux.variants')}>
+			{#each choices as variant (variant.id)}<button
+					type="button"
+					data-variant-option
+					class="flex min-h-11 w-full items-center gap-2 px-2 text-left hover:bg-secondary focus-visible:outline-2 focus-visible:outline-primary"
+					aria-pressed={selected.includes(variant.id)}
+					onclick={() => toggle(variant.id)}
+					><span aria-hidden="true">{selected.includes(variant.id) ? '✓' : '○'}</span><span
+						class="size-3 shrink-0 border"
+						style:background={variant.color}
+					></span><span class="break-words">{variant.name}</span></button
+				>{:else}<p class="p-2 text-sm text-muted-foreground">{$_('ux.noVariants')}</p>{/each}
+		</div>
+	</div>
+{/snippet}
+{#if inline}<div
+		onkeydown={move}
+		role="toolbar"
+		aria-label={$_('ux.variants')}
+		aria-orientation="vertical"
+		tabindex="-1"
+	>
+		{@render selector()}
+	</div>{:else}
+	<Popover.Root bind:open>
+		<Popover.Trigger>
+			{#snippet child({ props })}<Button
+					{...props}
+					variant="outline"
+					size={compact ? 'sm' : 'default'}
+					class="max-w-full min-w-0 justify-between"
+					aria-label={$_('ux.variants') + ': ' + label}
+					><span class="truncate">{label}</span><ChevronDownIcon /></Button
+				>{/snippet}
+		</Popover.Trigger>
+		<Popover.Portal>
+			<Popover.Content
+				align="start"
+				sideOffset={4}
+				style={modalZIndex(layer + 2)}
+				class="w-72 max-w-[calc(100vw-2rem)] border border-primary/30 bg-card p-3 shadow-xl"
+				onkeydown={move}
+			>
+				{@render selector()}
+			</Popover.Content>
+		</Popover.Portal>
+	</Popover.Root>
+{/if}
 {#each selected as id (id)}<input type="hidden" {name} value={id} />{/each}

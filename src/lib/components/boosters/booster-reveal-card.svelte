@@ -1,22 +1,13 @@
 <script lang="ts">
-	import { onDestroy, onMount, untrack } from 'svelte';
-	import CardTile from '$lib/components/card-tile.svelte';
-	import BoosterCardBack from './booster-card-back.svelte';
+	import VariantCardFace from '$lib/components/cards/variant-card-face.svelte';
 	import { _ } from '$lib/i18n';
-	import { cn } from '$lib/utils';
-	import { cardHasStyle, type CardRecord } from '$lib/types';
-	import {
-		hasUsableCardImage,
-		isLandscapeCardImage
-	} from '$lib/components/cards/card-image-orientation';
-	const particles = Array.from({ length: 8 }, (_, index) => index);
-
+	import type { CardRecord } from '$lib/types';
 	let {
 		card,
 		revealed,
 		interactive = true,
 		detailsEnabled = true,
-		class: className,
+		class: className = '',
 		onReveal,
 		onOpenDetail,
 		onOrientationChange = () => undefined
@@ -30,126 +21,39 @@
 		onOpenDetail: () => void;
 		onOrientationChange?: (landscape: boolean) => void;
 	} = $props();
-
-	let propagating = $state(false);
-	let previousRevealed = $state(false);
-	let propagationTimer: number | undefined;
-	let propagationFrame: number | undefined;
 	let landscape = $state(false);
-	let displayedLandscape = $state(false);
-	let inspectedImageUrl: string | null = null;
-	let orientationTimer: number | undefined;
-	let reducedMotion = $state(false);
-	const fullArt = $derived(cardHasStyle(card, 'FULL_ART'));
-	const actionable = $derived((!revealed && interactive) || (revealed && detailsEnabled));
-
-	function propagate() {
-		window.clearTimeout(propagationTimer);
-		window.cancelAnimationFrame(propagationFrame ?? 0);
-		propagating = false;
-		propagationFrame = requestAnimationFrame(() => {
-			propagating = true;
-			propagationTimer = window.setTimeout(() => (propagating = false), 1_250);
-		});
-	}
-
-	function activate() {
-		if (revealed) onOpenDetail();
-		else onReveal();
-	}
-
-	$effect(() => {
-		if (revealed && !previousRevealed) propagate();
-		previousRevealed = revealed;
-	});
-
-	$effect(() => {
-		const imageUrl = card.imageUrl;
-		if (imageUrl === inspectedImageUrl) return;
-		inspectedImageUrl = imageUrl;
-		landscape = false;
-		untrack(() => onOrientationChange(false));
-		displayedLandscape = false;
-		if (!fullArt || !hasUsableCardImage(imageUrl) || typeof Image === 'undefined') return;
-		const image = new Image();
-		image.onload = () => {
-			landscape = isLandscapeCardImage(image.naturalWidth, image.naturalHeight);
-			onOrientationChange(landscape);
-		};
-		image.onerror = () => {
-			landscape = false;
-			onOrientationChange(false);
-		};
-		image.src = imageUrl;
-	});
-
-	$effect(() => {
-		window.clearTimeout(orientationTimer);
-		if (!revealed || !landscape) {
-			displayedLandscape = false;
-			return;
-		}
-		orientationTimer = window.setTimeout(
-			() => (displayedLandscape = true),
-			reducedMotion ? 0 : 300
-		);
-	});
-
-	onMount(() => {
-		const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-		const update = () => (reducedMotion = media.matches);
-		update();
-		media.addEventListener('change', update);
-		return () => media.removeEventListener('change', update);
-	});
-
-	onDestroy(() => {
-		window.clearTimeout(propagationTimer);
-		window.cancelAnimationFrame(propagationFrame ?? 0);
-		window.clearTimeout(orientationTimer);
-	});
 </script>
 
 <div
-	class={cn('booster-reveal-card', className)}
+	class={'booster-reveal-card ' + className}
 	class:is-revealed={revealed}
-	class:is-full-art={fullArt}
-	class:is-landscape={displayedLandscape}
-	data-front-orientation={landscape ? 'landscape' : 'portrait'}
-	class:is-propagating={propagating}
-	style={`--variant-color:${card.variant.color}`}
-	data-render-key={card.variant.renderKey}
+	class:is-landscape={revealed && landscape}
 	data-revealed={revealed}
+	data-front-orientation={landscape ? 'landscape' : 'portrait'}
+	style={`--variant-color:${card.variant.color}`}
 >
-	<div class="booster-variant-aura" aria-hidden="true"></div>
-	<div class="booster-light-propagation" aria-hidden="true">
-		{#each [0, 1, 2] as wave (wave)}<span style={`--wave-index:${wave}`}></span>{/each}
-	</div>
-	{#if card.variant.renderKey !== 'standard'}
-		<div class="booster-particles" aria-hidden="true">
-			{#each particles as index (index)}<span style={`--particle-index:${index}`}></span>{/each}
-		</div>
-	{/if}
 	<button
-		type="button"
 		class="booster-card-button"
-		disabled={!actionable}
-		onclick={activate}
-		onpointerdown={(event) => {
-			if (event.pointerType !== 'mouse') propagate();
-		}}
+		type="button"
+		disabled={revealed ? !detailsEnabled : !interactive}
+		onclick={() => (revealed ? onOpenDetail() : onReveal())}
 		aria-label={revealed
 			? $_('boosters.open_card_detail', { values: { title: card.title } })
 			: $_('boosters.reveal_card', { values: { variant: card.variant.name } })}
-		data-booster-interactive
 	>
 		<span class="booster-card-flipper">
-			<span class="booster-card-face booster-card-front" aria-hidden={!revealed}>
-				<CardTile {card} interactive={false} showFriendOwners={false} />
-			</span>
-			<span class="booster-card-face booster-card-reverse">
-				<BoosterCardBack color={card.variant.color} {fullArt} renderKey={card.variant.renderKey} />
-			</span>
+			<span class="booster-card-front" aria-hidden={!revealed}
+				><VariantCardFace
+					{card}
+					onOrientationChange={(value) => {
+						landscape = value;
+						onOrientationChange(value);
+					}}
+				/></span
+			>
+			<span class="booster-card-reverse" aria-hidden={revealed}
+				><span class="reverse-mark">✦</span><span>{$_('navigation.brand')}</span></span
+			>
 		</span>
 	</button>
 	<span class="sr-only" aria-live="polite">{revealed ? card.title : ''}</span>
@@ -157,245 +61,71 @@
 
 <style>
 	.booster-reveal-card {
-		position: relative;
-		width: 13rem;
-		aspect-ratio: 862 / 1221;
-		perspective: 1200px;
-		isolation: isolate;
-		transition:
-			width 320ms ease,
-			aspect-ratio 320ms ease;
+		width: 100%;
+		aspect-ratio: 1/1.416;
+		perspective: 1000px;
+		min-width: 0;
 	}
 	.booster-reveal-card.is-landscape {
-		width: 19rem;
-		aspect-ratio: 1221/862;
+		aspect-ratio: 1.416/1;
 	}
-
-	.booster-variant-aura {
-		position: absolute;
-		inset: -9%;
-		z-index: -2;
-		background: radial-gradient(
-			ellipse,
-			color-mix(in srgb, var(--variant-color) 52%, transparent),
-			transparent 70%
-		);
-		filter: blur(22px);
-		opacity: 0.5;
-		animation: booster-aura 3.2s ease-in-out infinite;
-	}
-
-	.booster-light-propagation,
-	.booster-light-propagation span {
-		position: absolute;
-		inset: -11%;
-		z-index: -1;
-		pointer-events: none;
-	}
-
-	.booster-light-propagation span {
-		border: 1px solid color-mix(in srgb, var(--variant-color) 38%, transparent);
-		background: radial-gradient(
-			ellipse,
-			transparent 48%,
-			color-mix(in srgb, var(--variant-color) 20%, transparent) 62%,
-			transparent 78%
-		);
-		box-shadow: 0 0 1.75rem color-mix(in srgb, var(--variant-color) 30%, transparent);
-		filter: blur(12px);
-		opacity: 0;
-		transform: scale(0.78);
-	}
-
-	.booster-reveal-card:hover .booster-light-propagation span,
-	.booster-reveal-card:focus-within .booster-light-propagation span {
-		animation: booster-light-wave 2.65s ease-out infinite;
-		animation-delay: calc(var(--wave-index) * 520ms);
-	}
-
-	.is-propagating .booster-light-propagation span {
-		animation: booster-light-wave 1.7s ease-out both;
-		animation-delay: calc(var(--wave-index) * 210ms);
-	}
-
-	.booster-reveal-card:hover .booster-variant-aura,
-	.booster-reveal-card:focus-within .booster-variant-aura,
-	.is-propagating .booster-variant-aura {
-		opacity: 0.72;
-		filter: blur(27px);
-	}
-
-	.booster-card-button,
-	.booster-card-flipper,
-	.booster-card-face {
-		position: absolute;
-		inset: 0;
+	.booster-card-button {
+		position: relative;
 		display: block;
 		width: 100%;
 		height: 100%;
-	}
-
-	.booster-card-button {
-		cursor: pointer;
+		padding: 0;
 		border: 0;
 		background: transparent;
-		outline: none;
+		cursor: pointer;
 	}
-
-	.booster-card-button:focus-visible {
-		outline: 2px solid var(--ring);
-		outline-offset: 8px;
-	}
-
-	.booster-card-button:disabled {
-		cursor: default;
-	}
-
 	.booster-card-flipper {
+		position: absolute;
+		inset: 0;
 		transform-style: preserve-3d;
-		transition: transform 620ms cubic-bezier(0.2, 0.75, 0.2, 1.12);
-	}
-
-	.is-revealed .booster-card-flipper {
 		transform: rotateY(180deg);
+		transition: transform 360ms cubic-bezier(0.2, 0.7, 0.2, 1);
 	}
-
-	.booster-card-face {
+	.is-revealed .booster-card-flipper {
+		transform: rotateY(0);
+	}
+	.booster-card-front,
+	.booster-card-reverse {
+		position: absolute;
+		inset: 0;
 		backface-visibility: hidden;
 	}
-
 	.booster-card-front {
-		transform: rotateY(180deg);
+		display: grid;
+		align-items: center;
 	}
-
-	.booster-card-front :global(.wikiforge-card-size) {
-		width: 100%;
-	}
-
 	.booster-card-reverse {
-		filter: drop-shadow(0 16px 18px rgb(0 0 0 / 55%));
+		transform: rotateY(180deg);
+		border: 2px solid var(--variant-color);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+		background: repeating-linear-gradient(135deg, #171918 0 12px, #242923 12px 13px);
+		color: #efebd9;
+		clip-path: polygon(4% 0, 96% 0, 100% 4%, 100% 96%, 96% 100%, 4% 100%, 0 96%, 0 4%);
+		font:
+			800 1.4rem 'Barlow Condensed',
+			sans-serif;
+		text-transform: uppercase;
 	}
-
-	.is-revealed .booster-variant-aura {
-		animation: booster-reveal-flash 850ms ease-out both;
+	.reverse-mark {
+		font-size: 4rem;
+		color: var(--variant-color);
 	}
-
-	.booster-particles span {
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		z-index: -1;
-		width: 5px;
-		aspect-ratio: 1;
-		background: var(--variant-color);
-		box-shadow: 0 0 10px var(--variant-color);
-		opacity: 0;
+	.booster-card-button:focus-visible {
+		outline: 3px solid #e8ef42;
+		outline-offset: 4px;
 	}
-
-	.is-revealed .booster-particles span {
-		animation: booster-particle-burst 900ms ease-out both;
-		animation-delay: calc(var(--particle-index) * 28ms);
-	}
-
-	.is-full-art.is-revealed::after {
-		content: '';
-		position: absolute;
-		inset: -7%;
-		z-index: -1;
-		border: 2px solid color-mix(in srgb, #f8c943 70%, transparent);
-		box-shadow: 0 0 2rem rgb(207 29 29 / 78%);
-		animation: booster-full-art-signature 1.1s ease-out both;
-	}
-
-	@media (min-width: 1280px) {
-		.booster-reveal-card {
-			width: 17rem;
-		}
-	}
-
-	@keyframes booster-aura {
-		50% {
-			transform: scale(1.035);
-			opacity: 0.62;
-		}
-	}
-
-	@keyframes booster-reveal-flash {
-		0% {
-			transform: scale(0.72);
-			opacity: 0.75;
-		}
-		35% {
-			transform: scale(1.2);
-			opacity: 1;
-		}
-		100% {
-			transform: scale(1);
-			opacity: 0.42;
-		}
-	}
-
-	@keyframes booster-particle-burst {
-		0% {
-			transform: rotate(calc(var(--particle-index) * 45deg)) translateY(0);
-			opacity: 0;
-		}
-		20% {
-			opacity: 1;
-		}
-		100% {
-			transform: rotate(calc(var(--particle-index) * 45deg)) translateY(-10rem);
-			opacity: 0;
-		}
-	}
-
-	@keyframes booster-full-art-signature {
-		0% {
-			transform: scale(0.7) rotate(6deg);
-			opacity: 0;
-		}
-		45% {
-			opacity: 1;
-		}
-		100% {
-			transform: scale(1.08) rotate(0);
-			opacity: 0;
-		}
-	}
-
-	@keyframes booster-light-wave {
-		0% {
-			transform: scale(0.78);
-			opacity: 0;
-		}
-		22% {
-			opacity: 0.42;
-		}
-		100% {
-			transform: scale(1.34);
-			opacity: 0;
-		}
-	}
-
 	@media (prefers-reduced-motion: reduce) {
 		.booster-card-flipper {
 			transition: none;
-		}
-		.booster-variant-aura,
-		.is-revealed .booster-variant-aura,
-		.is-revealed .booster-particles span,
-		.is-full-art.is-revealed::after {
-			animation: none;
-		}
-		.booster-reveal-card:hover .booster-light-propagation span,
-		.booster-reveal-card:focus-within .booster-light-propagation span,
-		.is-propagating .booster-light-propagation span {
-			animation: none;
-			opacity: 0.24;
-			transform: scale(1.05);
-		}
-		.booster-particles {
-			display: none;
 		}
 	}
 </style>

@@ -49,8 +49,8 @@
 </script>
 
 <form bind:this={form} method="GET" onsubmit={submit}>
-	<Field.FieldGroup class="gap-5">
-		<Field.Field>
+	<Field.FieldGroup class="grid grid-cols-2 gap-2">
+		<Field.Field class="col-span-2">
 			<Field.FieldLabel for="codex-search" class="forge-label"
 				>{$_('codex.search')}</Field.FieldLabel
 			>
@@ -78,7 +78,7 @@
 				name="sortBy"
 				bind:value={localSortBy}
 				onchange={() => schedule(80)}
-				class="w-full"
+				class="min-h-11 w-full"
 			>
 				<option value="relevance">{$_('collection.sortRelevance')}</option>
 				<option value="name">{$_('collection.sortName')}</option>
@@ -93,7 +93,7 @@
 				name="sortDirection"
 				bind:value={localSortDirection}
 				onchange={() => schedule(80)}
-				class="w-full"
+				class="min-h-11 w-full"
 			>
 				<option value="ASC">{$_('codex.ascending')}</option>
 				<option value="DESC">{$_('codex.descending')}</option>

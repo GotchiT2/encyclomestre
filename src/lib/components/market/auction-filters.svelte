@@ -1,33 +1,34 @@
 <script lang="ts">
-	import VariantSelector from '$lib/components/cards/variant-selector.svelte';
-
+	import { untrack, onDestroy, onMount } from 'svelte';
+	import { _ } from '$lib/i18n';
 	import { currentSession } from '$lib/auth/session';
 	import { getWikiForgePublicPage } from '$lib/api/pages';
-	import { untrack } from 'svelte';
-	import { _ } from '$lib/i18n';
-
-	import { Button } from '$lib/components/ui/button';
-
-	import type { MarketQuery } from '$lib/auctions/presentation';
-
-	import { onMount } from 'svelte';
 	import { getVariants } from '$lib/api/variants';
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import * as Dialog from '$lib/components/ui/dialog';
+	import VariantSelector from '$lib/components/cards/variant-selector.svelte';
+	import type { MarketQuery } from '$lib/auctions/presentation';
 	import type { Auction } from '$lib/types';
-
 	let {
 		query,
-
 		items,
-
 		onChange
 	}: { query: MarketQuery; items: Auction[]; onChange: (patch: Record<string, string>) => void } =
 		$props();
-
-	let expanded = $state(false);
-	let wanted = $state(false);
-	let articleTitle = $state('');
+	let panel = $state<'all' | 'variants' | null>(null),
+		articleTitle = $state(''),
+		variants = $state<Auction['card']['variant'][]>([]);
+	let search = $state(''),
+		budget = $state('');
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	let selected = $state<number[]>([]);
 	$effect(() => {
-		wanted = Boolean(query.wishlist);
+		search = query.q;
+		budget = query.max;
+		selected = query.variant.split(',').filter(Boolean).map(Number);
+	});
+	$effect(() => {
 		const id = query.pageId;
 		articleTitle = '';
 		let alive = true;
@@ -38,169 +39,141 @@
 						.then((page) => {
 							if (alive) articleTitle = page.title;
 						})
-						.catch(() => {
-							if (alive) articleTitle = $_('plan.auctions.exactCard');
-						})
+						.catch(() => undefined)
 			);
 		return () => {
 			alive = false;
 		};
 	});
-
-	let selectedVariants = $derived(query.variant.split(',').filter(Boolean).map(Number));
-	let variants = $state<Auction['card']['variant'][]>([]);
 	onMount(() => {
 		void getVariants()
-			.then((value) => {
-				variants = value;
-			})
-			.catch(() => {
-				variants = items.map((item) => item.card.variant);
-			});
+			.then((value) => (variants = value))
+			.catch(() => (variants = items.map((item) => item.card.variant)));
 	});
-
+	onDestroy(() => clearTimeout(timer));
 	const active = $derived(
-		[
-			query.q,
-			query.variant,
-
-			query.min,
-			query.max,
-			query.phase,
-
-			query.sortBy === 'ENDS_AT' ? '' : query.sortBy,
-			query.sortDirection === 'ASC' ? '' : query.sortDirection
-		].filter(Boolean)
+		Number(Boolean(query.phase)) +
+			Number(Boolean(query.min)) +
+			Number(query.sortBy !== 'ENDS_AT') +
+			Number(query.sortDirection !== 'ASC')
 	);
-
-	function submit(event: SubmitEvent) {
-		event.preventDefault();
-
-		const fields = new FormData(event.currentTarget as HTMLFormElement);
-
-		fields.set('variant', selectedVariants.join(','));
-		fields.set('page', '0');
-		fields.set('wishlist', wanted ? ($currentSession?.user.id ?? '') : '');
-
-		onChange(Object.fromEntries([...fields].map(([key, value]) => [key, String(value)])));
+	function applySearch() {
+		clearTimeout(timer);
+		timer = setTimeout(() => onChange({ q: search, max: budget, page: '0' }), 400);
 	}
 </script>
 
-<details class="forge-panel p-3" bind:open={expanded}>
-	<summary class="min-h-11 cursor-pointer content-center font-bold"
-		>{$_('auctionHub.filters')} · {$_('ux.filtersSummary', {
-			values: { count: active.length }
-		})}</summary
-	>
-
-	{#if active.length}<p class="mb-2 break-words text-xs text-muted-foreground">
-			{active
-				.map((value) => variants.find((v) => String(v.id) === value)?.name ?? value)
-				.join(' · ')}
-		</p>{/if}
-
-	{#if query.pageId}<div class="mb-3 flex flex-wrap items-center gap-2">
+<div class="grid gap-2">
+	<div class="grid grid-cols-[minmax(0,1fr)_7rem] gap-2">
+		<Input
+			type="search"
+			maxlength={50}
+			bind:value={search}
+			aria-label={$_('auctionHub.search')}
+			placeholder={$_('auctionHub.search')}
+			oninput={applySearch}
+		/><Input
+			type="number"
+			min={0}
+			max={1000000000000}
+			bind:value={budget}
+			aria-label={$_('auctionHub.maximum')}
+			placeholder={$_('arcade.budget')}
+			oninput={applySearch}
+		/>
+	</div>
+	<div class="flex gap-2">
+		<div class="flex min-w-0 flex-1 gap-2 overflow-x-auto">
+			<Button
+				variant={query.wishlist ? 'default' : 'outline'}
+				aria-pressed={Boolean(query.wishlist)}
+				onclick={() =>
+					onChange({ wishlist: query.wishlist ? '' : ($currentSession?.user.id ?? ''), page: '0' })}
+				>{$_('plan.auctions.wanted')}</Button
+			><Button
+				variant={selected.length ? 'default' : 'outline'}
+				onclick={() => (panel = 'variants')}
+				>{$_('collection.variants')}{#if selected.length}
+					· {selected.length}{/if}</Button
+			>
+		</div>
+		<Button variant="outline" onclick={() => (panel = 'all')}
+			>{$_('arcade.filters')}{#if active}
+				· {active}{/if}</Button
+		>
+	</div>
+	{#if query.pageId}<div class="flex flex-wrap items-center gap-2 text-sm">
 			<span>{articleTitle || $_('completion.loading')}</span><Button
-				size="sm"
 				variant="ghost"
 				onclick={() => onChange({ pageId: '', title: '', page: '0' })}
 				>{$_('plan.auctions.removeExact')}</Button
 			>
 		</div>{/if}
-	<form class="flex flex-col gap-3" onsubmit={submit} aria-label={$_('auctionHub.filters')}>
-		<div>
-			<h2 class="font-serif text-xl">{$_('auctionHub.filters')}</h2>
-
-			<p class="mt-1 text-xs text-muted-foreground">{$_('auctionHub.filterScope')}</p>
-		</div>
-
-		<div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-			<label class="grid gap-1 text-sm"
-				>{$_('auctionHub.search')}<input
-					name="q"
-					maxlength="50"
-					value={query.q}
-					type="search"
-					class="h-11 min-w-0 border border-primary/25 bg-background px-3"
-				/></label
-			>
-
-			<label class="grid gap-1 text-sm"
-				>{$_('auctionHub.variant')}<VariantSelector
-					options={variants}
-					bind:selected={selectedVariants}
-					multiple={true}
-					name="variant"
-					onChange={() => {}}
-				/></label
-			>
-
-			<label class="grid gap-1 text-sm"
-				>{$_('auctionHub.minimum')}<input
-					name="min"
-					value={query.min}
-					type="number"
-					min="0"
-					max="1000000000000"
-					class="h-11 min-w-0 border border-primary/25 bg-background px-3"
-				/></label
-			>
-
-			<label class="grid gap-1 text-sm"
-				>{$_('auctionHub.maximum')}<input
-					name="max"
-					value={query.max}
-					type="number"
-					min="0"
-					max="1000000000000"
-					class="h-11 min-w-0 border border-primary/25 bg-background px-3"
-				/></label
-			>
-
-			<label class="grid gap-1 text-sm"
-				>{$_('auctionHub.phaseLabel')}<select
-					name="phase"
-					value={query.phase}
-					class="h-11 min-w-0 border border-primary/25 bg-background px-3"
-					><option value="">{$_('auctionHub.all')}</option
-					>{#each ['RUNNING', 'UPCOMING'] as phase (phase)}<option value={phase}
-							>{$_('apiEvolution.phase.' + phase)}</option
-						>{/each}</select
-				></label
-			>
-			<label class="flex items-center gap-2 text-sm"
-				><input type="checkbox" bind:checked={wanted} />{$_('plan.auctions.wanted')}</label
-			>
-			<label class="grid gap-1 text-sm"
-				>{$_('apiEvolution.sortBy')}<select
-					name="sortBy"
-					value={query.sortBy}
-					class="h-11 border border-primary/25 bg-background px-3"
-					>{#each ['ENDS_AT', 'PRICE', 'CREATION_DATE'] as sort (sort)}<option value={sort}
-							>{$_('apiEvolution.sort.' + sort)}</option
-						>{/each}</select
-				></label
-			>
-			<label class="grid gap-1 text-sm"
-				>{$_('apiEvolution.sortDirection')}<select
-					name="sortDirection"
-					value={query.sortDirection}
-					class="h-11 border border-primary/25 bg-background px-3"
-					><option value="ASC">{$_('apiEvolution.ascending')}</option><option value="DESC"
-						>{$_('apiEvolution.descending')}</option
-					></select
-				></label
-			>
-		</div>
-
-		<div class="flex flex-wrap gap-2">
-			<Button type="submit">{$_('auctionHub.applyFilters')}</Button><Button
+</div>
+<Dialog.Root
+	open={panel !== null}
+	onOpenChange={(open) => {
+		if (!open) panel = null;
+	}}
+	><Dialog.Content class="arcade-sheet max-w-xl overflow-y-auto p-5"
+		><Dialog.Header
+			><Dialog.Title
+				>{$_(panel === 'variants' ? 'collection.variants' : 'arcade.filters')}</Dialog.Title
+			><Dialog.Description>{$_('auctionHub.filterScope')}</Dialog.Description></Dialog.Header
+		>
+		{#if panel === 'variants'}<VariantSelector
+				options={variants}
+				bind:selected
+				multiple
+				onChange={() => onChange({ variant: selected.join(','), page: '0' })}
+			/>
+		{:else}<div class="grid gap-3 sm:grid-cols-2">
+				<label class="grid gap-1 text-sm"
+					>{$_('auctionHub.minimum')}<Input
+						type="number"
+						min={0}
+						value={query.min}
+						onchange={(event) => onChange({ min: event.currentTarget.value, page: '0' })}
+					/></label
+				>
+				<label class="grid gap-1 text-sm"
+					>{$_('auctionHub.phaseLabel')}<select
+						class="min-h-11"
+						value={query.phase}
+						onchange={(event) => onChange({ phase: event.currentTarget.value, page: '0' })}
+						><option value="">{$_('auctionHub.all')}</option
+						>{#each ['RUNNING', 'UPCOMING'] as phase (phase)}<option value={phase}
+								>{$_('apiEvolution.phase.' + phase)}</option
+							>{/each}</select
+					></label
+				>
+				<label class="grid gap-1 text-sm"
+					>{$_('apiEvolution.sortBy')}<select
+						class="min-h-11"
+						value={query.sortBy}
+						onchange={(event) => onChange({ sortBy: event.currentTarget.value, page: '0' })}
+						>{#each ['ENDS_AT', 'PRICE', 'CREATION_DATE'] as sort (sort)}<option value={sort}
+								>{$_('apiEvolution.sort.' + sort)}</option
+							>{/each}</select
+					></label
+				>
+				<label class="grid gap-1 text-sm"
+					>{$_('apiEvolution.sortDirection')}<select
+						class="min-h-11"
+						value={query.sortDirection}
+						onchange={(event) => onChange({ sortDirection: event.currentTarget.value, page: '0' })}
+						><option value="ASC">{$_('apiEvolution.ascending')}</option><option value="DESC"
+							>{$_('apiEvolution.descending')}</option
+						></select
+					></label
+				>
+			</div>
+			<Button
 				variant="ghost"
 				onclick={() =>
 					onChange({
 						q: '',
 						variant: '',
-						seller: '',
 						min: '',
 						max: '',
 						phase: '',
@@ -210,7 +183,7 @@
 						sortDirection: '',
 						page: '0'
 					})}>{$_('auctionHub.reset')}</Button
-			>
-		</div>
-	</form>
-</details>
+			>{/if}
+		<Button onclick={() => (panel = null)}>{$_('arcade.closeFilters')}</Button>
+	</Dialog.Content></Dialog.Root
+>

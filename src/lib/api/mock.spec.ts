@@ -236,4 +236,20 @@ describe('createMockApiResponse', () => {
 		});
 		expect(unblocked.status).toBe(204);
 	});
+	it('makes opened exemplars readable without inheriting the source card commitments', async () => {
+		const opening = await createMockApiResponse({
+			path: '/boosters/1/open',
+			method: 'POST'
+		}).json();
+		expect(opening.cards).toHaveLength(5);
+		for (const card of opening.cards) {
+			expect(card.saleId).toBeUndefined();
+			expect(card.auctionId).toBeUndefined();
+			expect(card.pendingTradeId).toBeNull();
+			expect(card.protected).toBe(false);
+			const read = await createMockApiResponse({ path: '/collection/' + card.id }).json();
+			expect(read.id).toBe(card.id);
+			expect(read.pageId).toBe(card.pageId);
+		}
+	});
 });

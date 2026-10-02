@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BoosterPackArt from '$lib/components/boosters/booster-pack-art.svelte';
 	import ActivityShortcuts from './activity-shortcuts.svelte';
 	import { resolve } from '$app/paths';
 	import CardTile from '$lib/components/card-tile.svelte';
@@ -54,7 +55,7 @@
 		>{/if}
 
 	<div class="grid gap-5 xl:grid-cols-[minmax(22rem,0.8fr)_minmax(0,1.2fr)]">
-		<ForgePanel class="relative min-h-[28rem] min-w-0 overflow-hidden p-6">
+		<ForgePanel class="relative min-w-0 overflow-hidden p-6">
 			<div class="relative z-10 w-full max-w-sm">
 				<p class="forge-label">
 					{$_(
@@ -75,11 +76,12 @@
 					><PackageOpenIcon />{$_('dashboard.openBooster')}</Button
 				>
 			</div>
-			<img
-				src="/images/booster.png"
-				alt=""
-				class="forge-booster-idle absolute right-2 bottom-[-4rem] w-52 sm:right-8 sm:w-64"
-			/>
+			<div class="mx-auto mt-6 w-40">
+				<BoosterPackArt
+					name={dashboard?.packs[0]?.name ?? $_('arcade.boosters')}
+					renderKey="standard"
+				/>
+			</div>
 		</ForgePanel>
 
 		<ForgePanel class="min-w-0 p-5 sm:p-6">
