@@ -38,11 +38,12 @@
 	const available = $derived(
 		packs.filter((pack) => pack.status === 'OPEN' && (pack.credit?.available ?? 0) > 0)
 	);
+	const activePacks = $derived(packs.filter((pack) => pack.status === 'OPEN'));
 	const selected = $derived(packs.find((pack) => pack.id === selectedId));
 	const slides = $derived(
-		selected && !available.some((pack) => pack.id === selected.id)
-			? [...available, selected]
-			: available
+		selected && !activePacks.some((pack) => pack.id === selected.id)
+			? [...activePacks, selected]
+			: activePacks
 	);
 	const selectedIndex = $derived(slides.findIndex((pack) => pack.id === selectedId));
 	const previous = $derived(slides[selectedIndex - 1]);
@@ -56,7 +57,14 @@
 		watchDrag: (_api, event) => {
 			const point = 'touches' in event ? event.touches[0] : event;
 			const box = _api.rootNode().getBoundingClientRect();
-			return Boolean(active && !locked && point && point.clientY >= box.top + box.height * 0.28);
+			return Boolean(
+				active &&
+				!locked &&
+				point &&
+				(selected?.status !== 'OPEN' ||
+					!selected.credit?.available ||
+					point.clientY >= box.top + box.height * 0.28)
+			);
 		}
 	});
 	onMount(() => {
@@ -125,7 +133,13 @@
 						{ values: { count: selected.nbCards } }
 					)}</span
 				>
-				<h2>{name(selected)}</h2>{:else}<h2>
+				<h2>{name(selected)}</h2>
+				<p class="no-credit" role="status">
+					{#if selected.status === 'OPEN' && selected.credit?.available === 0}
+						{$_('opening.noCredit')}
+					{/if}
+				</p>
+			{:else}<h2>
 					{$_(packs.length ? 'arcade.noAvailablePacks' : 'opening.empty')}
 				</h2>{/if}
 		</div>
@@ -138,7 +152,10 @@
 				gesture = {
 					x: event.clientX,
 					y: event.clientY,
-					tear: event.clientY < box.top + box.height * 0.28
+					tear:
+						selected?.status === 'OPEN' &&
+						Boolean(selected.credit?.available) &&
+						event.clientY < box.top + box.height * 0.28
 				};
 			}}
 			onpointerup={endGesture}
@@ -204,8 +221,8 @@
 			</div>
 		</div>
 	</div>
-	{#if available.length}<nav class="reserve-dock" aria-label={$_('arcade.availablePacks')}>
-			{#each available as pack (pack.id)}<button
+	{#if activePacks.length}<nav class="reserve-dock" aria-label={$_('opening.browsePacks')}>
+			{#each activePacks as pack (pack.id)}<button
 					type="button"
 					class:chosen={pack.id === selectedId}
 					aria-pressed={pack.id === selectedId}
@@ -217,7 +234,8 @@
 					</div>
 					<span>{name(pack)}</span><i aria-hidden="true"></i></button
 				>{/each}
-		</nav>{:else}<p class="reserve-empty" role="status">{$_('opening.noAvailable')}</p>{/if}
+		</nav>{/if}
+	{#if !available.length}<p class="reserve-empty" role="status">{$_('opening.noAvailable')}</p>{/if}
 </section>
 <Dialog.Root bind:open={allOpen}
 	><Dialog.Content class="overflow-y-auto p-4 sm:p-5"
@@ -307,6 +325,12 @@
 	.pack-cartouche span {
 		font-size: 11px;
 		color: #efebd9a6;
+	}
+	.no-credit {
+		margin: 6px 0 0;
+		min-height: 18px;
+		font-size: 12px;
+		color: #e8ef42;
 	}
 	h2 {
 		font:

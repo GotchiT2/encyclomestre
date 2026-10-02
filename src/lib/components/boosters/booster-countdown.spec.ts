@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { formatBoosterDelay, getBoosterRefreshDelay } from './booster-countdown';
 
 describe('formatBoosterDelay', () => {
-	it('formats the recharge delay with minutes and seconds only', () => {
+	it('includes hours for long recharge delays', () => {
 		expect(formatBoosterDelay(0)).toBe('00:00');
 		expect(formatBoosterDelay(5 * 60_000 + 9_000)).toBe('05:09');
-		expect(formatBoosterDelay(65 * 60_000 + 3_000)).toBe('65:03');
+		expect(formatBoosterDelay(65 * 60_000 + 3_000)).toBe('01:05:03');
+		expect(formatBoosterDelay(24 * 3600_000)).toBe('24:00:00');
+		expect(formatBoosterDelay(-1)).toBe('00:00');
 	});
 
 	it('schedules one refresh only for a valid future availability', () => {

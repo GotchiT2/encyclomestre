@@ -15,8 +15,7 @@ const report = [];
 async function trackMotion(page, act, id, motion) {
 	await page.evaluate(() => {
 		const nodes = [...document.querySelectorAll('.hero-lane .pack-object')];
-		const lane = document.querySelector('.hero-lane');
-		const origin = lane.getBoundingClientRect().y;
+		const initialScroll = scrollY;
 		const baseline = nodes.map((node) => node.getBoundingClientRect());
 		window.__carouselTrace = { frames: [], running: true };
 		const sample = () => {
@@ -26,7 +25,7 @@ async function trackMotion(page, act, id, motion) {
 					const box = node.getBoundingClientRect();
 					return {
 						x: box.x,
-						dy: box.y - lane.getBoundingClientRect().y - (baseline[i].y - origin),
+						dy: box.y + scrollY - baseline[i].y - initialScroll,
 						dh: box.height - baseline[i].height,
 						connected: node.isConnected
 					};
@@ -109,6 +108,24 @@ for (const [engine, launcher] of [
 						})
 					);
 					sessionStorage.setItem('wikiforge-plan-scenario', 'opening-fixtures');
+					sessionStorage.setItem(
+						'wikiforge-arcade-mock-opened',
+						JSON.stringify({
+							cards: [],
+							exhausted: false,
+							reserve: { available: 10, bonus: 0, lastRechargeAt: Date.now() },
+							premium: {
+								available: 0,
+								bonus: 0,
+								nextAvailableAt: new Date(Date.now() + 7200000).toISOString()
+							},
+							premiumPlus: {
+								available: 0,
+								bonus: 0,
+								nextAvailableAt: new Date(Date.now() + 86400000).toISOString()
+							}
+						})
+					);
 					window.__requests = [];
 					addEventListener('wikiforge:mock-request', (event) =>
 						window.__requests.push(event.detail)
@@ -122,6 +139,17 @@ for (const [engine, launcher] of [
 					() => !document.querySelector('[data-testid=booster-open-one]')?.disabled
 				);
 				await page.locator('[data-testid=pack-carousel][data-ready=true]').waitFor();
+				assert.equal(await page.locator('.family-credit[data-family=PREMIUM] time').count(), 1);
+				assert.equal(
+					await page.locator('.family-credit[data-family=PREMIUM_PLUS] time').count(),
+					1
+				);
+				for (const family of ['PREMIUM', 'PREMIUM_PLUS'])
+					assert.match(
+						await page.locator(`.family-credit[data-family=${family}] time`).innerText(),
+						/^\d+:\d{2}:\d{2}$/,
+						'long recharge includes hours'
+					);
 				let frames = await trackMotion(
 					page,
 					() =>
@@ -132,6 +160,11 @@ for (const [engine, launcher] of [
 					2,
 					motion
 				);
+				assert.ok(
+					await page.getByTestId('booster-open-one').isDisabled(),
+					'premium with no credit cannot open'
+				);
+				await page.getByText('Aucun crédit disponible', { exact: true }).waitFor();
 				frames += await trackMotion(
 					page,
 					() =>
@@ -158,14 +191,15 @@ for (const [engine, launcher] of [
 					motion
 				);
 				if (engine === 'chromium' && width < 768) {
+					await page.locator('.reserve-dock [data-pack-id="2"]').click();
 					frames += await trackMotion(
 						page,
 						async () => {
 							await page.locator('.hero-lane').scrollIntoViewIfNeeded();
 							const box = await page.locator('.hero-lane').boundingBox();
 							const touch = await context.newCDPSession(page);
-							const y = box.y + box.height * 0.68,
-								x = box.x + box.width * 0.65;
+							const y = box.y + box.height * 0.18,
+								x = box.x + box.width * 0.25;
 							await touch.send('Input.dispatchTouchEvent', {
 								type: 'touchStart',
 								touchPoints: [{ x, y }]
@@ -173,14 +207,14 @@ for (const [engine, launcher] of [
 							for (let shift = 20; shift <= 160; shift += 20) {
 								await touch.send('Input.dispatchTouchEvent', {
 									type: 'touchMove',
-									touchPoints: [{ x: x - shift, y }]
+									touchPoints: [{ x: x + shift, y }]
 								});
 								await page.waitForTimeout(16);
 							}
 							await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 							await touch.detach();
 						},
-						2,
+						1,
 						motion
 					);
 				}

@@ -7,7 +7,7 @@
 </script>
 
 <div class="family-credits" aria-label={$_('arcade.sharedCredits')}>
-	{#each unique as family (family.family)}<div class="family-credit">
+	{#each unique as family (family.family)}<div class="family-credit" data-family={family.family}>
 			<div class="family-name">
 				{$_('boosters.family.' + family.family, { default: family.family })}<span
 					>{$_('opening.sharedReserve')}</span
@@ -20,10 +20,17 @@
 						>{$_('arcade.noQuantity')}</span
 					>{/if}
 			</div>
-			{#if family.nextAvailableAt && Number.isFinite(Date.parse(family.nextAvailableAt))}<p>
-					{$_('boosters.nextCharge')} · {formatBoosterDelay(
-						Math.max(0, Date.parse(family.nextAvailableAt) - now)
-					)}
+			{#if family.nextAvailableAt && Number.isFinite(Date.parse(family.nextAvailableAt))}<p
+					class="recharge"
+				>
+					{#if Date.parse(family.nextAvailableAt) > now}
+						<span>{$_('opening.nextCredit')}</span>
+						<time datetime={family.nextAvailableAt}
+							>{formatBoosterDelay(Date.parse(family.nextAvailableAt) - now)}</time
+						>
+					{:else}
+						<span>{$_('opening.refreshCredits')}</span>
+					{/if}
 				</p>{/if}
 		</div>{/each}
 </div>
@@ -74,10 +81,21 @@
 		font-weight: 600;
 		color: #e8ef42;
 	}
-	p {
+	.recharge {
 		grid-column: 1/-1;
-		font-size: 10px;
-		color: #efebd980;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 2px 6px;
+		margin-top: 6px;
+		font-size: 11px;
+		color: #efebd9a6;
+	}
+	.recharge time {
+		font-size: 13px;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		color: #e8ef42;
 	}
 	@media (max-width: 600px) {
 		.family-credit {

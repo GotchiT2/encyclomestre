@@ -636,3 +636,12 @@ Sujet Conventional Commit : `fix(boosters): anchor opening dialog to mobile view
 - [x] Svelte sans diagnostic, 16 tests ciblés, ESLint et Prettier ciblés, build FO sans mocks et contrôle du diff réussis ; index GitNexus actualisé et changements contrôlés avant commit. 5 791 images du carrousel vérifiées.
 
 Sujet Conventional Commit : `fix(ui): unblock card auctions and smooth booster navigation`.
+
+## Boosters sans crédit, prochaines recharges et numérotation des tirages — 3 octobre 2026
+
+- [x] Conserver tous les packs ouverts dans le carrousel et le dock, même sans crédit connu ou disponible ; permettre leur sélection par lien direct. Le balayage sur la soudure d'un pack vide navigue sans lancer d'acquisition. Le message de réserve vide ne déplace pas le paquet.
+- [x] Afficher les prochaines recharges Premium et Premium+ d'après les dates API, en heures/minutes/secondes pour les délais longs ; une seule réserve par famille. À l'échéance, attendre la confirmation API du nouveau crédit.
+- [x] Numéroter les emplacements de probabilités à partir de 1, en continu entre les groupes de tirage.
+- [x] Validation en mocks : 14 tests ciblés, Svelte sans diagnostic, ESLint/Prettier ciblés, build FO sans mocks et diff validés. Les 26 scénarios d'ouverture et les 20 combinaisons de carrousel Chromium/WebKit passent aux cinq largeurs, mouvements ordinaires/réduits ; contrôle visuel des minuteries et des probabilités à 390/1440 px. GitNexus avant modification et contrôle des changements avant commit.
+
+Sujet Conventional Commit : `fix(boosters): retain empty packs, show recharges and number draws`.

@@ -194,9 +194,7 @@
 				.then(() => {
 					if (!mounted || $currentSession?.user.id !== account) return;
 					const requested = Number(page.url.searchParams.get('pack'));
-					const pack = packs?.find(
-						(p) => p.id === requested && p.status === 'OPEN' && p.credit?.available
-					);
+					const pack = packs?.find((p) => p.id === requested && p.status === 'OPEN');
 					const initial =
 						pack ?? packs?.find((p) => p.status === 'OPEN' && p.credit?.available) ?? packs?.[0];
 					if (initial) selectPack(initial);

@@ -46,3 +46,19 @@ Captures et vidéo de la cérémonie dans `%TEMP%/wikiforge-booster-room` : rés
 Le dialogue d'ouverture utilise désormais un mode plein écran explicite. Ses classes ne comportent plus de position à 50 % ni de translation de centrage ; il couvre le viewport au lieu de dépendre de leur annulation dans la feuille du booster. Sa largeur tient compte de la gouttière de défilement réservée par la page.
 
 Le scénario `check-booster-room.mjs` contrôle l'origine et les dimensions de la fenêtre pendant la requête et après la cérémonie : 26 scénarios réussis aux cinq largeurs. Contrôle complémentaire en émulation mobile Chromium et WebKit à 390 px, animations ordinaires/réduites, navigation depuis la collection, défilement et rotation : 348 images sans décalage. Ces vérifications ne constituent pas un essai sur le téléphone physique du joueur. Sept tests ciblés, Svelte sans diagnostic, lint, formatage, build FO et contrôle du diff réussis.
+
+## Packs sans crédit et probabilités — 3 octobre 2026
+
+Le carrousel et le dock conservent les packs ouverts avec réserve vide ou inconnue. Les commandes d'acquisition restent conditionnées aux crédits ; une sélection directe par URL et un balayage sur la partie haute d'un pack vide permettent de consulter et parcourir les packs sans ouvrir celui qui arrive ensuite. L'emplacement du message de réserve vide reste stable pendant la navigation.
+
+Les familles Premium et Premium+ affichent leur `nextAvailableAt` sous forme de compte à rebours, sans dupliquer une réserve partagée. Les délais longs affichent les heures (`HH:MM:SS`). Une date absente ou invalide n'invente pas de minuterie ; à l'échéance, la relecture API existante confirme les crédits avant de permettre l'ouverture. Le backend matérialise les recharges à la lecture ; aucune cadence ou capacité n'est codée en dur.
+
+Les emplacements des probabilités commencent à 1 et continuent entre les groupes : un groupe de quatre suivi d'un groupe d'une carte affiche 1–4 puis 5. Le calcul des probabilités est conservé.
+
+- 14 tests ciblés : galerie, crédits par famille, compteur temporel et API boosters ; tous réussis.
+- Svelte : aucun diagnostic ; ESLint/Prettier ciblés et build FO sans mocks réussis.
+- `check-booster-room.mjs` : 26 scénarios réussis, acquisition unique et parcours de reprise conservés.
+- `check-booster-carousel.mjs` : 20 combinaisons Chromium/WebKit × cinq largeurs × mouvements ordinaires/réduits, avec Premium/Premium+ vides et recharges relatives. Les contrôles suivent les coordonnées de la page, la persistance des objets, le défilement continu, les minuteries longues et l'absence de POST pendant la navigation. Le balayage tactile mobile commence sur la soudure du Premium vide et rejoint le pack quotidien sans acquisition.
+- Contrôle complémentaire à 390 et 1440 px : lien direct vers le Premium vide, ouverture désactivée et probabilités 1–5 pour Quotidien/Premium ; revue visuelle des minuteries à 390 px. Captures dans `%TEMP%/wikiforge-booster-carousel`.
+
+Validation exclusivement en mocks sur `https://dev.wikiforge.fr`. Le serveur local a été relancé après le build pour vérifier les modules actualisés. BO, `vite.config.ts`, certificats et contrat backend conservés ; aucun déploiement.
