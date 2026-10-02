@@ -21,3 +21,15 @@ Captures et relevés : `%TEMP%/wikiforge-booster-carousel`, `%TEMP%/wikiforge-bo
 Contrôles techniques : Svelte sans erreur ni avertissement, 16 tests ciblés réussis, ESLint/Prettier ciblés et build FO sans mocks réussis. Les 20 combinaisons du carrousel représentent 5 791 images contrôlées. Index GitNexus actualisé avant le contrôle des changements et du diff. Les avertissements Vitest `derived_inert` proviennent du démontage des fixtures existantes de révélation ; aucune erreur de page dans les parcours navigateur.
 
 La configuration HTTPS, les certificats, le BO et le contrat backend sont conservés. Le skill encyclomestre-ui reste exclu. Aucun déploiement.
+
+## Création d'enchère — dates et durées rapides
+
+Le début est prérempli à l'heure locale actuelle. Le mode « Maintenant » conserve le défaut backend (absence de `startsAt` dans la requête), afin de démarrer au moment de la création même après une attente dans le formulaire. Une saisie manuelle programme le début et le convertit en UTC lors de l'envoi ; le bouton « Maintenant » rétablit le départ immédiat.
+
+Les boutons 30 min, 1 h, 6 h, 12 h et 24 h remplissent la fin depuis le début choisi. Ils ne soumettent pas le formulaire. Modifier le début recalcule une durée encore sélectionnée ; saisir une fin manuelle la conserve ensuite sans réécriture par un changement de début. Les limites de 10 minutes à 24 heures, le devis et la confirmation restent contrôlés.
+
+- 13 tests réussis dans `auction-create-panel.svelte.spec.ts` et `presentation.spec.ts`, dont attente avant saisie, cinq durées, changement de début, retour à Maintenant, fin manuelle, refus d'un début passé et création unique en immédiat/programmé.
+- Sept créations en mocks depuis la fiche Blackpink : Chromium à 360, 390, 768, 1024 et 1440 px en heure de Paris, puis texte agrandi à 360 px et WebKit mobile à 390 px. Commandes au clavier/tactile, cibles de 44 px, aucune erreur de page, aucun débordement et un seul POST par création. Aucun appel à l'API de production. Captures dans `%TEMP%/wikiforge-auction-dates`.
+- Svelte sans erreur ni avertissement, ESLint/Prettier ciblés, build FO sans mocks et contrôle du diff réussis. Les avertissements `derived_inert` restent limités au démontage des fixtures des tests existants.
+
+Le contrat API, `vite.config.ts`, les certificats et le BO sont conservés. Livraison locale sur `feat/arcade-experience`, sans déploiement.

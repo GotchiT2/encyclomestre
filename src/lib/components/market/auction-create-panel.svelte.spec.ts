@@ -47,6 +47,7 @@ describe('auction creation from a personal card', () => {
 		create.mockReset();
 	});
 	afterEach(() => {
+		vi.restoreAllMocks();
 		currentSession.set(null);
 		clearPersonalAuctions();
 	});
@@ -56,6 +57,74 @@ describe('auction creation from a personal card', () => {
 		expect(sales).toHaveBeenCalledExactlyOnceWith(undefined, { status: 'OPEN' });
 		expect(bids).toHaveBeenCalledExactlyOnceWith(undefined, { status: 'OPEN' });
 		expect(get(personalAuctions).userId).toBe('1');
+	});
+	it('prefills the current local start and preserves immediate start after a delay', async () => {
+		const now = Date.now();
+		vi.spyOn(Date, 'now').mockReturnValue(now);
+		render(AuctionCreatePanel, { card });
+		const start = page.getByLabelText('Début', { exact: true });
+		await expect.element(start).toBeVisible();
+		const initial = (document.querySelector('input[type="datetime-local"]') as HTMLInputElement)
+			.value;
+		expect(Date.parse(initial)).toBeLessThanOrEqual(now);
+		expect(Date.parse(initial)).toBeGreaterThan(now - 60_000);
+		await page.getByRole('spinbutton', { name: 'Prix de départ' }).fill('100');
+		vi.spyOn(Date, 'now').mockReturnValue(now + 120_000);
+		await page.getByRole('button', { name: '1 h', exact: true }).click();
+		await page.getByRole('button', { name: 'Mettre en vente', exact: true }).click();
+		expect(fee).toHaveBeenCalledExactlyOnceWith(100);
+		expect(create).not.toHaveBeenCalled();
+		await expect.element(page.getByRole('dialog')).toBeVisible();
+	});
+	it('calculates each quick duration from a scheduled start and follows start edits', async () => {
+		const now = Date.now();
+		const local = (timestamp: number) => {
+			const date = new Date(timestamp);
+			return new Date(timestamp - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+		};
+		render(AuctionCreatePanel, { card });
+		const scheduled = local(now + 7200_000);
+		await page.getByLabelText('Début', { exact: true }).fill(scheduled);
+		for (const [label, minutes] of [
+			['30 min', 30],
+			['1 h', 60],
+			['6 h', 360],
+			['12 h', 720],
+			['24 h', 1440]
+		] as const) {
+			await page.getByRole('button', { name: label, exact: true }).click();
+			await expect
+				.element(page.getByLabelText('Fin', { exact: true }))
+				.toHaveValue(local(Date.parse(scheduled) + minutes * 60_000));
+		}
+		const later = local(now + 10800_000);
+		await page.getByLabelText('Début', { exact: true }).fill(later);
+		await expect
+			.element(page.getByLabelText('Fin', { exact: true }))
+			.toHaveValue(local(Date.parse(later) + 86400_000));
+		await page.getByRole('button', { name: 'Maintenant', exact: true }).click();
+		await expect
+			.element(page.getByRole('button', { name: 'Maintenant', exact: true }))
+			.toHaveAttribute('aria-pressed', 'true');
+		expect(fee).not.toHaveBeenCalled();
+		expect(create).not.toHaveBeenCalled();
+	});
+	it('preserves a custom end after start changes and refuses an expired scheduled start', async () => {
+		render(AuctionCreatePanel, { card });
+		await page.getByRole('spinbutton', { name: 'Prix de départ' }).fill('100');
+		await page.getByRole('button', { name: '1 h', exact: true }).click();
+		await page.getByLabelText('Fin', { exact: true }).fill('2030-01-01T12:00');
+		await page.getByLabelText('Début', { exact: true }).fill('2020-01-01T12:00');
+		await expect
+			.element(page.getByLabelText('Fin', { exact: true }))
+			.toHaveValue('2030-01-01T12:00');
+		await expect
+			.element(page.getByRole('button', { name: '1 h', exact: true }))
+			.toHaveAttribute('aria-pressed', 'false');
+		await page.getByRole('button', { name: 'Mettre en vente', exact: true }).click();
+		await expect.element(page.getByRole('alert')).toBeVisible();
+		expect(fee).not.toHaveBeenCalled();
+		expect(create).not.toHaveBeenCalled();
 	});
 	it('retries a failed prerequisite read without creating an auction', async () => {
 		sales.mockRejectedValueOnce(new Error('Network unavailable'));
@@ -85,7 +154,7 @@ describe('auction creation from a personal card', () => {
 		expect(get(personalAuctions).userId).toBe('2');
 		expect(sales).toHaveBeenCalledTimes(2);
 	});
-	it('quotes the fee, confirms and creates the selected copy exactly once', async () => {
+	it.each([false, true])('quotes, confirms and creates once (scheduled=%s)', async (scheduled) => {
 		const auction: Auction = {
 			id: '91',
 			card: { ...card, pageId: 1, packId: 1 },
@@ -103,7 +172,12 @@ describe('auction creation from a personal card', () => {
 		create.mockResolvedValue(auction);
 		render(AuctionCreatePanel, { card });
 		await page.getByRole('spinbutton', { name: 'Prix de départ' }).fill('100');
-		const end = new Date(Date.now() + 3600000);
+		const start = new Date(Date.now() + 3600000);
+		const localStart = new Date(start.getTime() - start.getTimezoneOffset() * 60000)
+			.toISOString()
+			.slice(0, 16);
+		if (scheduled) await page.getByLabelText('Début', { exact: true }).fill(localStart);
+		const end = new Date(Date.now() + (scheduled ? 7200000 : 3600000));
 		const local = new Date(end.getTime() - end.getTimezoneOffset() * 60000)
 			.toISOString()
 			.slice(0, 16);
@@ -115,6 +189,7 @@ describe('auction creation from a personal card', () => {
 		expect(create).toHaveBeenCalledExactlyOnceWith({
 			cardId: 42,
 			startPrice: 100,
+			...(scheduled ? { startsAt: new Date(localStart).toISOString() } : {}),
 			endsAt: new Date(local).toISOString()
 		});
 		await expect

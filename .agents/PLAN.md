@@ -645,3 +645,11 @@ Sujet Conventional Commit : `fix(ui): unblock card auctions and smooth booster n
 - [x] Validation en mocks : 14 tests ciblés, Svelte sans diagnostic, ESLint/Prettier ciblés, build FO sans mocks et diff validés. Les 26 scénarios d'ouverture et les 20 combinaisons de carrousel Chromium/WebKit passent aux cinq largeurs, mouvements ordinaires/réduits ; contrôle visuel des minuteries et des probabilités à 390/1440 px. GitNexus avant modification et contrôle des changements avant commit.
 
 Sujet Conventional Commit : `fix(boosters): retain empty packs, show recharges and number draws`.
+
+## Enchères — dates préremplies et durées rapides
+
+- [x] Préremplir le début à l'heure locale actuelle et conserver un départ immédiat au moment de la confirmation. Ajouter « Maintenant » pour revenir à ce mode après programmation.
+- [x] Ajouter les durées 30 min, 1 h, 6 h, 12 h et 24 h depuis le début choisi ; recalculer la fin après modification du début. Une fin manuelle désactive la durée sélectionnée. Préserver devis, confirmation et limites serveur.
+- [x] Validation exclusivement en mocks : 13 tests ciblés, départ immédiat après attente, programmation UTC, modification des dates et écriture unique. Création depuis une fiche aux cinq largeurs 360/390/768/1024/1440 px, WebKit mobile et texte agrandi ; aucun débordement ni appel de production. Svelte sans diagnostic, lint/formatage ciblés, build FO et diff réussis. GitNexus avant modification et avant commit ; HTTPS, certificats et BO conservés.
+
+Sujet Conventional Commit : `feat(auctions): prefill dates and add duration shortcuts`.
