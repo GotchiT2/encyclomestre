@@ -184,7 +184,11 @@
 		}
 	}}
 >
-	<Dialog.Content class="booster-theatre p-0 sm:p-0 overflow-hidden" showCloseButton={false}>
+	<Dialog.Content
+		fullscreen
+		class="booster-theatre p-0 sm:p-0 overflow-hidden"
+		showCloseButton={false}
+	>
 		<Dialog.Header class="theatre-header"
 			><div>
 				<p class="theatre-overline">{$_('opening.room')}</p>
@@ -369,15 +373,6 @@
 		color: var(--destructive);
 	}
 	:global(.booster-theatre) {
-		inset: 0 !important;
-		top: 0 !important;
-		left: 0 !important;
-		width: 100% !important;
-		max-width: none !important;
-		height: 100dvh;
-		max-height: 100dvh !important;
-		translate: none !important;
-		transform: none !important;
 		border: 0;
 		background: #10120f;
 		display: flex;

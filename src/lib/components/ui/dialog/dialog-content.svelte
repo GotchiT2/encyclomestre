@@ -16,6 +16,7 @@
 		portalProps,
 		children,
 		showCloseButton = true,
+		fullscreen = false,
 		modalLayer,
 		style,
 		...restProps
@@ -23,6 +24,7 @@
 		portalProps?: WithoutChildrenOrChild<ComponentProps<typeof DialogPortal>>;
 		children: Snippet;
 		showCloseButton?: boolean;
+		fullscreen?: boolean;
 		modalLayer?: number;
 	} = $props();
 
@@ -35,7 +37,10 @@
 		bind:ref
 		data-slot="dialog-content"
 		class={cn(
-			'fixed top-1/2 left-1/2 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto border border-border bg-card p-4 sm:p-5 text-foreground shadow-2xl outline-none',
+			'fixed grid gap-4 overflow-y-auto border border-border bg-card p-4 sm:p-5 text-foreground shadow-2xl outline-none',
+			fullscreen
+				? 'inset-0 h-dvh max-h-dvh w-screen max-w-none'
+				: 'top-1/2 left-1/2 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2',
 			className
 		)}
 		style={modalZIndex(layer + 1, style)}

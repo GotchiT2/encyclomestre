@@ -93,6 +93,16 @@ async function clean(state, label) {
 	console.log(label + ': passed');
 }
 async function bounds(page) {
+	const frame = await page.locator('.booster-theatre').boundingBox();
+	const viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+	assert.ok(
+		frame && Math.abs(frame.x) < 1 && Math.abs(frame.y) < 1,
+		'opening frame starts at viewport origin'
+	);
+	assert.ok(
+		Math.abs(frame.width - viewport.width) < 1 && Math.abs(frame.height - viewport.height) < 1,
+		'opening frame fills the viewport'
+	);
 	assert.ok(
 		await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
 		'no document overflow'
@@ -136,6 +146,7 @@ try {
 			});
 			const theatre = page.locator('.booster-theatre');
 			await theatre.getByText('Préparation de vos cartes…', { exact: true }).first().waitFor();
+			await bounds(page);
 			assert.equal(await page.getByTestId('discovery-board').count(), 0, 'closed before response');
 			await page.waitForFunction(() =>
 				window.__requests.some((r) => r.method === 'POST' && r.path.includes('/open'))

@@ -40,3 +40,9 @@ La perte de contexte est déclenchée par `WEBGL_lose_context` lorsqu'il est dis
 `node scripts/check-responsive-player-controls.mjs` : **30 visites contrôlées**, collection, catalogue, succès, amis et marché, à 360, 390, 768, 1024, 1440 et 1920 px. Vérification du retour à la ligne, recherche/tri alignés et pleine largeur, fond opaque, marges, colonne de demandes et noms, badge sur la carte, distinction des prix personnels et largeur disponible.
 
 Captures et vidéo de la cérémonie dans `%TEMP%/wikiforge-booster-room` : réserve et bilan aux cinq largeurs, images tension/déchirure/sortie, vidéo WebM et `report.json`. Captures des cinq autres pages dans `%TEMP%/wikiforge-player-controls`. Revue visuelle effectuée sur les images intermédiaires, desktop et mobile ; le défaut de surfaces perforées a disparu.
+
+## Correctif de position de la fenêtre mobile
+
+Le dialogue d'ouverture utilise désormais un mode plein écran explicite. Ses classes ne comportent plus de position à 50 % ni de translation de centrage ; il couvre le viewport au lieu de dépendre de leur annulation dans la feuille du booster. Sa largeur tient compte de la gouttière de défilement réservée par la page.
+
+Le scénario `check-booster-room.mjs` contrôle l'origine et les dimensions de la fenêtre pendant la requête et après la cérémonie : 26 scénarios réussis aux cinq largeurs. Contrôle complémentaire en émulation mobile Chromium et WebKit à 390 px, animations ordinaires/réduites, navigation depuis la collection, défilement et rotation : 348 images sans décalage. Ces vérifications ne constituent pas un essai sur le téléphone physique du joueur. Sept tests ciblés, Svelte sans diagnostic, lint, formatage, build FO et contrôle du diff réussis.

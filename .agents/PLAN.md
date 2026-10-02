@@ -620,3 +620,10 @@ Sujet Conventional Commit : `feat(boosters): rebuild opening room and refine pla
 - [x] Validation en mocks à 360 et 1440 px, Découverte/Express ; dix tests ciblés, Svelte sans diagnostic, lint, build FO et contrôle du diff réussis. GitNexus : impact faible, contrôle des changements avant commit.
 
 Sujet Conventional Commit : `fix(boosters): hide variant names in opening results`.
+
+## Ouverture mobile — ancrer la fenêtre au viewport
+
+- [x] Ajouter un mode plein écran explicite au dialogue et l'utiliser pour l'ouverture. Supprimer l'héritage des translations de centrage et les annulations CSS du plateau ; couvrir la largeur du viewport, y compris en présence d'une gouttière de défilement.
+- [x] Contrôler l'origine et les dimensions de la fenêtre dans le scénario navigateur existant pendant la requête et après la cérémonie. Les 26 scénarios passent aux cinq largeurs ; 348 images contrôlées en émulation mobile Chromium/WebKit après navigation, défilement et rotation, mouvements ordinaires/réduits. Sept tests ciblés, Svelte, lint, formatage, build FO et diff validés. GitNexus avant modification et avant commit.
+
+Sujet Conventional Commit : `fix(boosters): anchor opening dialog to mobile viewport`.
