@@ -1,31 +1,26 @@
 <script lang="ts">
-	import { onDestroy, untrack } from 'svelte';
+	import { tick, untrack, type Snippet } from 'svelte';
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import BoosterPackArt from './booster-pack-art.svelte';
-	import PackScene from '$lib/card-renderer/pack-scene.svelte';
+	import BoosterScene from './booster-scene.svelte';
 	import BoosterRevealCard from './booster-reveal-card.svelte';
-	import CardTile from '$lib/components/card-tile.svelte';
+	import { boosterVisual, openingPageSize } from './booster-visuals';
 	import { arcadePreferences, updateArcadePreferences } from '$lib/arcade/preferences';
-	import type { CardRecord } from '$lib/types';
+	import type { CardRecord, PackFamily } from '$lib/types';
 	let {
-		showPack = true,
 		openedCount,
 		creditKnown = true,
 		available,
-		regularAvailable = available,
-		bonusAvailable = 0,
-		maximum,
-		nextDelay,
 		opening,
+		requestPhase = 'verify',
 		openingId = 0,
 		packName,
-		packImage,
-		packRenderKey = 'standard',
+		packRenderKey,
+		packFamily,
 		packCardCount = 5,
 		cards,
-		error = false,
+		error = '',
 		suspended = false,
 		onOpen,
 		onOpenAll = () => undefined,
@@ -34,24 +29,22 @@
 		onReset,
 		onOpenCard = () => undefined,
 		resume = null,
-		onProgress = () => undefined
+		onProgress = () => undefined,
+		sceneOpen = $bindable(false),
+		verification
 	}: {
-		showPack?: boolean;
 		openedCount?: number;
 		creditKnown?: boolean;
 		available: number;
-		regularAvailable?: number;
-		bonusAvailable?: number;
-		maximum: number;
-		nextDelay?: string;
 		opening: boolean;
+		requestPhase?: 'verify' | 'request';
 		openingId?: number;
 		packName: string;
-		packImage: string;
 		packRenderKey?: string;
+		packFamily?: PackFamily;
 		packCardCount?: number;
 		cards: CardRecord[] | null;
-		error?: boolean;
+		error?: string;
 		suspended?: boolean;
 		onOpen: () => void;
 		onOpenAll?: () => void;
@@ -59,275 +52,272 @@
 		canOpen?: boolean;
 		onReset: () => void;
 		onOpenCard?: (card: CardRecord) => void;
-		resume?: { revealed: number; index: number } | null;
-		onProgress?: (revealed: number, index: number) => void;
+		resume?: { revealedIds: string[]; page: number } | null;
+		onProgress?: (revealedIds: string[], page: number) => void;
+		sceneOpen?: boolean;
+		verification?: Snippet;
 	} = $props();
-	let phase = $state<'idle' | 'dealing' | 'revealing' | 'complete'>('idle');
-	let revealed = $state(0),
-		index = $state(0),
-		handled = -1;
+	let phase = $state<'idle' | 'ceremony' | 'discovery'>('idle');
+	let revealedIds = $state<string[]>([]),
+		resultPage = $state(0),
+		progress = $state(0),
+		massReveal = $state(false);
+	let handled = -1;
 	let confirmBatch = $state(false),
-		startX: number | null = null,
-		startY: number | null = null;
-	let requested = $state(false),
-		dealTimer: ReturnType<typeof setTimeout> | undefined;
-	const reduced = () =>
-		$arcadePreferences.motion === 'reduce' ||
-		window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		requested = $state(false);
+	let grid = $state<HTMLDivElement>();
+	let inspectionOrigin: HTMLElement | null = null;
 	$effect(() => {
-		const id = openingId,
-			result = cards;
+		if (suspended || !inspectionOrigin) return;
+		const origin = inspectionOrigin;
+		inspectionOrigin = null;
+		void tick().then(() => {
+			if (sceneOpen && origin.isConnected) origin.focus({ preventScroll: true });
+		});
+	});
+	const complete = $derived(
+		Boolean(cards?.length && revealedIds.length === cards.length && phase === 'discovery')
+	);
+	const visible = $derived(
+		cards?.slice(resultPage * openingPageSize, (resultPage + 1) * openingPageSize) ?? []
+	);
+	const pages = $derived(Math.ceil((cards?.length ?? 0) / openingPageSize));
+	const visual = $derived(boosterVisual(packRenderKey, packFamily));
+	$effect(() => {
+		const result = cards,
+			id = openingId,
+			pending = opening;
 		if (!result?.length) {
-			clearTimeout(dealTimer);
-			phase = 'idle';
-			if (!opening) requested = false;
+			untrack(() => {
+				phase = 'idle';
+				if (!pending) requested = false;
+			});
 			return;
 		}
 		if (handled === id) return;
 		untrack(() => {
-			clearTimeout(dealTimer);
 			handled = id;
 			requested = false;
-			revealed = Math.min(resume?.revealed ?? 0, result.length);
-			index = Math.min(resume?.index ?? 0, result.length - 1);
+			progress = 0;
+			massReveal = false;
+			revealedIds = (resume?.revealedIds ?? []).filter((id) =>
+				result.some((card) => card.id === id)
+			);
+			resultPage = Math.min(resume?.page ?? 0, Math.ceil(result.length / openingPageSize) - 1);
 			if ($arcadePreferences.opening === 'express') {
-				revealed = result.length;
-				phase = 'complete';
-				onProgress(revealed, index);
-			} else if (resume) phase = revealed === result.length ? 'complete' : 'revealing';
-			else {
-				phase = 'dealing';
-				if (reduced()) dealTimer = setTimeout(() => (phase = 'revealing'), 0);
-			}
+				revealedIds = result.map((card) => card.id);
+				massReveal = true;
+				phase = 'discovery';
+				onProgress(revealedIds, resultPage);
+			} else phase = resume ? 'discovery' : 'ceremony';
 		});
 	});
-	onDestroy(() => clearTimeout(dealTimer));
 	function request(all = false) {
-		if (opening || requested || !canOpen || !available || suspended) return;
+		if (opening || requested || !canOpen || !available || !creditKnown || suspended) return;
 		requested = true;
+		sceneOpen = true;
 		if (all) onOpenAll();
 		else onOpen();
 	}
-	function discover() {
-		if (suspended || phase !== 'revealing' || !cards) return;
-		if (index < revealed - 1) index++;
-		else {
-			index = revealed;
-			revealed = Math.min(revealed + 1, cards.length);
-		}
-		onProgress(revealed, index);
+	function reveal(card: CardRecord) {
+		if (suspended || phase !== 'discovery' || revealedIds.includes(card.id)) return;
+		revealedIds = [...revealedIds, card.id];
+		onProgress(revealedIds, resultPage);
 	}
-	function revealAll() {
+	function all() {
 		if (!cards || suspended) return;
-		clearTimeout(dealTimer);
-		revealed = cards.length;
-		phase = 'complete';
-		onProgress(revealed, index);
+		massReveal = true;
+		phase = 'discovery';
+		revealedIds = cards.map((card) => card.id);
+		onProgress(revealedIds, resultPage);
 	}
-	function previous() {
-		index = Math.max(0, index - 1);
-		onProgress(revealed, index);
-	}
-	function tear(event: PointerEvent) {
-		if (
-			startX != null &&
-			startY != null &&
-			Math.abs(event.clientX - startX) >= 70 &&
-			Math.abs(event.clientY - startY) < 90
-		)
-			request();
-		startX = startY = null;
+	function movePage(next: number) {
+		resultPage = Math.max(0, Math.min(next, pages - 1));
+		onProgress(revealedIds, resultPage);
+		grid?.scrollTo({ top: 0, behavior: 'instant' });
 	}
 </script>
 
 <div class="opening-controls" data-testid="booster-stage">
-	<div class="opening-settings">
-		<div>
-			{#if creditKnown && showPack}<p class="text-sm font-semibold">
-					{$_('boosters.reserve')}
-					<span class="tabular-nums"
-						>{regularAvailable} / {maximum}{#if bonusAvailable}
-							+{bonusAvailable}{/if}</span
-					>
-				</p>
-				{#if nextDelay}<p class="text-xs text-muted-foreground">
-						{$_('boosters.nextCharge')} · {nextDelay}
-					</p>{/if}{:else if !creditKnown}<p class="text-sm">{$_('arcade.noQuantity')}</p>{/if}
-		</div>
-		<div class="flex gap-1" aria-label={$_('boosters.quick_mode')}>
-			<Button
-				aria-pressed={$arcadePreferences.opening === 'immersive'}
-				variant={$arcadePreferences.opening === 'immersive' ? 'default' : 'outline'}
-				onclick={() => updateArcadePreferences({ opening: 'immersive' })}
-				>{$_('arcade.immersive')}</Button
-			><Button
-				aria-pressed={$arcadePreferences.opening === 'express'}
-				variant={$arcadePreferences.opening === 'express' ? 'default' : 'outline'}
-				onclick={() => updateArcadePreferences({ opening: 'express' })}
-				>{$_('arcade.express')}</Button
-			>
-		</div>
+	<div class="opening-mode" aria-label={$_('boosters.quick_mode')}>
+		<Button
+			variant={$arcadePreferences.opening === 'immersive' ? 'secondary' : 'ghost'}
+			aria-pressed={$arcadePreferences.opening === 'immersive'}
+			onclick={() => updateArcadePreferences({ opening: 'immersive' })}
+			disabled={opening}>{$_('arcade.immersive')}</Button
+		><Button
+			variant={$arcadePreferences.opening === 'express' ? 'secondary' : 'ghost'}
+			aria-pressed={$arcadePreferences.opening === 'express'}
+			onclick={() => updateArcadePreferences({ opening: 'express' })}
+			disabled={opening}>{$_('arcade.express')}</Button
+		>
 	</div>
-	{#if !cards?.length}<div class="sealed-pack">
-			{#if showPack}<div
-					class="pack-object"
-					class:waiting={opening}
-					onpointerdown={(event) => {
-						startX = event.clientX;
-						startY = event.clientY;
-					}}
-					onpointerup={tear}
-					onpointercancel={() => {
-						startX = startY = null;
-					}}
-					role="presentation"
-				>
-					<BoosterPackArt
-						name={packName}
-						renderKey={packRenderKey}
-						cardCount={packCardCount}
-						imageUrl={packImage}
-					/>
-				</div>{/if}
-			{#if !showPack && !opening}<div
-					class="pack-tear-handle"
-					data-testid="pack-tear-handle"
-					role="presentation"
-					onpointerdown={(event) => {
-						startX = event.clientX;
-						startY = event.clientY;
-					}}
-					onpointerup={tear}
-					onpointercancel={() => {
-						startX = startY = null;
-					}}
-				>
-					<span aria-hidden="true">→ ····················· →</span><span
-						>{$_('arcade.tearStrip')}</span
-					>
-				</div>{/if}
-			<p class="text-sm text-muted-foreground" role="status">
-				{opening
-					? $_('arcade.openingWait')
-					: error
-						? $_('boosters.opening_error')
-						: $_('arcade.tearHint')}
-			</p>
-			<Button
-				data-testid="booster-open-one"
-				class="min-h-12 w-full max-w-xs"
-				disabled={opening || requested || !canOpen || !available}
-				onclick={() => request()}>{opening ? $_('boosters.opening') : $_('boosters.open')}</Button
+	<div class="open-buttons">
+		<Button
+			class="open-main"
+			data-testid="booster-open-one"
+			disabled={opening || requested || !canOpen || !available || !creditKnown}
+			onclick={() => request()}
+			><span>{opening ? $_('boosters.opening') : $_('boosters.open')}</span><span aria-hidden="true"
+				>↗</span
+			></Button
+		>{#if canOpenAll && available > 1}<Button
+				variant="outline"
+				disabled={opening || requested || !canOpen || !creditKnown}
+				onclick={() => (confirmBatch = true)}>{$_('arcade.batchConfirm')}</Button
+			>{/if}
+	</div>
+	{#if opening && !sceneOpen}<p role="status" class="pending-hint">
+			{$_('opening.pending')}
+			<Button variant="ghost" onclick={() => (sceneOpen = true)}>{$_('opening.returnScene')}</Button
 			>
-			{#if canOpenAll && available > 1}<Button
-					variant="outline"
-					disabled={opening || requested || !canOpen}
-					onclick={() => (confirmBatch = true)}>{$_('arcade.batchConfirm')}</Button
-				>{/if}
-		</div>{/if}
+		</p>{/if}
+	{#if error && !sceneOpen}<p role="alert" class="opening-error">{error}</p>{/if}
 </div>
+
 <Dialog.Root
-	open={Boolean(cards?.length)}
+	open={sceneOpen}
 	onOpenChange={(value) => {
-		if (!value && !suspended) onReset();
+		if (!value && !suspended) {
+			sceneOpen = false;
+			onReset();
+		}
 	}}
 >
-	<Dialog.Content
-		class="arcade-opening-dialog max-w-6xl p-0 sm:p-0 overflow-hidden"
-		showCloseButton={false}
-	>
-		<Dialog.Header class="opening-head"
+	<Dialog.Content class="booster-theatre p-0 sm:p-0 overflow-hidden" showCloseButton={false}>
+		<Dialog.Header class="theatre-header"
 			><div>
+				<p class="theatre-overline">{$_('opening.room')}</p>
 				<Dialog.Title>{packName}</Dialog.Title><Dialog.Description
-					>{phase === 'complete'
-						? $_('arcade.summary')
-						: $_('arcade.revealed', {
-								values: { count: revealed, total: cards?.length ?? 0 }
-							})}</Dialog.Description
+					>{cards?.length
+						? complete
+							? $_('opening.complete')
+							: $_('arcade.revealed', {
+									values: { count: revealedIds.length, total: cards.length }
+								})
+						: $_(
+								requestPhase === 'verify' ? 'opening.verifying' : 'opening.requesting'
+							)}</Dialog.Description
 				>
 			</div>
-			<Button variant="ghost" onclick={onReset}>{$_('arcade.leaveDiscovery')}</Button
+			<Button
+				variant="ghost"
+				aria-label={$_('arcade.leaveDiscovery')}
+				onclick={() => {
+					sceneOpen = false;
+					onReset();
+				}}
+				disabled={suspended}>{$_('boosters.close')} <span aria-hidden="true">×</span></Button
 			></Dialog.Header
 		>
-		{#if phase !== 'complete'}<div class="opening-command">
-				<Button onclick={revealAll} disabled={suspended}>{$_('arcade.revealAll')}</Button>
-			</div>{/if}
-		{#if phase === 'dealing'}<div class="ceremony-stage">
-				<Button
-					variant="outline"
-					class="ceremony-skip"
-					onclick={() => {
-						clearTimeout(dealTimer);
-						phase = 'revealing';
-					}}>{$_('arcade.skipAnimation')}</Button
+		<div class="theatre-main" class:ceremony={phase === 'ceremony'} class:summary={complete}>
+			{#if cards?.length && (phase === 'discovery' || progress >= 0.73)}
+				<div
+					class="discovery-board"
+					class:dealing={phase === 'ceremony'}
+					class:mass={massReveal}
+					bind:this={grid}
+					data-testid="discovery-board"
 				>
-				<PackScene
-					name={packName}
-					image={packImage}
-					brand={$_('navigation.brand')}
-					cardCount={packCardCount}
-					cardsLabel={$_('arcade.cardsLabel')}
-					playing
-					onComplete={() => {
-						if (phase === 'dealing') {
-							clearTimeout(dealTimer);
-							phase = 'revealing';
-						}
-					}}
-				/>
-			</div>
-		{:else if phase === 'revealing' && cards?.[index]}<div
-				class="discovery-stage"
-				onpointerdown={(event) => (startX = event.clientX)}
-				onpointerup={(event) => {
-					if (startX != null && startX - event.clientX > 70) discover();
-					startX = null;
-				}}
-				role="presentation"
-			>
-				<div class="discovery-card">
-					{#key index}<BoosterRevealCard
-							card={cards[index]}
-							revealed={index < revealed}
-							interactive={!suspended}
-							detailsEnabled={!suspended}
-							onReveal={discover}
-							onOpenDetail={() => onOpenCard(cards![index])}
-						/>{/key}
-				</div>
-				<div class="discovery-navigation">
-					<Button variant="outline" disabled={index === 0 || suspended} onclick={previous}
-						>{$_('arcade.previousCard')}</Button
-					><Button
-						disabled={suspended}
-						onclick={() => {
-							if (revealed === cards!.length && index === revealed - 1) phase = 'complete';
-							else discover();
-						}}
-						>{revealed === cards.length && index === revealed - 1
-							? $_('boosters.show_summary')
-							: $_('arcade.nextCard')}</Button
+					<div
+						class="board-grid"
+						style={`--large-cols:${Math.min(visible.length, 8)};--desktop-cols:${Math.min(visible.length, 6)};--tablet-cols:${Math.min(visible.length, 4)};--phone-cols:${Math.min(visible.length, 2)}`}
 					>
+						{#each visible as card, i (card.id)}<div
+								class="board-slot"
+								style={`--slot:${i};--flight-x:${((i % 6) - 2.5) * 22}px;--flight-angle:${((i % 5) - 2) * 5}deg`}
+							>
+								<BoosterRevealCard
+									{card}
+									{visual}
+									revealed={revealedIds.includes(card.id)}
+									{massReveal}
+									interactive={phase === 'discovery' && !suspended}
+									detailsEnabled={!suspended}
+									onReveal={() => reveal(card)}
+									onOpenDetail={() => {
+										inspectionOrigin =
+											document.activeElement instanceof HTMLElement ? document.activeElement : null;
+										onOpenCard(card);
+									}}
+								/>
+							</div>{/each}
+					</div>
 				</div>
-			</div>
-		{:else if phase === 'complete' && cards}<div class="opening-summary arcade-card-grid">
-				{#each cards as card (card.id)}<CardTile {card} owned onOpen={onOpenCard} />{/each}
-			</div>
-			<div class="opening-footer">
-				{#if openedCount != null}<p class="w-full text-center text-sm" role="status">
-						{$_(creditKnown ? 'plan.boosters.opened' : 'plan.boosters.openedUnknownCredits', {
-							values: { count: openedCount, remaining: available }
-						})}
-					</p>{/if}<Button variant="outline" onclick={onReset}>{$_('boosters.close')}</Button
-				>{#if available && canOpen}<Button
-						onclick={() => {
-							onReset();
-							request();
-						}}>{$_('boosters.open_next')}</Button
-					>{/if}
-			</div>{/if}
+			{/if}
+			{#if phase === 'ceremony' || !cards?.length}<div
+					class="theatre-scene"
+					class:departing={progress >= 0.73}
+				>
+					<BoosterScene
+						name={packName}
+						renderKey={packRenderKey}
+						family={packFamily}
+						count={packCardCount}
+						active={sceneOpen}
+						playing={phase === 'ceremony'}
+						waiting={!cards?.length && opening}
+						onProgress={(value) => (progress = value)}
+						onComplete={() => {
+							if (phase === 'ceremony') phase = 'discovery';
+						}}
+					/>
+				</div>{/if}
+			{#if !cards?.length}<div class="verification-slot">
+					{#if opening}<p class="waiting-label" role="status">
+							<span></span>{$_(
+								requestPhase === 'verify' ? 'opening.verifying' : 'opening.requesting'
+							)}
+						</p>{/if}{#if verification}{@render verification()}{/if}{#if error}<p
+							role="alert"
+							class="opening-error"
+						>
+							{error}
+						</p>{/if}
+				</div>{/if}
+		</div>
+		<footer class="theatre-footer">
+			{#if phase === 'ceremony'}<p>{$_('opening.sealBroken')}</p>
+				<Button variant="outline" onclick={() => (phase = 'discovery')} disabled={suspended}
+					>{$_('arcade.skipAnimation')}</Button
+				>
+			{:else if cards?.length}<div class="board-information">
+					{#if complete}<p role="status">{$_('arcade.summary')}</p>
+						{#if openedCount != null}<p class="summary-count">
+								{$_(creditKnown ? 'plan.boosters.opened' : 'plan.boosters.openedUnknownCredits', {
+									values: { count: openedCount, remaining: available }
+								})}
+							</p>{/if}
+						<p>{$_('opening.manageHint')}</p>{:else}<p>{$_('opening.revealHint')}</p>
+						<p class="finish-legend">{$_('opening.finishLegend')}</p>{/if}
+				</div>
+				<div class="board-commands">
+					{#if pages > 1}<div class="board-pagination" aria-label={$_('opening.resultPages')}>
+							<Button
+								variant="ghost"
+								size="icon"
+								disabled={!resultPage || suspended}
+								onclick={() => movePage(resultPage - 1)}
+								aria-label={$_('opening.previousPage')}>←</Button
+							><span>{resultPage + 1} / {pages}</span><Button
+								variant="ghost"
+								size="icon"
+								disabled={resultPage === pages - 1 || suspended}
+								onclick={() => movePage(resultPage + 1)}
+								aria-label={$_('opening.nextPage')}>→</Button
+							>
+						</div>{/if}{#if !complete}<Button disabled={suspended} onclick={all}
+							>{$_('arcade.revealAll')}</Button
+						>{:else if canOpen && available && !opening && creditKnown}<Button
+							onclick={() => request()}
+							disabled={suspended}>{$_('boosters.open_next')}</Button
+						>{/if}
+				</div>
+			{:else}<p>{$_('opening.waitHint')}</p>{/if}
+		</footer>
 	</Dialog.Content>
 </Dialog.Root>
+
 <Dialog.Root bind:open={confirmBatch}
 	><Dialog.Content class="max-w-md p-4 sm:p-5"
 		><Dialog.Header
@@ -348,136 +338,268 @@
 >
 
 <style>
-	.ceremony-stage {
-		position: relative;
-		flex: 1;
-		display: grid;
-		align-content: center;
-		min-height: 0;
-	}
-	:global(.ceremony-skip) {
-		justify-self: center;
-	}
-	.pack-tear-handle {
-		display: grid;
-		gap: 0.25rem;
-		place-items: center;
-		min-height: 44px;
-		width: 100%;
-		max-width: 320px;
-		touch-action: pan-y;
-		border-block: 1px dashed var(--primary);
-		color: var(--primary);
-		font-size: 0.875rem;
-		user-select: none;
-	}
 	.opening-controls {
 		display: grid;
-		gap: 1rem;
+		gap: 8px;
 		min-width: 0;
 	}
-	.opening-settings {
+	.opening-mode {
+		display: flex;
+		gap: 4px;
+		justify-content: end;
+	}
+	.open-buttons {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 1rem;
-		justify-content: space-between;
-		align-items: center;
+		gap: 8px;
 	}
-	.sealed-pack {
+	:global(.opening-controls .open-main) {
+		min-width: 220px;
+		justify-content: space-between;
+		gap: 30px;
+		min-height: 52px;
+	}
+	.pending-hint {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		font-size: 12px;
+	}
+	.opening-error {
+		font-size: 14px;
+		color: var(--destructive);
+	}
+	:global(.booster-theatre) {
+		inset: 0 !important;
+		top: 0 !important;
+		left: 0 !important;
+		width: 100% !important;
+		max-width: none !important;
+		height: 100dvh;
+		max-height: 100dvh !important;
+		translate: none !important;
+		transform: none !important;
+		border: 0;
+		background: #10120f;
 		display: flex;
 		flex-direction: column;
-		align-items: center;
-		gap: 0.6rem;
-		padding: 0;
+		gap: 0;
 	}
-	.pack-object {
-		width: min(58vw, 240px);
-		touch-action: pan-y;
-	}
-	.waiting {
-		opacity: 0.7;
-	}
-	:global(.arcade-opening-dialog .opening-head) {
+	:global(.booster-theatre .theatre-header) {
 		display: flex;
 		flex-direction: row;
-		align-items: start;
 		justify-content: space-between;
-		gap: 1rem;
-		padding: 1rem;
-		border-bottom: 1px solid var(--border);
-	}
-	.opening-command {
-		display: flex;
-		justify-content: flex-end;
-		padding: 0 1rem;
-	}
-	.discovery-stage {
-		min-height: 0;
-		display: flex;
-		flex-direction: column;
 		align-items: center;
-		gap: 1rem;
-		overflow: auto;
-		padding: 0.5rem 1rem 1rem;
-		touch-action: pan-y;
+		gap: 12px;
+		padding: max(16px, env(safe-area-inset-top)) clamp(16px, 4vw, 56px) 16px;
+		border-bottom: 1px solid #efebd924;
+		z-index: 5;
 	}
-	.discovery-card {
-		width: min(144px, calc((100dvh - 18rem) * 0.706));
-		min-width: 100px;
+	.theatre-overline {
+		font-size: 10px;
+		letter-spacing: 0.14em;
+		color: #e8ef42;
+		text-transform: uppercase;
+		margin-bottom: 2px;
 	}
-	.discovery-navigation {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: center;
-		gap: 0.5rem;
-	}
-	.opening-summary {
-		overflow-y: auto;
+	.theatre-main {
+		position: relative;
+		flex: 1;
 		min-height: 0;
-		padding: 1rem;
-		align-items: start;
+		overflow: hidden;
+		display: grid;
+		background: radial-gradient(ellipse at 50% 60%, #e8ef4209, transparent 60%);
 	}
-	.opening-footer {
+	.theatre-scene {
+		position: absolute;
+		inset: 0;
+		transition: opacity 700ms;
+	}
+	.theatre-scene.departing {
+		opacity: 0;
+		pointer-events: none;
+	}
+	.verification-slot {
+		z-index: 4;
+		align-self: end;
+		justify-self: center;
+		width: min(100% - 32px, 360px);
+		margin-bottom: 16px;
+		text-align: center;
+	}
+	.waiting-label {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+		justify-content: center;
+		font-size: 13px;
+		color: #efebd9a6;
+	}
+	.waiting-label span {
+		width: 6px;
+		height: 6px;
+		background: #e8ef42;
+		border-radius: 50%;
+	}
+	.discovery-board {
+		position: relative;
+		padding: clamp(20px, 4vw, 48px);
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		z-index: 3;
+		display: grid;
+		align-items: center;
+		min-height: 0;
+	}
+	.board-grid {
+		display: grid;
+		grid-template-columns: repeat(var(--desktop-cols), minmax(0, 144px));
+		justify-content: center;
+		align-items: start;
+		gap: 22px 24px;
+	}
+	.board-slot {
+		width: 100%;
+		max-width: 144px;
+		justify-self: center;
+		min-width: 0;
+	}
+	.dealing .board-slot {
+		animation: cards-deal 800ms cubic-bezier(0.16, 0.74, 0.18, 1) both;
+		animation-delay: calc(var(--slot) * 18ms);
+	}
+	.mass .board-grid {
+		animation: acquired 180ms ease-out;
+	}
+	.theatre-footer {
+		z-index: 5;
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.75rem;
-		padding: 1rem;
-		border-top: 1px solid var(--border);
-		justify-content: center;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 16px clamp(16px, 4vw, 56px) max(16px, env(safe-area-inset-bottom));
+		border-top: 1px solid #efebd924;
+		background: #171918;
+		min-height: 76px;
 	}
-	:global(.arcade-opening-dialog) {
+	.theatre-footer p {
+		font-size: 13px;
+		color: #efebd9b3;
+	}
+	.finish-legend,
+	.board-information p:last-child {
+		font-size: 11px;
+	}
+	.board-information p:first-child {
+		color: #efebd9;
+		font-weight: 600;
+	}
+	.summary-count {
+		font-variant-numeric: tabular-nums;
+	}
+	.board-commands {
 		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		height: min(90dvh, 900px);
-		max-height: 90dvh;
+		flex-wrap: wrap;
+		gap: 12px;
+		align-items: center;
 	}
-	@media (max-width: 767px) {
-		:global(.arcade-opening-dialog) {
-			inset: 0;
+	.board-pagination {
+		display: flex;
+		gap: 4px;
+		align-items: center;
+	}
+	.board-pagination span {
+		font-size: 12px;
+		font-variant-numeric: tabular-nums;
+	}
+	@keyframes cards-deal {
+		from {
+			opacity: 0;
+			transform: perspective(600px) translate(var(--flight-x), 100px) rotateZ(var(--flight-angle))
+				rotateY(25deg) scale(0.75);
+		}
+		to {
+			opacity: 1;
 			transform: none;
-			translate: none;
-			width: 100%;
-			height: 100dvh;
-			max-height: 100dvh;
-			border: 0;
 		}
-		:global(.arcade-opening-dialog .opening-head) {
-			padding-top: max(1rem, env(safe-area-inset-top));
+	}
+	@keyframes acquired {
+		from {
+			opacity: 0.7;
 		}
-		.opening-footer {
-			padding-bottom: max(1rem, env(safe-area-inset-bottom));
+		to {
+			opacity: 1;
+		}
+	}
+	@media (min-width: 1280px) {
+		.board-grid {
+			grid-template-columns: repeat(var(--large-cols), minmax(0, 144px));
 		}
 	}
 	@media (max-width: 1023px) {
-		.sealed-pack :global([data-testid='booster-open-one']) {
-			position: fixed;
-			bottom: calc(72px + env(safe-area-inset-bottom));
-			left: 12px;
-			width: calc(100% - 24px);
-			max-width: none;
-			z-index: 39;
-			box-shadow: 0 -8px 24px var(--background);
+		.board-grid {
+			grid-template-columns: repeat(var(--tablet-cols), minmax(0, 144px));
+			gap: 22px 18px;
+		}
+	}
+	@media (max-width: 600px) {
+		.board-grid {
+			grid-template-columns: repeat(var(--phone-cols), minmax(0, 144px));
+			gap: 18px 20px;
+		}
+		.discovery-board {
+			padding: 20px 20px 24px;
+			align-items: start;
+		}
+		.opening-mode {
+			justify-content: center;
+		}
+		.open-buttons {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.open-buttons :global(button:only-child) {
+			grid-column: 1 / -1;
+		}
+		.open-buttons :global(button) {
+			white-space: normal;
+			font-size: 13px;
+		}
+		:global(.opening-controls .open-main) {
+			width: 100%;
+			min-width: 0;
+		}
+		.theatre-footer {
+			padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+			gap: 8px;
+		}
+		.board-information {
+			width: 100%;
+		}
+		.board-commands {
+			width: 100%;
+			justify-content: space-between;
+		}
+		:global(.booster-theatre .theatre-header) {
+			padding-inline: 16px;
+		}
+		:global(.booster-theatre .theatre-header [data-slot='dialog-title']) {
+			font-size: 24px;
+			overflow-wrap: anywhere;
+		}
+	}
+	:global(html[data-motion='reduce'] .booster-theatre *) {
+		animation: none !important;
+		transition: none !important;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.board-slot,
+		.mass .board-grid {
+			animation: none !important;
+		}
+		.theatre-scene {
+			transition: none;
 		}
 	}
 </style>

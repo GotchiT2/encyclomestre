@@ -131,10 +131,11 @@
 	}
 	.achievement-row {
 		border-bottom: 1px solid var(--border);
+		padding-inline: 16px;
 	}
 	.achievement-row[data-reward-state='CLAIMABLE'] {
 		border-left: 3px solid var(--primary);
-		padding-left: 12px;
+		padding-left: 13px;
 		background: var(--card);
 	}
 	@media (min-width: 768px) {

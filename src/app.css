@@ -709,6 +709,33 @@ select:focus-visible {
 	outline: 2px solid var(--primary);
 	outline-offset: 2px;
 }
+select {
+	appearance: none;
+	cursor: pointer;
+	font-family: 'Barlow', sans-serif;
+	font-size: 14px;
+	font-weight: 600;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background-color: var(--card);
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EFEBD9' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+	background-position: right 10px center;
+	background-repeat: no-repeat;
+	background-size: 16px;
+	padding: 10px 36px 10px 12px;
+	transition: border-color 120ms;
+}
+select:hover:not(:disabled) {
+	border-color: var(--primary);
+}
+select:not([multiple]) {
+	padding-right: 36px;
+	font-weight: 600;
+}
+option {
+	background-color: var(--card);
+	color: var(--foreground);
+}
 .forge-panel::before,
 .forge-panel-flat::before {
 	display: none;
@@ -730,7 +757,7 @@ summary {
 }
 .arcade-page {
 	width: 100%;
-	max-width: 1320px;
+	max-width: none;
 	margin-inline: auto;
 	padding: 20px 12px calc(88px + env(safe-area-inset-bottom));
 }

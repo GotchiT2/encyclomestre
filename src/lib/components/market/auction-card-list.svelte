@@ -21,23 +21,27 @@
 		{@const href =
 			'/market/' + encodeURIComponent(auction.id) + '?from=' + encodeURIComponent(from)}
 		{@const phase = auctionPhase(auction, now)}
+		{@const personalState = auction.leading
+			? 'leading'
+			: ['OUTBID', 'LOST'].includes(auction.viewerOutcome ?? '') ||
+				  (auction.myMax != null && phase === 'open')
+				? 'outbid'
+				: 'neutral'}
 		<article class="auction-tile" data-auction-id={auction.id}>
-			<CardTile
-				card={auction.card}
-				showCollectionState={false}
-				showFriendOwners={false}
-				onOpen={() => void goto(resolve(href as '/market'))}
-			/>
+			<div class="auction-art">
+				<CardTile
+					card={auction.card}
+					showCollectionState={false}
+					showFriendOwners={false}
+					onOpen={() => void goto(resolve(href as '/market'))}
+				/>
+				{#if auction.seller.id === userId}<span class="own-auction">{$_('auctionHub.own')}</span
+					>{/if}
+			</div>
 			<div class="min-w-0 space-y-2">
 				<div class="flex items-center justify-between gap-1">
 					<AuctionStatus {auction} {now} />
-					{#if userId}<AuctionFavorite
-							compact
-							id={auction.id}
-							favorite={auction.favorite}
-						/>{/if}{#if auction.seller.id === userId}<span
-							class="self-center text-xs text-muted-foreground">{$_('auctionHub.own')}</span
-						>{/if}
+					{#if userId}<AuctionFavorite compact id={auction.id} favorite={auction.favorite} />{/if}
 				</div>
 				<a
 					href={resolve(href as '/market')}
@@ -45,11 +49,20 @@
 					>{auction.card.title}</a
 				>
 				<p class="text-xs text-muted-foreground">{auction.card.variant.name}</p>
-				<p class="text-xl font-bold text-primary tabular-nums">
+				<p class="auction-price text-xl font-bold tabular-nums" data-bid-state={personalState}>
 					{(auction.price ?? auction.startPrice).toLocaleString('fr')} ◈
-					<span class="text-xs font-normal text-muted-foreground"
-						>· {$_('auctionHub.bids', { values: { count: auction.nbBids } })}</span
+					<span class="sr-only"
+						>{$_(
+							personalState === 'leading'
+								? 'auctionHub.leading'
+								: personalState === 'outbid'
+									? 'auctionDisplay.outbid'
+									: 'auctionDisplay.currentPrice'
+						)}</span
 					>
+				</p>
+				<p class="text-xs text-muted-foreground">
+					{$_('auctionHub.bids', { values: { count: auction.nbBids } })}
 				</p>
 				<p class="text-xs text-muted-foreground">
 					{$_('auctionHub.seller')} :
@@ -63,9 +76,10 @@
 							mode={phase === 'upcoming' ? 'start' : 'end'}
 						/>
 					</div>{/if}
-				{#if auction.leading && auction.status === 'OPEN'}<p class="text-xs text-energy">
-						{$_('auctionHub.leading')}{#if auction.myMax != null}
-							· {$_('auctionHub.myMax')} : {auction.myMax}{/if}
+				{#if auction.myMax != null && auction.status === 'OPEN'}<p
+						class="text-xs text-muted-foreground"
+					>
+						{$_('auctionHub.myMax')} : {auction.myMax}
 					</p>{/if}
 			</div>
 		</article>
@@ -75,6 +89,35 @@
 </div>
 
 <style>
+	.auction-art {
+		position: relative;
+		width: 100%;
+		max-width: 144px;
+		justify-self: center;
+	}
+	.own-auction {
+		position: absolute;
+		top: 5px;
+		right: 5px;
+		z-index: 4;
+		max-width: calc(100% - 10px);
+		padding: 3px 6px;
+		background: #e8ef42;
+		color: #171918;
+		font-size: 10px;
+		font-weight: 700;
+		line-height: 1.1;
+		pointer-events: none;
+	}
+	.auction-price {
+		color: var(--primary);
+	}
+	.auction-price[data-bid-state='leading'] {
+		color: #8ad6a3;
+	}
+	.auction-price[data-bid-state='outbid'] {
+		color: #ee7967;
+	}
 	.auction-tile {
 		display: grid;
 		gap: 8px;

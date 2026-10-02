@@ -52,9 +52,9 @@
 				<div class="mx-auto w-36 md:w-[180px]">
 					<BoosterPackArt
 						name={displayName}
-						renderKey={pack.renderKey ?? 'standard'}
+						renderKey={pack.renderKey}
+						family={pack.family}
 						cardCount={pack.nbCards}
-						imageUrl={pack.imageUrl}
 					/>
 				</div>
 				<div class="grid content-start gap-5 sm:grid-cols-2">

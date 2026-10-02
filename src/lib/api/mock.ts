@@ -47,6 +47,7 @@ function savedMockOpenings():
 			cards: WikiForgeCardDto[];
 			reserve: { available: number; bonus: number; lastRechargeAt: number };
 			premiumPlus: { available: number; bonus: number };
+			premium?: { available: number; bonus: number };
 			exhausted: boolean;
 	  }
 	| undefined {
@@ -62,7 +63,9 @@ function savedMockOpenings():
 			) ||
 			!Number.isFinite(saved.reserve?.available) ||
 			!Number.isFinite(saved.reserve?.lastRechargeAt) ||
-			!Number.isFinite(saved.premiumPlus?.available)
+			!Number.isFinite(saved.premiumPlus?.available) ||
+			(saved.premium != null &&
+				(!Number.isFinite(saved.premium.available) || !Number.isFinite(saved.premium.bonus)))
 		)
 			return;
 		return saved;
@@ -556,7 +559,7 @@ const boosterReserve = new Map<
 ]);
 
 const mockPremiumCredits = {
-	PREMIUM: { available: 1, bonus: 0 },
+	PREMIUM: savedOpenings?.premium ?? { available: 1, bonus: 0 },
 	PREMIUM_PLUS: savedOpenings?.premiumPlus ?? { available: 0, bonus: 1 }
 };
 
@@ -969,6 +972,13 @@ export function createMockApiResponse({
 	const targetPath =
 		typeof sessionStorage === 'undefined' ? '' : sessionStorage.getItem('wikiforge-plan-path');
 	const matches = !targetPath || pathname === targetPath;
+	if (
+		planScenario === 'uncertain-opening-read-error' &&
+		openedCards.size > 0 &&
+		normalizedMethod === 'GET' &&
+		['/boosters', '/collection'].includes(pathname)
+	)
+		return error(503, 'Relecture indisponible.', 'UNAVAILABLE');
 	if (
 		matches &&
 		planScenario === 'error' &&
@@ -2369,12 +2379,17 @@ export function createMockApiResponse({
 			? json(pack.id === 1 && limitedPackExhausted ? { ...pack, status: 'EXHAUSTED' } : pack)
 			: error(404, 'Pack introuvable.', 'NOT_FOUND');
 	}
-	const boosterOpenMatch = /^\/boosters\/(1|3)\/(open|open-all)$/.exec(pathname);
+	const boosterOpenMatch = /^\/boosters\/(1|2|3)\/(open|open-all)$/.exec(pathname);
 	if (normalizedMethod === 'POST' && boosterOpenMatch) {
 		const packId = Number(boosterOpenMatch[1]);
 		const userId = 'demo-user';
 		boosterInventory(userId);
-		const state = packId === 1 ? boosterReserve.get(userId)! : mockPremiumCredits.PREMIUM_PLUS;
+		const state =
+			packId === 1
+				? boosterReserve.get(userId)!
+				: packId === 2
+					? mockPremiumCredits.PREMIUM
+					: mockPremiumCredits.PREMIUM_PLUS;
 		const available = state.available + state.bonus;
 		if (!available) return error(403, 'Aucun paquet disponible.', 'NO_BOOSTER_AVAILABLE');
 		if (planScenario === 'stock-limited' && limitedPackExhausted)
@@ -2388,7 +2403,14 @@ export function createMockApiResponse({
 		state.available -= regularUsed;
 		state.bonus -= openedCount - regularUsed;
 		const cards = Array.from({ length: 5 * openedCount }, (_, index) => {
-			const card = mockCards[Math.floor(Math.random() * mockCards.length)];
+			const fixtures = [
+				mockCards.find((card) => card.variant.styles.includes('NORMAL'))!,
+				mockCards.find((card) => card.variant.styles.includes('FULL_ART'))!,
+				mockCards.find((card) => card.variant.styles.includes('CHROME'))!
+			];
+			const card = planScenario?.startsWith('opening-')
+				? fixtures[index % fixtures.length]
+				: mockCards[Math.floor(Math.random() * mockCards.length)];
 			card.ownedCount += 1;
 			return {
 				id: nextOpenedCardId++,
@@ -2421,14 +2443,27 @@ export function createMockApiResponse({
 						cards: [...openedCards.values()],
 						reserve: boosterReserve.get(userId),
 						premiumPlus: mockPremiumCredits.PREMIUM_PLUS,
+						premium: mockPremiumCredits.PREMIUM,
 						exhausted: limitedPackExhausted
 					})
 				);
 		} catch {
 			/* Optional mock persistence. */
 		}
-		if (planScenario === 'uncertain-opening')
+		if (planScenario === 'uncertain-opening' || planScenario === 'uncertain-opening-read-error')
 			throw new TypeError('Mock response lost after opening');
+		if (planScenario === 'opening-pending')
+			return new Response(
+				new ReadableStream({
+					start(controller) {
+						setTimeout(() => {
+							controller.enqueue(new TextEncoder().encode(JSON.stringify({ packId, cards })));
+							controller.close();
+						}, 900);
+					}
+				}),
+				{ headers: { 'content-type': 'application/json' } }
+			);
 		return json({
 			packId,
 			cards

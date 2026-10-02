@@ -23,7 +23,7 @@
 	} = $props();
 </script>
 
-<article class="forge-panel flex min-w-0 items-center gap-3 p-3">
+<article class="forge-panel grid min-w-0 gap-3 p-3">
 	<a
 		href={resolve('/users/[id]', { id: friendship.user.id })}
 		class="flex min-w-0 flex-1 items-center gap-3"
@@ -35,7 +35,7 @@
 			lastConnection={friendship.user.lastConnection}
 		/>
 		<div class="min-w-0">
-			<h3 class="truncate text-lg font-black uppercase sm:text-xl">
+			<h3 class="break-words text-lg font-black leading-tight uppercase sm:text-xl">
 				@{friendship.user.username}
 			</h3>
 			<p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-primary">
@@ -43,7 +43,7 @@
 			</p>
 		</div>
 	</a>
-	<div class="flex shrink-0 items-center gap-1.5">
+	<div class="flex flex-wrap items-center justify-end gap-1.5 border-t border-border pt-2">
 		<Button
 			disabled={busy}
 			size="icon-sm"

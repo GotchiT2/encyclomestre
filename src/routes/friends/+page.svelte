@@ -357,8 +357,8 @@
 	}
 	@media (min-width: 1024px) {
 		.friends-layout {
-			grid-template-columns: minmax(0, 1fr) 300px;
-			gap: 32px;
+			grid-template-columns: minmax(0, 1.6fr) minmax(360px, 1fr);
+			gap: 24px;
 		}
 		.friends-requests,
 		.friends-requests.requests-open {
@@ -371,6 +371,11 @@
 		}
 		:global(.requests-toggle) {
 			display: none;
+		}
+	}
+	@media (min-width: 1600px) {
+		.friend-contacts-grid {
+			grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
 		}
 	}
 </style>

@@ -1,269 +1,480 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
-	import { tick, type Snippet } from 'svelte';
+	import { fly } from 'svelte/transition';
+	import type { Snippet } from 'svelte';
 	import { Button } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
+	import { arcadePreferences } from '$lib/arcade/preferences';
 	import BoosterPackArt from './booster-pack-art.svelte';
-	import PackScene from '$lib/card-renderer/pack-scene.svelte';
+	import BoosterScene from './booster-scene.svelte';
 	import PackCatalogue from './pack-catalogue.svelte';
-	import { packNameKey, packDescriptionKey } from './pack-labels';
+	import { packNameKey } from './pack-labels';
 	import type { PackCatalogueItem } from '$lib/types';
 	let {
 		packs,
 		selectedId,
 		onSelect,
 		onDetails,
-		actions
+		onTear = () => undefined,
+		locked = false,
+		active = true,
+		actions,
+		credits
 	}: {
 		packs: PackCatalogueItem[];
 		selectedId: number | null;
 		onSelect: (pack: PackCatalogueItem) => void;
 		onDetails: (pack: PackCatalogueItem) => void;
+		onTear?: () => void;
+		locked?: boolean;
+		active?: boolean;
 		actions?: Snippet;
+		credits?: Snippet;
 	} = $props();
-	let allOpen = $state(false),
-		gallery: HTMLDivElement;
-	const availablePacks = $derived(
+	let allOpen = $state(false);
+	let gesture: { x: number; y: number; tear: boolean } | null = null;
+	const available = $derived(
 		packs.filter((pack) => pack.status === 'OPEN' && (pack.credit?.available ?? 0) > 0)
 	);
-	const selectedIndex = $derived(
-		Math.max(
-			0,
-			availablePacks.findIndex((pack) => pack.id === selectedId)
-		)
-	);
 	const selected = $derived(packs.find((pack) => pack.id === selectedId));
-	$effect(() => {
-		const id = selectedId;
-		void tick().then(() => {
-			const card = gallery?.querySelector<HTMLElement>(`[data-pack-id="${id}"]`);
-			if (card && gallery)
-				gallery.scrollTo({
-					left: card.offsetLeft - gallery.offsetLeft - (gallery.clientWidth - card.clientWidth) / 2,
-					behavior:
-						document.documentElement.dataset.motion === 'reduce' ||
-						window.matchMedia('(prefers-reduced-motion:reduce)').matches
-							? 'instant'
-							: 'smooth'
-				});
-		});
-	});
+	const selectedIndex = $derived(available.findIndex((pack) => pack.id === selectedId));
+	const previous = $derived(available[selectedIndex - 1]);
+	const next = $derived(available[selectedIndex + 1]);
 	const name = (pack: PackCatalogueItem) => {
 		const key = packNameKey(pack.name);
 		return key ? $_(key) : pack.name;
 	};
+	const duration = () =>
+		$arcadePreferences.motion === 'reduce' ||
+		(typeof window !== 'undefined' && matchMedia('(prefers-reduced-motion:reduce)').matches)
+			? 0
+			: 220;
+	function endGesture(event: PointerEvent) {
+		if (!gesture || locked) {
+			gesture = null;
+			return;
+		}
+		const dx = event.clientX - gesture.x,
+			dy = event.clientY - gesture.y;
+		if (Math.abs(dx) >= 70 && Math.abs(dy) < 70) {
+			if (gesture.tear && selected?.status === 'OPEN' && selected.credit?.available) onTear();
+			else if (dx < 0 && next) onSelect(next);
+			else if (dx > 0 && previous) onSelect(previous);
+		}
+		gesture = null;
+	}
 </script>
 
-<div class="pack-selection">
-	<p class="available-heading">
-		{$_(availablePacks.length ? 'arcade.availablePacks' : 'arcade.noAvailablePacks')}
-	</p>
-	<div class="pack-gallery" bind:this={gallery} aria-label={$_('boosters.back_to_packs')}>
-		{#each availablePacks as pack (pack.id)}<button
-				type="button"
-				class="gallery-pack"
-				class:selected={pack.id === selectedId}
-				data-pack-id={pack.id}
-				aria-pressed={pack.id === selectedId}
-				aria-label={name(pack)}
-				onclick={() => onSelect(pack)}
-			>
-				{#if pack.id === selectedId}<PackScene
-						name={name(pack)}
-						image={pack.imageUrl}
-						brand={$_('navigation.brand')}
-						cardCount={pack.nbCards}
-						cardsLabel={$_('arcade.cardsLabel')}
-					/>
-				{:else}<BoosterPackArt
-						name={name(pack)}
-						renderKey={pack.renderKey ?? 'standard'}
-						cardCount={pack.nbCards}
-						imageUrl={pack.imageUrl}
-					/>{/if}
-				<span>{name(pack)}</span></button
-			>{/each}
-	</div>
-	<div class="gallery-navigation">
-		<Button
-			variant="outline"
-			disabled={selectedIndex === 0 || !availablePacks.length}
-			onclick={() => onSelect(availablePacks[selectedIndex - 1])}
-			aria-label={$_('arcade.previousPack')}>←</Button
-		><Button variant="outline" onclick={() => (allOpen = true)}>{$_('arcade.allPacks')}</Button
-		><Button
-			variant="outline"
-			disabled={!availablePacks.length || selectedIndex >= availablePacks.length - 1}
-			onclick={() => onSelect(availablePacks[selectedIndex + 1])}
-			aria-label={$_('arcade.nextPack')}>→</Button
+<section class="booster-reserve" data-testid="booster-reserve">
+	<div class="reserve-heading">
+		<div>
+			<p>{$_('opening.room')}</p>
+			<h1>{$_('opening.title')}</h1>
+		</div>
+		<Button variant="outline" onclick={() => (allOpen = true)} disabled={locked}
+			>{$_('arcade.allPacks')}</Button
 		>
 	</div>
-	{#if selected}<div class="selected-information">
-			<p class="text-xs font-semibold uppercase tracking-wider text-primary">
-				{$_('boosters.family.' + selected.family)}
-			</p>
-			<h2 class="text-3xl">{name(selected)}</h2>
-			{#if actions}{@render actions()}{/if}
-			<p class="pack-description text-sm">
-				{packDescriptionKey(selected.description)
-					? $_(packDescriptionKey(selected.description)!)
-					: selected.description}
-			</p>
-			<p class="text-sm text-muted-foreground">
-				{$_('boosters.catalogue.status.' + selected.status, {
-					default: $_('plan.boosters.unavailable')
-				})}
-			</p>
-			<Button variant="outline" onclick={() => onDetails(selected)}
-				>{$_('boosters.view_contents')}</Button
-			>
-		</div>{/if}
-</div>
+	{#if credits}<div class="reserve-credits">{@render credits()}</div>{/if}
+	<div class="reserve-plateau">
+		<div class="plateau-index" aria-hidden="true">
+			WF / <span>{$_('opening.sessionLabel')}</span>
+		</div>
+		<div class="pack-cartouche">
+			{#if selected}<span
+					>{$_('boosters.family.' + selected.family, { default: selected.family })} · {$_(
+						'boosters.pack_card_count',
+						{ values: { count: selected.nbCards } }
+					)}</span
+				>
+				<h2>{name(selected)}</h2>{:else}<h2>
+					{$_(packs.length ? 'arcade.noAvailablePacks' : 'opening.empty')}
+				</h2>{/if}
+		</div>
+		<div
+			class="hero-lane"
+			role="presentation"
+			onpointerdown={(event) => {
+				const box = event.currentTarget.getBoundingClientRect();
+				gesture = {
+					x: event.clientX,
+					y: event.clientY,
+					tear: event.clientY < box.top + box.height * 0.28
+				};
+			}}
+			onpointerup={endGesture}
+			onpointercancel={() => (gesture = null)}
+		>
+			{#if previous}<button
+					class="neighbor previous"
+					aria-label={$_('arcade.previousPack')}
+					disabled={locked}
+					onclick={() => onSelect(previous)}
+					><BoosterPackArt
+						name={name(previous)}
+						renderKey={previous.renderKey}
+						family={previous.family}
+					/></button
+				>{/if}
+			<div class="selected-pack">
+				{#if selected}{#key selected.id}<div
+							class="hero-pack"
+							in:fly={{ x: 45, duration: duration() }}
+							out:fly={{ x: -45, duration: duration() }}
+						>
+							<BoosterScene
+								name={name(selected)}
+								renderKey={selected.renderKey}
+								family={selected.family}
+								count={selected.nbCards}
+								{active}
+							/>
+						</div>{/key}{/if}
+			</div>
+			{#if next}<button
+					class="neighbor next"
+					aria-label={$_('arcade.nextPack')}
+					disabled={locked}
+					onclick={() => onSelect(next)}
+					><BoosterPackArt
+						name={name(next)}
+						renderKey={next.renderKey}
+						family={next.family}
+					/></button
+				>{/if}
+		</div>
+		{#if selected?.status === 'OPEN' && selected.credit?.available}<button
+				class="tear-invitation"
+				data-testid="pack-tear-handle"
+				disabled={locked}
+				onclick={onTear}>{$_('opening.tear')} <span aria-hidden="true">↗</span></button
+			>{/if}
+		<div class="plateau-base">
+			<div class="pack-navigation">
+				<Button
+					variant="ghost"
+					size="icon"
+					disabled={!previous || locked}
+					onclick={() => previous && onSelect(previous)}
+					aria-label={$_('arcade.previousPack')}>←</Button
+				><Button
+					variant="ghost"
+					size="icon"
+					disabled={!next || locked}
+					onclick={() => next && onSelect(next)}
+					aria-label={$_('arcade.nextPack')}>→</Button
+				>{#if selected}<Button variant="ghost" onclick={() => onDetails(selected)} disabled={locked}
+						>{$_('opening.contents')}</Button
+					>{/if}
+			</div>
+			<div class="reserve-actions">
+				{#if actions}{@render actions()}{/if}
+			</div>
+		</div>
+	</div>
+	{#if available.length}<nav class="reserve-dock" aria-label={$_('arcade.availablePacks')}>
+			{#each available as pack (pack.id)}<button
+					type="button"
+					class:chosen={pack.id === selectedId}
+					aria-pressed={pack.id === selectedId}
+					disabled={locked}
+					onclick={() => onSelect(pack)}
+					data-pack-id={pack.id}
+					><div class="dock-art">
+						<BoosterPackArt name={name(pack)} renderKey={pack.renderKey} family={pack.family} />
+					</div>
+					<span>{name(pack)}</span><i aria-hidden="true"></i></button
+				>{/each}
+		</nav>{:else}<p class="reserve-empty" role="status">{$_('opening.noAvailable')}</p>{/if}
+</section>
 <Dialog.Root bind:open={allOpen}
-	><Dialog.Content class="arcade-sheet overflow-y-auto p-4 sm:p-5"
+	><Dialog.Content class="overflow-y-auto p-4 sm:p-5"
 		><Dialog.Header
 			><Dialog.Title>{$_('arcade.allPacks')}</Dialog.Title><Dialog.Description
-				>{$_('boosters.description')}</Dialog.Description
+				>{$_('opening.allHint')}</Dialog.Description
 			></Dialog.Header
 		><PackCatalogue
 			{packs}
-			{onDetails}
-			onOpen={(pack) => {
-				onSelect(pack);
+			onDetails={(pack) => {
 				allOpen = false;
+				onDetails(pack);
+			}}
+			onOpen={(pack) => {
+				allOpen = false;
+				onSelect(pack);
 			}}
 		/></Dialog.Content
 	></Dialog.Root
 >
 
 <style>
-	.available-heading {
-		font-size: 12px;
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-		font-weight: 700;
-		color: var(--primary);
-		grid-column: 1/-1;
-	}
-	.gallery-pack.selected {
-		flex-basis: 210px;
-	}
-	.gallery-pack :global(.pack-scene) {
-		height: 215px;
-	}
-	@media (max-width: 1023px) {
-		.pack-gallery {
-			height: 215px;
-		}
-		.gallery-pack span {
-			display: none;
-		}
-		.pack-description {
-			display: none;
-		}
-		.selected-information {
-			padding: 0 !important;
-			border: 0 !important;
-		}
-		.selected-information h2 {
-			font-size: 24px;
-		}
-		.selected-information > p {
-			font-size: 12px;
-		}
-		.pack-selection {
-			gap: 8px;
-		}
-		.gallery-navigation {
-			order: 0;
-		}
-	}
-
-	.pack-selection {
+	.booster-reserve {
 		min-width: 0;
 		display: grid;
-		gap: 1rem;
+		gap: 14px;
+		padding-bottom: 8px;
 	}
-	.pack-gallery {
-		position: relative;
+	.reserve-heading {
 		display: flex;
-		gap: 1.25rem;
+		align-items: end;
+		justify-content: space-between;
+		gap: 12px;
+	}
+	.reserve-heading p {
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.13em;
+		text-transform: uppercase;
+		color: #e8ef42;
+	}
+	h1 {
+		font:
+			800 clamp(30px, 4vw, 52px)/0.95 'Barlow Condensed',
+			sans-serif;
+		text-transform: uppercase;
+	}
+	h1,
+	h2 {
+		margin: 0;
+	}
+	.reserve-plateau {
+		position: relative;
+		min-width: 0;
+		overflow: hidden;
+		isolation: isolate;
+		border: 1px solid #efebd92a;
+		background: radial-gradient(ellipse at 50% 65%, #2e3322, transparent 58%), #10120f;
+	}
+	.reserve-plateau::before {
+		content: '';
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 36px;
+		height: 3px;
+		background: #e8ef42;
+	}
+	.plateau-index {
+		position: absolute;
+		right: 20px;
+		top: 20px;
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.14em;
+		color: #efebd95a;
+	}
+	.plateau-index span {
+		color: #efebd932;
+	}
+	.pack-cartouche {
+		position: relative;
+		padding: 20px 20px 0;
+		z-index: 2;
+		max-width: 65%;
+	}
+	.pack-cartouche span {
+		font-size: 11px;
+		color: #efebd9a6;
+	}
+	h2 {
+		font:
+			700 clamp(22px, 3vw, 34px)/1.05 'Barlow Condensed',
+			sans-serif;
+		overflow-wrap: anywhere;
+	}
+	.hero-lane {
+		position: relative;
+		width: 100%;
+		height: clamp(310px, 42dvh, 450px);
+		touch-action: pan-y;
+	}
+	.selected-pack {
+		position: absolute;
+		inset: 0;
+	}
+	.hero-pack {
+		position: absolute;
+		inset: 0;
+	}
+	.neighbor {
+		display: none;
+		position: absolute;
+		width: 92px;
+		top: 24%;
+		border: 0;
+		background: none;
+		opacity: 0.5;
+		z-index: 3;
+		min-height: 44px;
+		transition: opacity 160ms;
+	}
+	.neighbor:hover {
+		opacity: 1;
+	}
+	.neighbor:focus-visible {
+		outline: 2px solid #e8ef42;
+		outline-offset: 5px;
+	}
+	.previous {
+		left: 9%;
+		transform: perspective(800px) rotateY(18deg) rotateZ(-8deg);
+	}
+	.next {
+		right: 9%;
+		transform: perspective(800px) rotateY(-18deg) rotateZ(8deg);
+	}
+	.tear-invitation {
+		display: block;
+		margin: -10px auto 6px;
+		position: relative;
+		z-index: 3;
+		padding: 0 14px;
+		min-height: 44px;
+		font-size: 12px;
+		color: #efebd99a;
+		background: transparent;
+		border: 0;
+	}
+	.tear-invitation span {
+		color: #e8ef42;
+	}
+	.tear-invitation:focus-visible {
+		outline: 2px solid #e8ef42;
+	}
+	.plateau-base {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		align-items: end;
+		justify-content: space-between;
+		padding: 12px 20px 20px;
+		border-top: 1px solid #efebd915;
+	}
+	.pack-navigation {
+		display: flex;
+		gap: 4px;
+		flex-wrap: wrap;
+	}
+	.reserve-actions {
+		min-width: 0;
+	}
+	.reserve-dock {
+		display: flex;
+		gap: 12px;
+		padding: 12px 4px 4px;
 		overflow-x: auto;
-		max-width: 100%;
-		padding: 0 max(1rem, calc(50% - 100px));
-		scroll-snap-type: x mandatory;
 		scrollbar-width: thin;
 	}
-	.gallery-pack {
-		min-width: 0;
-		flex: 0 0 150px;
-		scroll-snap-align: center;
-		opacity: 0.55;
+	.reserve-dock button {
+		position: relative;
+		min-height: 44px;
+		flex: 0 0 120px;
+		display: grid;
+		grid-template-columns: 40px 1fr;
+		gap: 10px;
+		align-items: center;
+		border: 1px solid #efebd925;
+		padding: 8px;
+		background: #1a1d17;
+		color: #efebd999;
 		transition:
-			opacity 160ms,
-			transform 160ms;
-		display: grid;
-		gap: 0.75rem;
-		align-content: start;
+			border-color 160ms,
+			color 160ms;
 	}
-	.gallery-pack.selected {
-		opacity: 1;
-		transform: translateY(-0.4rem);
+	.reserve-dock .chosen {
+		border-color: #e8ef42;
+		color: #efebd9;
 	}
-	.gallery-pack:focus-visible {
-		outline: 3px solid var(--primary);
-		outline-offset: 3px;
+	.reserve-dock button:focus-visible {
+		outline: 2px solid #e8ef42;
+		outline-offset: 2px;
 	}
-	.gallery-pack span {
+	.dock-art {
+		width: 36px;
+	}
+	.reserve-dock span {
+		text-align: left;
 		font:
-			800 1.3rem 'Barlow Condensed',
+			600 14px/1.05 'Barlow Condensed',
 			sans-serif;
-		text-align: center;
+		overflow-wrap: anywhere;
 	}
-	.gallery-navigation {
-		display: flex;
-		gap: 0.5rem;
-		justify-content: center;
+	.reserve-dock i {
+		position: absolute;
+		height: 3px;
+		background: #e8ef42;
+		bottom: -1px;
+		left: 8px;
+		right: 8px;
+		opacity: 0;
 	}
-	.selected-information {
-		display: grid;
-		gap: 0.6rem;
-		padding: 1rem;
-		border-top: 1px solid var(--border);
+	.chosen i {
+		opacity: 1;
 	}
-	.selected-information :global(button) {
-		justify-self: start;
+	.reserve-empty {
+		padding: 16px;
+		border: 1px dashed #efebd930;
+		font-size: 14px;
+		color: #efebd999;
 	}
-	@media (min-width: 1024px) {
-		.available-heading {
-			grid-column: 1;
-			grid-row: 1;
+	@media (min-width: 768px) {
+		.neighbor {
+			display: block;
 		}
-		.pack-selection {
-			grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-			grid-template-rows: auto auto auto;
+		.reserve-dock button {
+			flex-basis: 165px;
 		}
-		.pack-gallery {
-			height: 360px;
-			grid-column: 1;
-			grid-row: 2;
+	}
+	@media (max-width: 767px) {
+		h1 {
+			font-size: 26px;
 		}
-		.gallery-pack {
-			flex-basis: 200px;
+		.tear-invitation {
+			display: none;
 		}
-		.pack-gallery {
-			padding-inline: max(1rem, calc(50% - 110px));
+		.plateau-index span {
+			display: none;
 		}
-		.gallery-navigation {
-			grid-column: 1;
-			grid-row: 3;
+		.plateau-index {
+			top: 18px;
+			right: 16px;
 		}
-		.selected-information {
-			grid-column: 2;
-			grid-row: 1/4;
-			border-top: 0;
-			border-left: 1px solid var(--border);
-			align-content: start;
+		.pack-cartouche {
+			padding: 16px 16px 0;
+			max-width: 80%;
+		}
+		.hero-lane {
+			height: 210px;
+		}
+		.neighbor {
+			display: block;
+			width: 70px;
+			top: 30%;
+		}
+		.previous {
+			left: -34px;
+		}
+		.next {
+			right: -34px;
+		}
+		.plateau-base {
+			display: grid;
+			padding: 6px 12px 12px;
+			gap: 4px;
+		}
+		.pack-navigation {
+			justify-content: center;
+			order: 2;
+		}
+		.reserve-actions {
+			width: 100%;
+		}
+		.reserve-heading {
+			align-items: center;
+		}
+		.reserve-heading :global(button) {
+			max-width: 125px;
+			font-size: 12px;
 		}
 	}
 </style>

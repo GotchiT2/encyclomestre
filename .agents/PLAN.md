@@ -598,3 +598,18 @@ Branche : `feat/arcade-experience`. Skill encyclomestre-ui exclu ; certificats e
 Sujet Conventional Commit : `fix(ui): stabilize dialogs and refine WikiForge controls`.
 
 Validation : 317 tests FO, 77 tests BO, cinq scénarios du studio ; checks sans diagnostic, builds FO/BO, lint ciblé, rendu partagé et diff validés. Soixante ouvertures de dialogue contrôlées sur 1 031 images aux cinq largeurs, mouvements normaux et réduits, sans déplacement du centre. Parcours collection, vente, messages, notifications, échanges et pagination vérifiés en mocks. Voir docs/ui-corrections-validation.md.
+
+## Boosters WikiForge — plateau, dessins et cérémonie ; corrections des compositions
+
+Branche `feat/arcade-experience`. Périmètre FO uniquement ; skill encyclomestre-ui exclu. Configuration HTTPS et certificats locaux conservés. Validation exclusivement avec les mocks sur `https://dev.wikiforge.fr`.
+
+- [x] Plateau de sélection, dock des packs ouvrables, crédits uniques par famille, consultation des autres packs et gestes équivalents aux boutons.
+- [x] Dessins vectoriels Signal/Circuit/Prisme, dos communs, texture typographique et correction des intersections responsables des perforations du booster.
+- [x] Cérémonie Three.js/DOM, commandes HTML, découverte libre, finitions réelles, douze cartes par page, Express et animation passée.
+- [x] Acquisition séparée de la scène, verrou, reprise par identifiants, migration des reçus, réponse incertaine, déconnexion, visibilité et perte WebGL.
+- [x] Corrections supplémentaires demandées : marges des succès, filtres sans barre horizontale et selects harmonisés, recherche/tri pleine largeur et panneau opaque, badge/prix des enchères, demandes d'amis élargies, largeur disponible du site.
+- [x] Svelte sans diagnostic, 328 tests FO (92 fichiers), lint ciblé, build FO sans mocks et contrôle du diff ; 26 scénarios d'ouverture et 30 visites des pages corrigées. Captures aux cinq largeurs cibles, mouvements ordinaires/réduits, vidéo et images intermédiaires ; contrôle supplémentaire à 1920 px.
+
+GitNexus : analyses avant modification et index actualisé avant contrôle des changements. Le routeur des mocks a une portée critique signalée avant intervention ; modifications limitées aux ouvertures et fixtures de validation, suite complète réussie. Aucun changement du BO ni déploiement. Voir `docs/booster-room-validation.md`.
+
+Sujet Conventional Commit : `feat(boosters): rebuild opening room and refine player layouts`.

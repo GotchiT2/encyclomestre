@@ -5,6 +5,7 @@
 	import * as Field from '$lib/components/ui/field';
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import type { CardSearchSort } from '$lib/types';
 
 	let {
@@ -49,7 +50,7 @@
 </script>
 
 <form class="catalogue-search" bind:this={form} method="GET" onsubmit={submit}>
-	<Field.FieldGroup class="flex min-w-0 items-start gap-2">
+	<Field.FieldGroup class="flex min-w-0 flex-row items-start gap-2">
 		<Field.Field class="min-w-0 flex-1">
 			<Field.FieldLabel for="codex-search" class="sr-only">{$_('codex.search')}</Field.FieldLabel>
 			<Input
@@ -68,7 +69,7 @@
 			/>
 		</Field.Field>
 		<details class="catalogue-sort">
-			<summary>{$_('filters.sortBy')} ⌄</summary>
+			<summary>{$_('filters.sortBy')} <ChevronDownIcon class="size-4 shrink-0" /></summary>
 			<div class="sort-content">
 				<Field.Field>
 					<Field.FieldLabel for="codex-sort" class="forge-label"
@@ -112,28 +113,45 @@
 </form>
 
 <style>
+	.catalogue-search {
+		width: 100%;
+		min-width: 0;
+	}
 	.catalogue-sort {
 		position: relative;
 		flex: none;
 	}
 	summary {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		list-style: none;
 		min-height: 44px;
 		border: 1px solid var(--border);
 		padding: 10px 14px;
 		cursor: pointer;
 		font-size: 14px;
+		background: var(--card);
+	}
+	summary::-webkit-details-marker {
+		display: none;
+	}
+	summary:hover,
+	summary:focus-visible {
+		border-color: var(--primary);
 	}
 	.sort-content {
 		position: absolute;
 		right: 0;
 		top: 50px;
-		z-index: 20;
+		z-index: 35;
 		display: grid;
 		gap: 12px;
 		width: 240px;
 		max-width: calc(100vw - 24px);
 		border: 1px solid var(--border);
-		background: var(--card);
+		background-color: #252825;
+		opacity: 1;
 		padding: 16px;
 		box-shadow: 0 12px 32px #0006;
 	}

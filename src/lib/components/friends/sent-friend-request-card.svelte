@@ -29,7 +29,7 @@
 			lastConnection={friendship.user.lastConnection}
 		/>
 		<div class="min-w-0">
-			<h3 class="truncate text-lg font-black uppercase sm:text-xl">
+			<h3 class="break-words text-lg font-black leading-tight uppercase sm:text-xl">
 				@{friendship.user.username}
 			</h3>
 			<p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-primary">

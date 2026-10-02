@@ -31,6 +31,31 @@ function card(imageUrl: string): CardRecord {
 }
 
 describe('BoosterRevealCard', () => {
+	it('combines the real finish hints and does not infer rarity from a render key', () => {
+		const both = card('/card-placeholder.svg');
+		both.variant = { ...fullArt, styles: ['FULL_ART', 'CHROME'] };
+		const combined = render(BoosterRevealCard, {
+			card: both,
+			revealed: false,
+			onReveal: vi.fn(),
+			onOpenDetail: vi.fn()
+		});
+		const slot = combined.container.querySelector('.booster-reveal-card');
+		expect(slot?.classList.contains('chrome')).toBe(true);
+		expect(slot?.classList.contains('full-art')).toBe(true);
+		combined.unmount();
+		const unknown = card('/card-placeholder.svg');
+		unknown.variant = { ...fullArt, styles: [], renderKey: 'chrome' };
+		const ordinary = render(BoosterRevealCard, {
+			card: unknown,
+			revealed: false,
+			onReveal: vi.fn(),
+			onOpenDetail: vi.fn()
+		});
+		expect(
+			ordinary.container.querySelector('.booster-reveal-card')?.classList.contains('chrome')
+		).toBe(false);
+	});
 	it('keeps a landscape Full Art back portrait until it is revealed', async () => {
 		const image =
 			'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="1200" height="600"%3E%3C/svg%3E';

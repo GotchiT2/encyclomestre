@@ -132,5 +132,42 @@
 			"MODERATION": "Modération",
 			"OTHER": "Autres"
 		}
+	},
+	"auctionDisplay": {
+		"outbid": "Votre enchère a été dépassée",
+		"currentPrice": "Prix courant"
+	},
+	"opening": {
+		"room": "Salle des boosters",
+		"title": "Votre prochaine découverte",
+		"sessionLabel": "Ouverture",
+		"contents": "Contenu et chances",
+		"tear": "Tirer la languette pour ouvrir",
+		"noAvailable": "Aucun paquet à ouvrir pour le moment. Consultez les packs et les prochaines recharges.",
+		"allHint": "Les paquets ouvrables en premier, puis les autres collections et leur disponibilité.",
+		"pending": "Votre ouverture est en cours. Le résultat sera conservé.",
+		"returnScene": "Revenir à l’ouverture",
+		"verifying": "Vérification de l’ouverture…",
+		"requesting": "Préparation de vos cartes…",
+		"sealBroken": "Vos cartes arrivent sur le plateau.",
+		"revealHint": "Choisissez une carte à retourner.",
+		"finishLegend": "Couleur : variante · Filet large : full art · Reflet : chrome",
+		"manageHint": "Inspectez une carte pour la protéger, lui ajouter des étiquettes ou préparer un échange.",
+		"resultPages": "Pages des cartes obtenues",
+		"previousPage": "Page précédente",
+		"nextPage": "Page suivante",
+		"waitHint": "Le paquet reste fermé jusqu’à réception des cartes.",
+		"unknownPack": "Votre ouverture",
+		"saved": "Votre dernière découverte vous attend",
+		"sharedReserve": "Crédits partagés",
+		"finishStandard": "Composition standard",
+		"finishFullArt": "Finition full art",
+		"finishChrome": "Finition chrome",
+		"empty": "Aucun pack dans le catalogue pour le moment.",
+		"availablePacks": "Prêts à ouvrir",
+		"otherPacks": "Autres packs",
+		"selectPack": "Choisir ce pack",
+		"complete": "Découverte terminée",
+		"conflict": "La disponibilité du paquet a changé. Vos crédits ont été actualisés ; vérifiez-les avant une nouvelle ouverture."
 	}
 }

@@ -125,7 +125,7 @@
 		description={$_('codex.description')}
 	/>
 	<div class="grid gap-4">
-		<div class="max-w-2xl">
+		<div class="w-full min-w-0">
 			<CatalogueFilters
 				query={data.filters.query}
 				sortBy={data.filters.sortBy}

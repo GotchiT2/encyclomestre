@@ -5,8 +5,8 @@ export type OpeningReceipt = {
 	packId: number;
 	cardIds: string[];
 	openedCount: number;
-	revealed: number;
-	index: number;
+	revealedIds: string[];
+	page: number;
 };
 export function readOpeningReceipt(storage: Storage, accountId: string): OpeningReceipt | null {
 	try {
@@ -21,16 +21,41 @@ export function readOpeningReceipt(storage: Storage, accountId: string): Opening
 			!receipt.cardIds.every((id: unknown) => typeof id === 'string' && id.length > 0) ||
 			new Set(receipt.cardIds).size !== receipt.cardIds.length ||
 			!Number.isInteger(receipt.openedCount) ||
-			receipt.openedCount < 1 ||
-			!Number.isInteger(receipt.revealed) ||
-			receipt.revealed < 0 ||
-			receipt.revealed > receipt.cardIds.length ||
-			!Number.isInteger(receipt.index) ||
-			receipt.index < 0 ||
-			receipt.index >= receipt.cardIds.length
+			receipt.openedCount < 1
 		)
 			return null;
-		return receipt;
+		// Migrate the former sequential discovery without changing the storage key.
+		if (!Array.isArray(receipt.revealedIds)) {
+			if (
+				!Number.isInteger(receipt.revealed) ||
+				receipt.revealed < 0 ||
+				receipt.revealed > receipt.cardIds.length ||
+				!Number.isInteger(receipt.index) ||
+				receipt.index < 0 ||
+				receipt.index >= receipt.cardIds.length
+			)
+				return null;
+			receipt.revealedIds = receipt.cardIds.slice(0, receipt.revealed);
+			receipt.page = Math.floor(receipt.index / 12);
+		}
+		if (
+			!Number.isInteger(receipt.page) ||
+			receipt.page < 0 ||
+			receipt.page >= Math.ceil(receipt.cardIds.length / 12) ||
+			new Set(receipt.revealedIds).size !== receipt.revealedIds.length ||
+			!receipt.revealedIds.every(
+				(id: unknown) => typeof id === 'string' && receipt.cardIds.includes(id)
+			)
+		)
+			return null;
+		return {
+			accountId: receipt.accountId,
+			packId: receipt.packId,
+			cardIds: receipt.cardIds,
+			openedCount: receipt.openedCount,
+			revealedIds: receipt.revealedIds,
+			page: receipt.page
+		};
 	} catch {
 		return null;
 	}

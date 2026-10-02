@@ -3,6 +3,7 @@
 	import { Popover } from 'bits-ui';
 	import { _ } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import TagChoices from './tag-choices.svelte';
 	import { createModalLayer, modalZIndex } from '$lib/components/ui/dialog/modal-layer';
 	import type { CollectionTag } from '$lib/types';
@@ -72,7 +73,11 @@
 				>{#snippet child({ props })}<Button
 						{...props}
 						variant={values.length ? 'default' : 'outline'}
-						aria-label={$_('collection.tags') + ': ' + label}>{label} ⌄</Button
+						class="max-w-full justify-between gap-3"
+						aria-label={$_('collection.tags') + ': ' + label}
+						><span class="truncate">{label}</span><ChevronDownIcon
+							class="size-4 shrink-0"
+						/></Button
 					>{/snippet}</Popover.Trigger
 			>
 			<Popover.Portal

@@ -64,7 +64,17 @@
 			aria-label={$_('collection.search')}
 			placeholder={$_('collection.search')}
 			class="min-h-11 flex-1"
-		/>{#if actions}{@render actions()}{/if}
+		/>
+		<label class="sort-control"
+			><span class="sr-only">{$_('collection.sort')}</span><select
+				bind:value={sortBy}
+				aria-label={$_('collection.sort')}
+			>
+				{#if canonical}<option value="acquiredDate">{$_('collection.sortAcquiredDate')}</option
+					>{:else}<option value="relevance">{$_('collection.sortRelevance')}</option>{/if}
+				<option value="name">{$_('collection.sortName')}</option>
+			</select></label
+		>
 	</div>
 	{#if query.trim().length > 0 && query.trim().length < 3}<p
 			class="text-xs text-muted-foreground"
@@ -99,16 +109,6 @@
 			allowCreation={Boolean(onOpenTagEditor)}
 			onCreate={onOpenTagEditor}
 		/>
-		<label
-			><span>{$_('collection.sort')}</span><select
-				bind:value={sortBy}
-				aria-label={$_('collection.sort')}
-				>{#if canonical}<option value="acquiredDate">{$_('collection.sortAcquiredDate')}</option
-					>{:else}<option value="relevance">{$_('collection.sortRelevance')}</option>{/if}<option
-					value="name">{$_('collection.sortName')}</option
-				></select
-			></label
-		>
 		{#if wishlistOwners.length}<label
 				><span>{$_('collection.wishlist_filter')}</span><select
 					bind:value={wishlistOwnerId}
@@ -119,6 +119,7 @@
 						>{/each}</select
 				></label
 			>{/if}
+		{#if actions}{@render actions()}{/if}
 		{#if active}<Button variant="ghost" onclick={onClear}>{$_('ux.clear')}</Button>{/if}
 	</div>
 </div>
@@ -136,15 +137,24 @@
 	}
 	.filter-line {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: 8px;
 		min-width: 0;
-		overflow-x: auto;
 		padding-block: 2px;
-		scrollbar-width: thin;
 	}
 	.filter-line > :global(*) {
-		flex: none;
+		max-width: 100%;
+		min-width: 0;
+	}
+	.sort-control {
+		flex: 0 0 clamp(130px, 24vw, 200px);
+		padding: 0;
+	}
+	.sort-control select {
+		width: 100%;
+		max-width: none;
+		border: 0;
 	}
 	label {
 		display: flex;
@@ -155,13 +165,24 @@
 		background: var(--card);
 		padding-left: 10px;
 		font-size: 13px;
+		cursor: pointer;
+		max-width: 100%;
+		min-width: 0;
+		transition: border-color 120ms;
+	}
+	label:hover,
+	label:focus-within {
+		border-color: var(--primary);
 	}
 	label span {
 		white-space: nowrap;
+		color: var(--muted-foreground);
 	}
 	select {
 		width: auto;
-		max-width: 180px;
+		max-width: min(180px, 45vw);
+		min-width: 0;
+		font-weight: 600;
 		border: 0;
 		border-left: 1px solid var(--border);
 	}

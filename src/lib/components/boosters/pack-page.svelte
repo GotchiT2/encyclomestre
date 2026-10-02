@@ -69,9 +69,9 @@
 			<div class="mx-auto w-40 shrink-0">
 				<BoosterPackArt
 					name={packName}
-					renderKey={details.renderKey ?? 'standard'}
+					renderKey={details.renderKey}
+					family={details.family}
 					cardCount={details.nbCards}
-					imageUrl={details.imageUrl}
 				/>
 			</div>
 			<div class="flex flex-col gap-4">

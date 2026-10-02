@@ -30,8 +30,8 @@ const receipt: OpeningReceipt = {
 	packId: 2,
 	cardIds: ['17', '3', '91'],
 	openedCount: 1,
-	revealed: 1,
-	index: 0
+	revealedIds: ['3'],
+	page: 0
 };
 describe('opening recovery', () => {
 	it('keeps progress and ids within the account session', () => {
@@ -47,15 +47,37 @@ describe('opening recovery', () => {
 	it('rejects corrupt progress and a receipt copied from another account', () => {
 		const session = storage();
 		for (const bad of [
-			{ ...receipt, revealed: 99 },
+			{ ...receipt, revealedIds: ['unknown'] },
 			{ ...receipt, accountId: '2' },
-			{ ...receipt, index: -1 },
+			{ ...receipt, page: -1 },
+			{ ...receipt, page: 1 },
+			{ ...receipt, revealedIds: ['3', '3'] },
 			{ ...receipt, cardIds: ['17', '17'] },
 			{ ...receipt, openedCount: 0 }
 		]) {
 			session.setItem(openingReceiptPrefix + '1', JSON.stringify(bad));
 			expect(readOpeningReceipt(session, '1')).toBeNull();
 		}
+	});
+	it('migrates sequential sessions to revealed identifiers', () => {
+		const session = storage();
+		const base = {
+			accountId: receipt.accountId,
+			packId: receipt.packId,
+			cardIds: receipt.cardIds,
+			openedCount: receipt.openedCount
+		};
+		session.setItem(openingReceiptPrefix + '1', JSON.stringify({ ...base, revealed: 2, index: 1 }));
+		expect(readOpeningReceipt(session, '1')).toEqual({
+			...receipt,
+			revealedIds: ['17', '3'],
+			page: 0
+		});
+		session.setItem(
+			openingReceiptPrefix + '1',
+			JSON.stringify({ ...base, revealed: 99, index: 1 })
+		);
+		expect(readOpeningReceipt(session, '1')).toBeNull();
 	});
 	it('preserves server order when reads finish in a different order', async () => {
 		const actual = await restoreOpeningCards(receipt, async (id) => {
