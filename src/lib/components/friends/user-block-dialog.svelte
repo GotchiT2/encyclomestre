@@ -36,7 +36,7 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="max-w-md" data-testid="user-block-dialog">
+	<Dialog.Content class="max-w-md p-0 sm:p-0 overflow-hidden" data-testid="user-block-dialog">
 		<Dialog.Header class="border-b border-primary/20 p-5 pr-14">
 			<Dialog.Title class="text-2xl font-black uppercase text-foreground">
 				{blocked ? $_('friends.unblock_title') : $_('friends.block_title')}

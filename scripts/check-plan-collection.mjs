@@ -75,6 +75,8 @@ try {
 			.waitFor();
 		await page.keyboard.press('Escape');
 		await navigate(page, '/friends');
+		const requests = page.locator('.requests-toggle');
+		if (await requests.isVisible()) await requests.click();
 		await page.getByRole('button', { name: 'Accepter', exact: true }).first().click();
 		await page.getByText('Demandes reçues', { exact: true }).waitFor({ state: 'hidden' });
 		await navigate(page, '/messages?user=3');

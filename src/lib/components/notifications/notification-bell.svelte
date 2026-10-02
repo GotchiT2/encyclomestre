@@ -63,6 +63,7 @@
 		class={`notification-trigger ${compact ? 'compact' : ''}`}
 		aria-label={$_('notifications.open', { values: { count: $unreadNotifications } })}
 		data-testid="notification-trigger"
+		data-tooltip={$_('notifications.open', { values: { count: $unreadNotifications } })}
 	>
 		<BellIcon class="size-5" />
 		{#if $unreadNotifications > 0}<span class="notification-count"

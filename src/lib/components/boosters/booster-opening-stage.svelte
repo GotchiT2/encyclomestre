@@ -232,7 +232,10 @@
 		if (!value && !suspended) onReset();
 	}}
 >
-	<Dialog.Content class="arcade-opening-dialog max-w-6xl" showCloseButton={false}>
+	<Dialog.Content
+		class="arcade-opening-dialog max-w-6xl p-0 sm:p-0 overflow-hidden"
+		showCloseButton={false}
+	>
 		<Dialog.Header class="opening-head"
 			><div>
 				<Dialog.Title>{packName}</Dialog.Title><Dialog.Description
@@ -326,7 +329,7 @@
 	</Dialog.Content>
 </Dialog.Root>
 <Dialog.Root bind:open={confirmBatch}
-	><Dialog.Content class="max-w-md p-5"
+	><Dialog.Content class="max-w-md p-4 sm:p-5"
 		><Dialog.Header
 			><Dialog.Title>{$_('arcade.batchConfirm')}</Dialog.Title><Dialog.Description
 				>{$_('arcade.batchHint')}</Dialog.Description

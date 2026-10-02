@@ -42,8 +42,9 @@
 		href={$currentSession ? resolve('/welcome') : resolve('/')}
 		class="arcade-brand"
 		aria-label={$_('arcade.recap')}
-		><span class="brand-emblem" aria-hidden="true">E<span>↗</span></span><span
-			class="forge-wordmark brand-name">{$_('navigation.brand')}</span
+		data-tooltip={$_('arcade.recap')}
+		><span class="brand-emblem" aria-hidden="true">WF</span><span class="forge-wordmark brand-name"
+			>{$_('navigation.brand')}</span
 		></a
 	>
 	{#if $currentSession}<nav class="desktop-navigation" aria-label={$_('navigation.mobileAria')}>
@@ -62,7 +63,8 @@
 			<DropdownMenu.Root>
 				<DropdownMenu.Trigger
 					class="grid size-11 shrink-0 place-items-center border border-border hover:border-primary"
-					aria-label={$_('arcade.community')}><UsersIcon class="size-5" /></DropdownMenu.Trigger
+					aria-label={$_('arcade.community')}
+					data-tooltip={$_('arcade.community')}><UsersIcon class="size-5" /></DropdownMenu.Trigger
 				>
 				<DropdownMenu.Content align="end" class="min-w-56">
 					<DropdownMenu.Label>{$_('arcade.community')}</DropdownMenu.Label>
@@ -78,6 +80,7 @@
 				<DropdownMenu.Trigger
 					class="grid size-11 shrink-0 place-items-center"
 					aria-label={$_('arcade.account')}
+					data-tooltip={$_('arcade.account')}
 					><UserAvatar
 						name={$currentSession.user.username}
 						image={$currentSession.user.avatarUrl}
@@ -140,15 +143,9 @@
 		background: var(--primary);
 		color: var(--primary-foreground);
 		font:
-			900 32px/1 'Barlow Condensed',
+			900 27px/1 'Barlow Condensed',
 			sans-serif;
 		clip-path: polygon(0 0, 100% 0, 100% 80%, 80% 100%, 0 100%);
-	}
-	.brand-emblem span {
-		position: absolute;
-		right: 3px;
-		bottom: 2px;
-		font-size: 12px;
 	}
 	.brand-name {
 		display: none;

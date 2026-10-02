@@ -48,8 +48,8 @@
 </script>
 
 <Dialog.Root bind:open
-	><Dialog.Content class="max-h-[90dvh] overflow-y-auto p-4 sm:p-6"
-		><Dialog.Header class="pr-8"
+	><Dialog.Content class="max-h-[90dvh] overflow-y-auto p-4 sm:p-5"
+		><Dialog.Header class="pr-12"
 			><Dialog.Title>{$_('settings.choose_avatar')}</Dialog.Title><Dialog.Description
 				>{$_('plan.avatar.help')}</Dialog.Description
 			></Dialog.Header

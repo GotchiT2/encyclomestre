@@ -3,6 +3,7 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
 	import { _ } from '$lib/i18n';
+	import { normalizeTagSearch } from '$lib/collection/tag-search';
 	import { createWikiForgeTag, deleteWikiForgeTag, updateWikiForgeTag } from '$lib/api';
 	import type { CollectionTag, CollectionTagAssignments } from '$lib/types';
 
@@ -19,6 +20,10 @@
 	} = $props();
 
 	let draftTagName = $state('');
+	let search = $state('');
+	const visibleTags = $derived(
+		tags.filter((tag) => normalizeTagSearch(tag.name).includes(normalizeTagSearch(search)))
+	);
 	let draftTagColor = $state('#C19A6B');
 	let draftTagVisibility = $state<import('$lib/types').ProfileVisibility>('FRIENDS');
 	let editingTagId = $state<string | null>(null);
@@ -71,7 +76,7 @@
 			>{$_('collection.editTags')}</Dialog.Trigger
 		>{/if}
 	<Dialog.Content
-		class="max-h-[calc(100dvh-2rem)] max-w-2xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0"
+		class="max-h-[calc(100dvh-2rem)] max-w-2xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 p-0 sm:p-0 overflow-hidden"
 	>
 		<Dialog.Header class="border-b border-primary/20 px-5 py-4 pr-14"
 			><Dialog.Title>{$_('collection.tags')}</Dialog.Title><Dialog.Description
@@ -97,10 +102,16 @@
 					<option value="PUBLIC">{$_('collection.visibilityPublic')}</option>
 				</select><Button onclick={createTag}>{$_('collection.createTag')}</Button>
 			</div>
+			<Input
+				type="search"
+				bind:value={search}
+				aria-label={$_('controls.tagSearch')}
+				placeholder={$_('controls.tagSearch')}
+			/>
 			{#if tags.length}<ul
 					class="flex max-h-[48dvh] flex-col gap-2 overflow-y-auto pr-1 lg:max-h-[52dvh]"
 				>
-					{#each tags as tag (tag.id)}<li
+					{#each visibleTags as tag (tag.id)}<li
 							class="flex flex-wrap items-center gap-2 border-t border-dashed border-primary/20 pt-2"
 						>
 							{#if editingTagId === tag.id}<div
@@ -147,6 +158,8 @@
 								><Button size="sm" variant="ghost" onclick={() => deleteTag(tag.id)}
 									>{$_('collection.deleteTag')}</Button
 								>{/if}
+						</li>{:else}<li class="p-3 text-sm text-muted-foreground">
+							{$_('controls.noTags')}
 						</li>{/each}
 				</ul>{/if}
 		</div>

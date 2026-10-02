@@ -315,7 +315,7 @@
 		if (!value) removing = null;
 	}}
 	><Dialog.Content
-		><Dialog.Header class="pr-8"
+		><Dialog.Header class="pr-12"
 			><Dialog.Title>{$_('plan.friends.removeTitle')}</Dialog.Title><Dialog.Description
 				>{$_('plan.friends.removeInfo', {
 					values: { name: removing?.user.username ?? '' }

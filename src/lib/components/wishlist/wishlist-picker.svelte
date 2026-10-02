@@ -120,7 +120,9 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="h-[min(92dvh,58rem)] max-w-6xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0">
+	<Dialog.Content
+		class="h-[min(92dvh,58rem)] max-w-6xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 p-0 sm:p-0 overflow-hidden"
+	>
 		<div class="flex min-h-12 items-center gap-3 border-b border-primary/20 px-4 py-2 pr-14">
 			<p class="shrink-0 font-mono text-[9px] uppercase tracking-widest text-primary">
 				{catalogueLabel}

@@ -487,7 +487,6 @@ Aucun commit, déploiement ou changement backend effectué.
 - Sujet Conventional Commit : `feat(fo): render editable versioned card templates`.
 - Publication demandée par l’utilisateur ; aucun déploiement ni changement backend.
 
-
 ## Synchronisation de la bibliothèque graphique BO
 
 - [x] Douze modèles et vingt-quatre styles explicites synchronisés depuis le moteur canonique BO ; anciennes révisions mock conservées, données réelles de carte prioritaires.
@@ -504,7 +503,6 @@ Aucun commit, push ou déploiement demandé pour cette étape.
 - Sujet Conventional Commit : `feat(cards): sync full-art preset catalogue from backoffice`.
 - Commit local demandé ; aucun push ni déploiement.
 
-
 ## Évolution API — 28 septembre 2026
 
 - [x] Recherche serveur des enchères, pagination et filtres dans l’URL ; vues personnelles, résultats explicites, favoris persistants et devis avant confirmation.
@@ -513,7 +511,6 @@ Aucun commit, push ou déploiement demandé pour cette étape.
 - [x] Engagements DTO des exemplaires, bornes du catalogue, progression à la demande, recherche membres serveur, révocation des invitations et chat SSE avec rattrapage.
 
 Validation : check et ESLint, tests unitaires et build ; parcours navigateur mock aux cinq largeurs 360, 390, 768, 1024 et 1440 px. Aucun appel d’écriture en production, changement backend, déploiement, commit ou push.
-
 
 ## Passkeys — API 1.2.0
 
@@ -527,13 +524,11 @@ Aucun commit, push, déploiement ou changement backend dans cette étape.
 
 Validation finale : check sans erreur ni avertissement, ESLint ciblé, 282 tests FO, build statique et diff validés. Parcours Playwright WebAuthn virtuel en mock aux cinq largeurs ; action Turnstile et jetons renouvelés couverts par test de composant FO.
 
-
 ## Aide de connexion passkey FO
 
 - [x] Précise qu’une passkey doit d’abord être enregistrée dans les paramètres du compte.
 - [x] Remplace le message d’annulation WebAuthn par une aide pour vérifier la passkey disponible sur l’appareil.
 - Sujet Conventional Commit : `feat(auth): add passkey login and management`.
-
 
 ## Plan 1 — bugs, fonctions et parcours de collection — 1er octobre 2026
 
@@ -559,7 +554,6 @@ Détail par page et commandes : `docs/plan-1-validation.md`. Les écritures de v
 
 Validation : check, ESLint, 282 tests (84 fichiers, composants navigateur compris), build sans `_app/env.js`, garde-fous du script testés avec un `.env` factice sans action distante.
 Sujet Conventional Commit proposé : `fix(deploy): inline public env at build time and harden deploy script`.
-
 
 ## Plan 2 — Arcade contemporaine
 
@@ -588,7 +582,19 @@ Branche : `feat/arcade-experience`. Le skill encyclomestre-ui est exclu. Validat
 - [x] Communauté, compte, progression et notifications recomposés.
 - [x] Validation aux cinq largeurs, clavier, mouvements réduits, checks, tests et builds FO/BO.
 
-
 Validation : checks FO/BO sans diagnostic ; 307 tests FO, 77 tests BO et 33 scénarios du studio. Parcours aux cinq largeurs, WebGL et repli, compte, transactions, communauté et compteur de notifications concurrent ; lint ciblé, builds sans mocks, parité du moteur et diff validés. Voir `docs/plan-2-revised-validation.md`.
 
 Sujet Conventional Commit : `feat(ui): reinvent Arcade navigation and player journeys`.
+
+## Correctifs UX/UI — WikiForge
+
+Branche : `feat/arcade-experience`. Skill encyclomestre-ui exclu ; certificats et `vite.config.ts` conservés. Validation exclusivement en mocks.
+
+- [x] Modales stables, marges, selects, identité WikiForge et tooltips.
+- [x] Filtres directs, recherche d’étiquettes et création/attribution immédiate FRIENDS.
+- [x] Suppression de la progression, brouillons, Tabs d’échange, vitrines pleine largeur et notifications par famille.
+- [x] Validation des animations, parcours et contrôles techniques FO/BO.
+
+Sujet Conventional Commit : `fix(ui): stabilize dialogs and refine WikiForge controls`.
+
+Validation : 317 tests FO, 77 tests BO, cinq scénarios du studio ; checks sans diagnostic, builds FO/BO, lint ciblé, rendu partagé et diff validés. Soixante ouvertures de dialogue contrôlées sur 1 031 images aux cinq largeurs, mouvements normaux et réduits, sans déplacement du centre. Parcours collection, vente, messages, notifications, échanges et pagination vérifiés en mocks. Voir docs/ui-corrections-validation.md.

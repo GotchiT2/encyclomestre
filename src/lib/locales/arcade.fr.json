@@ -70,7 +70,7 @@
 		"sharedCredits": "Les packs d’une même famille partagent leurs crédits.",
 		"boosters": "Boosters",
 		"catalogue": "Catalogue",
-		"brand": "Encyclomestre",
+		"brand": "WikiForge",
 		"select": "Sélectionner",
 		"allNotifications": "Toutes",
 		"unreadNotifications": "Non lues",
@@ -109,6 +109,28 @@
 		"previewCeremony": "Prévisualiser la cérémonie"
 	},
 	"navigation": {
-		"brand": "Encyclomestre"
+		"brand": "WikiForge"
+	},
+	"controls": {
+		"saveDraft": "Conserver mon brouillon pendant 24 h",
+		"tagSearch": "Rechercher une étiquette",
+		"noTags": "Aucune étiquette correspondante",
+		"createAndAdd": "Créer et ajouter « {name} »",
+		"tagCreatedNotAssigned": "L’étiquette a été créée, mais son ajout à la carte a échoué. Validez à nouveau pour l’ajouter.",
+		"retryTagState": "L’état de l’étiquette n’a pas pu être vérifié. Réessayez avant de la créer.",
+		"myCards": "Mes cartes",
+		"friendCards": "Cartes de {name}",
+		"groupLoaded": "{count, plural, one {# notification chargée} other {# notifications chargées}} · {unread, plural, one {# non lue} other {# non lues}}",
+		"clearTags": "Effacer les étiquettes choisies",
+		"families": {
+			"TRADE": "Échanges",
+			"AUCTION": "Enchères",
+			"SALE": "Ventes",
+			"FRIEND": "Amis",
+			"GUILD": "Guilde",
+			"ACHIEVEMENT": "Succès",
+			"MODERATION": "Modération",
+			"OTHER": "Autres"
+		}
 	}
 }

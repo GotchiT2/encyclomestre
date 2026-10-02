@@ -120,7 +120,7 @@
 		</div>{/if}
 </div>
 <Dialog.Root bind:open={allOpen}
-	><Dialog.Content class="arcade-sheet overflow-y-auto p-5"
+	><Dialog.Content class="arcade-sheet overflow-y-auto p-4 sm:p-5"
 		><Dialog.Header
 			><Dialog.Title>{$_('arcade.allPacks')}</Dialog.Title><Dialog.Description
 				>{$_('boosters.description')}</Dialog.Description

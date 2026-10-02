@@ -97,11 +97,7 @@
 			>
 		</div>{/if}
 	{#if query.tab === 'explore' || query.tab === 'favorites'}
-		{#if query.tab === 'explore'}<AuctionFilters
-				{query}
-				items={catalogue.results}
-				{onChange}
-			/>{/if}
+		{#if query.tab === 'explore'}<AuctionFilters {query} {onChange} />{/if}
 		<p class="text-xs text-muted-foreground">
 			{$_('auctionHub.visibleResults', {
 				values: { visible: filtered.length, loaded: catalogue.nbResults }

@@ -31,7 +31,6 @@
 	import WishlistAccessDialog from '$lib/components/wishlist/wishlist-access-dialog.svelte';
 	import WishlistHub from '$lib/components/wishlist/wishlist-hub.svelte';
 	import WishlistListControls from '$lib/components/wishlist/wishlist-list-controls.svelte';
-	import FilterShell from '$lib/components/layout/filter-shell.svelte';
 	import WishlistPicker from '$lib/components/wishlist/wishlist-picker.svelte';
 	import WishlistRegistryDrawers from '$lib/components/wishlist/wishlist-registry-drawers.svelte';
 	import WishlistSocialGrid from '$lib/components/wishlist/wishlist-social-grid.svelte';
@@ -385,9 +384,6 @@
 		else editImage = card;
 		illustrationPickerOpen = false;
 	}
-	const activeFilterCount = $derived(
-		(query ? 1 : 0) + (sortBy !== 'date' ? 1 : 0) + (sortDirection === 'ASC' ? 1 : 0)
-	);
 </script>
 
 <section class="flex flex-col gap-6 pb-12 sm:gap-8">
@@ -500,14 +496,12 @@
 						</header>
 
 						<div class="grid gap-6">
-							<FilterShell activeCount={activeFilterCount}>
-								<WishlistListControls
-									bind:query
-									bind:sortBy
-									bind:sortDirection
-									onChange={resetPage}
-								/>
-							</FilterShell>
+							<WishlistListControls
+								bind:query
+								bind:sortBy
+								bind:sortDirection
+								onChange={resetPage}
+							/>
 
 							<div class="flex min-w-0 flex-col gap-4">
 								<p class="forge-label">

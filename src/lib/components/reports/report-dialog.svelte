@@ -82,7 +82,7 @@
 		/>{/if}
 	<Dialog.Root bind:open
 		><Dialog.Content
-			class="max-w-lg overflow-y-auto p-4 sm:p-6"
+			class="max-w-lg overflow-y-auto p-4 sm:p-5"
 			onInteractOutside={(event) => {
 				if (busy) event.preventDefault();
 			}}

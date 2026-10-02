@@ -40,11 +40,16 @@ describe('trade negotiation', () => {
 		});
 		const selector = page.getByTestId('trade-editor-card-selector');
 		await selector.getByRole('button', { name: 'Carte donnée', exact: true }).click();
+		await expect
+			.element(selector.getByRole('button', { name: 'Carte reçue', exact: true }))
+			.not.toBeInTheDocument();
+		await page.getByRole('tab', { name: /Cartes de Ariane/ }).click();
 		await selector.getByRole('button', { name: 'Carte reçue', exact: true }).click();
 		await page.getByRole('button', { name: 'Vérifier l’offre', exact: true }).click();
 		expect(onSubmit).not.toHaveBeenCalled();
 		await expect.element(page.getByText('Je donne · 1', { exact: true }).last()).toBeVisible();
 		await page.getByRole('button', { name: 'Modifier l’offre', exact: true }).click();
+		await page.getByRole('tab', { name: /Mes cartes/ }).click();
 		await expect
 			.element(page.getByRole('button', { name: 'Retirer Carte donnée de la sélection' }))
 			.toBeVisible();

@@ -99,7 +99,7 @@
 >
 	<div class="edge" data-card-zone="frame">
 		<div class="face">
-			<span class="press-mark" aria-hidden="true">E↗</span>
+			<span class="press-mark" aria-hidden="true">WF</span>
 			<div class="folio" data-card-zone="serial">
 				<span class="variant">{data.variantName}</span>
 				{#if serial}<span class="serial" data-testid="card-serial">{serial}</span>{/if}

@@ -29,7 +29,7 @@
 	}}
 >
 	<Dialog.Content
-		class="flex h-[100dvh] max-h-[100dvh] w-screen max-w-6xl flex-col gap-0 border border-solid max-sm:left-0 max-sm:translate-x-0 sm:h-[min(760px,90dvh)] sm:max-h-[90dvh] sm:w-[calc(100%-3rem)]"
+		class="flex h-[100dvh] max-h-[100dvh] w-screen max-w-6xl flex-col gap-0 border border-solid max-sm:left-0 max-sm:translate-x-0 sm:h-[min(760px,90dvh)] sm:max-h-[90dvh] sm:w-[calc(100%-3rem)] p-0 sm:p-0 overflow-hidden"
 	>
 		<header class="shrink-0 px-6 pt-8 pr-12 text-center">
 			<p class="forge-label">{$_(`boosterPreview.packs.${pack.nameKey}`)}</p>

@@ -101,8 +101,8 @@
 </script>
 
 <Dialog.Root bind:open={createOpen}>
-	<Dialog.Content class="max-w-md">
-		<Dialog.Header class="px-4 pt-4 pr-12 pb-2"
+	<Dialog.Content class="max-w-md p-0 sm:p-0 overflow-hidden">
+		<Dialog.Header class="px-4 pt-4 pr-14 pb-2 sm:px-5 sm:pr-14"
 			><Dialog.Title>{$_('wishlist.create_btn')}</Dialog.Title></Dialog.Header
 		>
 		<div class="grid gap-3 px-4 pt-2 pb-4">
@@ -137,9 +137,11 @@
 </Dialog.Root>
 
 <Dialog.Root bind:open={editOpen}>
-	<Dialog.Content class="max-w-md">
-		<Dialog.Header><Dialog.Title>{$_('wishlist.edit_registry')}</Dialog.Title></Dialog.Header>
-		<div class="grid gap-3 p-4">
+	<Dialog.Content class="max-w-md p-0 sm:p-0 overflow-hidden">
+		<Dialog.Header class="px-4 pt-4 pr-14 sm:px-5 sm:pr-14"
+			><Dialog.Title>{$_('wishlist.edit_registry')}</Dialog.Title></Dialog.Header
+		>
+		<div class="grid gap-3 p-4 sm:p-5">
 			<label class="flex items-center gap-2"
 				><input type="checkbox" bind:checked={editSharedWithGuild} />{$_(
 					'completion.guild.share'
@@ -185,12 +187,12 @@
 </Dialog.Root>
 
 <Dialog.Root bind:open={deleteOpen}>
-	<Dialog.Content class="max-w-md">
-		<Dialog.Header>
+	<Dialog.Content class="max-w-md p-0 sm:p-0 overflow-hidden">
+		<Dialog.Header class="px-4 pt-4 pr-14 sm:px-5 sm:pr-14">
 			<Dialog.Title>{$_('wishlist.delete_title')}</Dialog.Title>
 			<Dialog.Description>{registry?.title}</Dialog.Description>
 		</Dialog.Header>
-		<div class="flex gap-2 p-4">
+		<div class="flex gap-2 p-4 sm:p-5">
 			<Button variant="outline" class="flex-1" onclick={() => (deleteOpen = false)}
 				>{$_('common.cancel')}</Button
 			>

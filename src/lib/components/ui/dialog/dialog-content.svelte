@@ -35,7 +35,7 @@
 		bind:ref
 		data-slot="dialog-content"
 		class={cn(
-			'fixed top-1/2 left-1/2 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 gap-5 overflow-hidden border-4 border-double border-primary/40 bg-card p-0 text-foreground shadow-2xl outline-none',
+			'fixed top-1/2 left-1/2 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto border border-border bg-card p-4 sm:p-5 text-foreground shadow-2xl outline-none',
 			className
 		)}
 		style={modalZIndex(layer + 1, style)}

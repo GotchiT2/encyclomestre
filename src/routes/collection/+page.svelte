@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
-	import CollectionProgress from '$lib/components/collection/collection-progress.svelte';
 	import { replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { currentSession } from '$lib/auth/session';
@@ -413,7 +412,6 @@
 <section class="album-workspace flex flex-col gap-4 pb-6">
 	<div class="album-heading">
 		<PageHeader eyebrow={$_('collection.eyebrow')} title={$_('collection.title')} />
-		<CollectionProgress />
 	</div>
 	<div class="grid gap-4">
 		<CompactFilters
@@ -533,8 +531,8 @@
 	onOpenChange={(value) => {
 		if (!value) selling = null;
 	}}
-	><Dialog.Content class="max-h-[90dvh] overflow-y-auto"
-		><Dialog.Header class="pr-8"
+	><Dialog.Content class="max-h-[90dvh] max-w-lg overflow-y-auto"
+		><Dialog.Header class="pr-12"
 			><Dialog.Title>{selling?.title}</Dialog.Title><Dialog.Description
 				>{$_('plan.cards.cede')}</Dialog.Description
 			></Dialog.Header

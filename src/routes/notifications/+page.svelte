@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
 	import { notificationTarget } from '$lib/notifications/target';
+	import { groupNotifications, type NotificationFamily } from '$lib/notifications/groups';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -12,7 +13,7 @@
 	import { realtimeRefresh, refreshIncludes } from '$lib/realtime/resource-refresh';
 	import { _ } from '$lib/i18n';
 	import type { AppNotification } from '$lib/types';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	let items = $state<AppNotification[]>([]);
 	let cursor = $state<string | null>(null);
@@ -26,6 +27,9 @@
 	let sequence = 0;
 	let disposed = false;
 	const visibleItems = $derived(unreadOnly ? items.filter((item) => !item.read) : items);
+	const groups = $derived(groupNotifications(visibleItems));
+	const collapsed = new SvelteSet<NotificationFamily>();
+	const accountId = $derived($currentSession?.user.id);
 
 	function label(notification: AppNotification) {
 		if (notification.type.startsWith('MODERATION_')) return $_('completion.moderation.title');
@@ -121,9 +125,25 @@
 		}
 	}
 	onMount(() => {
-		void load().finally(() => (notificationsReady = true));
 		return () => {
 			disposed = true;
+			sequence++;
+		};
+	});
+	$effect(() => {
+		const account = accountId;
+		untrack(() => {
+			items = [];
+			cursor = null;
+			hasNext = false;
+			collapsed.clear();
+			notificationsReady = false;
+			if (!account) return;
+			void load().finally(() => {
+				if (!disposed && account === $currentSession?.user.id) notificationsReady = true;
+			});
+		});
+		return () => {
 			sequence++;
 		};
 	});
@@ -172,31 +192,56 @@
 			<p class="text-destructive">{$_('notifications.error')}</p>
 			<Button variant="outline" onclick={() => void load()}>{$_('common.retry')}</Button>
 		</div>
-	{:else if visibleItems.length}<ul class="divide-y divide-primary/15 border-y border-primary/20">
-			{#each visibleItems as notification (notification.id)}<li>
-					<button
-						class={`flex w-full flex-wrap gap-3 px-3 py-4 text-left hover:bg-primary/8 ${!notification.read ? 'bg-primary/10' : ''}`}
-						onclick={() => void open(notification)}
-					>
-						<div class="min-w-0 basis-48 flex-1">
-							<p class="font-bold flex justify-between gap-2">
-								<span>{label(notification)}</span><span aria-hidden="true">↗</span>
-							</p>
-							<p class="mt-1 text-sm text-muted-foreground">
-								{notification.actor ? notification.actor.name : $_('notifications.system')}
-							</p>
-						</div>
-						<time class="shrink-0 text-xs text-muted-foreground"
-							>{Number.isFinite(Date.parse(notification.createdAt))
-								? new Intl.DateTimeFormat('fr-FR', {
-										dateStyle: 'short',
-										timeStyle: 'short'
-									}).format(new Date(notification.createdAt))
-								: $_('plan.unknownDate')}</time
+	{:else if visibleItems.length}<div class="grid gap-4" data-testid="notification-groups">
+			{#each groups as group (group.family)}<section
+					class="border border-border"
+					data-family={group.family}
+				>
+					<h2>
+						<button
+							type="button"
+							class="flex min-h-11 w-full flex-wrap items-center justify-between gap-2 bg-card px-3 py-2 text-left"
+							aria-expanded={!collapsed.has(group.family)}
+							onclick={() => {
+								if (collapsed.has(group.family)) collapsed.delete(group.family);
+								else collapsed.add(group.family);
+							}}
 						>
-					</button>
-				</li>{/each}
-		</ul>{:else}<p class="forge-panel-flat p-6 text-muted-foreground">
+							<span class="text-xl">{$_('controls.families.' + group.family)}</span><span
+								class="text-xs font-sans text-muted-foreground"
+								>{$_('controls.groupLoaded', {
+									values: { count: group.items.length, unread: group.unread }
+								})} <span aria-hidden="true">{collapsed.has(group.family) ? '+' : '−'}</span></span
+							>
+						</button>
+					</h2>
+					<ul class="divide-y divide-border" hidden={collapsed.has(group.family)}>
+						{#each group.items as notification (notification.id)}<li>
+								<button
+									class={`flex w-full flex-wrap gap-3 px-3 py-4 text-left hover:bg-primary/8 ${!notification.read ? 'bg-primary/10' : ''}`}
+									onclick={() => void open(notification)}
+								>
+									<div class="min-w-0 basis-48 flex-1">
+										<p class="font-bold flex justify-between gap-2">
+											<span>{label(notification)}</span><span aria-hidden="true">↗</span>
+										</p>
+										<p class="mt-1 text-sm text-muted-foreground">
+											{notification.actor ? notification.actor.name : $_('notifications.system')}
+										</p>
+									</div>
+									<time class="shrink-0 text-xs text-muted-foreground"
+										>{Number.isFinite(Date.parse(notification.createdAt))
+											? new Intl.DateTimeFormat('fr-FR', {
+													dateStyle: 'short',
+													timeStyle: 'short'
+												}).format(new Date(notification.createdAt))
+											: $_('plan.unknownDate')}</time
+									>
+								</button>
+							</li>{/each}
+					</ul>
+				</section>{/each}
+		</div>{:else}<p class="forge-panel-flat p-6 text-muted-foreground">
 			{$_('notifications.empty_tab')}
 		</p>{/if}
 	{#if hasNext}<Button variant="outline" disabled={loadingMore} onclick={() => void load(true)}

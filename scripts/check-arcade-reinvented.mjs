@@ -163,7 +163,7 @@ try {
 		await page.goto(base + '/trades?partner=2&offerCards=90');
 		const negotiation = page.getByRole('dialog');
 		await negotiation.locator('.tray-card').first().waitFor();
-		if (width < 1024) await negotiation.getByRole('button', { name: /Je reçois · 0/ }).click();
+		await negotiation.getByRole('tab', { name: /Cartes de/ }).click();
 		const selectors = negotiation.getByTestId('trade-editor-card-selector');
 		const requestedPanel = selectors.locator(':scope>div').nth(1);
 		await requestedPanel.locator('.card-inspect').first().click();

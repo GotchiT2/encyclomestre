@@ -1,4 +1,5 @@
 <script lang="ts">
+	import IconTooltips from '$lib/components/layout/icon-tooltips.svelte';
 	import '$lib/i18n';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
@@ -119,4 +120,5 @@
 </div>
 
 <CardDetailHost />
+<IconTooltips />
 <Toaster richColors />

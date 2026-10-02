@@ -16,7 +16,10 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="max-w-lg" data-testid="card-trade-partner-dialog">
+	<Dialog.Content
+		class="max-w-lg p-0 sm:p-0 overflow-hidden"
+		data-testid="card-trade-partner-dialog"
+	>
 		<Dialog.Header class="border-b border-primary/20 p-5 pr-14">
 			<Dialog.Title>{$_('cardDetail.choose_trade_partner')}</Dialog.Title>
 			<Dialog.Description>{$_('cardDetail.choose_trade_partner_description')}</Dialog.Description>

@@ -77,8 +77,8 @@ export function createPackScene(canvas: HTMLCanvasElement, options: PackSceneOpt
 				ctx.stroke();
 			}
 			ctx.fillStyle = '#efebd9';
-			ctx.font = '900 250px "Barlow Condensed",sans-serif';
-			ctx.fillText('E', 175, 420);
+			ctx.font = '900 210px "Barlow Condensed",sans-serif';
+			ctx.fillText('WF', 120, 420, 300);
 		}
 		ctx.fillStyle = '#efebd9';
 		ctx.fillRect(24, 558, 464, 178);

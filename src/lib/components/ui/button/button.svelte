@@ -42,6 +42,7 @@
 		WithElementRef<HTMLAnchorAttributes> & {
 			variant?: ButtonVariant;
 			size?: ButtonSize;
+			tooltip?: string;
 		};
 </script>
 
@@ -57,6 +58,7 @@
 		href = undefined,
 		type = 'button',
 		disabled,
+		tooltip,
 		children,
 		...restProps
 	}: ButtonProps = $props();
@@ -69,6 +71,7 @@
 	<a
 		bind:this={ref}
 		data-slot="button"
+		data-tooltip={tooltip ?? (size.startsWith('icon') ? restProps['aria-label'] : undefined)}
 		class={cn(buttonVariants({ variant, size }), className)}
 		href={disabled ? undefined : isExternalHref(href) ? href : resolve(href as '/')}
 		aria-disabled={disabled}
@@ -82,6 +85,7 @@
 	<button
 		bind:this={ref}
 		data-slot="button"
+		data-tooltip={tooltip ?? (size.startsWith('icon') ? restProps['aria-label'] : undefined)}
 		class={cn(buttonVariants({ variant, size }), className)}
 		{type}
 		{disabled}

@@ -384,7 +384,7 @@
 <Dialog.Root bind:open={newOpen}
 	><Dialog.Portal
 		><Dialog.Overlay class="fixed inset-0 z-[100] bg-black/60" /><Dialog.Content
-			class="fixed top-1/2 left-1/2 z-[101] max-h-[85dvh] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded border bg-card p-5"
+			class="fixed top-1/2 left-1/2 z-[101] max-h-[85dvh] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded border bg-card p-4 sm:p-5"
 			><Dialog.Title class="text-xl font-semibold">{$_('plan.messages.new')}</Dialog.Title
 			><Dialog.Description class="my-3 text-sm">{$_('plan.messages.newInfo')}</Dialog.Description
 			>{#each friends as friend (friend.id)}<Button

@@ -19,7 +19,6 @@
 	import CollectionVitrine from './collection-vitrine.svelte';
 	import CardGrid from '$lib/components/collection/card-grid.svelte';
 	import FilterControls from '$lib/components/collection/filter-controls.svelte';
-	import FilterShell from '$lib/components/layout/filter-shell.svelte';
 	import PlayerRelationshipControl from '$lib/components/friends/player-relationship-control.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import UserAvatar from '$lib/components/users/user-avatar.svelte';
@@ -344,29 +343,28 @@
 			<div>
 				<label class="mb-3 flex items-start gap-2 text-sm"
 					><input type="checkbox" bind:checked={wanted} />{$_('plan.profile.wanted')}</label
-				><FilterShell description={$_('collection.filtersDescription')}>
-					<FilterControls
-						bind:query={friendQuery}
-						bind:sortBy={friendSort}
-						bind:variantIds={friendVariantIds}
-						bind:tagFilterIds={friendTagIds}
-						bind:duplicate={friendDuplicate}
-						bind:protected={friendProtection}
-						tags={friendTags}
-						canonical
-						allowTagCreation={false}
-						onOpenTagEditor={() => {}}
-						onClear={() => {
-							friendQuery = '';
-							friendSort = 'acquiredDate';
-							friendVariantIds = [];
-							friendTagIds = [];
-							friendDuplicate = 'all';
-							friendProtection = 'all';
-							wanted = false;
-						}}
-					/>
-				</FilterShell>
+				>
+				<FilterControls
+					bind:query={friendQuery}
+					bind:sortBy={friendSort}
+					bind:variantIds={friendVariantIds}
+					bind:tagFilterIds={friendTagIds}
+					bind:duplicate={friendDuplicate}
+					bind:protected={friendProtection}
+					tags={friendTags}
+					canonical
+					allowTagCreation={false}
+					onOpenTagEditor={() => {}}
+					onClear={() => {
+						friendQuery = '';
+						friendSort = 'acquiredDate';
+						friendVariantIds = [];
+						friendTagIds = [];
+						friendDuplicate = 'all';
+						friendProtection = 'all';
+						wanted = false;
+					}}
+				/>
 			</div>
 			<div class="min-w-0">
 				{#if collectionLoading}<p class="forge-label text-primary">{$_('friends.loading')}</p>
@@ -400,7 +398,7 @@
 		if (!value && !buyingId) purchase = null;
 	}}
 	><Dialog.Content
-		><Dialog.Header class="pr-8"
+		><Dialog.Header class="pr-12"
 			><Dialog.Title>{$_('plan.profile.confirmBuy')}</Dialog.Title><Dialog.Description
 				>{$_('plan.profile.purchase', {
 					values: { title: purchase?.card.title ?? '', price: purchase?.price ?? 0 }

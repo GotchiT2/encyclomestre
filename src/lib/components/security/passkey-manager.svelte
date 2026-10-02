@@ -215,8 +215,8 @@
 	<Button variant="outline" disabled={busy} onclick={logoutAll}>{$_('passkeys.logoutAll')}</Button>
 </section>
 <Dialog.Root bind:open
-	><Dialog.Content class="max-h-[90dvh] overflow-y-auto p-4 sm:p-6"
-		><Dialog.Header class="pr-8"
+	><Dialog.Content class="max-h-[90dvh] overflow-y-auto p-4 sm:p-5"
+		><Dialog.Header class="pr-12"
 			><Dialog.Title>{$_('passkeys.add')}</Dialog.Title><Dialog.Description
 				>{$_('passkeys.addDescription')}</Dialog.Description
 			></Dialog.Header
@@ -248,8 +248,8 @@
 	></Dialog.Root
 >
 <Dialog.Root bind:open={deleteOpen}
-	><Dialog.Content class="p-4 sm:p-6"
-		><Dialog.Header class="pr-8"
+	><Dialog.Content class="p-4 sm:p-5"
+		><Dialog.Header class="pr-12"
 			><Dialog.Title
 				>{$_('passkeys.removeTitle', { values: { label: deleting?.label ?? '' } })}</Dialog.Title
 			><Dialog.Description>{$_('passkeys.removalInfo')}</Dialog.Description></Dialog.Header
@@ -289,7 +289,7 @@
 	}}
 >
 	<Dialog.Content class="max-h-[90dvh] overflow-y-auto"
-		><Dialog.Header class="pr-8"
+		><Dialog.Header class="pr-12"
 			><Dialog.Title>{$_('plan.account.codesTitle')}</Dialog.Title><Dialog.Description
 				>{$_('plan.account.replaceCodes')}</Dialog.Description
 			></Dialog.Header

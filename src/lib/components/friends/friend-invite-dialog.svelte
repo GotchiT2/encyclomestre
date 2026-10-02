@@ -72,7 +72,7 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="max-w-xl grid-rows-[auto_minmax(0,1fr)] gap-0">
+	<Dialog.Content class="max-w-xl grid-rows-[auto_minmax(0,1fr)] gap-0 p-0 sm:p-0 overflow-hidden">
 		<header class="border-b border-primary/20 px-4 py-3 pr-14">
 			<Dialog.Title>{$_('friends.invite_search_title')}</Dialog.Title>
 			<Dialog.Description class="mt-1 text-sm text-muted-foreground">

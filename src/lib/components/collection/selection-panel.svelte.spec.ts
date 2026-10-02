@@ -22,7 +22,10 @@ describe('SelectionPanel', () => {
 		});
 
 		const selector = page.getByTestId('bulk-tag-selector');
-		expect(selector.element().querySelector('.forge-control')).not.toBeNull();
+		await selector.getByRole('button', { name: 'Étiquettes: Étiquettes' }).click();
+		await page.getByRole('searchbox').fill('favorite');
+		await expect.element(page.getByRole('button', { name: /Favorite/ })).toBeVisible();
+		await page.getByRole('button', { name: /Favorite/ }).click();
 		const protect = page.getByTestId('protect-selection');
 		expect(protect.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
 		await protect.click();

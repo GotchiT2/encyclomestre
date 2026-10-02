@@ -73,7 +73,7 @@
 <Dialog.Root bind:open>
 	<Dialog.Content
 		preventScroll={true}
-		class="flex max-h-[92dvh] w-[calc(100%-1rem)] max-w-6xl flex-col gap-0 sm:w-[calc(100%-2rem)]"
+		class="flex max-h-[92dvh] w-[calc(100%-1rem)] max-w-6xl flex-col gap-0 sm:w-[calc(100%-2rem)] p-0 sm:p-0 overflow-hidden"
 		data-testid="trade-detail-modal"
 	>
 		<header class="shrink-0 border-b border-primary/20 p-3 pr-12 sm:p-4 sm:pr-14">

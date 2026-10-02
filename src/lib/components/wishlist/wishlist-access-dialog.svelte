@@ -54,7 +54,7 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="max-w-lg">
+	<Dialog.Content class="max-w-lg p-0 sm:p-0 overflow-hidden">
 		<Dialog.Header class="px-4 pt-4 pr-12 pb-2">
 			<Dialog.Title>{$_('wishlist.manage_access')}</Dialog.Title>
 			<Dialog.Description>{$_('plan.wishlist.inviteHint')}</Dialog.Description>

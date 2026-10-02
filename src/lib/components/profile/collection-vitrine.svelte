@@ -264,18 +264,19 @@
 		background: var(--card);
 		--gap: 0.75rem;
 		width: 100%;
-		max-width: calc(
-			var(--colonnes-max) * 144px + (var(--colonnes-max) - 1) * var(--gap) + 2rem + 2px
-		);
+		max-width: none;
 	}
 	.vitrine__rangee {
 		display: grid;
-		grid-template-columns: repeat(var(--par-ligne), minmax(0, 144px));
+		grid-template-columns: repeat(var(--par-ligne), minmax(0, 1fr));
+		justify-items: center;
 		gap: var(--gap);
 		align-items: start;
 		margin-bottom: 1rem;
 	}
 	.vitrine__carte {
+		width: 100%;
+		max-width: 144px;
 		min-width: 0;
 		position: relative;
 		outline-offset: 3px;
