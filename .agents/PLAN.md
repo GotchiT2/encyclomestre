@@ -613,3 +613,10 @@ Branche `feat/arcade-experience`. Périmètre FO uniquement ; skill encyclomestr
 GitNexus : analyses avant modification et index actualisé avant contrôle des changements. Le routeur des mocks a une portée critique signalée avant intervention ; modifications limitées aux ouvertures et fixtures de validation, suite complète réussie. Aucun changement du BO ni déploiement. Voir `docs/booster-room-validation.md`.
 
 Sujet Conventional Commit : `feat(boosters): rebuild opening room and refine player layouts`.
+
+## Ouverture — supprimer les noms de rareté
+
+- [x] Retirer les noms sous les dos et la légende des finitions ; masquer le nom de variante imprimé sur les rectos uniquement dans le plateau d'ouverture. Titres, couleurs, effets et dimensions conservés, y compris en Express et dans le bilan.
+- [x] Validation en mocks à 360 et 1440 px, Découverte/Express ; dix tests ciblés, Svelte sans diagnostic, lint, build FO et contrôle du diff réussis. GitNexus : impact faible, contrôle des changements avant commit.
+
+Sujet Conventional Commit : `fix(boosters): hide variant names in opening results`.

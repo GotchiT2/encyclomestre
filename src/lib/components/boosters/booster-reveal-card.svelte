@@ -71,7 +71,7 @@
 		>
 		<span class="reveal-sparks" aria-hidden="true"></span>
 	</button>
-	<span class="card-caption">{revealed ? card.title : card.variant.name}</span>
+	<span class="card-caption">{revealed ? card.title : ''}</span>
 	<span class="sr-only" aria-live="polite">{revealed ? card.title : ''}</span>
 </div>
 
@@ -112,6 +112,9 @@
 	.booster-card-front {
 		display: grid;
 		align-content: center;
+	}
+	.booster-card-front :global(.variant) {
+		display: none;
 	}
 	.booster-card-reverse {
 		transform: rotateY(180deg);

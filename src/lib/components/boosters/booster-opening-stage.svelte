@@ -288,8 +288,7 @@
 									values: { count: openedCount, remaining: available }
 								})}
 							</p>{/if}
-						<p>{$_('opening.manageHint')}</p>{:else}<p>{$_('opening.revealHint')}</p>
-						<p class="finish-legend">{$_('opening.finishLegend')}</p>{/if}
+						<p>{$_('opening.manageHint')}</p>{:else}<p>{$_('opening.revealHint')}</p>{/if}
 				</div>
 				<div class="board-commands">
 					{#if pages > 1}<div class="board-pagination" aria-label={$_('opening.resultPages')}>
@@ -487,7 +486,6 @@
 		font-size: 13px;
 		color: #efebd9b3;
 	}
-	.finish-legend,
 	.board-information p:last-child {
 		font-size: 11px;
 	}
