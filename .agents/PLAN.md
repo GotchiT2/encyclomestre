@@ -653,3 +653,17 @@ Sujet Conventional Commit : `fix(boosters): retain empty packs, show recharges a
 - [x] Validation exclusivement en mocks : 13 tests ciblés, départ immédiat après attente, programmation UTC, modification des dates et écriture unique. Création depuis une fiche aux cinq largeurs 360/390/768/1024/1440 px, WebKit mobile et texte agrandi ; aucun débordement ni appel de production. Svelte sans diagnostic, lint/formatage ciblés, build FO et diff réussis. GitNexus avant modification et avant commit ; HTTPS, certificats et BO conservés.
 
 Sujet Conventional Commit : `feat(auctions): prefill dates and add duration shortcuts`.
+
+## Identité WikiForge — flamme Taillée et formats web — 3 octobre 2026
+
+Branche `feat/arcade-experience`. Commit local demandé après validation ; aucun déploiement. Skill encyclomestre-ui exclu. HTTPS, certificats, BO et clés de stockage conservés.
+
+- [x] Reconstruire la proposition 01 en vecteurs et vectoriser le nom WikiForge depuis Barlow Condensed Black ; variantes sombre, claire et monochromes, signatures horizontales/empilées et dessin optique 16 px.
+- [x] Remplacer les anciens monogrammes et logotypes dans l'en-tête, la connexion, l'accueil, les cartes, les boosters/dos et leurs rendus de secours, y compris l'aperçu expérimental. Préserver les logos spécifiques fournis par les données.
+- [x] Préparer 31 SVG, 52 PNG, favicon ICO, icônes Apple/installation/maskable, manifeste et image de partage ; sources de génération, inventaire et licences joints.
+- [x] Centrer verticalement le symbole et le nom dans le header, sans espace de descente typographique ; conserver une cible d'au moins 44 px.
+- [x] Vérifier 155 combinaisons de pages/largeurs en mocks, 26 scénarios d'ouverture, 28 tests ciblés et l'en-tête dans Chromium/WebKit à six largeurs avec texte normal/agrandi. Svelte sans diagnostic, lint/formatage ciblés, syntaxe Python, build FO sans mocks et diff validés.
+
+GitNexus avant les modifications et contrôle des changements : portée faible sur les symboles indexés ; imports Svelte et nouveaux fichiers vérifiés directement. Captures et documentation : `docs/branding/wikiforge-taillee/`. Les modifications préexistantes d'AGENTS.md et les anciens fichiers de proposition restent hors de cette livraison.
+
+Sujet Conventional Commit : `feat(branding): integrate WikiForge flame identity and web assets`.

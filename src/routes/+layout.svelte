@@ -3,6 +3,7 @@
 	import '$lib/i18n';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import { page } from '$app/state';
 	import {
 		currentSession,
 		hydrateSession,
@@ -99,8 +100,25 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
+	<link rel="icon" type="image/svg+xml" href={favicon} />
+	<link rel="icon" type="image/png" sizes="32x32" href="/brand/v1/favicon-32.png" />
+	<link rel="icon" type="image/png" sizes="16x16" href="/brand/v1/favicon-16.png" />
+	<link rel="apple-touch-icon" sizes="180x180" href="/brand/v1/icon-180.png" />
+	<link rel="mask-icon" href="/brand/v1/pinned-tab.svg" color="#E8EF42" />
+	<link rel="manifest" href="/site.webmanifest" />
 	<meta name="theme-color" content="#171918" />
+	<meta name="application-name" content={$_('navigation.brand')} />
+	<meta name="apple-mobile-web-app-title" content={$_('navigation.brand')} />
+	<meta name="description" content={$_('landing.manifest')} />
+	<meta property="og:site_name" content={$_('navigation.brand')} />
+	<meta property="og:title" content={$_('app.title')} />
+	<meta property="og:description" content={$_('landing.manifest')} />
+	<meta property="og:image" content={new URL('/brand/v1/social-card.png', page.url).href} />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:image:alt" content={$_('navigation.brand')} />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:image" content={new URL('/brand/v1/social-card.png', page.url).href} />
 	<title>{$_('app.title')}</title>
 </svelte:head>
 

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Brand from '../brand/brand.svelte';
+	import { brandName } from '../brand/artwork.js';
 	let {
 		name,
 		renderKey = 'standard',
@@ -43,21 +45,15 @@
 			onerror={() => (failed = true)}
 		/>{:else}
 		<div class="pack-graphic">
-			<svg viewBox="0 0 100 100" fill="none"
-				><path
-					d="M20 17H71L84 30V70L71 83H20L7 70V30Z"
-					stroke="currentColor"
-					stroke-width="3"
-				/><path d="M34 25L70 50L34 75V25Z" fill="currentColor" /><path
-					d="M18 5H80M18 95H80"
-					stroke="currentColor"
-				/></svg
-			>
+			<Brand kind="symbol" />
 		</div>
 	{/if}
 	<div class="pack-caption">
-		<span class="pack-brand">{labels.brand}</span><strong>{name}</strong
-		>{#if cardCount != null}<span class="pack-count">{cardCount} {labels.cards}</span>{/if}
+		<span class="pack-brand"
+			>{#if labels.brand === brandName}<Brand kind="wordmark" />{:else}{labels.brand}{/if}</span
+		><strong>{name}</strong>{#if cardCount != null}<span class="pack-count"
+				>{cardCount} {labels.cards}</span
+			>{/if}
 	</div>
 </div>
 
@@ -121,7 +117,7 @@
 		background: repeating-linear-gradient(135deg, transparent 0 12px, #efebd90a 12px 13px);
 		border: 1px solid #efebd966;
 	}
-	.pack-graphic svg {
+	.pack-graphic :global(.wikiforge-brand) {
 		width: 80%;
 		height: 80%;
 	}
@@ -144,7 +140,7 @@
 	}
 	.pack-brand {
 		font:
-			600 4.5cqw 'Barlow',
+			600 6cqw 'Barlow',
 			sans-serif;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;

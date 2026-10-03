@@ -5,12 +5,14 @@
 	import BoosterPackArt from '$lib/components/boosters/booster-pack-art.svelte';
 	import LegalLinks from '$lib/components/security/legal-links.svelte';
 	import { _ } from '$lib/i18n';
+	import Brand from '$lib/brand/brand.svelte';
 	import type { CardRecord } from '$lib/types';
 	let { showcaseCard }: { showcaseCard: CardRecord | null } = $props();
 </script>
 
 <section class="arcade-landing">
 	<div class="landing-copy">
+		<div class="landing-signature"><Brand decorative={false} /></div>
 		<p class="forge-label">{$_('landing.eyebrow')}</p>
 		<h1>{$_('landing.title')}</h1>
 		<p class="manifest">{$_('landing.manifest')}</p>
@@ -23,7 +25,7 @@
 		</div>
 	</div>
 	<div class="landing-objects">
-		<div class="graphic-print" aria-hidden="true">✦</div>
+		<div class="graphic-print" aria-hidden="true"><Brand kind="symbol" /></div>
 		<div class="landing-pack">
 			<BoosterPackArt name={$_('navigation.brand')} renderKey="standard" />
 		</div>
@@ -55,6 +57,9 @@
 		margin: 1rem 0;
 		max-width: 10ch;
 	}
+	.landing-signature {
+		font-size: clamp(28px, 4vw, 44px);
+	}
 	.manifest {
 		max-width: 34rem;
 		color: var(--muted-foreground);
@@ -77,8 +82,7 @@
 		inset: 0;
 		display: grid;
 		place-items: center;
-		font-size: 360px;
-		line-height: 1;
+		padding: 0 18%;
 		color: #e8ef42;
 		z-index: -1;
 	}

@@ -3,6 +3,7 @@
 	import { defaultLayout } from './layout';
 	import { landscapeFor, type TemplateDefinition, type RenderData } from './definition';
 	import Finish from './finish.svelte';
+	import Brand from '../brand/brand.svelte';
 
 	let {
 		definition,
@@ -99,7 +100,7 @@
 >
 	<div class="edge" data-card-zone="frame">
 		<div class="face">
-			<span class="press-mark" aria-hidden="true">WF</span>
+			<span class="press-mark" aria-hidden="true"><Brand kind="symbol" compact monochrome /></span>
 			<div class="folio" data-card-zone="serial">
 				<span class="variant">{data.variantName}</span>
 				{#if serial}<span class="serial" data-testid="card-serial">{serial}</span>{/if}
@@ -198,9 +199,7 @@
 		height: 10cqw;
 		background: var(--card-accent);
 		color: #171918;
-		font:
-			900 7cqw/1 'Barlow Condensed',
-			sans-serif;
+		padding: 1cqw 2cqw;
 		clip-path: polygon(0 0, 100% 0, 100% 75%, 80% 100%, 0 100%);
 	}
 	.folio {

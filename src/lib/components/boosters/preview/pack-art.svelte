@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
-	import EditionSigil from './edition-sigil.svelte';
+	import Brand from '$lib/brand/brand.svelte';
 	import type { PreviewPack } from './catalogue';
 	let { pack }: { pack: PreviewPack } = $props();
 </script>
@@ -16,10 +16,10 @@
 	<div class="outer-frame"></div>
 	<div class="inner-frame"></div>
 	<p class="pack-name">{$_(`boosterPreview.packs.${pack.nameKey}`)}</p>
-	<p class="pack-brand">{$_('navigation.brand')}</p>
+	<p class="pack-brand"><Brand kind="wordmark" /></p>
 	<p class="pack-motto">{$_('boosterPreview.pack_motto')}</p>
 	<div class="pack-rule"><span></span><i></i><span></span></div>
-	<div class="pack-seal"><EditionSigil key={pack.renderKey} /></div>
+	<div class="pack-seal"><Brand kind="symbol" /></div>
 	<div class="pack-footer">
 		<div class="footer-side"><strong>5</strong><span>{$_('boosterPreview.cards_label')}</span></div>
 		<div class="footer-center">

@@ -8,6 +8,7 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import UserAvatar from '$lib/components/users/user-avatar.svelte';
 	import { _ } from '$lib/i18n';
+	import Brand from '$lib/brand/brand.svelte';
 	import UsersIcon from '@lucide/svelte/icons/users';
 	import LogInIcon from '@lucide/svelte/icons/log-in';
 	import PlayerMoney from './player-money.svelte';
@@ -41,10 +42,10 @@
 	<a
 		href={$currentSession ? resolve('/welcome') : resolve('/')}
 		class="arcade-brand"
-		aria-label={$_('arcade.recap')}
+		aria-label={`${$_('navigation.brand')} · ${$_('arcade.recap')}`}
 		data-tooltip={$_('arcade.recap')}
-		><span class="brand-emblem" aria-hidden="true">WF</span><span class="forge-wordmark brand-name"
-			>{$_('navigation.brand')}</span
+		><span class="brand-emblem"><Brand kind="symbol" /></span><span class="brand-name"
+			><Brand kind="wordmark" /></span
 		></a
 	>
 	{#if $currentSession}<nav class="desktop-navigation" aria-label={$_('navigation.mobileAria')}>
@@ -132,6 +133,7 @@
 		align-items: center;
 		gap: 10px;
 		min-width: 44px;
+		min-height: 44px;
 		flex: none;
 	}
 	.brand-emblem {
@@ -140,16 +142,11 @@
 		place-items: center;
 		width: 40px;
 		height: 40px;
-		background: var(--primary);
-		color: var(--primary-foreground);
-		font:
-			900 27px/1 'Barlow Condensed',
-			sans-serif;
-		clip-path: polygon(0 0, 100% 0, 100% 80%, 80% 100%, 0 100%);
 	}
 	.brand-name {
 		display: none;
-		font-size: 24px;
+		font-size: 30px;
+		line-height: 1;
 	}
 	.desktop-navigation {
 		display: none;
@@ -194,7 +191,8 @@
 	}
 	@media (min-width: 1280px) {
 		.brand-name {
-			display: block;
+			display: flex;
+			align-items: center;
 		}
 	}
 	@media (max-width: 389px) {

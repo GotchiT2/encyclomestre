@@ -13,7 +13,7 @@
 		isActiveRoute,
 		type NavItem
 	} from './nav-items';
-	import GalleryVerticalEndIcon from '@lucide/svelte/icons/gallery-vertical-end';
+	import Brand from '$lib/brand/brand.svelte';
 	import LogInIcon from '@lucide/svelte/icons/log-in';
 	import PackageOpenIcon from '@lucide/svelte/icons/package-open';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
@@ -72,16 +72,9 @@
 				class="flex min-w-0 items-center gap-3"
 				aria-label={$_('navigation.home')}
 			>
-				<span
-					class="relative grid size-8 shrink-0 place-items-center border border-primary/45 bg-card text-primary"
-				>
-					<span class="absolute inset-1 border border-[rgb(124_228_222_/_18%)]"></span>
-					<GalleryVerticalEndIcon class="relative size-4" />
-				</span>
+				<span class="grid size-8 shrink-0 place-items-center"><Brand kind="symbol" /></span>
 				<span class="min-w-0 group-data-[collapsible=icon]:hidden">
-					<span class="forge-wordmark block truncate text-lg leading-none"
-						>{$_('navigation.brand')}</span
-					>
+					<Brand kind="wordmark" class="text-2xl" />
 				</span>
 			</a>
 			<Sidebar.Trigger

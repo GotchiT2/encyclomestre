@@ -2,7 +2,7 @@
 	import { _ } from '$lib/i18n';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Button } from '$lib/components/ui/button';
-	import EditionSigil from './edition-sigil.svelte';
+	import Brand from '$lib/brand/brand.svelte';
 	import VariantCard from './variant-card.svelte';
 	import { isLandscapeCard, type PreviewCard, type PreviewPack } from './catalogue';
 	let {
@@ -54,8 +54,8 @@
 								onclick={() => (revealed += 1)}
 								aria-label={$_('boosterPreview.reveal_one', { values: { index: index + 1 } })}
 								><span class="back-frame"
-									><span class="back-brand">{$_('navigation.brand')}</span><span class="back-symbol"
-										><EditionSigil key="standard" /></span
+									><span class="back-brand"><Brand kind="wordmark" /></span><span
+										class="back-symbol"><Brand kind="symbol" /></span
 									><span class="back-number">{String(index + 1).padStart(2, '0')}</span><span
 										class="back-action"
 										>{index === revealed

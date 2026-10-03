@@ -10,6 +10,7 @@
 	import PackCatalogue from './pack-catalogue.svelte';
 	import { packNameKey } from './pack-labels';
 	import type { PackCatalogueItem } from '$lib/types';
+	import Brand from '$lib/brand/brand.svelte';
 	let {
 		packs,
 		selectedId,
@@ -124,7 +125,8 @@
 	{#if credits}<div class="reserve-credits">{@render credits()}</div>{/if}
 	<div class="reserve-plateau">
 		<div class="plateau-index" aria-hidden="true">
-			WF / <span>{$_('opening.sessionLabel')}</span>
+			<span class="plateau-brand"><Brand kind="symbol" /></span> /
+			<span>{$_('opening.sessionLabel')}</span>
 		</div>
 		<div class="pack-cartouche">
 			{#if selected}<span
@@ -258,6 +260,12 @@
 >
 
 <style>
+	.plateau-brand {
+		display: inline-flex;
+		width: 20px;
+		height: 24px;
+		vertical-align: middle;
+	}
 	.booster-reserve {
 		min-width: 0;
 		display: grid;

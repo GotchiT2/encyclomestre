@@ -9,6 +9,7 @@
 	import { markWikiForgeSessionVerified, persistSession } from '$lib/auth/session';
 	import { Button } from '$lib/components/ui/button';
 	import { _ } from '$lib/i18n';
+	import Brand from '$lib/brand/brand.svelte';
 	let busy = $state(false);
 	async function acceptSession(session: AuthSession) {
 		persistSession(localStorage, session);
@@ -19,7 +20,7 @@
 </script>
 
 <section class="mx-auto grid min-h-[calc(100dvh-10rem)] w-full max-w-md content-center gap-6 py-6">
-	<p class="forge-wordmark text-center text-4xl">{$_('navigation.brand')}</p>
+	<div class="flex justify-center text-4xl"><Brand decorative={false} /></div>
 	<div class="forge-panel space-y-4 rounded-lg bg-card p-4 sm:p-6">
 		<h1 class="text-2xl font-semibold">{$_('auth.login.title')}</h1>
 		<p class="text-sm text-muted-foreground">{$_('plan.account.loginInfo')}</p>

@@ -1,4 +1,11 @@
 import type { PackFamily } from '$lib/types';
+import {
+	brandName,
+	flamePath,
+	flameViewBox,
+	wordmarkPath,
+	wordmarkViewBox
+} from '../../brand/artwork.js';
 
 export type BoosterVisual = 'signal' | 'circuit' | 'prism';
 export const openingDuration = 3000;
@@ -21,7 +28,7 @@ const escape = (text: string) =>
 export function boosterArtwork({
 	visual,
 	name = '',
-	brand = 'WikiForge',
+	brand = brandName,
 	count,
 	cardsLabel = '',
 	back = false,
@@ -37,6 +44,10 @@ export function boosterArtwork({
 }) {
 	const prefix = id.replace(/[^a-zA-Z0-9_-]/g, '');
 	const metallic = visual === 'circuit';
+	const wordmark =
+		brand === brandName
+			? `<svg x="${back ? 120 : 46}" y="${back ? 548 : 56}" width="${back ? 272 : 170}" height="${back ? 70 : 44}" viewBox="${wordmarkViewBox}" fill="#EFEBD9"><path d="${wordmarkPath}"/></svg>`
+			: `<text x="${back ? 256 : 46}" y="${back ? 590 : 90}" text-anchor="${back ? 'middle' : 'start'}" fill="#EFEBD9" font-family="Barlow,Arial,sans-serif" font-size="22" font-weight="700">${escape(brand.toUpperCase())}</text>`;
 	const pattern =
 		visual === 'signal'
 			? `<path d="M-40 390L360-10H470L70 390ZM110 710L540 280V390L220 710Z" fill="#E8EF42"/><path d="M40 78H152M40 78V145M472 78H360M472 78V145M40 650V592M40 650H152M472 650V592M472 650H360" stroke="#EFEBD9" stroke-width="3"/>`
@@ -52,8 +63,10 @@ export function boosterArtwork({
 	return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 736" width="512" height="736">
 	<defs><linearGradient id="${prefix}-metal" x2="1" y2="1"><stop stop-color="#171918"/><stop offset=".28" stop-color="#777c76"/><stop offset=".5" stop-color="#292d29"/><stop offset=".8" stop-color="#51594f"/><stop offset="1" stop-color="#171918"/></linearGradient><linearGradient id="${prefix}-light"><stop stop-color="#EFEBD9" stop-opacity=".02"/><stop offset=".46" stop-color="#EFEBD9" stop-opacity=".25"/><stop offset=".54" stop-color="#EFEBD9" stop-opacity=".02"/></linearGradient><pattern id="${prefix}-seal" width="8" height="12" patternUnits="userSpaceOnUse"><path d="M2 0V12" stroke="#EFEBD9" stroke-opacity=".35" stroke-width="2"/></pattern></defs>
 	<rect width="512" height="736" rx="${back ? 18 : 4}" fill="${metallic ? `url(#${prefix}-metal)` : '#171918'}"/>
-	${back ? `<g opacity=".65">${pattern}<g transform="rotate(180 256 368)">${pattern}</g></g><rect x="22" y="22" width="468" height="692" rx="12" stroke="#EFEBD9" stroke-width="2" fill="none"/><rect x="34" y="34" width="444" height="668" rx="6" stroke="#E8EF42" fill="none"/>` : `${pattern}<rect y="0" width="512" height="35" fill="url(#${prefix}-seal)"/><rect y="701" width="512" height="35" fill="url(#${prefix}-seal)"/><path d="M28 38V698M484 38V698" stroke="#EFEBD9" stroke-opacity=".3"/><text x="46" y="90" fill="#EFEBD9" font-family="Barlow,Arial,sans-serif" font-size="22" font-weight="700" letter-spacing="4">${escape(brand.toUpperCase())}</text>`}
-	<g transform="translate(${back ? 106 : 58} ${back ? 276 : 190}) scale(${back ? 0.78 : 1.05})" fill="#EFEBD9"><path d="M0 0H35L52 109L74 40H105L127 109L145 0H180L153 167H118L89 86L62 167H28Z"/><path d="M204 0H330V32H240V70H312V102H240V167H204Z"/></g>
-	${back ? `<text x="256" y="590" text-anchor="middle" fill="#EFEBD9" font-family="Barlow,Arial,sans-serif" font-size="18" font-weight="700" letter-spacing="5">${escape(brand.toUpperCase())}</text>` : `<rect x="38" y="496" width="436" height="175" fill="#EFEBD9"/><rect x="38" y="496" width="8" height="175" fill="#E8EF42"/>${lines.map((line, index) => `<text x="60" y="${539 + index * 38}" fill="#171918" font-family="Barlow Condensed,Arial,sans-serif" font-size="36" font-weight="900" letter-spacing="-1">${escape(line)}</text>`).join('')}${count == null ? '' : `<text x="60" y="651" fill="#171918" font-family="Barlow,Arial,sans-serif" font-size="19" font-weight="600">${count} ${escape(cardsLabel)}</text>`}`}
-	<rect width="512" height="736" fill="url(#${prefix}-light)" opacity="${metallic ? '.6' : '.18'}"/></svg>`;
+	${back ? `<g opacity=".65">${pattern}<g transform="rotate(180 256 368)">${pattern}</g></g><rect x="22" y="22" width="468" height="692" rx="12" stroke="#EFEBD9" stroke-width="2" fill="none"/><rect x="34" y="34" width="444" height="668" rx="6" stroke="#E8EF42" fill="none"/>` : `${pattern}<rect y="0" width="512" height="35" fill="url(#${prefix}-seal)"/><rect y="701" width="512" height="35" fill="url(#${prefix}-seal)"/><path d="M28 38V698M484 38V698" stroke="#EFEBD9" stroke-opacity=".3"/>`}
+	<rect x="150" y="${back ? 258 : 160}" width="212" height="304" rx="8" fill="#171918"/>
+	<svg x="170" y="${back ? 282 : 184}" width="172" height="256" viewBox="${flameViewBox}" fill="#E8EF42"><path d="${flamePath}"/></svg>
+	${wordmark}
+	${back ? '' : `<rect x="38" y="496" width="436" height="175" fill="#EFEBD9"/><rect x="38" y="496" width="8" height="175" fill="#E8EF42"/>${lines.map((line, index) => `<text x="60" y="${539 + index * 38}" fill="#171918" font-family="Barlow Condensed,Arial,sans-serif" font-size="36" font-weight="900" letter-spacing="-1">${escape(line)}</text>`).join('')}${count == null ? '' : `<text x="60" y="651" fill="#171918" font-family="Barlow,Arial,sans-serif" font-size="19" font-weight="600">${count} ${escape(cardsLabel)}</text>`}`}
+	<rect width="512" height="736" rx="${back ? 18 : 4}" fill="url(#${prefix}-light)" opacity="${metallic ? '.6' : '.18'}"/></svg>`;
 }

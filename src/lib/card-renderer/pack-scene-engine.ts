@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { brandName, flamePath, wordmarkPath, wordmarkViewBox } from '../brand/artwork.js';
 
 export type PackSceneOptions = {
 	name: string;
@@ -51,8 +52,17 @@ export function createPackScene(canvas: HTMLCanvasElement, options: PackSceneOpt
 		ctx.fillStyle = options.color;
 		ctx.fillRect(24, 20, 464, 54);
 		ctx.fillStyle = '#171918';
-		ctx.font = '900 32px "Barlow Condensed",sans-serif';
-		ctx.fillText(options.brand.toUpperCase(), 40, 59);
+		if (options.brand === brandName) {
+			const height = Number(wordmarkViewBox.split(' ')[3]);
+			ctx.save();
+			ctx.translate(40, 30);
+			ctx.scale(32 / height, 32 / height);
+			ctx.fill(new Path2D(wordmarkPath));
+			ctx.restore();
+		} else {
+			ctx.font = '900 32px "Barlow Condensed",sans-serif';
+			ctx.fillText(options.brand.toUpperCase(), 40, 59);
+		}
 		if (image) {
 			const scale = Math.max(464 / image.width, 445 / image.height);
 			ctx.save();
@@ -76,9 +86,12 @@ export function createPackScene(canvas: HTMLCanvasElement, options: PackSceneOpt
 				ctx.lineTo(488, 240 + i * 24);
 				ctx.stroke();
 			}
-			ctx.fillStyle = '#efebd9';
-			ctx.font = '900 210px "Barlow Condensed",sans-serif';
-			ctx.fillText('WF', 120, 420, 300);
+			ctx.fillStyle = '#E8EF42';
+			ctx.save();
+			ctx.translate(142, 144);
+			ctx.scale(1.2, 1.2);
+			ctx.fill(new Path2D(flamePath));
+			ctx.restore();
 		}
 		ctx.fillStyle = '#efebd9';
 		ctx.fillRect(24, 558, 464, 178);
