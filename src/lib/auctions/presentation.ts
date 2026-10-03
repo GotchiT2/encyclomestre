@@ -18,6 +18,11 @@ export const canEditAuction = (auction: Auction, now = Date.now()) =>
 export const creationFee = (price: number) => (price <= 10 ? 0 : Math.ceil(price / 100));
 export const validAmount = (value: number) =>
 	Number.isSafeInteger(value) && value > 0 && value <= 1_000_000_000_000;
+export function minimumAuctionBid(auction: Auction) {
+	return auction.leading
+		? Math.max(auction.minBid, (auction.myMax ?? auction.price ?? auction.startPrice) + 1)
+		: auction.minBid;
+}
 export function validAuctionPeriod(start: number, end: number, now = Date.now(), scheduled = true) {
 	return (
 		Number.isFinite(start) &&

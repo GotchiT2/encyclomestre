@@ -6,6 +6,8 @@ import VariantFace from './variant-card-face.svelte';
 import TemplateCard from '$lib/card-renderer/template-card.svelte';
 import { presetDefinition, themes } from '$lib/card-renderer/definition';
 import { mockCards } from '$lib/api/mocks/cards';
+import { cardDefinition } from '$lib/card-renderer/card-presets';
+import { serializeRenderKey } from '$lib/card-renderer/render-key';
 const { load } = vi.hoisted(() => ({ load: vi.fn() }));
 vi.mock('$lib/api/card-templates', () => ({ getCardTemplate: load }));
 const labels = {
@@ -49,11 +51,44 @@ describe('shared card renderer', () => {
 				...mockCards[0],
 				serialNumber: 17,
 				maxCopies: 99,
-				variant: { ...mockCards[0].variant, renderKey: 'tpl:space@1' }
+				variant: { ...mockCards[0].variant, styles: ['FULL_ART'], renderKey: 'tpl:space@1' }
 			}
 		});
 		await expect.element(page.getByTestId('template-card')).toHaveAttribute('data-theme', 'space');
 		await expect.element(page.getByTestId('card-serial')).toHaveTextContent('17/99');
+	});
+	it('renders inline JSON, description and the flame without a detail or template read', async () => {
+		render(VariantFace, {
+			card: {
+				...mockCards[0],
+				title: "Ministre de l'Éducation nationale (France)",
+				longDescription: 'Une description de collection.',
+				serialNumber: 17,
+				variant: { ...mockCards[0].variant, renderKey: serializeRenderKey(cardDefinition(false)) }
+			}
+		});
+		await expect
+			.element(page.getByTestId('template-card'))
+			.toHaveAttribute('data-full-art', 'false');
+		expect(document.querySelector('[data-card-content="description"]')?.textContent).toContain(
+			'Une description'
+		);
+		expect(document.querySelector('[data-card-content="logo"] svg')).not.toBeNull();
+		expect(document.querySelector('[data-testid="card-serial"]')).toBeNull();
+		expect(load).not.toHaveBeenCalled();
+	});
+	it('reports malformed inline JSON and keeps a usable fallback', async () => {
+		render(VariantFace, {
+			card: {
+				...mockCards[0],
+				variant: { ...mockCards[0].variant, renderKey: '{"schemaVersion":3}' }
+			}
+		});
+		await expect.element(page.getByTestId('template-card')).toBeVisible();
+		await expect
+			.element(page.getByRole('status'))
+			.toHaveTextContent('Modèle indisponible : affichage standard.');
+		expect(load).not.toHaveBeenCalled();
 	});
 	it('ignores old template reads after changing the card', async () => {
 		let resolve: (v: unknown) => void = () => {};

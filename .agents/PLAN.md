@@ -667,3 +667,27 @@ Branche `feat/arcade-experience`. Commit local demandé après validation ; aucu
 GitNexus avant les modifications et contrôle des changements : portée faible sur les symboles indexés ; imports Svelte et nouveaux fichiers vérifiés directement. Captures et documentation : `docs/branding/wikiforge-taillee/`. Les modifications préexistantes d'AGENTS.md et les anciens fichiers de proposition restent hors de cette livraison.
 
 Sujet Conventional Commit : `feat(branding): integrate WikiForge flame identity and web assets`.
+
+## Cartes validées — N3 et full art photo dominante — 3 octobre 2026
+
+- [x] Direction validée : N3 normale avec description, full art avec flamme en bas à droite et texte discret en bas à gauche ; numérotation seulement full art.
+- [x] Moteur CSS/JSON v3 partagé FO/BO, styles/calques/animations éditables, lecture v1/v2 et anciennes clés conservée. Sept fichiers du moteur strictement identiques entre les deux projets.
+- [x] N3 et full art, six finitions éditables d'exploration, huit JSON prêts à importer ; studio visuel, variantes JSON, titres longs, orientations 5:7/7:5 et description ajustée aux lignes disponibles. Sources et styles inconnus conservés.
+- [x] Validation exclusivement en mocks : Svelte sans diagnostic ; 361 tests FO, 94 tests BO, 28 scénarios navigateur de compatibilité ; parcours du nouveau studio aux cinq largeurs, texte agrandi, import/export, brouillons invalides, annulation/rétablissement, sauvegarde de variante, mouvements réduits et concordance FO/BO normale/full art portrait/paysage. Lint ciblé, builds FO/BO et diff validés.
+
+HTTPS et certificats conservés ; skill encyclomestre-ui exclu. Aucun déploiement ni publication réelle.
+
+Documentation : `docs/cards/templates-v3.md`. Captures et mesures : `%TEMP%/wikiforge-card-designs/`. GitNexus exécuté avant les changements et en contrôle final : portée élevée FO / critique BO sur les chemins communs de templates, couverts par les validations d'import, chargement, création et sauvegarde en mocks. Aucun commit effectué pour cette étape.
+
+
+## Détail d’enchère et livraison FO — 3 octobre 2026
+
+- [x] Carte inspectable au clic sans bouton redondant ; description puis historique ouvert par défaut, métadonnées répétées retirées.
+- [x] Panneau persistant à droite sur desktop et fixé au-dessus de la navigation mobile, hauteur mesurée et espace réservé ; une seule instance du formulaire conserve sa saisie entre les tailles d’écran.
+- [x] Timer dominant, date exacte en petit dessous, informations secondaires dans un dialogue. Avatars recadrés vendeur/meneur, lecture légère et cache dédupliqué par visite, initiales et meneur masqué conservés.
+- [x] Mise rapide immédiate au minimum serveur, dépassement du plafond personnel, verrou contre double appel. Confirmation manuelle et récupération du surplus maintenues. Saisie vidée après succès, conservée après conflit/actualisation, erreurs locales et serveur actualisées avec la saisie.
+- [x] Validation en mocks : Svelte sans diagnostic, 57 tests ciblés (enchères, cache, JSON et rendu), lint ciblé et build FO. Revue navigateur aux cinq largeurs 360/390/768/1024/1440, texte agrandi, défilement, focus, hauteur réduite, changement de largeur, conflit et phases ; 16 mesures de géométrie, aucune requête de production.
+- [x] Livraison des cartes CSS/JSON précédemment validées avec ces corrections d’enchère. GitNexus contrôlé avant les changements et avant commit : portée élevée sur les treize flux communs du rendu, couverts par les tests ; contrôle manuel des compositions Svelte et du cache d’identités.
+- Sujet Conventional Commit : feat(fo): add configurable cards and persistent auction bidding.
+
+Captures et mesures : %TEMP%/wikiforge-auction-detail/. Vite, certificats, clés de session et préférences préservés. Skill encyclomestre-ui exclu. Commit local demandé ; fichiers IDE, AGENTS généré et outillage .claude hors livraison. Aucun push ni déploiement.

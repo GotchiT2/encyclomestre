@@ -4,11 +4,22 @@ const { apiRequest } = vi.hoisted(() => ({ apiRequest: vi.fn() }));
 vi.mock('./client', () => ({ apiRequest }));
 
 import { defaultPageVariant, getVariants, resetVariantsCache, standardVariant } from './variants';
+import { cardDefinition } from '$lib/card-renderer/card-presets';
+import { serializeRenderKey } from '$lib/card-renderer/render-key';
 
 describe('variant catalogue', () => {
 	beforeEach(() => {
 		resetVariantsCache();
 		apiRequest.mockReset();
+	});
+	it('keeps complete JSON and its casing exactly as provided by the catalogue', async () => {
+		const key = serializeRenderKey(cardDefinition(false));
+		apiRequest.mockResolvedValue([
+			{ id: 9, name: 'Atelier', color: '#E8EF42', styles: ['NORMAL'], renderKey: key }
+		]);
+		const variants = await getVariants();
+		expect(variants[0].renderKey).toBe(key);
+		expect(variants[0].renderKey).toContain('Barlow Condensed');
 	});
 
 	it('loads once, keeps unknown styles and falls back for an unknown render key', async () => {

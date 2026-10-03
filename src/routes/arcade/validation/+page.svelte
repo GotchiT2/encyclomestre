@@ -4,6 +4,7 @@
 	import { isMockApiEnabled } from '$lib/api/client';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import ArcadeValidation from '$lib/components/cards/arcade-validation.svelte';
+	import CardDesignValidation from '$lib/components/cards/card-design-validation.svelte';
 	import type { CardRecord } from '$lib/types';
 	let examples = $state<CardRecord[]>([]);
 	onMount(async () => {
@@ -16,9 +17,8 @@
 	title={$_('arcade.validationTitle')}
 	description={$_('arcade.validationDescription')}
 />
-{#if isMockApiEnabled() && examples.length}<ArcadeValidation {examples} />{:else}<p
-		role="status"
-		class="mt-6"
-	>
+{#if isMockApiEnabled() && examples.length}<CardDesignValidation /><ArcadeValidation
+		{examples}
+	/>{:else}<p role="status" class="mt-6">
 		{$_('arcade.validationMockOnly')}
 	</p>{/if}

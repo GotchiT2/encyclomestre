@@ -60,6 +60,7 @@
 			><span class="booster-card-front" aria-hidden={!revealed}
 				><VariantCardFace
 					{card}
+					reveal={revealed}
 					onOrientationChange={(value) => {
 						landscape = value;
 						onOrientationChange(value);

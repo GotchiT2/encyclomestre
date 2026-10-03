@@ -2,7 +2,8 @@
 	import './arcade-fonts.css';
 	import { defaultLayout, surfaceCss } from './layout';
 	import Finish from './finish.svelte';
-	import ArcadeCard from './arcade-card.svelte';
+	import JsonCard from './json-card.svelte';
+	import { adaptPresentation } from './card-presets';
 	import { untrack, onDestroy } from 'svelte';
 	import { landscapeFor, type TemplateDefinition, type RenderData } from './definition';
 	let {
@@ -95,8 +96,16 @@
 	}
 </script>
 
-{#if profile === 'arcade'}
-	<ArcadeCard {definition} {data} {labels} {onOrientationChange} {testId} {reveal} />
+{#if profile === 'arcade' || definition.presentation}
+	<JsonCard
+		presentation={adaptPresentation(definition, data.fullArt)}
+		theme={definition.design.theme}
+		{data}
+		{labels}
+		{onOrientationChange}
+		{testId}
+		{reveal}
+	/>
 {:else}
 	<div
 		class="canvas"

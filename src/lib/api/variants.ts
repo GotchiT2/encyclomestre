@@ -28,12 +28,16 @@ interface VariantDto {
 }
 
 function normalizeVariant(variant: VariantDto): VariantDefinition {
-	const requestedKey = variant.renderKey?.trim().toLowerCase();
+	const raw = variant.renderKey?.trim();
+	const requestedKey = raw?.startsWith('{') ? raw : raw?.toLowerCase();
 	return {
 		...variant,
 		styles: Array.isArray(variant.styles) ? variant.styles : [],
 		renderKey:
-			requestedKey && (knownRenderKeys.has(requestedKey) || requestedKey.startsWith('tpl:'))
+			requestedKey &&
+			(requestedKey.startsWith('{') ||
+				knownRenderKeys.has(requestedKey) ||
+				requestedKey.startsWith('tpl:'))
 				? requestedKey
 				: 'standard'
 	};

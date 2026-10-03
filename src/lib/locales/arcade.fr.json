@@ -173,5 +173,28 @@
 		"selectPack": "Choisir ce pack",
 		"complete": "Découverte terminée",
 		"conflict": "La disponibilité du paquet a changé. Vos crédits ont été actualisés ; vérifiez-les avant une nouvelle ouverture."
+	},
+	"cardDesigns": {
+		"title": "Cartes WikiForge",
+		"description": "N3 et full art : titre long, illustration portrait ou paysage, description et finitions éditables.",
+		"longTitle": "Ministre de l'Éducation nationale (France)",
+		"shortTitle": "Portrait d’artiste",
+		"sampleDescription": "Une fonction publique présentée à travers les lieux et les institutions qui l’accompagnent. La description occupe les lignes disponibles, sans masquer le titre ni la collection.",
+		"collection": "Patrimoine français",
+		"cases": {
+			"normal-long": "N3 · Titre long",
+			"normal-landscape-image": "N3 · Image paysage",
+			"full-long-portrait": "Full art · Portrait",
+			"full-long-landscape": "Full art · Paysage",
+			"normal-missing": "N3 · Sans image"
+		},
+		"effects": {
+			"chrome": "Chrome",
+			"prism": "Prisme",
+			"orbit": "Orbite",
+			"impact": "Impact",
+			"circuit": "Circuit",
+			"eclipse": "Éclipse"
+		}
 	}
 }

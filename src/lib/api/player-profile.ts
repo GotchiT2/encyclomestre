@@ -45,6 +45,17 @@ interface UserProfileDto {
 	showcase?: ShowcaseLineDto[];
 }
 
+export type UserIdentity = Pick<UserProfile, 'id' | 'name' | 'image' | 'imageCrop'>;
+
+/** Read only the identity fields; avatars do not need variants or card conversion. */
+export async function getUserIdentity(id: string, options?: RequestOptions): Promise<UserIdentity> {
+	const dto = await apiRequest<UserProfileDto>(`/users/${wikiForgeNumericId(id, 'utilisateur')}`, {
+		...options,
+		apiTarget: 'wikiforge'
+	});
+	return { id: String(dto.id), name: dto.name, image: dto.image ?? null, imageCrop: dto.imageCrop };
+}
+
 interface SalesDto {
 	instantSales?: Array<{ id: number; price: number; card: ShowcaseCardDto }>;
 	auctions?: AuctionDto[];

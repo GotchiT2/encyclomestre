@@ -1,15 +1,21 @@
 <script lang="ts">
-	import AuctionFavorite from './auction-favorite.svelte';
+	import { onDestroy } from 'svelte';
 	import { _ } from '$lib/i18n';
-	import ReportDialog from '$lib/components/reports/report-dialog.svelte';
-	import { resolve } from '$app/paths';
 	import type { Auction } from '$lib/types';
+	import type { UserIdentity } from '$lib/api/player-profile';
+	import { createAuctionPlayerCache } from '$lib/auctions/player-cache';
 	import { auctionPhase } from '$lib/auctions/presentation';
+	import AuctionFavorite from './auction-favorite.svelte';
 	import AuctionStatus from './auction-status.svelte';
 	import AuctionCountdown from './auction-countdown.svelte';
 	import AuctionCardDetail from './auction-card-detail.svelte';
 	import AuctionBidPanel from './auction-bid-panel.svelte';
 	import AuctionSellerPanel from './auction-seller-panel.svelte';
+	import AuctionDock from './auction-dock.svelte';
+	import AuctionHistory from './auction-history.svelte';
+	import AuctionInformation from './auction-information.svelte';
+	import AuctionPlayer from './auction-player.svelte';
+	import ReportDialog from '$lib/components/reports/report-dialog.svelte';
 	let {
 		auction,
 		userId,
@@ -24,145 +30,169 @@
 		onConflict: () => Promise<void>;
 	} = $props();
 	const phase = $derived(auctionPhase(auction, now));
-	const date = (value: string) =>
-		new Intl.DateTimeFormat('fr', { dateStyle: 'medium', timeStyle: 'short' }).format(
-			new Date(value)
-		);
+	let players = $state<Record<string, UserIdentity | null>>({});
+	let cache = createAuctionPlayerCache();
+	let cachedFor: string | undefined;
+	$effect(() => {
+		if (cachedFor !== userId) {
+			cache.dispose();
+			cache = createAuctionPlayerCache();
+			cachedFor = userId;
+			players = {};
+		}
+		const ids = [
+			...new Set([auction.seller.id, auction.leader?.id].filter((id): id is string => Boolean(id)))
+		];
+		let active = true;
+		for (const id of ids)
+			void cache.get(id).then((value) => {
+				if (active) players[id] = value;
+			});
+		return () => {
+			active = false;
+		};
+	});
+	onDestroy(() => cache.dispose());
 </script>
 
-<header class="space-y-2 border-b border-border pb-4">
+<header class="auction-heading">
 	<div class="flex flex-wrap items-center gap-3">
 		<p class="forge-label">{$_('market.auction_details')} · #{auction.id}</p>
 		<AuctionStatus {auction} {now} />
 		{#if userId}<AuctionFavorite id={auction.id} favorite={auction.favorite} />{/if}
 	</div>
 	<h1 class="break-words font-serif text-3xl sm:text-4xl">{auction.card.title}</h1>
-	<p class="text-sm text-muted-foreground">
-		{$_('auctionHub.seller')} :
-		<a href={resolve('/users/[id]', { id: auction.seller.id })} class="text-primary underline"
-			>{auction.seller.name}</a
-		>
-		{#if auction.seller.id === userId}
-			· {$_('auctionHub.own')}{/if}
-	</p>
+	<div class="flex flex-wrap items-center gap-3">
+		<AuctionPlayer
+			player={auction.seller}
+			identity={players[auction.seller.id]}
+			label={$_('auctionHub.seller')}
+		/>
+		{#if auction.seller.id === userId}<span class="text-sm text-primary"
+				>{$_('auctionHub.own')}</span
+			>
+		{:else}<ReportDialog
+				target={{ type: 'USER', id: Number(auction.seller.id) }}
+				title={auction.seller.name}
+				userId={Number(auction.seller.id)}
+			/>{/if}
+	</div>
 </header>
-{#if auction.seller.id !== userId}<ReportDialog
-		target={{ type: 'USER', id: Number(auction.seller.id) }}
-		title={auction.seller.name}
-		userId={Number(auction.seller.id)}
-	/>{/if}
 <div class="auction-inspection">
-	<AuctionCardDetail card={auction.card} />
-	<div class="auction-transaction min-w-0 space-y-5">
-		<section class="forge-panel space-y-5 p-5" aria-label={$_('market.auction_details')}>
-			<div class="flex flex-wrap items-start justify-between gap-4">
+	<div class="auction-album">
+		<AuctionCardDetail card={auction.card} />
+		<AuctionHistory {auction} />
+	</div>
+	<AuctionDock>
+		<section class="auction-state" data-dock-state aria-label={$_('market.auction_details')}>
+			<div class="auction-price">
 				<div>
 					<p class="forge-label">
 						{$_(auction.price == null ? 'auctionHub.startPrice' : 'auctionHub.price')}
 					</p>
-					<p class="mt-1 text-3xl font-bold text-primary">
+					<p
+						class="price-value"
+						class:leading={auction.leading}
+						class:outbid={auction.viewerOutcome === 'LOST' ||
+							auction.viewerOutcome === 'OUTBID' ||
+							(!auction.leading && auction.myMax != null)}
+					>
 						{(auction.price ?? auction.startPrice).toLocaleString('fr')} ◈
 					</p>
 				</div>
 				{#if phase === 'open' || phase === 'upcoming'}<AuctionCountdown
 						endsAt={phase === 'upcoming' ? auction.startsAt : auction.endsAt}
 						mode={phase === 'upcoming' ? 'start' : 'end'}
-					/>{/if}
+						prominent
+					/>{:else}<AuctionStatus {auction} {now} />{/if}
 			</div>
-			<dl class="grid gap-3 text-sm sm:grid-cols-2">
-				{#if auction.viewerOutcome}<div>
-						<dt>{$_('apiEvolution.outcomeLabel')}</dt>
-						<dd>
-							{$_('apiEvolution.outcome.' + auction.viewerOutcome, {
-								default: auction.viewerOutcome
-							})}
-						</dd>
-					</div>{/if}
-				{#each ['listingFee', 'finalFee'] as field (field)}{@const amount =
-						field === 'listingFee'
-							? auction.listingFee
-							: auction.finalFee}{#if amount !== undefined}<div>
-							<dt>{$_('apiEvolution.' + field)}</dt>
-							<dd>{amount} ◈</dd>
-						</div>{/if}{/each}
-				<div>
-					<dt class="text-muted-foreground">{$_('auctionHub.starts')}</dt>
-					<dd>{date(auction.startsAt)}</dd>
+			<div class="auction-context">
+				<div class="min-w-0">
+					{#if auction.nbBids > 0}
+						{#if auction.leader}<AuctionPlayer
+								player={auction.leader}
+								identity={players[auction.leader.id]}
+								label={$_(phase === 'sold' ? 'auctionHub.winner' : 'auctionHub.leader')}
+							/>{:else}<p class="text-sm">{$_('auctionHub.hiddenPlayer')}</p>{/if}
+					{:else}<p class="text-sm text-muted-foreground">{$_('auctionHub.noBids')}</p>{/if}
 				</div>
-				<div>
-					<dt class="text-muted-foreground">{$_('auctionHub.ends')}</dt>
-					<dd>{date(auction.endsAt)}</dd>
-				</div>
-				{#if auction.closedAt}<div>
-						<dt class="text-muted-foreground">{$_('auctionHub.closed')}</dt>
-						<dd>{date(auction.closedAt)}</dd>
-					</div>{/if}
-				{#if auction.nbBids > 0}<div>
-						<dt class="text-muted-foreground">
-							{$_(auction.status === 'SOLD' ? 'auctionHub.winner' : 'auctionHub.leader')}
-						</dt>
-						<dd>
-							{#if auction.leader}<a
-									href={resolve('/users/[id]', { id: auction.leader.id })}
-									class="underline">{auction.leader.name}</a
-								>{:else}{$_('auctionHub.hiddenPlayer')}{/if}
-						</dd>
-					</div>{/if}
-			</dl>
-			<p class="text-xs text-muted-foreground">
-				{$_('auctionHub.bids', { values: { count: auction.nbBids } })} · {$_(
-					'auctionHub.extensions',
-					{ values: { count: auction.nbExtensions } }
-				)}
-			</p>
+				<AuctionInformation {auction} />
+			</div>
+			{#if auction.viewerOutcome}<p class="text-sm" class:text-energy={auction.leading}>
+					{$_('apiEvolution.outcome.' + auction.viewerOutcome, { default: auction.viewerOutcome })}
+				</p>{:else if auction.leading}<p class="text-sm text-energy">
+					{$_('auctionHub.leading')}
+				</p>{/if}
 		</section>
-		{#if userId === auction.seller.id}
-			<AuctionSellerPanel {auction} {now} {onUpdated} {onConflict} />
-		{:else if userId && auction.status === 'OPEN'}
-			<AuctionBidPanel {auction} {now} {onUpdated} {onConflict} />
-		{/if}
-		<details class="space-y-3 border-t border-border pt-4">
-			<summary class="min-h-11 text-xl">{$_('auctionHub.bidHistory')}</summary>
-			<p class="text-xs text-muted-foreground">{$_('auctionHub.bidHistoryLimit')}</p>
-			{#each auction.bids ?? [] as bid, index (index)}
-				<div
-					class="flex flex-wrap items-start justify-between gap-2 border-t border-primary/15 pt-3 text-sm"
-				>
-					<div>
-						{#if bid.user}<a href={resolve('/users/[id]', { id: bid.user.id })} class="underline"
-								>{bid.user.name}</a
-							>{:else}{$_('auctionHub.hiddenPlayer')}{/if}{#if bid.auto}<p
-								class="text-xs text-muted-foreground"
-							>
-								{$_('market.auction_auto')}
-							</p>{/if}
-					</div>
-					<div class="text-right">
-						<strong>{bid.amount.toLocaleString('fr')} ◈</strong><time
-							datetime={bid.date}
-							class="block text-xs text-muted-foreground">{date(bid.date)}</time
-						>
-					</div>
-				</div>
-			{:else}<p class="text-sm text-muted-foreground">{$_('auctionHub.noBids')}</p>{/each}
-		</details>
-	</div>
+		{#if userId === auction.seller.id}<AuctionSellerPanel
+				{auction}
+				{now}
+				{onUpdated}
+				{onConflict}
+			/>
+		{:else if userId && auction.status === 'OPEN'}<AuctionBidPanel
+				{auction}
+				{now}
+				{onUpdated}
+				{onConflict}
+			/>{/if}
+	</AuctionDock>
 </div>
 
 <style>
+	.auction-heading {
+		display: grid;
+		gap: 10px;
+		border-bottom: 1px solid var(--border);
+		padding-bottom: 16px;
+	}
 	.auction-inspection {
 		display: grid;
 		gap: 24px;
 		align-items: start;
+		min-width: 0;
+	}
+	.auction-album {
+		display: grid;
+		gap: 24px;
+		min-width: 0;
+	}
+	.auction-state {
+		display: grid;
+		gap: 8px;
+	}
+	.auction-price {
+		display: flex;
+		align-items: start;
+		justify-content: space-between;
+		gap: 12px;
+	}
+	.price-value {
+		font-family: 'Barlow Condensed', sans-serif;
+		font-size: 2rem;
+		font-weight: 800;
+		line-height: 1.1;
+		color: var(--primary);
+	}
+	.price-value.leading {
+		color: var(--energy);
+	}
+	.price-value.outbid {
+		color: var(--destructive);
+	}
+	.auction-context {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
 	}
 	@media (min-width: 1024px) {
 		.auction-inspection {
-			grid-template-columns: minmax(0, 1fr) minmax(360px, 520px);
-			gap: 48px;
+			grid-template-columns: minmax(0, 1fr) minmax(350px, 440px);
+			gap: 32px;
 		}
-		.auction-transaction {
-			position: sticky;
-			top: 88px;
+		.price-value {
+			font-size: 2.5rem;
 		}
 	}
 </style>

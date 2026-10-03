@@ -6,8 +6,9 @@
 	import { bidAuction, retractAuctionMax } from '$lib/api/auctions';
 	import { ApiError } from '$lib/api/client';
 	import { auctionErrorKey } from '$lib/auctions/errors';
-	import { auctionPhase, validAmount } from '$lib/auctions/presentation';
+	import { auctionPhase, validAmount, minimumAuctionBid } from '$lib/auctions/presentation';
 	import { Button } from '$lib/components/ui/button';
+	import * as Field from '$lib/components/ui/field';
 	import AuctionConfirmation from './auction-confirmation.svelte';
 	import { toast } from 'svelte-sonner';
 	let {
@@ -26,13 +27,23 @@
 	let error = $state('');
 	let confirm = $state(false);
 	let action = $state<'bid' | 'retract'>('bid');
-	const minimum = $derived(
-		auction.leading ? (auction.myMax ?? auction.price ?? auction.startPrice) + 1 : auction.minBid
-	);
+	const inputId = $props.id();
+	let confirmedAmount = $state<number>();
+	const minimum = $derived(minimumAuctionBid(auction));
 	const valid = $derived(amount !== undefined && validAmount(amount) && amount >= minimum);
 	const open = $derived(auctionPhase(auction, now) === 'open');
-	async function submit() {
-		if (busy || !open || (action === 'bid' && (!valid || $activeRestrictions.includes('TRADE')))) {
+	const restricted = $derived($activeRestrictions.includes('TRADE'));
+	const invalid = $derived(amount !== undefined && !valid);
+	async function submit(kind: 'bid' | 'retract', submittedAmount?: number) {
+		if (
+			busy ||
+			!open ||
+			(kind === 'bid' &&
+				(restricted ||
+					submittedAmount === undefined ||
+					!validAmount(submittedAmount) ||
+					submittedAmount < minimum))
+		) {
 			confirm = false;
 			return;
 		}
@@ -40,65 +51,92 @@
 		error = '';
 		try {
 			const next =
-				action === 'bid'
-					? await bidAuction(auction.id, amount!)
+				kind === 'bid'
+					? await bidAuction(auction.id, submittedAmount!)
 					: await retractAuctionMax(auction.id);
+			if (kind === 'bid') amount = undefined;
 			onUpdated(next);
 			toast.success($_(next.leading ? 'market.auction_bid_result' : 'market.auction_outbid'));
 		} catch (cause) {
-			if (cause instanceof ApiError && cause.status === 409) await onConflict();
 			error = $_(auctionErrorKey(cause));
+			if (cause instanceof ApiError && cause.status === 409) {
+				try {
+					await onConflict();
+				} catch {
+					error = $_('auctionHub.conflictRefreshError');
+				}
+			}
 		} finally {
 			busy = false;
 			confirm = false;
 		}
 	}
+	function prepare(kind: 'bid' | 'retract') {
+		if (busy || !open || (kind === 'bid' && (!valid || restricted))) return;
+		error = '';
+		action = kind;
+		confirmedAmount = amount;
+		confirm = true;
+	}
 </script>
 
 <SanctionNotice kind="TRADE" />
 
-<section class="forge-panel space-y-4 p-4 sm:p-5">
-	<h2 class="font-serif text-xl">
+<section class="bid-panel" aria-label={$_('auctionHub.placeBid')}>
+	<h2 class="sr-only">
 		{$_(auction.leading ? 'auctionHub.raiseBid' : 'auctionHub.placeBid')}
 	</h2>
-	{#if auction.leading}<p class="border-l-2 border-energy pl-3 text-energy">
-			{$_('auctionHub.leading')} · {$_('auctionHub.myMax')} : {auction.myMax ?? '—'}
+	{#if auction.leading}<p class="text-sm text-energy">
+			{$_('auctionHub.myMax')} : {auction.myMax ?? '—'} ◈
 		</p>{/if}
-	<p class="text-sm text-muted-foreground">{$_('market.auction_max_help')}</p>
-	<p class="text-xs text-muted-foreground">{$_('market.auction_tie_help')}</p>
-	<label class="grid gap-2 text-sm"
-		>{$_('auctionHub.maxAmount')}
-		<input
-			type="number"
-			min={minimum}
-			max="1000000000000"
-			step="1"
-			bind:value={amount}
-			disabled={busy || !open}
-			class="h-12 min-w-0 border border-primary/30 bg-background px-3 text-lg"
-		/>
-	</label>
-	<p class="text-sm">{$_('auctionHub.minimumBid')} : {minimum}</p>
-	{#if amount !== undefined && !valid}<p class="text-sm text-destructive">
-			{$_('auctionHub.invalidAmount')}
+	<form
+		class="bid-line"
+		novalidate
+		onsubmit={(event) => {
+			event.preventDefault();
+			prepare('bid');
+		}}
+	>
+		<Field.Field data-invalid={invalid}>
+			<Field.Label for={inputId}>{$_('auctionHub.maxAmount')}</Field.Label>
+			<input
+				id={inputId}
+				type="number"
+				min={minimum}
+				max="1000000000000"
+				step="1"
+				bind:value={amount}
+				oninput={() => (error = '')}
+				disabled={busy || !open}
+				aria-invalid={invalid}
+				aria-describedby={`${inputId}-minimum${invalid ? ' ' + inputId + '-invalid' : ''}`}
+				class="h-11 w-full min-w-0 border border-border bg-background px-3 text-lg"
+			/>
+		</Field.Field>
+		<Button type="submit" disabled={!valid || busy || !open || restricted}>
+			{$_(auction.leading ? 'auctionHub.raiseBid' : 'auctionHub.placeBid')}
+		</Button>
+	</form>
+	<p id={`${inputId}-minimum`} class="text-xs text-muted-foreground">
+		{$_('auctionHub.minimumBid')} : {minimum.toLocaleString('fr')} ◈
+	</p>
+	{#if invalid}<p id={`${inputId}-invalid`} class="text-sm text-destructive">
+			{$_(validAmount(amount!) ? 'auctionHub.belowMinimum' : 'auctionHub.invalidAmount', {
+				values: { amount: minimum.toLocaleString('fr') }
+			})}
 		</p>{/if}
 	{#if error}<p role="alert" class="text-sm text-destructive">{error}</p>{/if}
 	<div class="flex flex-wrap gap-2">
 		<Button
-			disabled={!valid || busy || !open || $activeRestrictions.includes('TRADE')}
-			onclick={() => {
-				action = 'bid';
-				confirm = true;
-			}}>{$_(auction.leading ? 'auctionHub.raiseBid' : 'auctionHub.placeBid')}</Button
+			variant="outline"
+			disabled={busy || !open || restricted || !validAmount(minimum)}
+			onclick={() => void submit('bid', minimum)}
 		>
+			{$_('auctionHub.quickBid', { values: { amount: minimum.toLocaleString('fr') } })}
+		</Button>
 		{#if auction.leading && (auction.myMax ?? 0) > (auction.price ?? auction.startPrice)}
-			<Button
-				variant="outline"
-				disabled={busy || !open}
-				onclick={() => {
-					action = 'retract';
-					confirm = true;
-				}}>{$_('auctionHub.retract')}</Button
+			<Button variant="outline" disabled={busy || !open} onclick={() => prepare('retract')}
+				>{$_('auctionHub.retract')}</Button
 			>
 		{/if}
 	</div>
@@ -111,10 +149,32 @@
 	description={action === 'bid'
 		? $_('auctionHub.bidSummary', {
 				values: {
-					amount: amount ?? 0,
-					debit: Math.max(0, (amount ?? 0) - (auction.leading ? (auction.myMax ?? 0) : 0))
+					amount: confirmedAmount ?? 0,
+					debit: Math.max(0, (confirmedAmount ?? 0) - (auction.leading ? (auction.myMax ?? 0) : 0))
 				}
 			})
 		: $_('auctionHub.retractHelp')}
-	onConfirm={() => void submit()}
+	onConfirm={() => void submit(action, confirmedAmount)}
 />
+
+<style>
+	.bid-panel {
+		display: grid;
+		gap: 8px;
+		min-width: 0;
+	}
+	.bid-line {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(100px, 0.8fr);
+		align-items: end;
+		gap: 8px;
+	}
+	.bid-line :global([data-slot='field']) {
+		gap: 4px;
+		min-width: 0;
+	}
+	.bid-line :global(button) {
+		height: auto;
+		min-height: 44px;
+	}
+</style>

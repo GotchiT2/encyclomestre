@@ -7,14 +7,17 @@
 	import { currentSession } from '$lib/auth/session';
 	import { packNameKey } from '$lib/components/boosters/pack-labels';
 	import { variantDefinition } from '$lib/card-renderer/presentation';
+	import { parseRenderKey } from '$lib/card-renderer/render-key';
 	import { nsfwFilterSettings, shouldBlurCardIllustration } from '$lib/content/nsfw-filter';
 	import { cardHasStyle, type CardRecord } from '$lib/types';
 
 	let {
 		card,
+		reveal = false,
 		onOrientationChange = () => undefined
 	}: {
 		card: CardRecord;
+		reveal?: boolean;
 		onOrientationChange?: (landscape: boolean) => void;
 	} = $props();
 	$effect(() => {
@@ -29,6 +32,13 @@
 	const chrome = $derived(cardHasStyle(card, 'CHROME'));
 	const illustrationBlurred = $derived(shouldBlurCardIllustration(card, $nsfwFilterSettings));
 	const fallback = $derived(variantDefinition(card.variant.color, chrome));
+	const inline = $derived.by(() => {
+		try {
+			return { definition: parseRenderKey(card.variant.renderKey), error: false };
+		} catch {
+			return { definition: null, error: true };
+		}
+	});
 
 	let template = $state<PublishedTemplate | null>(null),
 		templateError = $state(false);
@@ -55,7 +65,7 @@
 </script>
 
 <TemplateCard
-	definition={template?.definition ?? fallback}
+	definition={inline.definition ?? template?.definition ?? fallback}
 	data={{
 		title: card.title,
 		image: card.imageUrl,
@@ -64,11 +74,13 @@
 		serial: card.serialNumber,
 		maximum: card.maxCopies,
 		blurred: illustrationBlurred,
-		edition
+		edition,
+		description: card.longDescription || card.shortDescription
 	}}
 	labels={{ missing: $_('cardTemplates.missing'), untitled: $_('cardTemplates.untitled') }}
 	{onOrientationChange}
+	{reveal}
 />
-{#if templateError}<p class="text-xs text-muted-foreground" role="status">
+{#if templateError || inline.error}<p class="text-xs text-muted-foreground" role="status">
 		{$_('cardTemplates.fallback')}
 	</p>{/if}
