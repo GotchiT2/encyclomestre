@@ -24,7 +24,14 @@
 			image: '/images/booster-preview/blackpink.png',
 			long: true
 		},
-		{ id: 'normal-missing', fullArt: false, image: '', long: true }
+		{ id: 'normal-missing', fullArt: false, image: '', long: true },
+		{ id: 'full-placeholder', fullArt: true, image: '/card-placeholder.svg', long: true },
+		{
+			id: 'full-failed-image',
+			fullArt: true,
+			image: 'data:image/png;base64,bm90LWFuLWltYWdl',
+			long: true
+		}
 	];
 </script>
 

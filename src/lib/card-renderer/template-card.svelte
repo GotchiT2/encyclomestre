@@ -4,6 +4,8 @@
 	import Finish from './finish.svelte';
 	import JsonCard from './json-card.svelte';
 	import { adaptPresentation } from './card-presets';
+	import CardImageFallback from './card-image-fallback.svelte';
+	import { hasUsableCardImage } from '$lib/components/cards/card-image-orientation';
 	import { untrack, onDestroy } from 'svelte';
 	import { landscapeFor, type TemplateDefinition, type RenderData } from './definition';
 	let {
@@ -132,7 +134,7 @@
 			style={surfaceCss(l.zones.frame)}
 		>
 			<div class="picture" data-card-zone="image" style={surfaceCss(l.zones.image)}>
-				{#key data.image}{@const source = data.image}{#if source && !failed}<img
+				{#key data.image}{@const source = data.image}{#if hasUsableCardImage(source) && !failed}<img
 							src={source}
 							alt=""
 							class:blurred={data.blurred}
@@ -140,7 +142,7 @@
 							loading="lazy"
 							decoding="async"
 							{...imageHandlers(source)}
-						/>{:else}<div class="missing">{labels.missing}</div>{/if}{/key}
+						/>{:else}<CardImageFallback label={labels.missing} />{/if}{/key}
 				<Finish
 					finish={l.imageFinish}
 					pointer={l.imageFinish.motion === 'pointer' ? pointer : 50}
@@ -235,14 +237,6 @@
 	}
 	.blurred {
 		filter: blur(18px);
-	}
-	.missing {
-		height: 100%;
-		display: grid;
-		place-items: center;
-		background: linear-gradient(145deg, #253a48, #101820);
-		font-size: 4cqw;
-		color: #b7c5ce;
 	}
 	.inner {
 		position: absolute;

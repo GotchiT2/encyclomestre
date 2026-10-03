@@ -186,7 +186,9 @@
 			"normal-landscape-image": "N3 · Image paysage",
 			"full-long-portrait": "Full art · Portrait",
 			"full-long-landscape": "Full art · Paysage",
-			"normal-missing": "N3 · Sans image"
+			"normal-missing": "N3 · Sans image",
+			"full-placeholder": "Full art · Sans illustration",
+			"full-failed-image": "Full art · Image indisponible"
 		},
 		"effects": {
 			"chrome": "Chrome",
