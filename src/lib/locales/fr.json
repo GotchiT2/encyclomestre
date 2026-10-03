@@ -969,8 +969,8 @@
 		"auction_auto": "contre-enchère automatique",
 		"auction_leading": "Vous êtes en tête",
 		"auction_outbid": "Vous avez été immédiatement surenchéri. Aucun montant n’a été débité.",
-		"auction_max_help": "Saisissez votre maximum. Le prix n’augmente que du nécessaire ; votre maximum est débité si vous prenez la tête puis rendu si vous êtes dépassé.",
-		"auction_tie_help": "À maximum égal, le premier arrivé garde la tête. Une mise perdante exige tout de même un solde suffisant.",
+		"auction_max_help": "Saisissez votre mise maximale. Le prix n’augmente que du montant nécessaire.\nLe montant de votre mise maximale est débité dans sa totalité. Il vous sera restitué si vous êtes dépassé(e).",
+		"auction_tie_help": "À mise maximale égale, le premier arrivé garde la tête. Une mise perdante exige tout de même un solde suffisant.",
 		"auction_place_bid": "Placer ou relever mon maximum",
 		"auction_retract_max": "Rendre le surplus de mon maximum",
 		"auction_unavailable": "Cette enchère n’est pas ouverte aux mises.",
@@ -988,7 +988,8 @@
 		"auction_edit_price": "Modifier le prix de départ",
 		"auction_cancel_own": "Annuler mon enchère",
 		"auction_saved": "Enchère enregistrée.",
-		"auction_cancelled": "Enchère annulée. Les frais de mise en vente restent acquis."
+		"auction_cancelled": "Enchère annulée. Les frais de mise en vente restent acquis.",
+		"auction_proxy_help": "Si quelqu'un d'autre place une enchère, vous gardez la tête si la mise est moins élevée que votre maximum."
 	},
 	"banners": {
 		"region": "Annonces du site",

@@ -20,7 +20,10 @@
 <Dialog.Root bind:open>
 	<Dialog.Content class="max-w-lg overflow-y-auto p-4 sm:p-5">
 		<Dialog.Title>{$_('auctionHub.informationTitle')}</Dialog.Title>
-		<Dialog.Description>{$_('market.auction_max_help')}</Dialog.Description>
+		<Dialog.Description class="whitespace-pre-line"
+			>{$_('market.auction_max_help')}</Dialog.Description
+		>
+		<p class="text-sm">{$_('market.auction_proxy_help')}</p>
 		<p class="text-sm">{$_('market.auction_tie_help')}</p>
 		<dl class="grid gap-3 text-sm sm:grid-cols-2">
 			<div>

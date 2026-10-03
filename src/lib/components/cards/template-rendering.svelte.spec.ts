@@ -19,6 +19,40 @@ const labels = {
 };
 describe('shared card renderer', () => {
 	beforeEach(() => load.mockReset());
+	it.each([
+		{ name: 'empty image', image: '' },
+		{ name: 'API placeholder', image: '/card-placeholder.svg' },
+		{ name: 'failed image', image: 'data:image/png;base64,bm90LWFuLWltYWdl' }
+	])(
+		'keeps the WikiForge fallback in portrait for $name and recovers with a real image',
+		async ({ image }) => {
+			const props = {
+				definition: cardDefinition(true),
+				data: { title: 'Carte sans illustration', image, variantName: 'Full art', fullArt: true },
+				labels
+			};
+			const view = render(TemplateCard, props);
+			await expect.element(page.getByTestId('card-image-fallback')).toBeVisible();
+			await expect
+				.element(page.getByTestId('template-card'))
+				.toHaveAttribute('data-orientation', 'portrait');
+			expect(
+				document.querySelector('[data-testid="card-image-fallback"] [data-brand="wikiforge"]')
+			).not.toBeNull();
+			await view.rerender({
+				...props,
+				data: {
+					...props.data,
+					image:
+						'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="700" height="500"%3E%3C/svg%3E'
+				}
+			});
+			await expect
+				.element(page.getByTestId('template-card'))
+				.toHaveAttribute('data-orientation', 'landscape');
+			await expect.element(page.getByTestId('card-image-fallback')).not.toBeInTheDocument();
+		}
+	);
 	it('renders serial and landscape without stretching title', async () => {
 		const definition = presetDefinition('cyberpunk');
 		definition.design.orientation = 'landscape';

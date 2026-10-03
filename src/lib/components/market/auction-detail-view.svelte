@@ -41,13 +41,25 @@
 			players = {};
 		}
 		const ids = [
-			...new Set([auction.seller.id, auction.leader?.id].filter((id): id is string => Boolean(id)))
+			...new Set(
+				[
+					auction.seller.id,
+					auction.leader?.id,
+					...(auction.bids ?? []).map((bid) => bid.user?.id)
+				].filter((id): id is string => Boolean(id))
+			)
 		];
 		let active = true;
-		for (const id of ids)
-			void cache.get(id).then((value) => {
-				if (active) players[id] = value;
-			});
+		void (async () => {
+			for (let offset = 0; active && offset < ids.length; offset += 3) {
+				await Promise.all(
+					ids.slice(offset, offset + 3).map(async (id) => {
+						const identity = await cache.get(id);
+						if (active) players[id] = identity;
+					})
+				);
+			}
+		})();
 		return () => {
 			active = false;
 		};
@@ -81,7 +93,7 @@
 <div class="auction-inspection">
 	<div class="auction-album">
 		<AuctionCardDetail card={auction.card} />
-		<AuctionHistory {auction} />
+		<AuctionHistory {auction} {players} />
 	</div>
 	<AuctionDock>
 		<section class="auction-state" data-dock-state aria-label={$_('market.auction_details')}>

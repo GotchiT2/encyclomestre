@@ -691,3 +691,14 @@ Documentation : `docs/cards/templates-v3.md`. Captures et mesures : `%TEMP%/wiki
 - Sujet Conventional Commit : feat(fo): add configurable cards and persistent auction bidding.
 
 Captures et mesures : %TEMP%/wikiforge-auction-detail/. Vite, certificats, clés de session et préférences préservés. Skill encyclomestre-ui exclu. Commit local demandé ; fichiers IDE, AGENTS généré et outillage .claude hors livraison. Aucun push ni déploiement.
+
+
+## Illustrations absentes et historique des mises — 3 octobre 2026
+
+- [x] Rendu de remplacement commun avec flamme Taillée et nom WikiForge, anthracite/crème/jaune. Les images absentes, le chemin de remplacement de l’API et les échecs de chargement ne sont plus recadrés comme une photographie ; une vraie image rétablit son orientation. API et définitions JSON conservées.
+- [x] Avatars recadrés dans l’historique des mises, initiales après échec et icône générique pour joueur masqué. Cache commun vendeur/meneur/auteurs dédupliqué par visite, avec trois lectures simultanées maximum et garde contre les réponses obsolètes.
+- [x] Explication des mises remplacée par le texte demandé, avec paragraphes et saut de ligne, via svelte-i18n.
+- [x] Validation exclusivement en mocks : Svelte sans diagnostic, 33 tests ciblés, lint, build et contrôle du diff. Revue à 360/390/768/1024/1440 px ; logo entier, orientation portrait sans illustration, reprise d’image, avatars, texte exact et lecture de profil unique contrôlés.
+- [x] GitNexus avant modification : portée critique identifiée sur le convertisseur de cartes, laissé intact ; composants Svelte non indexés vérifiés directement. Contrôle final des chemins attendus et absence de changement d’API.
+
+Captures : C:/Users/benja/.codex/artifacts/fo-card-avatar-corrections/. BO, Vite et certificats préservés ; skill encyclomestre-ui exclu. Livraison par commit local demandé sur feat/arcade-experience. Sujet Conventional Commit : fix(fo): brand missing illustrations and show bid history avatars. Aucun push ni déploiement.

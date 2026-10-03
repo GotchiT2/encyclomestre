@@ -2,6 +2,8 @@
 	import { untrack, onDestroy } from 'svelte';
 	import { flame, styleText, type CardBlueprint, type CardLayer } from './blueprint';
 	import type { RenderData } from './definition';
+	import CardImageFallback from './card-image-fallback.svelte';
+	import { hasUsableCardImage } from '$lib/components/cards/card-image-orientation';
 	let {
 		presentation,
 		data,
@@ -209,9 +211,9 @@
 					data-card-content={layer.content}
 					style={styleText(layerStyle(layer))}
 					use:bindLayer={layer}
-					aria-busy={Boolean(data.image) && !failed && !natural.width}
+					aria-busy={hasUsableCardImage(data.image) && !failed && !natural.width}
 				>
-					{#key data.image}{@const source = data.image}{#if source && !failed}
+					{#key data.image}{@const source = data.image}{#if hasUsableCardImage(source) && !failed}
 							<img
 								src={source}
 								alt=""
@@ -228,7 +230,7 @@
 									if (source === data.image) failed = true;
 								}}
 							/>
-						{:else}<span class="missing">{labels.missing}</span>{/if}{/key}
+						{:else}<CardImageFallback label={labels.missing} />{/if}{/key}
 				</div>
 			{:else}
 				<div
@@ -335,14 +337,5 @@
 	.blurred {
 		filter: blur(16px);
 		transform: scale(1.08);
-	}
-	.missing {
-		position: absolute;
-		inset: 0;
-		display: grid;
-		place-items: center;
-		padding: 8%;
-		font: inherit;
-		text-align: center;
 	}
 </style>
