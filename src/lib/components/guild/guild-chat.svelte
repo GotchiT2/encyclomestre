@@ -1,4 +1,5 @@
 <script lang="ts">
+	import UserAvatar from '$lib/components/users/user-avatar.svelte';
 	import { draftKey, writeDraft } from '$lib/drafts/storage';
 	import LocalDraft from '$lib/components/layout/local-draft.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
@@ -149,6 +150,8 @@
 		};
 		window.addEventListener('wikiforge:guild-message', receive);
 		window.addEventListener('wikiforge:stream-ready', refresh);
+		const poll = setInterval(refresh, 15000);
+		document.addEventListener('visibilitychange', refresh);
 		const clock = setInterval(() => (now = Date.now()), 1000);
 		window.addEventListener('focus', refresh);
 		return () => {
@@ -156,6 +159,8 @@
 			window.removeEventListener('wikiforge:guild-message', receive);
 			window.removeEventListener('wikiforge:stream-ready', refresh);
 			clearInterval(clock);
+			clearInterval(poll);
+			document.removeEventListener('visibilitychange', refresh);
 			window.removeEventListener('focus', refresh);
 		};
 	});
@@ -177,7 +182,11 @@
 		{#each messages as message (message.id)}<li class="forge-panel flex flex-col gap-3 p-4">
 				<div class="flex flex-wrap items-center justify-between gap-2">
 					<a class="underline" href={resolve('/users/[id]', { id: String(message.fromUserId) })}
-						>{$_('completion.guild.author', { values: { id: message.fromUserId } })}</a
+						><UserAvatar
+							image={message.fromUser?.image}
+							crop={message.fromUser?.imageCrop}
+							name={message.fromUser?.name ?? $_('notifications.system')}
+						/>{message.fromUser?.name ?? $_('notifications.system')}</a
 					><time class="text-xs"
 						>{wikiForgeUtcDate(message.creationDate).toLocaleString('fr-FR')}</time
 					>

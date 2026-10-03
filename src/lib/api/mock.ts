@@ -1,4 +1,9 @@
-import { passkeyMock } from '$lib/passkeys/mock';
+import {
+	passkeyMock,
+	validateMockReauthentication,
+	mockRecoveryCount,
+	mockAccountName
+} from '$lib/passkeys/mock';
 import type {
 	AuthSession,
 	CardRecord,
@@ -20,6 +25,7 @@ import { mockCards, mockVariants } from './mocks/cards';
 import { mockCollectionTags } from './mocks/collection-tags';
 import { createAuctionMocks } from './mocks/auctions';
 import { createCommunityMocks } from './mocks/community';
+import type { WikiForgeCardDto } from './cards';
 
 export interface MockApiRequest {
 	path: string;
@@ -28,14 +34,59 @@ export interface MockApiRequest {
 	headers?: HeadersInit;
 }
 
-const now = '2026-07-11T09:00:00.000Z';
+const now = new Date().toISOString();
+const mockCardTags = new Map(
+	mockCards.map((_, index) => [index + 1, index % 3 === 0 ? ([] as number[]) : [index % 2 ? 2 : 1]])
+);
+const mockTags = new Map(
+	mockCollectionTags.map((tag, index) => [index + 1, { ...tag, id: index + 1 }])
+);
+let nextTagId = mockTags.size + 1;
+function savedMockOpenings():
+	| {
+			cards: WikiForgeCardDto[];
+			reserve: { available: number; bonus: number; lastRechargeAt: number };
+			premiumPlus: { available: number; bonus: number };
+			premium?: { available: number; bonus: number };
+			exhausted: boolean;
+	  }
+	| undefined {
+	try {
+		if (typeof sessionStorage === 'undefined') return;
+		const saved = JSON.parse(sessionStorage.getItem('wikiforge-arcade-mock-opened') ?? 'null');
+		if (
+			!saved ||
+			!Array.isArray(saved.cards) ||
+			!saved.cards.every(
+				(card: WikiForgeCardDto) =>
+					Number.isSafeInteger(card.id) && Number.isSafeInteger(card.pageId)
+			) ||
+			!Number.isFinite(saved.reserve?.available) ||
+			!Number.isFinite(saved.reserve?.lastRechargeAt) ||
+			!Number.isFinite(saved.premiumPlus?.available) ||
+			(saved.premium != null &&
+				(!Number.isFinite(saved.premium.available) || !Number.isFinite(saved.premium.bonus)))
+		)
+			return;
+		return saved;
+	} catch {
+		return;
+	}
+}
+const savedOpenings = savedMockOpenings();
+let limitedPackExhausted = savedOpenings?.exhausted ?? false;
+const openedCards = new Map<number, WikiForgeCardDto>(
+	(savedOpenings?.cards ?? []).map((card) => [card.id, card])
+);
+let nextOpenedCardId = Math.max(99_999, ...openedCards.keys()) + 1;
+const fixtureDate = (days: number) => new Date(Date.now() + days * 86400000).toISOString();
 const mockNotifications = [
 	{
 		id: 990,
 		type: 'AUCTION_OUTBID',
 		extId: 70,
 		read: false,
-		creationDate: '2026-09-27T10:00:00',
+		creationDate: fixtureDate(-1),
 		actor: { id: 2, name: 'Joueur' },
 		meta: null
 	},
@@ -48,7 +99,7 @@ const mockNotifications = [
 		read: false,
 		creationDate: now
 	},
-	{ id: 2, type: 'FRIEND_ACCEPTED', read: true, creationDate: '2026-07-10T09:00:00.000Z' }
+	{ id: 2, type: 'FRIEND_ACCEPTED', read: true, creationDate: fixtureDate(-6) }
 ];
 const mockAchievements = [
 	{
@@ -59,7 +110,7 @@ const mockAchievements = [
 		threshold: 10,
 		progress: 10,
 		rewardMoney: 100,
-		unlockedAt: '2026-09-14T18:22:31'
+		unlockedAt: fixtureDate(-2)
 	},
 	{
 		code: 'boosters_100',
@@ -78,8 +129,8 @@ const mockAchievements = [
 		threshold: 10,
 		progress: 10,
 		rewardMoney: 300,
-		unlockedAt: '2026-09-10T18:22:31',
-		claimedAt: '2026-09-10T18:22:40'
+		unlockedAt: fixtureDate(-4),
+		claimedAt: fixtureDate(-3)
 	}
 ];
 
@@ -151,7 +202,7 @@ const userByWikiForgeId = (id: string) =>
 	[...users.values()].find((user) => String(wikiForgeUserId(user.id)) === id);
 const simpleWikiForgeUser = (user: User) => ({
 	id: wikiForgeUserId(user.id),
-	name: user.username,
+	name: user.id === 'demo-user' ? (mockAccountName ?? user.username) : user.username,
 	image: null,
 	lastConnection:
 		user.lastConnection ??
@@ -175,7 +226,7 @@ const collectionCard = (card: CardRecord, id: number) => ({
 	atk: card.attack,
 	duplicate: card.ownedCount > 1,
 	protected: Boolean(card.userProtected),
-	tagIds: card.collectionTagIds?.map(Number) ?? [],
+	tagIds: mockCardTags.get(id) ?? [],
 	acquiredDate: card.acquiredAt ?? now,
 	creationDate: now,
 	pendingTradeId: null,
@@ -326,7 +377,7 @@ const saleBids: SaleBid[] = [
 		saleId: 'sale-003',
 		bidderName: 'OnMyGhost',
 		amount: 38,
-		createdAt: '2026-07-13T13:05:00.000Z'
+		createdAt: fixtureDate(-3)
 	},
 	{
 		id: 'bid-2',
@@ -334,14 +385,14 @@ const saleBids: SaleBid[] = [
 		bidderName: 'SoneS9',
 		bidderId: 'demo-user',
 		amount: 46,
-		createdAt: '2026-07-13T13:28:00.000Z'
+		createdAt: fixtureDate(-3)
 	},
 	{
 		id: 'bid-3',
 		saleId: 'sale-003',
 		bidderName: 'Assassinblanc',
 		amount: 54,
-		createdAt: '2026-07-13T14:08:00.000Z'
+		createdAt: fixtureDate(-3)
 	}
 ];
 const wishlist = new Map<string, LegacyWishlistEntry[]>([
@@ -452,7 +503,7 @@ const conversations: Conversation[] = [
 		participantIds: ['demo-user', 'friend-0'],
 		preview: 'Je peux regarder mes doubles.',
 		unreadCount: 0,
-		updatedAt: '2026-07-10T15:00:00.000Z'
+		updatedAt: fixtureDate(-6)
 	}
 ];
 const messages = new Map<string, MessageRecord[]>([
@@ -484,8 +535,8 @@ const messages = new Map<string, MessageRecord[]>([
 				conversationId: 'conversation-friend-0',
 				senderId: 'friend-0',
 				content: 'Je peux regarder mes doubles.',
-				createdAt: '2026-07-10T15:00:00.000Z',
-				readAt: '2026-07-10T15:02:00.000Z',
+				createdAt: fixtureDate(-6),
+				readAt: fixtureDate(-6),
 				reactions: [],
 				tradeOffer: {
 					offerId: 'trade-001',
@@ -500,9 +551,17 @@ const messages = new Map<string, MessageRecord[]>([
 	]
 ]);
 const friendships = new Map<string, Friendship[]>();
-const boosterReserve = new Map<string, { available: number; lastRechargeAt: number }>([
-	['demo-user', { available: 10, lastRechargeAt: Date.now() }]
+const boosterReserve = new Map<
+	string,
+	{ available: number; bonus: number; lastRechargeAt: number }
+>([
+	['demo-user', savedOpenings?.reserve ?? { available: 10, bonus: 1, lastRechargeAt: Date.now() }]
 ]);
+
+const mockPremiumCredits = {
+	PREMIUM: savedOpenings?.premium ?? { available: 1, bonus: 0 },
+	PREMIUM_PLUS: savedOpenings?.premiumPlus ?? { available: 0, bonus: 1 }
+};
 
 const mockPackCatalogue = [
 	{
@@ -554,7 +613,7 @@ const mockPackCatalogue = [
 			description: name,
 			renderKey,
 			status,
-			...(id === 2 ? { startsAt: '2026-01-01T00:00:00Z', endsAt: '2027-01-01T00:00:00Z' } : {}),
+			...(id === 2 ? { startsAt: fixtureDate(-30), endsAt: fixtureDate(30) } : {}),
 			nbCards: 5,
 			openAll: false,
 			drawGroups: [
@@ -605,8 +664,8 @@ const tradeOffers: TradeOffer[] = [
 		requestedCardIds: ['owned-demo-user-2ne1-1'],
 		message: 'Une proposition pour compléter nos collections.',
 		status: 'pending',
-		createdAt: '2026-07-10T08:00:00.000Z',
-		updatedAt: '2026-07-10T08:00:00.000Z'
+		createdAt: fixtureDate(-6),
+		updatedAt: fixtureDate(-6)
 	},
 	{
 		id: '2',
@@ -617,8 +676,8 @@ const tradeOffers: TradeOffer[] = [
 		offeredCardIds: ['owned-demo-user-girls-generation-1'],
 		requestedCardIds: ['owned-friend-1-2ne1-1'],
 		status: 'accepted',
-		createdAt: '2026-07-01T08:00:00.000Z',
-		updatedAt: '2026-07-02T09:30:00.000Z'
+		createdAt: fixtureDate(-15),
+		updatedAt: fixtureDate(-14)
 	},
 	{
 		id: '3',
@@ -629,8 +688,8 @@ const tradeOffers: TradeOffer[] = [
 		offeredCardIds: ['owned-demo-user-girls-generation-1'],
 		requestedCardIds: ['owned-friend-2-twice-groupe-1'],
 		status: 'pending',
-		createdAt: '2026-07-15T14:00:00.000Z',
-		updatedAt: '2026-07-15T14:00:00.000Z'
+		createdAt: fixtureDate(-1),
+		updatedAt: fixtureDate(-1)
 	}
 ];
 const apiTradeCards = (offer: TradeOffer) =>
@@ -824,18 +883,20 @@ function priceHistory(cardId: string): CardPriceHistory {
 		cardId,
 		points: [
 			{ date: '2026-03-01T00:00:00.000Z', price: 35.9, currency: 'EUR' },
-			{ date: '2026-07-01T00:00:00.000Z', price: 42.5, currency: 'EUR' }
+			{ date: fixtureDate(-15), price: 42.5, currency: 'EUR' }
 		]
 	};
 }
 
 function boosterInventory(userId: string): {
 	available: number;
+	bonus: number;
 	capacity: number;
 	nextRechargeAt: string | null;
 } {
 	const state = boosterReserve.get(userId) ?? {
 		available: boosterCapacity,
+		bonus: 1,
 		lastRechargeAt: Date.now()
 	};
 	const elapsed = Math.floor((Date.now() - state.lastRechargeAt) / rechargeMs);
@@ -846,6 +907,7 @@ function boosterInventory(userId: string): {
 	boosterReserve.set(userId, state);
 	return {
 		available: state.available,
+		bonus: state.bonus,
 		capacity: boosterCapacity,
 		nextRechargeAt:
 			state.available >= boosterCapacity
@@ -861,14 +923,14 @@ function mockBoostersPayload(inventory: ReturnType<typeof boosterInventory>) {
 				family: 'NORMAL',
 				available: inventory.available,
 				max: inventory.capacity,
-				bonus: 1,
+				bonus: inventory.bonus,
 				nextAvailableAt: inventory.nextRechargeAt
 			},
-			{ family: 'PREMIUM', available: Math.min(1, inventory.available), max: 1, bonus: 0 },
-			{ family: 'PREMIUM_PLUS', available: 0, max: 1, bonus: 1 }
+			{ family: 'PREMIUM', ...mockPremiumCredits.PREMIUM, max: 1 },
+			{ family: 'PREMIUM_PLUS', ...mockPremiumCredits.PREMIUM_PLUS, max: 1 }
 		],
 		slots: mockPackCatalogue
-			.filter((pack) => pack.status === 'OPEN')
+			.filter((pack) => pack.status === 'OPEN' && !(pack.id === 1 && limitedPackExhausted))
 			.map((pack) => ({
 				id: pack.slotId,
 				name: `Slot ${pack.slotId}`,
@@ -898,7 +960,79 @@ export function createMockApiResponse({
 	const routedPath = requestUrl.pathname.replace(/^\/api(?=\/)/, '');
 	const url = new URL(`${routedPath}${requestUrl.search}`, requestUrl.origin);
 	const { pathname } = url;
+	if (typeof window !== 'undefined')
+		window.dispatchEvent(
+			new CustomEvent('wikiforge:mock-request', {
+				detail: { path: routedPath + requestUrl.search, method }
+			})
+		);
 	const normalizedMethod = method.toUpperCase();
+	const planScenario =
+		typeof sessionStorage === 'undefined' ? '' : sessionStorage.getItem('wikiforge-plan-scenario');
+	const targetPath =
+		typeof sessionStorage === 'undefined' ? '' : sessionStorage.getItem('wikiforge-plan-path');
+	const matches = !targetPath || pathname === targetPath;
+	if (
+		planScenario === 'uncertain-opening-read-error' &&
+		openedCards.size > 0 &&
+		normalizedMethod === 'GET' &&
+		['/boosters', '/collection'].includes(pathname)
+	)
+		return error(503, 'Relecture indisponible.', 'UNAVAILABLE');
+	if (
+		matches &&
+		planScenario === 'error' &&
+		normalizedMethod === 'GET' &&
+		!['/me', '/variants'].includes(pathname)
+	)
+		return error(503, 'Chargement indisponible.', 'UNAVAILABLE');
+	if (
+		matches &&
+		planScenario === 'conflict' &&
+		['POST', 'PUT', 'PATCH', 'DELETE'].includes(normalizedMethod) &&
+		!pathname.startsWith('/oauth2')
+	)
+		return error(409, 'Les données ont changé.', 'ACCOUNT_CONFLICT');
+	if (planScenario === 'empty' || planScenario === 'omitted' || mockAccountName) {
+		if (pathname === '/collection' || (pathname === '/pages' && planScenario === 'empty'))
+			return json({ page: 0, nbResults: 0, hasNext: false, nextCursor: null, results: [] });
+		if (pathname === '/collection/stats')
+			return json({ nbCards: 0, nbDistinctPages: 0, nbActivePages: 1200 });
+		if (pathname === '/welcome')
+			return json({
+				collection: { nbCards: 0, recent: [] },
+				boosters: mockBoostersPayload(boosterInventory('demo-user')),
+				money: 0,
+				pendingTrades: 0
+			});
+		if (pathname === '/me/showcase' && normalizedMethod === 'GET')
+			return json({ slots: 1, maxSlots: 4096, usedSlots: 0, slotPrice: 10 });
+		if (pathname === '/friends' && normalizedMethod === 'GET') return json({});
+		if (pathname === '/conversations' && normalizedMethod === 'GET')
+			return json({ hasNext: false });
+		if (pathname === '/me/guild' && normalizedMethod === 'GET') return json(null);
+		if (pathname === '/notifications' && normalizedMethod === 'GET')
+			return json({ hasNext: false, unread: 0 });
+	}
+	if (planScenario === 'many' && pathname === '/collection' && normalizedMethod === 'GET') {
+		const page = Math.max(
+			0,
+			Number(url.searchParams.get('page') ?? url.searchParams.get('cursor')?.split('-').at(-1) ?? 0)
+		);
+		const all = Array.from({ length: 145 }, (_, index) => ({
+			...collectionCard(mockCards[index % mockCards.length], index + 1),
+			id: index + 1
+		}));
+		return json({
+			results: all.slice(page * 48, (page + 1) * 48),
+			page,
+			nbResults: 145,
+			hasNext: (page + 1) * 48 < 145,
+			nextCursor:
+				url.searchParams.get('sortBy') === 'NAME' ? null : 'mock-collection-cursor-' + (page + 1)
+		});
+	}
+
 	const passkeyResponse = passkeyMock(pathname, normalizedMethod, body, headers);
 	if (passkeyResponse)
 		return passkeyResponse.body === undefined
@@ -913,7 +1047,11 @@ export function createMockApiResponse({
 	if (communityResponse) return communityResponse;
 	if (pathname === '/me/deletion')
 		return json({
-			canDelete: true,
+			canDelete: planScenario !== 'guild-owner',
+			blockers:
+				planScenario === 'guild-owner'
+					? [{ code: 'GUILD_OWNER', guildId: 1, guildName: 'Les archivistes' }]
+					: [],
 			consequences: {
 				openTrades: 2,
 				openSales: 1,
@@ -923,27 +1061,34 @@ export function createMockApiResponse({
 				friends: 3,
 				friendRequests: 1,
 				wishlists: 2,
-				nbCards: mockCards.length,
+				nbCards: mockAccountName ? 0 : mockCards.length,
 				money: 3200
 			}
 		});
 	if (pathname === '/me' && normalizedMethod === 'DELETE') {
-		if ((body as { password?: string })?.password !== 'demo-password')
-			return json({ error: 'INVALID_CREDENTIALS' }, 403);
+		if (planScenario === 'guild-owner')
+			return error(409, 'Propriété de guilde à transmettre.', 'GUILD_CONFLICT');
+		if (!validateMockReauthentication(body)) return json({ error: 'INVALID_CREDENTIALS' }, 403);
 		mockAccountDeleted = true;
 		return new Response(null, { status: 204 });
 	}
 	if (pathname === '/me' && mockAccountDeleted) return json({ error: 'INVALID_CREDENTIALS' }, 401);
 	if (pathname === '/collection/stats')
 		return json({
-			nbCards: mockCards.length,
+			nbCards: mockAccountName ? 0 : mockCards.length,
 			nbDistinctPages: new Set(mockCards.map((card) => card.baseCardId)).size,
 			nbActivePages: 1200
 		});
 
 	if (normalizedMethod === 'POST' && pathname === '/me/achievements/claim') {
 		const claimed = mockAchievements.filter((item) => item.unlockedAt && !item.claimedAt);
-		for (const item of claimed) item.claimedAt = new Date().toISOString();
+		for (const item of claimed) {
+			item.claimedAt = new Date().toISOString();
+			const user = users.get('demo-user');
+			if (user) user.money = (user.money ?? 0) + item.rewardMoney;
+			const reward = item.rewardBoosters?.PREMIUM ?? 0;
+			if (reward) mockPremiumCredits.PREMIUM.bonus += reward;
+		}
 		return json({ claimed: claimed.map((item) => item.code) });
 	}
 
@@ -974,6 +1119,8 @@ export function createMockApiResponse({
 		if (!achievement.unlockedAt || achievement.claimedAt)
 			return error(409, 'Succès non réclamable.', 'ACHIEVEMENT_CONFLICT');
 		achievement.claimedAt = new Date().toISOString();
+		const user = users.get('demo-user');
+		if (user) user.money = (user.money ?? 0) + achievement.rewardMoney;
 		return json(undefined, 204);
 	}
 	if (normalizedMethod === 'GET' && pathname === '/notifications') {
@@ -1073,18 +1220,20 @@ export function createMockApiResponse({
 		}
 		return json({
 			id: wikiForgeUserId(user.id),
-			name: user.username,
+			name: user.id === 'demo-user' ? (mockAccountName ?? user.username) : user.username,
 			...(user.role !== 'admin' && mockNameChangeAvailableAt
 				? { nameChangeAvailableAt: mockNameChangeAvailableAt }
 				: {}),
 			email: user.email,
 			roles: [user.role.toUpperCase()],
+			recoveryCodes: mockRecoveryCount(),
+			imageCrop: user.imageCrop,
 			imagePageId: user.imagePageId ?? null,
 			image: user.avatarUrl,
 			nsfw: profile.nsfwEnabled,
 			safeWords: profile.censoredKeywords,
 			mutedNotifications: user.mutedNotifications ?? [],
-			money: user.money ?? 350,
+			money: mockAccountName ? 0 : (user.money ?? 350),
 			createdAt: user.createdAt,
 			visibility: profile.visibility,
 			lastConnection: 'TODAY',
@@ -1096,6 +1245,7 @@ export function createMockApiResponse({
 		const input = asObject(body);
 		const user = users.get('demo-user')!;
 		user.imagePageId = typeof input?.imagePageId === 'number' ? input.imagePageId : null;
+		user.imageCrop = input?.imageCrop as import('$lib/types/user').ImageCrop | undefined;
 		user.avatarUrl =
 			user.imagePageId == null
 				? null
@@ -1103,18 +1253,21 @@ export function createMockApiResponse({
 		const profile = profileSettings.get('demo-user')!;
 		return json({
 			id: 1,
-			name: user.username,
+			name: user.id === 'demo-user' ? (mockAccountName ?? user.username) : user.username,
 			...(user.role !== 'admin' && mockNameChangeAvailableAt
 				? { nameChangeAvailableAt: mockNameChangeAvailableAt }
 				: {}),
 			email: user.email,
 			roles: ['USER'],
+			recoveryCodes: mockRecoveryCount(),
+			imageCrop: user.imageCrop,
 			imagePageId: user.imagePageId,
 			image: user.avatarUrl,
 			nsfw: profile.nsfwEnabled,
 			safeWords: profile.censoredKeywords,
-			money: user.money ?? 350,
+			money: mockAccountName ? 0 : (user.money ?? 350),
 			createdAt: user.createdAt,
+			mutedNotifications: user.mutedNotifications ?? [],
 			visibility: profile.visibility,
 			lastConnection: 'TODAY',
 			rank: 12
@@ -1183,9 +1336,10 @@ export function createMockApiResponse({
 		const full = user.id !== 'blocked-user';
 		return json({
 			id: wikiForgeUserId(user.id),
-			name: user.username,
+			name: user.id === 'demo-user' ? (mockAccountName ?? user.username) : user.username,
 			imagePageId: user.imagePageId,
 			image: user.avatarUrl,
+			imageCrop: user.imageCrop,
 			joinedAt: user.createdAt.slice(0, 7),
 			lastConnection: simpleWikiForgeUser(user).lastConnection,
 			full,
@@ -1216,6 +1370,7 @@ export function createMockApiResponse({
 			!mockCards[cardId - 1]
 		)
 			return error(409, 'Conflit de vente.', 'SALE_CONFLICT');
+		mockCards[cardId - 1].saleId = String(nextInstantSaleId);
 		mockInstantSales = [
 			...mockInstantSales,
 			{ id: nextInstantSaleId++, price, card: showcaseCard(mockCards[cardId - 1], cardId) }
@@ -1224,6 +1379,8 @@ export function createMockApiResponse({
 	}
 	const mySaleMatch = /^\/me\/sales\/(\d+)$/.exec(pathname);
 	if (normalizedMethod === 'DELETE' && mySaleMatch) {
+		const removed = mockInstantSales.find((sale) => sale.id === Number(mySaleMatch[1]));
+		if (removed && mockCards[removed.card.id - 1]) mockCards[removed.card.id - 1].saleId = null;
 		mockInstantSales = mockInstantSales.filter((sale) => sale.id !== Number(mySaleMatch[1]));
 		return json({ instantSales: mockInstantSales });
 	}
@@ -1242,9 +1399,10 @@ export function createMockApiResponse({
 		const entries = [...users.values()].slice(0, 20).map((user, index) => ({
 			rank: index + 1,
 			id: wikiForgeUserId(user.id),
-			name: user.username,
+			name: user.id === 'demo-user' ? (mockAccountName ?? user.username) : user.username,
 			imagePageId: user.imagePageId,
 			image: user.avatarUrl,
+			imageCrop: user.imageCrop,
 			nbCards:
 				leaderboardMatch[1] === 'global' ? Math.max(1, 120 - index * 7) : Math.max(1, 18 - index)
 		}));
@@ -1291,28 +1449,25 @@ export function createMockApiResponse({
 		return json(user, 201);
 	}
 	if (normalizedMethod === 'GET' && pathname === '/users') {
-		const excludedId = url.searchParams.get('excludeId');
-		const excludeCurrent = url.searchParams.get('excludeCurrent') === 'true';
 		const query = url.searchParams.get('q')?.trim().toLocaleLowerCase('fr-FR') ?? '';
-		const page = Math.max(0, Number(url.searchParams.get('page') ?? 0));
-		const size = Math.max(1, Math.min(100, Number(url.searchParams.get('size') ?? 20)));
-		const items = [...users.values()].filter(
-			(user) =>
-				user.role === 'user' &&
-				user.id !== excludedId &&
-				(!excludeCurrent || user.id !== 'demo-user') &&
-				(!query || user.username.toLocaleLowerCase('fr-FR').includes(query))
+		if (!url.searchParams.has('q')) return error(400, 'Recherche requise.', 'MISSING_PARAMETER');
+		if (query.length < 3) return json([]);
+		return json(
+			[...users.values()]
+				.filter(
+					(user) =>
+						user.id !== 'demo-user' &&
+						!blockedUserIds.has(user.id) &&
+						user.username.toLocaleLowerCase('fr-FR').includes(query)
+				)
+				.sort(
+					(a, b) =>
+						Number(b.username.toLocaleLowerCase('fr-FR') === query) -
+						Number(a.username.toLocaleLowerCase('fr-FR') === query)
+				)
+				.slice(0, 10)
+				.map(simpleWikiForgeUser)
 		);
-		return json({
-			results: items.slice(page * size, (page + 1) * size),
-			page,
-			nbResults: items.length,
-			size,
-			sortBy: 'name',
-			sortDirection: 'ASC',
-			filters: { excludeCurrent },
-			q: query || null
-		});
 	}
 
 	if (normalizedMethod === 'GET' && pathname === '/cards') {
@@ -1353,16 +1508,14 @@ export function createMockApiResponse({
 		if (!userByWikiForgeId(friendTagsMatch[1])) {
 			return error(404, 'Ami introuvable.', 'NOT_FOUND');
 		}
-		return json(
-			mockCollectionTags.map((tag, index) => ({ ...tag, id: index + 1, visibility: undefined }))
-		);
+		return json([...mockTags.values()].map((tag) => ({ ...tag, visibility: undefined })));
 	}
 	if (normalizedMethod === 'GET' && pathname === '/collection') {
 		const cursorPage = /mock-collection-cursor-(\d+)/.exec(url.searchParams.get('cursor') ?? '');
 		const page = cursorPage
 			? Number(cursorPage[1])
 			: Math.max(0, Number(url.searchParams.get('page') ?? 0));
-		const pageSize = 50;
+		const pageSize = 48;
 		const query = url.searchParams.get('q')?.toLocaleLowerCase('fr-FR');
 		const variantIds = url.searchParams.getAll('variant').map(Number);
 		const tagIds = url.searchParams.getAll('tags');
@@ -1376,9 +1529,9 @@ export function createMockApiResponse({
 				: []
 		);
 		const items = mockCards
-			.map((card, index) => ({ card, index, tagIds: index % 3 === 0 ? [] : [index % 2 ? 2 : 1] }))
+			.map((card, index) => ({ card, index, tagIds: mockCardTags.get(index + 1) ?? [] }))
 			.filter(
-				({ card, index, tagIds: cardTagIds }) =>
+				({ card, tagIds: cardTagIds }) =>
 					card.ownedCount > 0 &&
 					(!query || card.title.toLocaleLowerCase('fr-FR').includes(query)) &&
 					(!variantIds.length || variantIds.includes(card.variantId)) &&
@@ -1387,36 +1540,58 @@ export function createMockApiResponse({
 							? cardTagIds.length === 0
 							: tagIds.every((tagId) => cardTagIds.includes(Number(tagId))))) &&
 					(duplicate === null || String(card.ownedCount > 1) === duplicate) &&
-					(protection === null || String(index % 3 === 0) === protection) &&
+					(protection === null || String(Boolean(card.userProtected)) === protection) &&
 					(!wishlistOwner || wishedCardIds.has(card.id))
 			);
-		const pageItems = items.slice(page * pageSize, (page + 1) * pageSize);
-		const hasNext = (page + 1) * pageSize < items.length;
+		const extra = [...openedCards.values()].filter(
+			(card) =>
+				(!query || card.title.toLocaleLowerCase('fr-FR').includes(query)) &&
+				(!variantIds.length || variantIds.includes(card.variantId)) &&
+				(!tagIds.length ||
+					(tagIds.includes('-1')
+						? !card.tagIds?.length
+						: tagIds.every((id) => card.tagIds?.includes(Number(id))))) &&
+				(duplicate === null || String(Boolean(card.duplicate)) === duplicate) &&
+				(protection === null || String(Boolean(card.protected)) === protection) &&
+				(!wishlistOwner ||
+					mockCards.some((item) => item.baseCardId === card.pageId && wishedCardIds.has(item.id)))
+		);
+		const pageItems = items.slice(
+			Math.max(0, page * pageSize - extra.length),
+			Math.max(0, (page + 1) * pageSize - extra.length)
+		);
+		const hasNext = (page + 1) * pageSize < items.length + extra.length;
 		return json({
-			results: pageItems.map(({ card, index, tagIds: cardTagIds }) => ({
-				id: index + 1,
-				pageId: card.baseCardId ?? index + 1,
-				title: card.title,
-				description: card.longDescription || card.shortDescription,
-				image: card.imageUrl,
-				nsfw: card.nsfw,
-				variantId: card.variantId,
-				packId: card.packId ?? 1,
-				serialNumber: card.serialNumber,
-				maxCopies: card.maxCopies,
-				atk: card.attack,
-				duplicate: card.ownedCount > 1,
-				protected: index % 3 === 0,
-				tagIds: cardTagIds,
-				acquiredDate: card.acquiredAt ?? now,
-				creationDate: now,
-				pendingTradeId: null
-			})),
+			results: [
+				...extra.slice(page * pageSize, (page + 1) * pageSize),
+				...pageItems.map(({ card, index, tagIds: cardTagIds }) => ({
+					id: index + 1,
+					pageId: card.baseCardId ?? index + 1,
+					title: card.title,
+					description: card.longDescription || card.shortDescription,
+					image: card.imageUrl,
+					nsfw: card.nsfw,
+					variantId: card.variantId,
+					packId: card.packId ?? 1,
+					serialNumber: card.serialNumber,
+					maxCopies: card.maxCopies,
+					atk: card.attack,
+					ownedCount: card.ownedCount,
+					saleId: card.saleId ? Number(card.saleId) : undefined,
+					auctionId: card.activeAuctionId ? Number(card.activeAuctionId) : undefined,
+					duplicate: card.ownedCount > 1,
+					protected: Boolean(card.userProtected),
+					tagIds: cardTagIds,
+					acquiredDate: card.acquiredAt ?? now,
+					creationDate: now,
+					pendingTradeId: null
+				}))
+			],
 			page,
 			nbResults:
 				query || variantIds.length || tagIds.length || duplicate || protection || wishlistOwner
 					? -1
-					: items.length,
+					: items.length + extra.length,
 			sortBy: url.searchParams.get('sortBy') ?? 'ACQUIRED_DATE',
 			sortDirection: 'DESC',
 			nextCursor:
@@ -1427,50 +1602,79 @@ export function createMockApiResponse({
 			q: query ?? null
 		});
 	}
-	if (normalizedMethod === 'GET' && pathname === '/tags') {
-		return json(
-			mockCollectionTags.map((tag, index) => ({
-				...tag,
-				id: index + 1,
-				visibility: tag.visibility ?? 'FRIENDS'
-			}))
-		);
-	}
+	if (normalizedMethod === 'GET' && pathname === '/tags') return json([...mockTags.values()]);
 	if (normalizedMethod === 'POST' && pathname === '/tags') {
 		const input = asObject(body);
-		return json({
-			id: mockCollectionTags.length + 1,
-			name: input?.name,
-			color: input?.color,
-			visibility: input?.visibility
-		});
+		const tag = {
+			id: nextTagId++,
+			name: String(input?.name ?? ''),
+			color: String(input?.color ?? '#feb823'),
+			visibility: (input?.visibility ?? 'FRIENDS') as import('$lib/types').ProfileVisibility
+		};
+		mockTags.set(tag.id, tag);
+		return json(tag);
 	}
 	const tagMatch = /^\/tags\/(\d+)$/.exec(pathname);
 	if (tagMatch && normalizedMethod === 'PATCH') {
+		const id = Number(tagMatch[1]);
+		const tag = mockTags.get(id);
+		if (!tag) return error(404, 'Étiquette introuvable.', 'NOT_FOUND');
 		const input = asObject(body);
-		return json({
-			id: Number(tagMatch[1]),
-			name: input?.name,
-			color: input?.color,
-			visibility: input?.visibility
-		});
+		const updated = {
+			...tag,
+			...(input?.name == null ? {} : { name: String(input.name) }),
+			...(input?.color == null ? {} : { color: String(input.color) }),
+			...(input?.visibility == null
+				? {}
+				: { visibility: input.visibility as import('$lib/types').ProfileVisibility })
+		};
+		mockTags.set(id, updated);
+		return json(updated);
 	}
-	if (tagMatch && normalizedMethod === 'DELETE') return json(undefined, 204);
+	if (tagMatch && normalizedMethod === 'DELETE') {
+		const id = Number(tagMatch[1]);
+		mockTags.delete(id);
+		for (const [card, tags] of mockCardTags)
+			mockCardTags.set(
+				card,
+				tags.filter((tag) => tag !== id)
+			);
+		return json(undefined, 204);
+	}
+
 	if (/^\/collection\/\d+\/(?:protect|unprotect)$/.test(pathname) && normalizedMethod === 'PUT') {
+		const opened = openedCards.get(Number(pathname.split('/')[2]));
+		if (opened) {
+			opened.protected = pathname.endsWith('/protect');
+			return json(undefined, 204);
+		}
+		const index = Number(pathname.split('/')[2]) - 1;
+		const card = mockCards[index];
+		if (!card) return error(404, 'Carte introuvable.', 'NOT_FOUND');
+		card.userProtected = pathname.endsWith('/protect');
 		return json(undefined, 204);
 	}
 	if (
 		(pathname === '/collection/protect' || pathname === '/collection/unprotect') &&
 		normalizedMethod === 'PUT'
 	) {
-		return Array.isArray(body) && body.length
-			? json(undefined, 204)
-			: error(404, 'Aucune carte sélectionnée.', 'NOT_FOUND');
+		if (!Array.isArray(body) || !body.length || body.length > 500)
+			return error(400, 'Sélection invalide.', 'INVALID_PARAMETER');
+		for (const id of body) {
+			const card = mockCards[Number(id) - 1];
+			if (card) card.userProtected = pathname.endsWith('/protect');
+		}
+		return json(undefined, 204);
 	}
 	const collectionDetailMatch = /^\/collection\/(\d+)$/.exec(pathname);
 	if (normalizedMethod === 'GET' && collectionDetailMatch) {
+		const opened = openedCards.get(Number(collectionDetailMatch[1]));
+		if (opened) return json(opened);
 		const cardIndex = Number(collectionDetailMatch[1]) - 1;
-		const card = mockCards[cardIndex];
+		const card =
+			planScenario === 'many' && cardIndex >= 0 && cardIndex < 145
+				? mockCards[cardIndex % mockCards.length]
+				: mockCards[cardIndex];
 		return card
 			? json({
 					...collectionCard(card, cardIndex + 1),
@@ -1478,13 +1682,29 @@ export function createMockApiResponse({
 				})
 			: error(404, 'Carte introuvable.', 'NOT_FOUND');
 	}
-	const collectionCardTagMatch = /^\/collection\/(\d+)\/tags\/\d+$/.exec(pathname);
+	const collectionCardTagMatch = /^\/collection\/(\d+)\/tags\/(\d+)$/.exec(pathname);
 	if (collectionCardTagMatch && (normalizedMethod === 'PUT' || normalizedMethod === 'DELETE')) {
+		const opened = openedCards.get(Number(collectionCardTagMatch[1]));
+		if (opened) {
+			const tagId = Number(collectionCardTagMatch[2]);
+			opened.tagIds =
+				normalizedMethod === 'PUT'
+					? [...new Set([...(opened.tagIds ?? []), tagId])]
+					: (opened.tagIds ?? []).filter((id) => id !== tagId);
+			return json(opened);
+		}
 		const cardIndex = Number(collectionCardTagMatch[1]) - 1;
 		const card = mockCards[cardIndex];
-		return card
-			? json(collectionCard(card, cardIndex + 1))
-			: error(404, 'Carte introuvable.', 'NOT_FOUND');
+		const id = cardIndex + 1;
+		const tagId = Number(collectionCardTagMatch[2]);
+		if (card)
+			mockCardTags.set(
+				id,
+				normalizedMethod === 'PUT'
+					? [...new Set([...(mockCardTags.get(id) ?? []), tagId])]
+					: (mockCardTags.get(id) ?? []).filter((tag) => tag !== tagId)
+			);
+		return card ? json(collectionCard(card, id)) : error(404, 'Carte introuvable.', 'NOT_FOUND');
 	}
 	if (
 		/^\/collection\/tags\/\d+$/.test(pathname) &&
@@ -1496,6 +1716,14 @@ export function createMockApiResponse({
 		return json(
 			ids.flatMap((id) => {
 				const card = mockCards[id - 1];
+				const tagId = Number(pathname.split('/').at(-1));
+				if (card)
+					mockCardTags.set(
+						id,
+						normalizedMethod === 'PUT'
+							? [...new Set([...(mockCardTags.get(id) ?? []), tagId])]
+							: (mockCardTags.get(id) ?? []).filter((tag) => tag !== tagId)
+					);
 				return card ? [collectionCard(card, id)] : [];
 			})
 		);
@@ -1683,7 +1911,7 @@ export function createMockApiResponse({
 			const records = (messages.get(conversation.id) ?? []).toReversed();
 			return json({
 				results: records.map((message, index) => ({
-					id: index + 1,
+					id: Number.parseInt(message.id.replace(/\D/g, ''), 10) || index + 1,
 					conversationId: Number.parseInt(conversation.id.replace(/\D/g, ''), 10) || 1,
 					fromUserId: wikiForgeUserId(message.senderId),
 					type: message.tradeOffer ? 'TRADE' : 'TEXT',
@@ -1701,6 +1929,12 @@ export function createMockApiResponse({
 			});
 		}
 		if (normalizedMethod === 'POST' && participant) {
+			if (
+				!(friendships.get('demo-user') ?? []).some(
+					(item) => item.user.id === participant.id && item.status === 'accepted'
+				)
+			)
+				return error(403, 'Amitié requise.', 'FRIENDSHIP_REQUIRED');
 			const content = asObject(body)?.content;
 			if (typeof content !== 'string' || !content.trim() || content.trim().length > 2_000) {
 				return error(400, 'Message invalide.', 'INVALID_PARAMETER');
@@ -1729,7 +1963,7 @@ export function createMockApiResponse({
 			};
 			messages.set(target.id, [...(messages.get(target.id) ?? []), message]);
 			return json({
-				id: Date.now(),
+				id: Number(message.id.replace(/\D/g, '')),
 				conversationId: Number.parseInt(target.id.replace(/\D/g, ''), 10) || 1,
 				fromUserId: 1,
 				type: 'TEXT',
@@ -2132,26 +2366,54 @@ export function createMockApiResponse({
 		const inventory = boosterInventory('demo-user');
 		return json(mockBoostersPayload(inventory));
 	}
-	if (normalizedMethod === 'GET' && pathname === '/packs') return json(mockPackCatalogue);
+	if (normalizedMethod === 'GET' && pathname === '/packs')
+		return json(
+			mockPackCatalogue.map((pack) =>
+				pack.id === 1 && limitedPackExhausted ? { ...pack, status: 'EXHAUSTED' } : pack
+			)
+		);
 	const packDetailMatch = /^\/packs\/(\d+)$/.exec(pathname);
 	if (normalizedMethod === 'GET' && packDetailMatch) {
 		const pack = mockPackCatalogue.find((candidate) => candidate.id === Number(packDetailMatch[1]));
-		return pack ? json(pack) : error(404, 'Pack introuvable.', 'NOT_FOUND');
+		return pack
+			? json(pack.id === 1 && limitedPackExhausted ? { ...pack, status: 'EXHAUSTED' } : pack)
+			: error(404, 'Pack introuvable.', 'NOT_FOUND');
 	}
-	const boosterOpenMatch = /^\/boosters\/(1|3)\/(open|open-all)$/.exec(pathname);
+	const boosterOpenMatch = /^\/boosters\/(1|2|3)\/(open|open-all)$/.exec(pathname);
 	if (normalizedMethod === 'POST' && boosterOpenMatch) {
 		const packId = Number(boosterOpenMatch[1]);
 		const userId = 'demo-user';
-		const inventory = boosterInventory(userId);
-		if (!inventory.available) return error(403, 'Aucun paquet disponible.', 'NO_BOOSTER_AVAILABLE');
-		const state = boosterReserve.get(userId)!;
-		const openedCount = boosterOpenMatch[2] === 'open-all' ? Math.min(state.available, 100) : 1;
-		state.available -= openedCount;
+		boosterInventory(userId);
+		const state =
+			packId === 1
+				? boosterReserve.get(userId)!
+				: packId === 2
+					? mockPremiumCredits.PREMIUM
+					: mockPremiumCredits.PREMIUM_PLUS;
+		const available = state.available + state.bonus;
+		if (!available) return error(403, 'Aucun paquet disponible.', 'NO_BOOSTER_AVAILABLE');
+		if (planScenario === 'stock-limited' && limitedPackExhausted)
+			return error(403, 'Pack épuisé.', 'PACK_EXHAUSTED');
+		const openedCount =
+			boosterOpenMatch[2] === 'open-all'
+				? Math.min(available, planScenario === 'stock-limited' ? 2 : 100)
+				: 1;
+		if (planScenario === 'stock-limited') limitedPackExhausted = true;
+		const regularUsed = Math.min(state.available, openedCount);
+		state.available -= regularUsed;
+		state.bonus -= openedCount - regularUsed;
 		const cards = Array.from({ length: 5 * openedCount }, (_, index) => {
-			const card = mockCards[Math.floor(Math.random() * mockCards.length)];
+			const fixtures = [
+				mockCards.find((card) => card.variant.styles.includes('NORMAL'))!,
+				mockCards.find((card) => card.variant.styles.includes('FULL_ART'))!,
+				mockCards.find((card) => card.variant.styles.includes('CHROME'))!
+			];
+			const card = planScenario?.startsWith('opening-')
+				? fixtures[index % fixtures.length]
+				: mockCards[Math.floor(Math.random() * mockCards.length)];
 			card.ownedCount += 1;
 			return {
-				id: Date.now() + index,
+				id: nextOpenedCardId++,
 				pageId: card.baseCardId ?? (Number.parseInt(card.id.replace(/\D/g, ''), 10) || index + 1),
 				title: card.title,
 				description: card.longDescription || card.shortDescription,
@@ -2161,6 +2423,9 @@ export function createMockApiResponse({
 				serialNumber: card.serialNumber,
 				maxCopies: card.maxCopies,
 				atk: card.attack,
+				ownedCount: card.ownedCount,
+				saleId: undefined,
+				auctionId: undefined,
 				duplicate: card.ownedCount > 1,
 				protected: false,
 				tagIds: [],
@@ -2169,6 +2434,36 @@ export function createMockApiResponse({
 				pendingTradeId: null
 			};
 		});
+		cards.forEach((card) => openedCards.set(card.id, card));
+		try {
+			if (typeof sessionStorage !== 'undefined')
+				sessionStorage.setItem(
+					'wikiforge-arcade-mock-opened',
+					JSON.stringify({
+						cards: [...openedCards.values()],
+						reserve: boosterReserve.get(userId),
+						premiumPlus: mockPremiumCredits.PREMIUM_PLUS,
+						premium: mockPremiumCredits.PREMIUM,
+						exhausted: limitedPackExhausted
+					})
+				);
+		} catch {
+			/* Optional mock persistence. */
+		}
+		if (planScenario === 'uncertain-opening' || planScenario === 'uncertain-opening-read-error')
+			throw new TypeError('Mock response lost after opening');
+		if (planScenario === 'opening-pending')
+			return new Response(
+				new ReadableStream({
+					start(controller) {
+						setTimeout(() => {
+							controller.enqueue(new TextEncoder().encode(JSON.stringify({ packId, cards })));
+							controller.close();
+						}, 900);
+					}
+				}),
+				{ headers: { 'content-type': 'application/json' } }
+			);
 		return json({
 			packId,
 			cards

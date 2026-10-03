@@ -3,8 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import type { PackCatalogueItem } from '$lib/types';
 	import BoosterPackArt from './booster-pack-art.svelte';
-	import { packDescriptionKey, packNameKey } from './pack-labels';
-
+	import { packNameKey } from './pack-labels';
 	let {
 		packs,
 		onDetails,
@@ -14,97 +13,107 @@
 		onDetails: (pack: PackCatalogueItem) => void;
 		onOpen: (pack: PackCatalogueItem) => void;
 	} = $props();
-
-	const sections = $derived(
-		[...new Set(packs.map((pack) => pack.slotId))].sort((a, b) => {
-			const left = packs.find((pack) => pack.slotId === a)?.credit?.slotOrder ?? a;
-			const right = packs.find((pack) => pack.slotId === b)?.credit?.slotOrder ?? b;
-			return left - right;
-		})
-	);
-	const slotTitle = (slotId: number) =>
-		packs.find((pack) => pack.slotId === slotId)?.slotName?.trim() ||
-		$_('boosters.catalogue.slot_fallback', { values: { id: slotId } });
+	const canOpen = (pack: PackCatalogueItem) =>
+		pack.status === 'OPEN' && Boolean(pack.credit?.available);
+	const groups = $derived([
+		{ key: 'available', label: 'opening.availablePacks', packs: packs.filter(canOpen) },
+		{ key: 'other', label: 'opening.otherPacks', packs: packs.filter((pack) => !canOpen(pack)) }
+	]);
 	const name = (pack: PackCatalogueItem) => {
 		const key = packNameKey(pack.name);
 		return key ? $_(key) : pack.name;
 	};
-	const description = (pack: PackCatalogueItem) => {
-		const key = packDescriptionKey(pack.description);
-		return key ? $_(key) : pack.description;
-	};
-	const canOpen = (pack: PackCatalogueItem) =>
-		pack.status === 'OPEN' && Boolean(pack.credit?.available);
 </script>
 
-{#each sections as slotId (slotId)}
-	{@const entries = packs
-		.filter((pack) => pack.slotId === slotId)
-		.sort((a, b) => a.position - b.position)}
-	{#if entries.length}
-		<section class="space-y-4" data-pack-section={slotId}>
-			<div class="flex items-end justify-between gap-4 border-b border-border pb-3">
-				<div>
-					<p class="forge-label">{$_('boosters.catalogue.slot')}</p>
-					<h2 class="mt-1 font-serif text-2xl">{slotTitle(slotId)}</h2>
-				</div>
-				<p class="text-sm text-muted-foreground">{entries.length}</p>
-			</div>
-			<div class="pack-grid">
-				{#each entries as pack (pack.id)}
-					<article
-						class="forge-panel grid min-h-full grid-cols-[6.5rem_minmax(0,1fr)] gap-4 p-4 max-[420px]:grid-cols-1"
-					>
-						<div class="mx-auto w-full max-w-36">
-							<BoosterPackArt
-								name={name(pack)}
-								renderKey={pack.renderKey ?? 'standard'}
-								cardCount={pack.nbCards}
-								imageUrl={pack.imageUrl}
-							/>
-						</div>
-						<div class="flex min-w-0 flex-col">
-							<p class="forge-label">{$_(`boosters.family.${pack.family}`)}</p>
-							<h3 class="mt-2 font-serif text-2xl">{name(pack)}</h3>
-							<span
-								class="mt-2 w-fit rounded-full border border-primary/50 px-2.5 py-1 text-xs font-medium"
-								>{$_(`boosters.catalogue.status.${pack.status}`, { default: pack.status })}</span
-							>
-							<p class="mt-2 grow text-sm text-muted-foreground">{description(pack)}</p>
-							{#if pack.credit}
-								<p class="mt-4 text-sm font-semibold text-primary">
-									{$_('boosters.credits', {
-										values: { available: pack.credit.regularAvailable, max: pack.credit.max }
-									})}
-								</p>
-								{#if pack.credit.bonus > 0}<p class="mt-1 text-xs text-energy">
-										{$_('boosters.bonus_credits', { values: { count: pack.credit.bonus } })}
-									</p>{/if}
-							{:else if pack.status === 'OPEN'}
-								<p class="mt-4 text-sm text-muted-foreground">{$_('boosters.no_credit')}</p>
-							{/if}
-							<div class="mt-4 flex flex-wrap gap-2">
-								<Button variant="outline" size="sm" onclick={() => onDetails(pack)}
-									>{$_('boosters.view_contents')}</Button
-								>
-								{#if pack.status === 'OPEN'}<Button
-										size="sm"
-										disabled={!canOpen(pack)}
-										onclick={() => onOpen(pack)}>{$_('boosters.open')}</Button
-									>{/if}
-							</div>
-						</div>
-					</article>
-				{/each}
-			</div>
-		</section>
-	{/if}
+{#if !packs.length}<p>{$_('opening.empty')}</p>{/if}
+{#each groups as group (group.key)}
+	{#if group.packs.length}<section class="pack-group">
+			<h2>{$_(group.label)}</h2>
+			{#each group.packs as pack (pack.id)}<article class="pack-row">
+					<div class="pack-art">
+						<BoosterPackArt
+							name={name(pack)}
+							renderKey={pack.renderKey}
+							family={pack.family}
+							cardCount={pack.nbCards}
+						/>
+					</div>
+					<div class="pack-description">
+						<h3>{name(pack)}</h3>
+						<p>
+							{$_('boosters.family.' + pack.family, { default: pack.family })} · {$_(
+								'boosters.pack_card_count',
+								{ values: { count: pack.nbCards } }
+							)}
+						</p>
+						{#if !canOpen(pack)}<span
+								>{$_(
+									pack.status === 'OPEN'
+										? 'boosters.no_credit'
+										: `boosters.catalogue.status.${pack.status}`,
+									{ default: pack.status }
+								)}</span
+							>{/if}
+					</div>
+					<div class="pack-actions">
+						<Button variant="ghost" onclick={() => onDetails(pack)}>{$_('opening.contents')}</Button
+						>
+						{#if canOpen(pack)}<Button variant="outline" onclick={() => onOpen(pack)}
+								>{$_('opening.selectPack')}</Button
+							>{/if}
+					</div>
+				</article>{/each}
+		</section>{/if}
 {/each}
 
 <style>
-	.pack-grid {
+	.pack-group {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
-		gap: 1rem;
+		gap: 10px;
+	}
+	h2 {
+		font:
+			700 24px/1.1 'Barlow Condensed',
+			sans-serif;
+	}
+	.pack-row {
+		display: grid;
+		grid-template-columns: 52px minmax(0, 1fr) auto;
+		gap: 14px;
+		align-items: center;
+		padding: 12px;
+		border: 1px solid var(--border);
+		background: #1b1e18;
+	}
+	.pack-art {
+		width: 52px;
+	}
+	h3 {
+		font:
+			700 22px/1.1 'Barlow Condensed',
+			sans-serif;
+		overflow-wrap: anywhere;
+	}
+	p,
+	span {
+		font-size: 12px;
+		color: var(--muted-foreground);
+	}
+	.pack-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+	@media (max-width: 600px) {
+		.pack-row {
+			grid-template-columns: 44px minmax(0, 1fr);
+			gap: 10px;
+		}
+		.pack-art {
+			width: 44px;
+		}
+		.pack-actions {
+			grid-column: 1/-1;
+		}
 	}
 </style>

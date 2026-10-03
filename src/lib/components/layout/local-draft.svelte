@@ -33,15 +33,19 @@
 	}
 </script>
 
-<div class="flex flex-wrap items-center gap-2 py-2 text-xs">
-	<label class="flex min-h-11 items-center gap-2"
+<div
+	class="draft-option flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs"
+	data-testid="local-draft"
+>
+	<label class="flex min-h-11 cursor-pointer items-center gap-2 leading-normal"
 		><input
 			type="checkbox"
+			class="size-4 shrink-0 accent-primary"
 			bind:checked={enabled}
 			onchange={(event) => {
 				if (!event.currentTarget.checked) discard();
 			}}
-		/>{$_('ux.draftEnable')}</label
+		/><span>{$_('controls.saveDraft')}</span></label
 	>
 	{#if saved !== null}<ConfirmAction
 			label={$_('ux.draftRestore')}

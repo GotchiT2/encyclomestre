@@ -8,9 +8,11 @@
 
 	let {
 		friendship,
+		busy = false,
 		onCancel
 	}: {
 		friendship: Friendship;
+		busy?: boolean;
 		onCancel: () => void;
 	} = $props();
 </script>
@@ -22,11 +24,12 @@
 	>
 		<UserAvatar
 			image={friendship.user.avatarUrl}
+			crop={friendship.user.imageCrop}
 			name={friendship.user.username}
 			lastConnection={friendship.user.lastConnection}
 		/>
 		<div class="min-w-0">
-			<h3 class="truncate text-lg font-black uppercase sm:text-xl">
+			<h3 class="break-words text-lg font-black leading-tight uppercase sm:text-xl">
 				@{friendship.user.username}
 			</h3>
 			<p class="mt-1 font-mono text-[10px] uppercase tracking-widest text-primary">
@@ -35,6 +38,7 @@
 		</div>
 	</a>
 	<Button
+		disabled={busy}
 		size="icon-sm"
 		variant="outline"
 		aria-label={$_('friends.cancel_request')}

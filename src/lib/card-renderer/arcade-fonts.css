@@ -1,0 +1,30 @@
+@font-face {
+	font-family: 'Barlow';
+	src: url('/fonts/arcade/Barlow-Regular.ttf') format('truetype');
+	font-weight: 400;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'Barlow';
+	src: url('/fonts/arcade/Barlow-Medium.ttf') format('truetype');
+	font-weight: 500;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'Barlow';
+	src: url('/fonts/arcade/Barlow-SemiBold.ttf') format('truetype');
+	font-weight: 600 900;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'Barlow Condensed';
+	src: url('/fonts/arcade/BarlowCondensed-Bold.ttf') format('truetype');
+	font-weight: 600 800;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'Barlow Condensed';
+	src: url('/fonts/arcade/BarlowCondensed-Black.ttf') format('truetype');
+	font-weight: 900;
+	font-display: swap;
+}

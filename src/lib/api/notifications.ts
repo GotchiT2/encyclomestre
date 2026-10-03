@@ -1,6 +1,6 @@
 import { apiRequest, type RequestOptions } from './client';
 import { wikiForgeImageUrl } from './pages';
-import { wikiForgeNumericId, wikiForgeUtcDate } from './wikiforge-contract';
+import { wikiForgeNumericId, wikiForgeIsoDate } from './wikiforge-contract';
 import type { AppNotification, NotificationsPage } from '$lib/types';
 
 interface NotificationDto {
@@ -37,12 +37,16 @@ export function toAppNotification(dto: NotificationDto): AppNotification {
 		id: String(dto.id),
 		type: dto.type,
 		actor: dto.actor
-			? { id: String(dto.actor.id), name: dto.actor.name, imageUrl: wikiForgeImageUrl(dto.actor.image) }
+			? {
+					id: String(dto.actor.id),
+					name: dto.actor.name,
+					imageUrl: wikiForgeImageUrl(dto.actor.image)
+				}
 			: null,
 		extId: dto.extId == null ? null : String(dto.extId),
 		meta: parseMeta(dto.meta),
 		read: dto.read,
-		createdAt: wikiForgeUtcDate(dto.creationDate).toISOString()
+		createdAt: wikiForgeIsoDate(dto.creationDate) ?? ''
 	};
 }
 
@@ -53,10 +57,13 @@ export async function getNotifications(
 	const params = new URLSearchParams();
 	if (input.cursor) params.set('cursor', input.cursor);
 	if (input.unreadOnly) params.set('unreadOnly', 'true');
-	const result = await apiRequest<NotificationsResultDto>(`/notifications${params.size ? `?${params}` : ''}`, {
-		...options,
-		apiTarget: 'wikiforge'
-	});
+	const result = await apiRequest<NotificationsResultDto>(
+		`/notifications${params.size ? `?${params}` : ''}`,
+		{
+			...options,
+			apiTarget: 'wikiforge'
+		}
+	);
 	return {
 		items: (result.results ?? []).map(toAppNotification),
 		nextCursor: result.nextCursor ?? null,
@@ -73,4 +80,8 @@ export const markNotificationRead = (id: string, options?: RequestOptions) =>
 	});
 
 export const markAllNotificationsRead = (options?: RequestOptions) =>
-	apiRequest<void>('/notifications/read-all', { ...options, apiTarget: 'wikiforge', method: 'POST' });
+	apiRequest<void>('/notifications/read-all', {
+		...options,
+		apiTarget: 'wikiforge',
+		method: 'POST'
+	});

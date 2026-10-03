@@ -19,7 +19,7 @@
 
 <Dialog.Root bind:open>
 	<Dialog.Content
-		class="max-w-lg overflow-y-auto border p-5"
+		class="max-w-lg overflow-y-auto border p-4 sm:p-5"
 		modalLayer={150}
 		showCloseButton={!busy}
 		onInteractOutside={(event) => {

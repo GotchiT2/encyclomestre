@@ -33,6 +33,7 @@ export interface WishlistQuery {
 }
 
 export interface WishlistFollower {
+	imageCrop?: import('./user').ImageCrop;
 	id: string;
 	name: string;
 	imagePageId?: string | null;

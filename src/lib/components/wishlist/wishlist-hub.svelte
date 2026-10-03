@@ -28,149 +28,188 @@
 		onDecline: (wishlist: WishlistRegistrySummary) => void | Promise<void>;
 		onLeave: (wishlist: WishlistRegistrySummary) => void | Promise<void>;
 	} = $props();
+	const all = $derived([...groups.owned, ...groups.shared]);
 </script>
 
-{#snippet registryCard(wishlist: WishlistRegistrySummary)}
-	<article
-		class="group relative min-w-56 snap-start overflow-hidden border p-3 transition-colors {wishlist.id ===
-		activeId
-			? 'border-primary bg-primary/10'
-			: 'border-primary/20 bg-background hover:bg-primary/8'}"
+<section class="wishlist-index" data-testid="wishlist-hub">
+	<header>
+		<h2>{$_('wishlist.owned_lists')}</h2>
+		<Button onclick={onCreate} size="sm">{$_('wishlist.create_btn')}</Button>
+	</header>
+	<select
+		class="mobile-list-choice"
+		aria-label={$_('wishlist.hub_title')}
+		value={activeId ?? ''}
+		onchange={(event) => {
+			const list = all.find((list) => list.id === event.currentTarget.value);
+			if (list) onSelect(list);
+		}}
 	>
-		<button
-			type="button"
-			class="absolute inset-0 z-0 cursor-pointer focus-visible:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[-3px]"
-			aria-label={wishlist.title}
-			onclick={() => onSelect(wishlist)}
-		></button>
-		<div class="pointer-events-none relative z-10 flex min-h-14 items-start text-left">
-			{#if wishlist.imageUrl}
-				<img
-					src={wishlist.imageUrl}
-					alt=""
-					class="mr-3 size-14 shrink-0 border border-primary/30 object-cover"
-					loading="lazy"
-					referrerpolicy="no-referrer"
-				/>
-			{/if}
-			<span class="min-w-0">
-				<span class="block truncate text-sm font-black uppercase tracking-tight">
-					{wishlist.title}
-				</span>
-				{#if wishlist.cardCount !== null}<span
-						class="mt-1 block font-mono text-[9px] uppercase tracking-widest text-primary"
-					>
-						{$_('wishlist.total', { values: { count: wishlist.cardCount } })}
-					</span>{/if}
-				{#if wishlist.ownerName}
-					<span
-						class="mt-1 block truncate font-mono text-[9px] uppercase tracking-widest text-muted-foreground"
-					>
-						{$_('wishlist.owner_name', { values: { owner: wishlist.ownerName } })}
-					</span>
-				{/if}
-			</span>
-		</div>
-		<div class="relative z-10 mt-3 flex gap-2">
-			{#if wishlist.access === 'owned'}
-				<Button
-					size="icon-sm"
+		{#each all as list (list.id)}<option value={list.id}>{list.title}</option>{/each}
+	</select>
+	<div class="list-index-entries">
+		{#each all as list (list.id)}{#if list.id === groups.shared[0]?.id}<p
+					class="shared-label text-sm text-muted-foreground pt-3"
+				>
+					{$_('wishlist.shared_lists')}
+				</p>{/if}
+			<article class:active={list.id === activeId}>
+				<button
+					class="choose-list"
+					onclick={() => onSelect(list)}
+					aria-pressed={list.id === activeId}
+					>{#if list.imageUrl}<img
+							class="size-8 object-cover shrink-0"
+							src={list.imageUrl}
+							alt=""
+						/>{/if}<span>{list.title}</span>{#if list.cardCount != null}<span
+							class="text-xs tabular-nums">{list.cardCount}</span
+						>{/if}</button
+				>
+				{#if list.id === activeId}<div class="list-tools">
+						{#if list.imageUrl}<img
+								class="size-8 object-cover lg:hidden"
+								src={list.imageUrl}
+								alt=""
+							/>{/if}
+						{#if list.access === 'owned'}<Button
+								variant="ghost"
+								size="icon"
+								aria-label={$_('wishlist.edit_registry')}
+								onclick={() => onEdit(list)}><PencilIcon /></Button
+							><Button
+								variant="ghost"
+								size="icon"
+								aria-label={$_('wishlist.delete_registry')}
+								onclick={() => onDelete(list)}><Trash2Icon /></Button
+							>
+						{:else}<Button variant="ghost" onclick={() => void onLeave(list)}
+								>{$_('wishlist.leave')}</Button
+							>{/if}
+					</div>{/if}
+			</article>{/each}
+	</div>
+	<details class="invitation-folder">
+		<summary>{$_('wishlist.pending_invitations')} · {groups.pending.length}</summary>
+		{#each groups.pending as list (list.id)}<div class="invitation-row">
+				<span
+					><strong>{list.title}</strong><span class="block text-xs text-muted-foreground"
+						>{list.ownerName ?? '—'}</span
+					></span
+				><Button
+					size="icon"
+					aria-label={$_('wishlist.accept_invitation')}
+					onclick={() => void onAccept(list)}><CheckIcon /></Button
+				><Button
 					variant="outline"
-					aria-label={$_('wishlist.edit_registry')}
-					onclick={() => onEdit(wishlist)}
+					size="icon"
+					aria-label={$_('wishlist.decline_invitation')}
+					onclick={() => void onDecline(list)}><XIcon /></Button
 				>
-					<PencilIcon />
-				</Button>
-				<Button
-					size="icon-sm"
-					variant="destructive"
-					aria-label={$_('wishlist.delete_registry')}
-					onclick={() => onDelete(wishlist)}
-				>
-					<Trash2Icon />
-				</Button>
-			{:else if wishlist.access === 'shared'}
-				<Button size="sm" variant="outline" onclick={() => void onLeave(wishlist)}>
-					{$_('wishlist.leave')}
-				</Button>
-			{/if}
-		</div>
-	</article>
-{/snippet}
-
-<section class="grid gap-4" data-testid="wishlist-hub">
-	<div class="border-4 border-double border-primary/30 bg-card p-3">
-		<div class="flex items-center justify-between gap-3">
-			<p class="forge-label">{$_('wishlist.owned_lists')}</p>
-			<Button size="sm" onclick={onCreate}>{$_('wishlist.create_btn')}</Button>
-		</div>
-		{#if groups.owned.length}
-			<div class="mt-3 flex snap-x gap-2 overflow-x-auto pb-1">
-				{#each groups.owned as wishlist (wishlist.id)}{@render registryCard(wishlist)}{/each}
 			</div>
-		{:else}
-			<p class="mt-3 text-sm italic text-muted-foreground">{$_('wishlist.no_owned_lists')}</p>
-		{/if}
-	</div>
-
-	<div class="grid gap-4 lg:grid-cols-2">
-		<section class="border border-primary/25 bg-card p-3">
-			<p class="forge-label">{$_('wishlist.shared_lists')}</p>
-			{#if groups.shared.length}
-				<div class="mt-3 flex snap-x gap-2 overflow-x-auto pb-1">
-					{#each groups.shared as wishlist (wishlist.id)}{@render registryCard(wishlist)}{/each}
-				</div>
-			{:else}
-				<p class="mt-3 text-sm italic text-muted-foreground">{$_('wishlist.no_shared_lists')}</p>
-			{/if}
-		</section>
-
-		<section class="border border-primary/25 bg-card p-3">
-			<p class="forge-label">{$_('wishlist.pending_invitations')}</p>
-			{#if groups.pending.length}
-				<ul class="mt-3 grid gap-2">
-					{#each groups.pending as wishlist (wishlist.id)}
-						<li
-							class="flex flex-wrap items-center gap-2 border border-primary/20 bg-background p-3"
-						>
-							<div class="min-w-0 flex-1">
-								<p class="truncate font-bold">{wishlist.title}</p>
-								<p class="text-xs text-muted-foreground">
-									{$_('wishlist.owner_name', { values: { owner: wishlist.ownerName ?? '—' } })}
-								</p>
-								{#if wishlist.invitedAt}
-									<p
-										class="mt-1 font-mono text-[9px] uppercase tracking-wider text-muted-foreground"
-									>
-										{$_('wishlist.invitation_expires', {
-											values: {
-												date: new Date(
-													new Date(wishlist.invitedAt).getTime() + 3 * 86_400_000
-												).toLocaleString('fr-FR')
-											}
-										})}
-									</p>
-								{/if}
-							</div>
-							<Button
-								size="icon-sm"
-								aria-label={$_('wishlist.accept_invitation')}
-								onclick={() => void onAccept(wishlist)}><CheckIcon /></Button
-							>
-							<Button
-								size="icon-sm"
-								variant="destructive"
-								aria-label={$_('wishlist.decline_invitation')}
-								onclick={() => void onDecline(wishlist)}><XIcon /></Button
-							>
-						</li>
-					{/each}
-				</ul>
-			{:else}
-				<p class="mt-3 text-sm italic text-muted-foreground">
-					{$_('wishlist.no_pending_invitations')}
-				</p>
-			{/if}
-		</section>
-	</div>
+		{:else}<p class="py-3 text-sm text-muted-foreground">
+				{$_('wishlist.no_pending_invitations')}
+			</p>{/each}
+	</details>
 </section>
+
+<style>
+	.wishlist-index {
+		display: grid;
+		align-content: start;
+		gap: 12px;
+		min-width: 0;
+	}
+	header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 8px;
+	}
+	h2 {
+		font-size: 18px;
+	}
+	select {
+		width: 100%;
+		min-height: 44px;
+		border: 1px solid var(--border);
+		padding: 8px;
+	}
+	.list-index-entries {
+		display: grid;
+		gap: 6px;
+	}
+	article {
+		border-left: 2px solid var(--border);
+	}
+	article.active {
+		border-color: var(--primary);
+		background: var(--muted);
+	}
+	.choose-list {
+		display: flex;
+		width: 100%;
+		justify-content: space-between;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 10px;
+		text-align: left;
+	}
+	.choose-list > span:first-child {
+		min-width: 0;
+		overflow-wrap: anywhere;
+	}
+	.list-tools {
+		display: flex;
+		justify-content: flex-end;
+	}
+	.invitation-folder {
+		border-top: 1px solid var(--border);
+		font-size: 13px;
+	}
+	summary {
+		cursor: pointer;
+		padding: 8px 0;
+	}
+	.invitation-row {
+		display: flex;
+		gap: 6px;
+		align-items: center;
+		padding-block: 8px;
+	}
+	.invitation-row > span {
+		min-width: 0;
+		flex: 1;
+		overflow-wrap: anywhere;
+	}
+	@media (min-width: 1024px) {
+		.wishlist-index {
+			position: sticky;
+			top: 84px;
+			max-height: calc(100dvh - 100px);
+			overflow: auto;
+			padding-right: 16px;
+			border-right: 1px solid var(--border);
+		}
+		.mobile-list-choice {
+			display: none;
+		}
+	}
+	@media (max-width: 1023px) {
+		.list-index-entries article:not(.active) {
+			display: none;
+		}
+		.choose-list {
+			display: none;
+		}
+		.list-tools {
+			justify-content: flex-start;
+		}
+		.list-index-entries {
+			display: none;
+		}
+		.wishlist-index:has(.list-tools) .list-index-entries {
+			display: block;
+		}
+	}
+</style>

@@ -2,7 +2,7 @@
 	import { _ } from '$lib/i18n';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Button } from '$lib/components/ui/button';
-	import EditionSigil from './edition-sigil.svelte';
+	import Brand from '$lib/brand/brand.svelte';
 	import VariantCard from './variant-card.svelte';
 	import { isLandscapeCard, type PreviewCard, type PreviewPack } from './catalogue';
 	let {
@@ -29,7 +29,7 @@
 	}}
 >
 	<Dialog.Content
-		class="flex h-[100dvh] max-h-[100dvh] w-screen max-w-6xl flex-col gap-0 border border-solid max-sm:left-0 max-sm:translate-x-0 sm:h-[min(760px,90dvh)] sm:max-h-[90dvh] sm:w-[calc(100%-3rem)]"
+		class="flex h-[100dvh] max-h-[100dvh] w-screen max-w-6xl flex-col gap-0 border border-solid max-sm:left-0 max-sm:translate-x-0 sm:h-[min(760px,90dvh)] sm:max-h-[90dvh] sm:w-[calc(100%-3rem)] p-0 sm:p-0 overflow-hidden"
 	>
 		<header class="shrink-0 px-6 pt-8 pr-12 text-center">
 			<p class="forge-label">{$_(`boosterPreview.packs.${pack.nameKey}`)}</p>
@@ -54,8 +54,8 @@
 								onclick={() => (revealed += 1)}
 								aria-label={$_('boosterPreview.reveal_one', { values: { index: index + 1 } })}
 								><span class="back-frame"
-									><span class="back-brand">{$_('navigation.brand')}</span><span class="back-symbol"
-										><EditionSigil key="standard" /></span
+									><span class="back-brand"><Brand kind="wordmark" /></span><span
+										class="back-symbol"><Brand kind="symbol" /></span
 									><span class="back-number">{String(index + 1).padStart(2, '0')}</span><span
 										class="back-action"
 										>{index === revealed

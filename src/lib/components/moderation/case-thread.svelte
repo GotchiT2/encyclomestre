@@ -38,7 +38,7 @@
 </script>
 
 <section class="flex flex-col gap-5">
-	<header class="forge-panel flex flex-col gap-3 p-5">
+	<header class="flex flex-col gap-2 border-b border-border pb-4">
 		<h1 class="font-title text-3xl">{item.subject}</h1>
 		<p>{$_('completion.moderation.' + item.status)}</p>
 		{#if item.creationDate}<p class="text-sm">
@@ -59,9 +59,9 @@
 				</p>
 			</aside>{/if}
 	</header>
-	<ol class="flex flex-col gap-3">
+	<ol class="case-messages flex flex-col gap-3">
 		{#each item.messages as message (message.id)}<li
-				class="forge-panel flex flex-col gap-2 p-4"
+				class="flex flex-col gap-2 border-l-2 border-border bg-card p-4"
 				class:border-primary={message.fromModeration}
 			>
 				<div class="flex flex-wrap justify-between gap-2 text-sm">
@@ -77,7 +77,7 @@
 			</li>{/each}
 	</ol>
 	{#if item.status === 'OPEN'}<form
-			class="forge-panel flex flex-col gap-4 p-5"
+			class="case-compose flex flex-col gap-3 border-t border-border bg-background pt-4"
 			onsubmit={(event) => {
 				event.preventDefault();
 				void send();
@@ -90,7 +90,7 @@
 					bind:value={content}
 					maxlength={2000}
 					disabled={busy || awaiting >= 10}
-					class="min-h-32 w-full border border-border bg-background p-3"
+					class="min-h-20 w-full border border-border bg-background p-3"
 				></textarea><Field.FieldDescription
 					>{$_('completion.moderation.replyHelp')} · {content.length} / 2 000</Field.FieldDescription
 				></Field.Field
@@ -103,3 +103,19 @@
 			>
 		</form>{:else}<p class="forge-panel p-5">{$_('completion.moderation.closed')}</p>{/if}
 </section>
+
+<style>
+	.case-messages {
+		max-height: 60dvh;
+		overflow-y: auto;
+	}
+	.case-compose {
+		position: sticky;
+		bottom: 80px;
+	}
+	@media (min-width: 1024px) {
+		.case-compose {
+			bottom: 0;
+		}
+	}
+</style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { packNameKey, packDescriptionKey } from './pack-labels';
 	import { untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import {
@@ -18,6 +19,20 @@
 	let error = $state('');
 	let busy = $state(true);
 	let generation = 0;
+	const packName = $derived(
+		details ? (packNameKey(details.name) ? $_(packNameKey(details.name)!) : details.name) : ''
+	);
+	const packDescription = $derived(
+		details
+			? packDescriptionKey(details.description)
+				? $_(packDescriptionKey(details.description)!)
+				: details.description
+			: ''
+	);
+	const date = (value?: string) =>
+		value && Number.isFinite(Date.parse(value))
+			? new Date(value).toLocaleString('fr-FR')
+			: $_('plan.unknownDate');
 	async function load() {
 		const request = ++generation;
 		busy = true;
@@ -48,28 +63,40 @@
 		<Button onclick={load}>{$_('completion.retry')}</Button>{:else if details}<h1
 			class="font-title text-3xl"
 		>
-			{details.name}
+			{packName}
 		</h1>
 		<div class="flex flex-col gap-6 sm:flex-row">
 			<div class="mx-auto w-40 shrink-0">
 				<BoosterPackArt
-					name={details.name}
-					renderKey={details.renderKey ?? 'standard'}
+					name={packName}
+					renderKey={details.renderKey}
+					family={details.family}
 					cardCount={details.nbCards}
-					imageUrl={details.imageUrl}
 				/>
 			</div>
 			<div class="flex flex-col gap-4">
-				<p>{details.description}</p>
+				<details>
+					<summary class="min-h-11">{$_('boosters.detail.title')}</summary>
+					<p>{packDescription}</p>
+				</details>
 				<p>{$_('boosters.pack_card_count', { values: { count: details.nbCards } })}</p>
 				<p>
-					{$_('boosters.detail.status')} : {['OPEN', 'UPCOMING', 'EXHAUSTED', 'ENDED'].includes(
-						details.status
-					)
+					{$_('boosters.detail.status')} : {[
+						'OPEN',
+						'UPCOMING',
+						'EXHAUSTED',
+						'ENDED',
+						'CLOSED'
+					].includes(details.status)
 						? $_('boosters.status.' + details.status)
-						: details.status}
+						: $_('boosters.status.CLOSED')}
 				</p>
-				<p>{details.startsAt ?? '—'} → {details.endsAt ?? '—'}</p>
+				{#if details.startsAt || details.endsAt}<p class="text-sm text-muted-foreground">
+						{date(details.startsAt)} → {date(details.endsAt)}
+					</p>{/if}
+				<Button href={'/boosters?pack=' + details.id}
+					>{$_(details.status === 'OPEN' ? 'boosters.open' : 'arcade.allPacks')}</Button
+				>
 			</div>
 		</div>
 		<PackPoolBrowser {details} />{/if}

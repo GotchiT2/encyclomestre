@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { _ } from '$lib/i18n';
+	import { Button } from '$lib/components/ui/button';
+	import { getUserProfile } from '$lib/api/player-profile';
+	import { realtimeRefresh, refreshIncludes } from '$lib/realtime/resource-refresh';
 	import { draftKey, writeDraft } from '$lib/drafts/storage';
 	import { operationError } from '$lib/domain/operation-error';
 	import { onDestroy, onMount } from 'svelte';
@@ -7,7 +11,7 @@
 	import { chatStreamEvent, toChatStreamMessage } from '$lib/messages/stream';
 	import ConversationList from './conversation-list.svelte';
 	import MessageThread from './message-thread.svelte';
-	import type { Conversation, LastConnection, MessageRecord } from '$lib/types';
+	import type { Conversation, LastConnection, MessageRecord, User } from '$lib/types';
 	import type { getFriends as GetFriends } from '$lib/api/users';
 
 	const defaultLoadFriends: typeof GetFriends = async (...args) =>
@@ -24,6 +28,10 @@
 	} = $props();
 
 	let conversations = $state<Conversation[]>([]);
+	let friends = $state<User[]>([]);
+	let newOpen = $state(false);
+	let loadError = $state('');
+	let revision = 0;
 	let selectedConversationId = $state('');
 	let thread = $state<MessageRecord[]>([]);
 	let query = $state('');
@@ -69,7 +77,14 @@
 		);
 		if (!knownConversation) {
 			const page = await getConversations();
-			conversations = withFriendPresence(page.items);
+			conversations = [
+				...new Map(
+					[...conversations, ...withFriendPresence(page.items)].map((item) => [
+						item.userId ?? item.id,
+						item
+					])
+				).values()
+			];
 			conversationsCursor = page.nextCursor;
 			hasMoreConversations = page.hasNext;
 			return;
@@ -87,7 +102,7 @@
 			...conversations.filter((conversation) => conversation.id !== knownConversation.id)
 		];
 		if (isSelected && !thread.some((item) => item.id === message.id)) {
-			thread = [...thread, message];
+			thread = [...new Map([...thread, message].map((item) => [item.id, item])).values()];
 		}
 	}
 
@@ -96,7 +111,7 @@
 		const event = $chatStreamEvent;
 		if (!event || event.message.id === Number(handledStreamMessageId)) return;
 		handledStreamMessageId = String(event.message.id);
-		void applyIncomingMessage();
+		void applyIncomingMessage().catch((cause) => (loadError = operationError(cause)));
 	});
 
 	onMount(() => {
@@ -114,6 +129,7 @@
 
 	async function loadInitialData() {
 		loading = true;
+		loadError = '';
 		try {
 			const [page, friendships] = await Promise.all([getConversations(), loadFriends()]);
 			friendPresenceByUserId = Object.fromEntries(
@@ -122,17 +138,32 @@
 			conversations = withFriendPresence(page.items);
 			conversationsCursor = page.nextCursor;
 			hasMoreConversations = page.hasNext;
+			friends = friendships
+				.filter((friendship) => friendship.status === 'accepted')
+				.map((friendship) => friendship.user);
 			acceptedFriendIds = friendships
 				.filter((friendship) => friendship.status === 'accepted')
 				.map((friendship) => friendship.user.id);
-			const requested = initialUserId
+			let requested = initialUserId
 				? conversations.find((conversation) => conversation.userId === initialUserId)
 				: null;
+			if (initialUserId && !requested) {
+				const friend = friends.find((user) => user.id === initialUserId);
+				const profile = friend ? undefined : await getUserProfile(initialUserId);
+				requested = makeConversation(
+					initialUserId,
+					friend?.username ?? profile?.name ?? '',
+					friend?.avatarUrl ?? profile?.image
+				);
+				conversations = [requested, ...conversations];
+			}
 			selectedConversationId = requested?.id ?? conversations[0]?.id ?? '';
 			if (selectedConversationId && (!mobileViewport || requested)) {
 				await loadThread(selectedConversationId);
 				mobileThreadOpen = mobileViewport && Boolean(requested);
 			}
+		} catch (cause) {
+			loadError = operationError(cause);
 		} finally {
 			loading = false;
 		}
@@ -150,6 +181,8 @@
 			];
 			conversationsCursor = page.nextCursor;
 			hasMoreConversations = page.hasNext;
+		} catch (cause) {
+			loadError = operationError(cause);
 		} finally {
 			loadingMoreConversations = false;
 		}
@@ -170,6 +203,8 @@
 			conversations = conversations.map((item) =>
 				item.id === conversationId ? { ...item, unreadCount: 0 } : item
 			);
+		} catch (cause) {
+			if (sequence === requestSequence) loadError = operationError(cause);
 		} finally {
 			if (sequence === requestSequence) threadLoading = false;
 		}
@@ -177,13 +212,17 @@
 
 	async function loadOlderMessages() {
 		if (!selectedConversation?.userId || !hasOlderMessages || loadingOlderMessages) return;
+		const selectedId = selectedConversation.id;
 		loadingOlderMessages = true;
 		try {
 			const page = await getConversationMessages(selectedConversation.userId, messagesCursor);
+			if (selectedConversationId !== selectedId) return;
 			const known = new Set(thread.map((message) => message.id));
 			thread = [...page.items.toReversed().filter((message) => !known.has(message.id)), ...thread];
 			messagesCursor = page.nextCursor;
 			hasOlderMessages = page.hasNext;
+		} catch (cause) {
+			loadError = operationError(cause);
 		} finally {
 			loadingOlderMessages = false;
 		}
@@ -208,25 +247,84 @@
 		sending = true;
 		sendError = '';
 		try {
-			const message = await sendMessage(selectedConversation.userId, { content: draft });
-			thread = [...thread, message];
+			const conversation = selectedConversation;
+			const content = draft;
+			const message = await sendMessage(conversation.userId!, { content });
+			if (selectedConversationId !== conversation.id) {
+				writeDraft(localStorage, draftKey(userId, `message:${conversation.id}`), '');
+				return;
+			}
+			thread = [...new Map([...thread, message].map((item) => [item.id, item])).values()];
 			writeDraft(localStorage, draftKey(userId, `message:${selectedConversation.id}`), '');
-			draft = '';
+			if (draft === content) draft = '';
 		} catch (cause) {
 			sendError = operationError(cause);
 		} finally {
 			sending = false;
 		}
 	}
+	function makeConversation(id: string, name: string, image?: string | null): Conversation {
+		return {
+			id: 'player:' + id,
+			userId: id,
+			title: name,
+			avatarUrl: image,
+			preview: '',
+			unreadCount: 0,
+			updatedAt: new Date().toISOString(),
+			kind: 'direct',
+			participantIds: [userId, id]
+		};
+	}
+	async function start(user: User) {
+		let conversation = conversations.find((item) => item.userId === user.id);
+		if (!conversation) {
+			conversation = makeConversation(user.id, user.username, user.avatarUrl);
+			conversations = [conversation, ...conversations];
+		}
+		newOpen = false;
+		await selectConversation(conversation.id);
+	}
+	$effect(() => {
+		const refresh = $realtimeRefresh;
+		if (refresh.revision === revision || !refreshIncludes(refresh, 'messages')) return;
+		revision = refresh.revision;
+		void (async () => {
+			const selectedUser = selectedConversation?.userId;
+			const result = await getConversations();
+			conversations = [
+				...new Map(
+					[...conversations, ...withFriendPresence(result.items)].map((item) => [
+						item.userId ?? item.id,
+						item
+					])
+				).values()
+			];
+			if (selectedUser)
+				selectedConversationId =
+					conversations.find((item) => item.userId === selectedUser)?.id ?? selectedConversationId;
+			if (selectedConversationId) await loadThread(selectedConversationId);
+		})().catch((cause) => (loadError = operationError(cause)));
+	});
 </script>
 
+<div class="mb-3 flex flex-wrap gap-2">
+	<Button onclick={() => (newOpen = true)}>{$_('plan.messages.new')}</Button>{#if loadError}<p
+			role="alert"
+		>
+			{loadError}
+		</p>
+		<Button variant="outline" onclick={() => void loadInitialData()}
+			>{$_('completion.retry')}</Button
+		>{/if}
+</div>
 {#if sendError}<p role="alert" class="mb-3 text-destructive">{sendError}</p>{/if}
 <div
-	class="forge-panel-flat min-h-[34rem] overflow-hidden lg:grid lg:h-[calc(100dvh-12rem)] lg:min-h-[38rem] lg:grid-cols-[21rem_minmax(0,1fr)]"
+	class="message-workbench min-h-0 overflow-hidden lg:grid lg:grid-cols-[280px_minmax(0,1fr)]"
 	data-testid="message-workspace"
 >
 	<ConversationList
-		class="h-[calc(100dvh-13rem)] min-h-[34rem] lg:h-full lg:min-h-0 lg:border-r lg:border-primary/20"
+		class="h-[calc(100dvh-17rem)] min-h-0 lg:h-full lg:border-r lg:border-border"
 		{conversations}
 		selectedId={selectedConversationId}
 		bind:query
@@ -282,3 +380,33 @@
 		</Dialog.Portal>
 	</Dialog.Root>
 {/if}
+
+<Dialog.Root bind:open={newOpen}
+	><Dialog.Portal
+		><Dialog.Overlay class="fixed inset-0 z-[100] bg-black/60" /><Dialog.Content
+			class="fixed top-1/2 left-1/2 z-[101] max-h-[85dvh] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded border bg-card p-4 sm:p-5"
+			><Dialog.Title class="text-xl font-semibold">{$_('plan.messages.new')}</Dialog.Title
+			><Dialog.Description class="my-3 text-sm">{$_('plan.messages.newInfo')}</Dialog.Description
+			>{#each friends as friend (friend.id)}<Button
+					variant="ghost"
+					class="w-full justify-start"
+					onclick={() => void start(friend)}>{friend.username}</Button
+				>{:else}<p>{$_('plan.messages.noFriends')}</p>
+				<Button href="/friends">{$_('navigation.friends')}</Button>{/each}<Dialog.Close
+				class="mt-4 underline">{$_('completion.cancel')}</Dialog.Close
+			></Dialog.Content
+		></Dialog.Portal
+	></Dialog.Root
+>
+
+<style>
+	.message-workbench {
+		height: calc(100dvh - 18rem);
+		min-height: 320px;
+	}
+	@media (min-width: 1024px) {
+		.message-workbench {
+			height: calc(100dvh - 15rem);
+		}
+	}
+</style>

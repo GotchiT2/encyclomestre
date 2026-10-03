@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
+	import Brand from '$lib/brand/brand.svelte';
 	import EditionSigil from './edition-sigil.svelte';
 	import VariantEffects from './variant-effects.svelte';
 	import { getSubject, getVariant, isLandscapeCard, type PreviewCard } from './catalogue';
@@ -114,7 +115,7 @@
 		<span class="edition-seal" data-testid="edition-sigil"
 			><EditionSigil key={variant.renderKey} /></span
 		>
-		<span class="brand-diamond" aria-hidden="true"><span>W</span></span>
+		<span class="brand-diamond" aria-hidden="true"><Brand kind="symbol" compact monochrome /></span>
 		{#if serialLabel}<span class="serial-engraving">{serialLabel}</span>{/if}
 	</span>
 </button>
@@ -345,21 +346,15 @@
 		width: 8%;
 		aspect-ratio: 1;
 		place-items: center;
-		color: #06101f;
-		background: linear-gradient(135deg, #fff1ad, #b2600d 52%, #ffd663);
-		border: 1px solid #ffcf55;
-		transform: translateX(-50%) rotate(45deg);
-	}
-	.brand-diamond span {
-		font: 700 4.2cqw / 1 var(--font-heading);
-		transform: rotate(-45deg);
+		color: #e8ef42;
+		background: #171918;
+		border: 1px solid #e8ef42;
+		padding: 0.7%;
+		transform: translateX(-50%);
 	}
 	.landscape .brand-diamond {
 		width: 5%;
 		bottom: 1.5%;
-	}
-	.landscape .brand-diamond span {
-		font-size: 2.5cqw;
 	}
 	.serial-engraving {
 		position: absolute;

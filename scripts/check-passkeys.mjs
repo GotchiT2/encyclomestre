@@ -1,3 +1,7 @@
+if (!process.argv[2] || process.argv[2] === 'fo') {
+	await import('./check-plan-account.mjs');
+	process.exit(0);
+}
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';

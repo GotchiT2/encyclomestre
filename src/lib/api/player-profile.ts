@@ -35,6 +35,7 @@ interface UserProfileDto {
 	id: number;
 	name: string;
 	imagePageId?: number;
+	imageCrop?: import('$lib/types/user').ImageCrop;
 	image?: string;
 	joinedAt: string;
 	lastConnection?: LastConnection;
@@ -42,6 +43,17 @@ interface UserProfileDto {
 	nbCards: number;
 	tags?: Array<{ name: string; color: string }>;
 	showcase?: ShowcaseLineDto[];
+}
+
+export type UserIdentity = Pick<UserProfile, 'id' | 'name' | 'image' | 'imageCrop'>;
+
+/** Read only the identity fields; avatars do not need variants or card conversion. */
+export async function getUserIdentity(id: string, options?: RequestOptions): Promise<UserIdentity> {
+	const dto = await apiRequest<UserProfileDto>(`/users/${wikiForgeNumericId(id, 'utilisateur')}`, {
+		...options,
+		apiTarget: 'wikiforge'
+	});
+	return { id: String(dto.id), name: dto.name, image: dto.image ?? null, imageCrop: dto.imageCrop };
 }
 
 interface SalesDto {
@@ -54,6 +66,7 @@ interface LeaderboardEntryDto {
 	id: number;
 	name: string;
 	imagePageId?: number;
+	imageCrop?: import('$lib/types/user').ImageCrop;
 	image?: string;
 	nbCards: number;
 }
@@ -101,6 +114,7 @@ export async function getUserProfile(id: string, options?: RequestOptions): Prom
 		...('guild' in dto ? { guild: dto.guild as { id: number; name: string } | undefined } : {}),
 		name: dto.name,
 		imagePageId: dto.imagePageId ?? null,
+		imageCrop: dto.imageCrop,
 		image: dto.image ?? null,
 		joinedAt: dto.joinedAt,
 		lastConnection: dto.lastConnection,
@@ -216,6 +230,7 @@ function toLeaderboardEntry(entry: LeaderboardEntryDto): LeaderboardEntry {
 		id: String(entry.id),
 		name: entry.name,
 		imagePageId: entry.imagePageId ?? null,
+		imageCrop: entry.imageCrop,
 		image: entry.image ?? null,
 		nbCards: entry.nbCards
 	};
@@ -228,14 +243,21 @@ export const getLeaderboard = (period: LeaderboardPeriod, options?: RequestOptio
 	}).then((dto): Leaderboard => ({
 		top: (dto.top ?? []).map(toLeaderboardEntry),
 		around: (dto.around ?? []).map(toLeaderboardEntry),
-		computedAt: dto.computedAt ? wikiForgeUtcDate(dto.computedAt).toISOString() : null,
-		refreshAt: dto.refreshAt ? wikiForgeUtcDate(dto.refreshAt).toISOString() : null
+		computedAt:
+			dto.computedAt && Number.isFinite(wikiForgeUtcDate(dto.computedAt).getTime())
+				? wikiForgeUtcDate(dto.computedAt).toISOString()
+				: null,
+		refreshAt:
+			dto.refreshAt && Number.isFinite(wikiForgeUtcDate(dto.refreshAt).getTime())
+				? wikiForgeUtcDate(dto.refreshAt).toISOString()
+				: null
 	}));
 };
 
 export interface CompleteMeUpdate {
 	name: string;
 	imagePageId: number | null;
+	imageCrop?: import('$lib/types/user').ImageCrop;
 	nsfw: boolean;
 	safeWords: string[];
 	visibility: ProfileVisibility;

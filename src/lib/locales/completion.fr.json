@@ -36,8 +36,8 @@
 			"ALREADY_EXISTS": "Ce nom est déjà utilisé.",
 			"WISHLIST_FULL": "La liste ne peut pas dépasser 1 000 cartes.",
 			"NOT_ENOUGH_MONEY": "Votre solde disponible est insuffisant.",
-			"ACCOUNT_CONFLICT": "Une opération concurrente empêche la fermeture. Actualisez avant de réessayer.",
-			"INVALID_CREDENTIALS": "Mot de passe incorrect.",
+			"ACCOUNT_CONFLICT": "Les données ont changé pendant votre action. Votre saisie est conservée ; actualisez puis réessayez.",
+			"INVALID_CREDENTIALS": "La vérification de votre identité a échoué. Utilisez une passkey valide ou un code de secours inutilisé.",
 			"AUCTION_CONFLICT": "L’enchère a changé. Actualisez.",
 			"SALE_CONFLICT": "Carte indisponible pour la vente.",
 			"TRADE_CONFLICT": "Carte indisponible pour cet échange."
@@ -172,5 +172,139 @@
 		"missing": "Image indisponible",
 		"untitled": "Carte sans titre",
 		"fallback": "Modèle indisponible : affichage standard."
+	},
+	"plan": {
+		"unknownDate": "Date indisponible",
+		"account": {
+			"loginInfo": "Connectez-vous avec une passkey enregistrée sur votre appareil ou votre gestionnaire de mots de passe.",
+			"reauth": "Confirmez votre identité avec une passkey. Vous pouvez aussi utiliser un code de secours, qui sera consommé après validation.",
+			"useCode": "Utiliser un code de secours",
+			"code": "Code de secours",
+			"codesTitle": "Codes de secours",
+			"codesInfo": "Ces dix codes sont affichés une seule fois. Gardez-les hors de cette application, dans un endroit sûr. Chaque code ne peut être utilisé qu’une fois.",
+			"copy": "Copier",
+			"copied": "Codes copiés",
+			"download": "Télécharger",
+			"copyFailed": "La copie a échoué. Sélectionnez les codes ou téléchargez-les.",
+			"saved": "J’ai conservé mes codes dans un endroit sûr.",
+			"continue": "Entrer dans le jeu",
+			"recoverTitle": "Récupérer mon compte",
+			"signupTitle": "Créer mon compte",
+			"linkRecovery": "Ce lien remplace vos anciennes passkeys, ferme vos autres sessions et génère de nouveaux codes de secours. Vous allez créer une nouvelle passkey.",
+			"codeRecovery": "Saisissez votre pseudonyme exact et un code de secours inutilisé pour ajouter une nouvelle passkey. Vos autres passkeys et sessions restent actives. Un lien de récupération reçu permet également de créer une nouvelle passkey.",
+			"signupInfo": "Choisissez votre pseudonyme, puis créez une passkey. Conservez ensuite les dix codes de secours qui permettent de retrouver votre compte.",
+			"name": "Pseudonyme",
+			"createPasskey": "Créer une passkey",
+			"login": "Se connecter",
+			"recover": "Récupérer mon compte",
+			"remaining": "{count} codes de secours restants",
+			"regenerate": "Générer de nouveaux codes",
+			"replaceCodes": "Les anciens codes seront invalidés. Les nouveaux codes seront affichés une seule fois."
+		},
+		"legal": {
+			"navigation": "Informations légales",
+			"legal": "Mentions légales",
+			"privacy": "Confidentialité",
+			"terms": "Conditions d’utilisation",
+			"home": "Retour à l’accueil",
+			"draft": "Document préparatoire — contenu à compléter et à valider avant publication définitive.",
+			"incomplete": "À compléter par l’éditeur. Aucun engagement définitif n’est formulé dans cette section.",
+			"sections": {
+				"publisher": "Identité de l’éditeur et responsable de publication",
+				"hosting": "Hébergement",
+				"contact": "Coordonnées de contact",
+				"data": "Données traitées",
+				"purposes": "Finalités et bases légales",
+				"retention": "Durées de conservation et destinataires",
+				"rights": "Exercice des droits et contact",
+				"access": "Accès au compte et récupération",
+				"collection": "Collection et contenus du jeu",
+				"transactions": "Enchères, ventes et échanges",
+				"restrictions": "Règles de conduite, restrictions et fermeture du compte"
+			}
+		},
+		"loadError": "Le chargement a échoué. Vous pouvez réessayer.",
+		"navigation": {
+			"transactions": "Enchères et échanges",
+			"progression": "Progression"
+		},
+		"boosters": {
+			"checkAvailability": "Consulter les packs disponibles",
+			"packDetails": "Voir le pack",
+			"opened": "{count} boosters ouverts · {remaining} crédits restants",
+			"unavailable": "Ce pack n’est plus disponible. Revenez aux packs pour choisir une autre ouverture.",
+			"openedUnknownCredits": "{count} boosters ouverts · crédits restants à actualiser"
+		},
+		"filters": {
+			"all": "Tous",
+			"yes": "Oui",
+			"no": "Non"
+		},
+		"cards": {
+			"cede": "Céder cet exemplaire",
+			"instantSale": "Vente immédiate",
+			"auction": "Enchère",
+			"saleCreated": "Cet exemplaire est en vente sur votre profil.",
+			"manageSales": "Gérer mes ventes",
+			"saleInfo": "Fixez le prix de cet exemplaire. Vous pouvez avoir jusqu’à trois ventes immédiates. Une proposition d’échange reste possible lorsque le jeu l’autorise.",
+			"unavailableSale": "Cet exemplaire est protégé, déjà en vente, en enchère ou indisponible pour cette action.",
+			"quickUnprotect": "Déprotéger {title}"
+		},
+		"wishlist": {
+			"inviteHint": "Recherchez un joueur par son pseudonyme, puis invitez-le à consulter cette liste.",
+			"friendCollection": "Voir les cartes recherchées chez un ami"
+		},
+		"auctions": {
+			"wanted": "Les cartes que je recherche",
+			"exactCard": "Carte sélectionnée",
+			"removeExact": "Retirer ce filtre"
+		},
+		"avatar": {
+			"help": "Choisissez une image de carte, puis ajustez son cadrage. L’aperçu correspond à votre avatar dans tout le jeu.",
+			"x": "Position horizontale",
+			"y": "Position verticale",
+			"zoom": "Zoom"
+		},
+		"messages": {
+			"new": "Nouveau message",
+			"newInfo": "Choisissez un ami. Votre premier message crée la conversation.",
+			"noFriends": "Ajoutez un ami pour lui écrire."
+		},
+		"profile": {
+			"wanted": "Cartes de cet ami que je recherche",
+			"confirmBuy": "Confirmer l’achat",
+			"purchase": "Acheter « {title} » pour {price} ◈ ?"
+		},
+		"leaderboard": {
+			"criteria": "Global : exemplaires possédés. Jour et semaine : cartes obtenues en ouvrant des boosters pendant la période."
+		},
+		"friends": {
+			"removeTitle": "Retirer cet ami",
+			"removeInfo": "Retirer {name} de vos amis ? Vous perdrez les accès réservés aux amis et ne pourrez plus lui écrire."
+		},
+		"guild": {
+			"alreadyMember": "Vous appartenez déjà à la guilde « {name} ».",
+			"full": "Cette guilde est complète."
+		}
+	},
+	"boosters": {
+		"open_all": "Tout ouvrir ({count})",
+		"catalogue": {
+			"slot": "Packs disponibles",
+			"slot_fallback": "Sélection de packs"
+		}
+	},
+	"trades": {
+		"offer_sent": "Proposition envoyée."
+	},
+	"common": {
+		"error": "Cette opération n’a pas abouti. Vous pouvez réessayer.",
+		"unknown": "Indisponible"
+	},
+	"dashboard": {
+		"auctions": "Enchères"
+	},
+	"collection": {
+		"load_error": "La collection n’a pas pu être chargée."
 	}
 }

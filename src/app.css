@@ -3,6 +3,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn-svelte/tailwind.css';
+@import './lib/card-renderer/arcade-fonts.css';
 
 @font-face {
 	font-family: 'DBacks';
@@ -18,49 +19,48 @@
 }
 
 :root {
-	--background: #061029;
-	--foreground: #f7f2df;
-	--card: #0d1e45;
-	--card-foreground: #f7f2df;
-	--popover: #12244f;
-	--popover-foreground: #f7f2df;
-	--primary: #feb823;
-	--primary-foreground: #080f19;
-	--secondary: #162c5a;
-	--secondary-foreground: #e9f4f4;
-	--muted: #142449;
-	--muted-foreground: #9cb0bc;
-	--accent: #fd790c;
-	--accent-foreground: #080f19;
-	--energy: #19a7aa;
-	--energy-soft: #7ce4de;
-	--surface-elevated: #1a3162;
-	--destructive: #e33c39;
-	--border: color-mix(in srgb, #feb823 28%, transparent);
-	--input: color-mix(in srgb, #7ce4de 32%, transparent);
-	--ring: #7ce4de;
-	--radius: 0rem;
-	--forge-cut: 14px;
-	--sidebar: color-mix(in srgb, #0b1a3d 88%, transparent);
-	--sidebar-foreground: #f7f2df;
-	--sidebar-primary: #feb823;
-	--sidebar-primary-foreground: #080f19;
-	/* Bleu relevé plutôt qu'ambre dilué : l'ambre à faible opacité virait au gris sur le bleu nuit. */
-	--sidebar-accent: color-mix(in srgb, #24427e 72%, transparent);
-	--sidebar-accent-foreground: #feb823;
-	--sidebar-border: color-mix(in srgb, #feb823 22%, transparent);
-	--sidebar-ring: #7ce4de;
+	--background: #171918;
+	--foreground: #efebd9;
+	--card: #202320;
+	--card-foreground: #efebd9;
+	--popover: #252825;
+	--popover-foreground: #efebd9;
+	--primary: #e8ef42;
+	--primary-foreground: #171918;
+	--secondary: #30342e;
+	--secondary-foreground: #efebd9;
+	--muted: #292d27;
+	--muted-foreground: #b4b8aa;
+	--accent: #e8ef42;
+	--accent-foreground: #171918;
+	--energy: #b8dac4;
+	--energy-soft: #d4eadc;
+	--surface-elevated: #30342e;
+	--destructive: #ee7967;
+	--border: #464a40;
+	--input: #565b4d;
+	--ring: #e8ef42;
+	--radius: 0.25rem;
+	--forge-cut: 8px;
+	--sidebar: #171918;
+	--sidebar-foreground: #efebd9;
+	--sidebar-primary: #e8ef42;
+	--sidebar-primary-foreground: #171918;
+	--sidebar-accent: #30342e;
+	--sidebar-accent-foreground: #e8ef42;
+	--sidebar-border: #464a40;
+	--sidebar-ring: #e8ef42;
 }
 
 @theme inline {
-	--font-sans: 'Source Sans 3 Variable', 'Source Sans 3', system-ui, sans-serif;
+	--font-sans: 'Barlow', system-ui, sans-serif;
 	/* Réservée aux H1 et à la typographie des cartes. */
-	--font-serif: 'Palatino Linotype', Palatino, Georgia, serif;
+	--font-serif: 'Barlow Condensed', Impact, sans-serif;
 	/* Titres de sections et de composants. */
-	--font-title: 'Inter Variable', Inter, system-ui, sans-serif;
-	--font-mono: 'Source Sans 3 Variable', 'Source Sans 3', system-ui, sans-serif;
+	--font-title: 'Barlow Condensed', Impact, sans-serif;
+	--font-mono: 'Barlow', system-ui, sans-serif;
 	/* Display : signature de marque et chiffres mis en avant. */
-	--font-heading: 'DBacks', Impact, sans-serif;
+	--font-heading: 'Barlow Condensed', Impact, sans-serif;
 	--color-ring: var(--ring);
 	--color-input: var(--input);
 	--color-border: var(--border);
@@ -107,7 +107,7 @@
 		@apply bg-background text-foreground antialiased;
 		min-width: 320px;
 		overflow-x: clip;
-		background-image: linear-gradient(180deg, #071638 0%, #040e28 46%, #020816 100%);
+		background-image: none;
 		background-attachment: fixed;
 	}
 
@@ -160,7 +160,9 @@
 }
 
 @utility wikiforge-card-grid {
-	@apply grid min-w-0 grid-cols-2 justify-items-center gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4;
+	/* Les cartes restent lisibles même à côté d’un panneau de filtres. */
+	@apply grid min-w-0 justify-items-center gap-x-3 gap-y-5;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr));
 }
 
 @utility wikiforge-card-size {
@@ -269,7 +271,7 @@ article {
 }
 
 .forge-wordmark {
-	font-family: 'DBacks', Impact, sans-serif;
+	font-family: 'Barlow Condensed', Impact, sans-serif;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
 	color: var(--primary);
@@ -314,21 +316,21 @@ select:not([multiple]),
 .forge-control {
 	height: 2.75rem !important;
 	min-height: 2.75rem;
-	border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent) !important;
-	background-color: rgb(6 16 41 / 76%) !important;
+	border: 1px solid var(--border);
+	background-color: var(--card);
 	padding-inline: 0.75rem;
 	font-family: var(--font-sans);
-	font-size: 0.75rem;
-	font-weight: 700;
-	letter-spacing: 0.06em;
+	font-size: 0.875rem;
+	font-weight: 500;
+	letter-spacing: normal;
 	color: var(--foreground);
 	outline: none;
 }
 
 select:not([multiple]):focus,
 .forge-control:focus-visible {
-	border-color: var(--energy-soft) !important;
-	box-shadow: 0 0 0 2px rgb(124 228 222 / 14%);
+	border-color: var(--primary);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
 .forge-energy-orbit {
@@ -490,4 +492,369 @@ select:not([multiple]):focus,
 	font-size: 0.625rem;
 	font-weight: 700;
 	line-height: 1;
+}
+
+/* Le défilement vers un champ laisse les actions au-dessous des annonces fixes. */
+html {
+	scroll-padding-top: calc(var(--site-banner-height, 0px) + 5rem);
+	scroll-padding-bottom: 8rem;
+}
+@media (min-width: 768px) {
+	html {
+		scroll-padding-top: calc(var(--site-banner-height, 0px) + 1rem);
+	}
+}
+
+/* Arcade presentation: shared by the player pages, independent of their domain state. */
+.forge-scene {
+	background: var(--background);
+}
+.forge-starfield {
+	display: none;
+}
+.forge-wordmark {
+	font-family: 'Barlow Condensed', sans-serif;
+	font-weight: 900;
+	letter-spacing: -0.035em;
+	text-shadow: none;
+}
+.forge-nav-active {
+	background: var(--primary);
+	color: var(--primary-foreground);
+	box-shadow: none;
+}
+.forge-panel,
+.forge-panel-flat,
+.alchemy-frame {
+	background: var(--card);
+	border-color: var(--border);
+	box-shadow: none;
+}
+.forge-label,
+.alchemy-label {
+	font-family: 'Barlow', sans-serif;
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+}
+h1 {
+	font-weight: 900;
+	line-height: 1;
+	letter-spacing: -0.025em;
+	text-transform: uppercase;
+}
+h2,
+h3 {
+	font-weight: 800;
+	letter-spacing: -0.01em;
+}
+button,
+[role='button'],
+[role='tab'],
+summary {
+	transition:
+		background-color 120ms,
+		color 120ms,
+		border-color 120ms,
+		transform 120ms;
+}
+button:active:not(:disabled),
+[role='button']:active {
+	transform: translateY(1px);
+}
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 3px;
+}
+.arcade-page {
+	max-width: 1440px;
+	margin-inline: auto;
+	padding: 1rem;
+}
+.arcade-card-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1rem 0.75rem;
+	align-items: start;
+}
+@media (min-width: 640px) {
+	.arcade-card-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+	.arcade-page {
+		padding: 1.5rem;
+	}
+}
+@media (min-width: 1024px) {
+	.arcade-card-grid {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+}
+@media (min-width: 1280px) {
+	.arcade-card-grid {
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+	}
+}
+@media (min-width: 1600px) {
+	.arcade-card-grid {
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+	}
+}
+html[data-motion='reduce'] *,
+html[data-motion='reduce'] *::before,
+html[data-motion='reduce'] *::after {
+	animation-duration: 0.001ms !important;
+	animation-iteration-count: 1 !important;
+	transition-duration: 0.001ms !important;
+	scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+body:has([data-selection-panel]) [data-mobile-tabs] {
+	display: none;
+}
+body:has([data-selection-panel]) .arcade-page {
+	padding-bottom: 44dvh;
+}
+@media (max-width: 767px) {
+	.arcade-sheet {
+		top: auto !important;
+		bottom: 0 !important;
+		left: 0 !important;
+		transform: none !important;
+		translate: none !important;
+		width: 100% !important;
+		max-height: 85dvh !important;
+	}
+}
+[data-slot='button'],
+[data-slot='dialog-close'],
+[data-slot='dropdown-menu-item'] {
+	min-height: 44px;
+}
+
+.arcade-page {
+	padding-top: 5rem;
+	padding-bottom: 6rem;
+}
+@media (min-width: 768px) {
+	.arcade-page {
+		padding-top: 1.5rem;
+		padding-bottom: 2.5rem;
+	}
+}
+.wikiforge-card-grid {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 768px) {
+	.wikiforge-card-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+@media (min-width: 1024px) {
+	.wikiforge-card-grid {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+}
+@media (min-width: 1280px) {
+	.wikiforge-card-grid {
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+	}
+}
+@media (min-width: 1440px) {
+	.wikiforge-card-grid {
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+	}
+}
+[data-testid='card-detail-modal'] .card-slot {
+	aspect-ratio: 1/1.416;
+}
+[data-testid='card-detail-modal'] .landscape-preview .card-slot {
+	aspect-ratio: 1.416/1;
+}
+@media (max-width: 767px) {
+	[data-testid='card-detail-modal'] {
+		inset: 0 !important;
+		width: 100% !important;
+		height: 100dvh !important;
+		max-height: 100dvh !important;
+		translate: none !important;
+		transform: none !important;
+		border: 0;
+	}
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']),
+textarea,
+select {
+	background-color: var(--background);
+	border-color: var(--border);
+	color: var(--foreground);
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+	border-color: var(--primary);
+	outline: 2px solid var(--primary);
+	outline-offset: 2px;
+}
+select {
+	appearance: none;
+	cursor: pointer;
+	font-family: 'Barlow', sans-serif;
+	font-size: 14px;
+	font-weight: 600;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background-color: var(--card);
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EFEBD9' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+	background-position: right 10px center;
+	background-repeat: no-repeat;
+	background-size: 16px;
+	padding: 10px 36px 10px 12px;
+	transition: border-color 120ms;
+}
+select:hover:not(:disabled) {
+	border-color: var(--primary);
+}
+select:not([multiple]) {
+	padding-right: 36px;
+	font-weight: 600;
+}
+option {
+	background-color: var(--card);
+	color: var(--foreground);
+}
+.forge-panel::before,
+.forge-panel-flat::before {
+	display: none;
+}
+
+/* Touch targets include native controls used by the player workspaces. */
+button,
+[role='button'],
+[role='tab'],
+select,
+summary {
+	min-height: 44px;
+	min-width: 44px;
+}
+
+/* Album layout: every card search shares stable, compact slots. */
+.app-frame {
+	min-height: 100dvh;
+}
+.arcade-page {
+	width: 100%;
+	max-width: none;
+	margin-inline: auto;
+	padding: 20px 12px calc(88px + env(safe-area-inset-bottom));
+}
+.arcade-card-grid,
+.wikiforge-card-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(8.5rem, 100%), 1fr));
+	gap: 20px 12px;
+	align-items: start;
+	justify-items: center;
+}
+.arcade-card-grid > *,
+.wikiforge-card-grid > * {
+	width: 100%;
+	min-width: 0;
+	max-width: 160px;
+}
+html {
+	scroll-padding-top: 80px;
+}
+@media (min-width: 768px) {
+	.arcade-page {
+		padding: 24px 24px 96px;
+	}
+	.arcade-card-grid,
+	.wikiforge-card-grid {
+		grid-template-columns: repeat(auto-fill, minmax(min(8.5rem, 100%), 1fr));
+	}
+}
+@media (min-width: 1024px) {
+	.arcade-page {
+		padding: 28px 24px 48px;
+	}
+	.arcade-card-grid,
+	.wikiforge-card-grid {
+		grid-template-columns: repeat(auto-fill, minmax(min(8.5rem, 100%), 1fr));
+	}
+}
+@media (min-width: 1440px) {
+	.arcade-card-grid,
+	.wikiforge-card-grid {
+		grid-template-columns: repeat(auto-fill, minmax(min(8.5rem, 100%), 1fr));
+	}
+}
+@media (max-width: 340px) {
+	.arcade-card-grid,
+	.wikiforge-card-grid {
+		grid-template-columns: repeat(auto-fit, minmax(min(136px, 100%), 1fr));
+	}
+}
+[data-testid='card-detail-modal'] {
+	animation: panel-enter 180ms ease-out;
+}
+[data-slot='dialog-content'],
+[data-slot='dropdown-menu-content'] {
+	animation: panel-enter 180ms ease-out;
+}
+@keyframes panel-enter {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.album-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	border-bottom: 1px solid var(--border);
+}
+.album-heading .arcade-page-heading {
+	border: 0;
+	padding-bottom: 12px;
+}
+.album-heading > details {
+	max-width: 45%;
+	position: relative;
+	border: 0;
+}
+.album-heading > details[open] {
+	position: static;
+	max-width: none;
+}
+.album-heading > details summary {
+	font-size: 12px;
+}
+[hidden] {
+	display: none !important;
+}
+body:has([data-testid='booster-open-one']) .arcade-page {
+	padding-bottom: 170px;
+}
+@media (min-width: 1024px) {
+	body:has([data-testid='booster-open-one']) .arcade-page {
+		padding-bottom: 48px;
+	}
 }

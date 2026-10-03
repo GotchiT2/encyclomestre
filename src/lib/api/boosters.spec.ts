@@ -27,6 +27,28 @@ describe('booster API', () => {
 		resetPackDetailsCache();
 	});
 
+	it('preserves family credits after the exhausted pack leaves its slot', () => {
+		const [pack] = mergePackCatalogue(
+			[
+				{
+					id: 1,
+					slotId: 1,
+					position: 1,
+					family: 'NORMAL',
+					name: 'daily',
+					description: '',
+					status: 'EXHAUSTED',
+					nbCards: 5,
+					openAll: true,
+					drawGroups: []
+				}
+			],
+			[],
+			[{ family: 'NORMAL', available: 8, bonus: 1, max: 10 }]
+		);
+		expect(pack.credit).toMatchObject({ available: 9, regularAvailable: 8, bonus: 1, max: 10 });
+	});
+
 	const nebula = {
 		id: 3,
 		slotId: 3,

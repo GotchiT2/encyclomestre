@@ -23,6 +23,12 @@ describe('card mapping', () => {
 		});
 	});
 
+	it('ignores missing and invalid dates without breaking card details', () => {
+		const card = toCardRecord({ ...dto, acquiredDate: 'invalid-date' }, [variant]);
+		expect(card.acquiredAt).toBeUndefined();
+		expect(card.createdAt).toBeUndefined();
+	});
+
 	it('formats all three serial states', () => {
 		expect(cardNumberLabel({ serialNumber: 7, maxCopies: 99 })).toBe('7/99');
 		expect(cardNumberLabel({ serialNumber: 12 })).toBe('#12');

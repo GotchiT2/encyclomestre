@@ -57,7 +57,7 @@
 <div class="mt-4 space-y-2 border-t border-border pt-4">
 	<Button
 		type="button"
-		variant="outline"
+		variant="default"
 		class="w-full whitespace-normal"
 		disabled={busy || !available}
 		onclick={connect}>{$_('passkeys.login')}</Button

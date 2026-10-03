@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { activeAuctionCardIds } from '$lib/auctions/store';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import { _ } from '$lib/i18n';
 	import { cn } from '$lib/utils';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import ShieldIcon from '@lucide/svelte/icons/shield';
 	import TagIcon from '@lucide/svelte/icons/tag';
 	import type { CardRecord, CollectionTag, CollectionTagAssignments } from '$lib/types';
@@ -36,45 +38,54 @@
 	}
 </script>
 
-<div class="wikiforge-card-grid">
+<div class="arcade-card-grid">
 	{#each cards as card (card.id)}<div class="wikiforge-card-size group relative isolate">
 			<CardTile
+				owned
 				interactive={!isSelectionMode}
 				{card}
 				tags={cardTags(card.id)}
 				showFriendOwners
 				onOpen={isSelectionMode ? undefined : onOpenCard}
 			/>{#if quickActions && !isSelectionMode}
-				<!-- Au-dessus de la zone cliquable de la tuile (z-30), sous la sélection multiple (z-50).
-				     Visible au survol, au focus clavier, et en permanence sur pointeur grossier. -->
-				<div
-					class="pointer-events-none absolute inset-x-1 bottom-1 z-40 flex flex-col gap-1 opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 [@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100"
-					data-testid="card-quick-actions"
+				<DropdownMenu.Root
+					><DropdownMenu.Trigger
+						class="mt-1 flex min-h-11 w-full items-center justify-center gap-2 border border-border bg-card text-sm"
+						data-testid="card-quick-actions">{$_('arcade.cardActions')} ···</DropdownMenu.Trigger
+					><DropdownMenu.Content align="start" class="min-w-52">
+						<DropdownMenu.Item
+							class="min-h-11"
+							disabled={!onProtect ||
+								Boolean(
+									card.pendingTradeId ||
+									card.saleId ||
+									card.activeAuctionId ||
+									$activeAuctionCardIds.has(card.id)
+								)}
+							onSelect={() => onProtect?.(card)}
+							><ShieldIcon />{$_(
+								card.userProtected ? 'collection.unprotect' : 'collection.quick_protect'
+							)}</DropdownMenu.Item
+						>
+						<DropdownMenu.Item
+							class="min-h-11"
+							disabled={!onSell ||
+								Boolean(
+									card.userProtected ||
+									card.saleId ||
+									card.activeAuctionId ||
+									$activeAuctionCardIds.has(card.id)
+								)}
+							onSelect={() => onSell?.(card)}
+							><TagIcon />{$_('collection.quick_sell')}</DropdownMenu.Item
+						>
+					</DropdownMenu.Content></DropdownMenu.Root
 				>
-					<button
-						type="button"
-						class="flex w-full min-w-0 items-center justify-center gap-1 border border-primary/60 bg-background/90 px-1 py-1.5 text-[9px] font-bold tracking-wider text-primary uppercase backdrop-blur-sm transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-						aria-label={$_('collection.quick_protect_card', { values: { title: card.title } })}
-						onclick={() => onProtect?.(card)}
-					>
-						<ShieldIcon class="size-3 shrink-0" />
-						<span class="truncate">{$_('collection.quick_protect')}</span>
-					</button>
-					<button
-						type="button"
-						class="flex w-full min-w-0 items-center justify-center gap-1 border border-primary/60 bg-background/90 px-1 py-1.5 text-[9px] font-bold tracking-wider text-primary uppercase backdrop-blur-sm transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-						aria-label={$_('collection.quick_sell_card', { values: { title: card.title } })}
-						onclick={() => onSell?.(card)}
-					>
-						<TagIcon class="size-3 shrink-0" />
-						<span class="truncate">{$_('collection.quick_sell')}</span>
-					</button>
-				</div>
 			{/if}{#if isSelectionMode}<button
 					type="button"
 					class={cn(
 						'absolute inset-0 z-50 h-full w-full cursor-pointer border-2 border-primary/60 bg-transparent p-0 transition-colors hover:bg-primary/15 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[-3px]',
-						selectedCardIds.includes(card.id) && 'bg-primary/30 hover:bg-primary/35'
+						selectedCardIds.includes(card.id) && 'bg-primary/10 hover:bg-primary/15'
 					)}
 					data-testid="card-selection-overlay"
 					aria-pressed={selectedCardIds.includes(card.id)}

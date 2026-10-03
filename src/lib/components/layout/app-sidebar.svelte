@@ -5,8 +5,15 @@
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import UserPresence from '$lib/components/users/user-presence.svelte';
 	import { _ } from '$lib/i18n';
-	import { communityNavigation, exploreNavigation, isActiveRoute, type NavItem } from './nav-items';
-	import GalleryVerticalEndIcon from '@lucide/svelte/icons/gallery-vertical-end';
+	import {
+		communityNavigation,
+		exploreNavigation,
+		transactionNavigation,
+		progressionNavigation,
+		isActiveRoute,
+		type NavItem
+	} from './nav-items';
+	import Brand from '$lib/brand/brand.svelte';
 	import LogInIcon from '@lucide/svelte/icons/log-in';
 	import PackageOpenIcon from '@lucide/svelte/icons/package-open';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
@@ -25,13 +32,14 @@
 
 {#snippet navGroup(label: string, items: NavItem[])}
 	<Sidebar.Group>
-		<Sidebar.GroupLabel class="forge-label">{$_(label)}</Sidebar.GroupLabel>
+		<Sidebar.GroupLabel class="forge-label text-muted-foreground">{$_(label)}</Sidebar.GroupLabel>
 		<Sidebar.GroupContent>
 			<Sidebar.Menu>
 				{#each items as item (item.href)}
 					<Sidebar.MenuItem>
 						<Sidebar.MenuButton
 							isActive={isActiveRoute(page.url.pathname, item.href)}
+							class="min-h-11 text-sm"
 							tooltipContent={$_(item.label)}
 						>
 							{#snippet child({ props })}
@@ -59,26 +67,14 @@
 			class="flex items-center gap-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-3"
 		>
 			<a
-				href={resolve('/')}
+				href={resolve('/welcome')}
 				onclick={closeOnMobile}
 				class="flex min-w-0 items-center gap-3"
 				aria-label={$_('navigation.home')}
 			>
-				<span
-					class="relative grid size-8 shrink-0 place-items-center border border-primary/45 bg-card text-primary"
-				>
-					<span class="absolute inset-1 border border-[rgb(124_228_222_/_18%)]"></span>
-					<GalleryVerticalEndIcon class="relative size-4" />
-				</span>
+				<span class="grid size-8 shrink-0 place-items-center"><Brand kind="symbol" /></span>
 				<span class="min-w-0 group-data-[collapsible=icon]:hidden">
-					<span class="forge-wordmark block truncate text-lg leading-none"
-						>{$_('navigation.brand')}</span
-					>
-					<span
-						class="mt-1 block truncate text-[8px] font-bold tracking-[0.25em] text-[var(--energy-soft)] uppercase"
-					>
-						{$_('navigation.forgeNetwork')}
-					</span>
+					<Brand kind="wordmark" class="text-2xl" />
 				</span>
 			</a>
 			<Sidebar.Trigger
@@ -91,14 +87,16 @@
 
 	<Sidebar.Content>
 		{@render navGroup('navigation.sectionExplore', exploreNavigation)}
+		{@render navGroup('plan.navigation.transactions', transactionNavigation)}
 		{@render navGroup('navigation.sectionCommunity', communityNavigation)}
+		{@render navGroup('plan.navigation.progression', progressionNavigation)}
 	</Sidebar.Content>
 
 	<Sidebar.Footer class="gap-2 border-t border-primary/20 p-2">
 		<Sidebar.Menu>
 			<Sidebar.MenuItem>
 				<Sidebar.MenuButton
-					class="forge-sidebar-cta"
+					class="forge-sidebar-cta min-h-11"
 					isActive={isActiveRoute(page.url.pathname, '/boosters')}
 					tooltipContent={$_('navigation.openBooster')}
 				>

@@ -1,6 +1,16 @@
 <script lang="ts">
+	import { activeAuctionCardIds } from '$lib/auctions/store';
+	import { protectWikiForgeCard, unprotectWikiForgeCard } from '$lib/api/collection';
+	import { publishRealtimeRefresh } from '$lib/realtime/resource-refresh';
+	import { operationError } from '$lib/domain/operation-error';
 	import { untrack } from 'svelte';
 	import CardVariantPreviews from './card-variant-previews.svelte';
+	import {
+		getWikiForgePublicPage,
+		toPublicPageCardRecord,
+		type WikiForgePublicPageCard
+	} from '$lib/api/pages';
+	import type { CardDetailContext } from '$lib/arcade/card-presentation';
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardActions from './card-actions.svelte';
 	import CardTagControls from './card-tag-controls.svelte';
@@ -14,11 +24,12 @@
 		createTradeOffer,
 		getFriendCollectionPage,
 		getWikiForgeCollectionCard,
+		getWikiForgeTags,
 		getWikiForgeCollectionPage
 	} from '$lib/api';
 	import { currentSession } from '$lib/auth/session';
 	import { toast } from 'svelte-sonner';
-	import AuctionCreatePanel from '$lib/components/market/auction-create-panel.svelte';
+	import CardCession from '$lib/components/collection/card-cession.svelte';
 	import ReportDialog from '$lib/components/reports/report-dialog.svelte';
 	import XIcon from '@lucide/svelte/icons/x';
 	import LockIcon from '@lucide/svelte/icons/lock';
@@ -38,6 +49,7 @@
 	let {
 		card,
 		owned = false,
+		context,
 		modalLayer = 100,
 		wishlists = [],
 		tags = $bindable<CollectionTag[]>([]),
@@ -48,6 +60,7 @@
 	}: {
 		card: CardRecord;
 		owned?: boolean;
+		context?: CardDetailContext;
 		modalLayer?: number;
 		wishlists?: WishlistRegistrySummary[];
 		tags?: CollectionTag[];
@@ -57,9 +70,90 @@
 		onClose: () => void;
 	} = $props();
 
+	const detailContext = $derived(
+		context ?? (owned ? 'owned' : card.serialNumber != null ? 'other' : 'article')
+	);
+	const articleId = $derived(
+		card.baseCardId ?? card.catalogueId ?? (detailContext === 'article' ? card.id : undefined)
+	);
+	let article = $state<WikiForgePublicPageCard>(),
+		articleFailed = $state(false),
+		articleGeneration = 0;
+	async function loadArticle() {
+		const id = articleId,
+			request = ++articleGeneration,
+			account = $currentSession?.user.id;
+		article = undefined;
+		articleFailed = false;
+		if (!id) return;
+		try {
+			const value = await getWikiForgePublicPage(id);
+			if (request !== articleGeneration || account !== $currentSession?.user.id) return;
+			article = value;
+			const detail = toPublicPageCardRecord(value);
+			card = {
+				...card,
+				longDescription: detail.longDescription,
+				shortDescription: detail.shortDescription,
+				imageUrl: detail.imageUrl,
+				nsfw: detail.nsfw,
+				wikipediaUrl: detail.wikipediaUrl,
+				imageAttribution: detail.imageAttribution ?? card.imageAttribution
+			};
+		} catch {
+			if (request === articleGeneration) articleFailed = true;
+		}
+	}
+	$effect(() => {
+		void articleId;
+		untrack(() => void loadArticle());
+		return () => {
+			articleGeneration++;
+		};
+	});
+
 	const origin = untrack(() =>
 		document.activeElement instanceof HTMLElement ? document.activeElement : null
 	);
+	const thumbnail = untrack(
+		() =>
+			origin?.closest('[data-testid=card-tile]')?.querySelector<HTMLElement>('.card-object') ?? null
+	);
+	const thumbnailBounds = untrack(() => thumbnail?.getBoundingClientRect());
+	let previewElement = $state<HTMLElement>(),
+		animated = false;
+	$effect(() => {
+		const element = previewElement;
+		if (!element || animated) return;
+		animated = true;
+		if (
+			!thumbnailBounds ||
+			window.matchMedia('(prefers-reduced-motion:reduce)').matches ||
+			document.documentElement.dataset.motion === 'reduce'
+		)
+			return;
+		const target = element.getBoundingClientRect(),
+			scale = thumbnailBounds.width / Math.max(1, target.width);
+		element.animate(
+			[
+				{
+					transform:
+						'translate(' +
+						(thumbnailBounds.x - target.x) +
+						'px,' +
+						(thumbnailBounds.y - target.y) +
+						'px) scale(' +
+						scale +
+						')',
+					transformOrigin: 'top left',
+					opacity: 0.7
+				},
+				{ transform: 'none', transformOrigin: 'top left', opacity: 1 }
+			],
+			{ duration: 220, easing: 'cubic-bezier(.2,.7,.2,1)' }
+		);
+	});
+
 	const detailLayer = createModalLayer(untrack(() => modalLayer));
 	let activeTab = $state<'data' | 'social'>('data');
 	let tradeEditorOpen = $state(false);
@@ -69,6 +163,24 @@
 	let sharedWishlistsLoading = $state(false);
 	let sharedWishlistsCardId = $state<string | null>(null);
 	let landscapePreview = $state(false);
+	let protecting = $state(false);
+	async function protect() {
+		if (protecting) return;
+		protecting = true;
+		try {
+			if (onToggleProtection) await onToggleProtection();
+			else {
+				if (card.userProtected) await unprotectWikiForgeCard(card.id);
+				else await protectWikiForgeCard(card.id);
+				card = { ...card, userProtected: !card.userProtected };
+			}
+			publishRealtimeRefresh(['collection']);
+		} catch (cause) {
+			toast.error(operationError(cause));
+		} finally {
+			protecting = false;
+		}
+	}
 
 	$effect(() => {
 		if (!owned) return;
@@ -76,10 +188,17 @@
 		if (sharedWishlistsCardId === cardId) return;
 		sharedWishlistsCardId = cardId;
 		sharedWishlistsLoading = true;
+		if (!untrack(() => tags.length))
+			void getWikiForgeTags()
+				.then((result) => {
+					if (card.id === cardId) tags = result;
+				})
+				.catch((cause) => toast.error(operationError(cause)));
 		void getWikiForgeCollectionCard(cardId)
 			.then((detail) => {
 				if (card.id !== cardId) return;
 				card = { ...card, sharedWishlistMemberships: detail.sharedWishlistMemberships };
+				assignments = { ...assignments, [cardId]: detail.collectionTagIds ?? [] };
 			})
 			.catch(() => undefined)
 			.finally(() => {
@@ -95,6 +214,7 @@
 		return {
 			items: result.items,
 			meta: {
+				hasNext: result.hasNext,
 				page,
 				pageSize,
 				total: result.total < 0 ? result.items.length : result.total,
@@ -113,7 +233,7 @@
 				query: query.query,
 				sortBy: query.sortBy === 'name' ? 'name' : 'acquiredDate',
 				variantIds: query.variantIds,
-				page: query.cursor ? undefined : query.page,
+				page: query.cursor ? undefined : Math.max(0, (query.page ?? 1) - 1),
 				cursor: query.cursor
 			})
 		);
@@ -126,7 +246,7 @@
 			query: query.query,
 			sortBy: query.sortBy === 'name' ? 'name' : 'acquiredDate',
 			variantIds: query.variantIds,
-			page: query.cursor ? undefined : query.page,
+			page: query.cursor ? undefined : Math.max(0, (query.page ?? 1) - 1),
 			cursor: query.cursor
 		});
 		return asTradePage(result);
@@ -187,6 +307,18 @@
 			onCloseAutoFocus={(event) => {
 				event.preventDefault();
 				origin?.focus({ preventScroll: true });
+				if (
+					thumbnail &&
+					!window.matchMedia('(prefers-reduced-motion:reduce)').matches &&
+					document.documentElement.dataset.motion !== 'reduce'
+				)
+					thumbnail.animate(
+						[
+							{ transform: 'scale(1.06)', opacity: 0.7 },
+							{ transform: 'none', opacity: 1 }
+						],
+						{ duration: 180 }
+					);
 			}}
 			class="fixed inset-2 h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-none overflow-hidden border border-primary/35 bg-card p-0 text-foreground shadow-2xl outline-none sm:top-1/2 sm:right-auto sm:bottom-auto sm:left-1/2 sm:h-auto sm:max-h-[calc(100dvh-2.5rem)] sm:w-[calc(100%-2.5rem)] sm:max-w-screen-xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:p-4"
 			style={`z-index:${detailLayer + 1}`}
@@ -210,14 +342,16 @@
 					class="card-detail-layout relative grid min-h-0 flex-1 gap-3 overflow-y-auto overscroll-contain px-3 py-3 sm:gap-5 sm:p-0 lg:grid-cols-[minmax(18rem,0.48fr)_minmax(0,1fr)] xl:grid-cols-[minmax(21rem,0.52fr)_minmax(0,1fr)]"
 					class:landscape-preview={landscapePreview}
 				>
-					<div class="card-detail-preview mx-auto w-fit lg:sticky lg:top-0 lg:self-start">
+					<div
+						class="card-detail-preview mx-auto w-fit lg:sticky lg:top-0 lg:self-start"
+						bind:this={previewElement}
+					>
 						<CardTile
+							inspection
 							interactive={false}
 							{card}
-							stateIndicatorsOffset={10}
 							tags={tags.filter((tag) => (assignments[card.id] ?? []).includes(tag.id))}
 							showFriendOwners
-							tagDisplay="full"
 							onOrientationChange={(landscape) => (landscapePreview = landscape)}
 						/>
 					</div>
@@ -263,8 +397,20 @@
 						<div class="forge-panel-flat p-3" data-testid="card-detail-tab-panel">
 							{#if activeTab === 'data'}
 								{#if owned}
-									{#if onToggleProtection}
-										<Button variant="outline" class="mb-3" onclick={onToggleProtection}>
+									{#if owned}
+										<Button
+											variant="outline"
+											class="mb-3"
+											disabled={protecting ||
+												Boolean(
+													!card.userProtected &&
+													(card.saleId ||
+														card.activeAuctionId ||
+														card.pendingTradeId ||
+														$activeAuctionCardIds.has(card.id))
+												)}
+											onclick={() => void protect()}
+										>
 											{#if card.userProtected}<LockOpenIcon />{$_('collection.unprotect')}
 											{:else}<LockIcon />{$_('collection.protect')}{/if}
 										</Button>
@@ -277,19 +423,16 @@
 									/>
 								{/if}
 								<div class:mt-3={owned}><CardTelemetry {card} /></div>
-								<CardVariantPreviews
-									{card}
-									onResolved={(detail) => {
-										card = {
-											...card,
-											longDescription: detail.longDescription,
-											shortDescription: detail.shortDescription,
-											imageUrl: detail.imageUrl,
-											nsfw: detail.nsfw,
-											wikipediaUrl: detail.wikipediaUrl
-										};
-									}}
-								/>
+								{#if articleFailed}<Button variant="outline" onclick={() => void loadArticle()}
+										>{$_('completion.retry')}</Button
+									>{/if}
+								{#if detailContext === 'article' && !articleFailed}<CardVariantPreviews
+										{card}
+										record={article}
+										onSelect={(variant) => {
+											card = { ...card, variant, variantId: variant.id };
+										}}
+									/>{/if}
 								{#if card.imageAttribution}
 									<p class="mt-3 text-xs text-muted-foreground">
 										<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
@@ -303,7 +446,7 @@
 								{#if card.wikipediaUrl}<Button href={card.wikipediaUrl} target="_blank" class="mt-3"
 										>{$_('codex.wikipedia')}</Button
 									>{/if}
-								{#if owned}<div class="mt-4"><AuctionCreatePanel {card} /></div>{/if}
+								{#if owned}<div class="mt-4"><CardCession {card} /></div>{/if}
 								{#if card.baseCardId}<div class="mt-4">
 										<ReportDialog pageId={card.baseCardId} title={card.title} />
 									</div>{/if}
@@ -337,7 +480,7 @@
 					</div>
 				</section>
 				<div
-					class="flex min-h-11 shrink-0 border-t border-b border-primary/25 bg-[rgb(8_15_25_/_98%)] sm:hidden"
+					class="flex min-h-11 shrink-0 border-t border-b border-primary/25 bg-card sm:hidden"
 					role="tablist"
 					aria-label={$_('cardDetail.tabs')}
 					data-testid="card-detail-mobile-tabs"
@@ -353,7 +496,7 @@
 					{/each}
 				</div>
 				<div
-					class="min-h-[4.25rem] shrink-0 border-t border-primary/25 bg-[rgb(8_15_25_/_96%)] p-3 sm:hidden"
+					class="min-h-[4.25rem] shrink-0 border-t border-primary/25 bg-card p-3 sm:hidden"
 					data-testid="card-detail-mobile-actions"
 				>
 					<CardActions
@@ -384,7 +527,7 @@
 
 <style>
 	.card-detail-preview :global(.wikiforge-card-size) {
-		width: 12rem;
+		width: min(72vw, 19rem);
 	}
 	.landscape-preview .card-detail-preview :global(.wikiforge-card-size) {
 		width: min(100%, 28rem);
@@ -392,7 +535,7 @@
 
 	@media (min-width: 640px) {
 		.card-detail-preview :global(.wikiforge-card-size) {
-			width: 15rem;
+			width: 19rem;
 		}
 		.landscape-preview .card-detail-preview :global(.wikiforge-card-size) {
 			width: min(28rem, calc(100vw - 5rem));

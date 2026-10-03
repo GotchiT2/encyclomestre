@@ -1,15 +1,18 @@
 <script lang="ts">
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import { tick } from 'svelte';
+	import { Popover } from 'bits-ui';
 	import { _ } from '$lib/i18n';
+	import { Button } from '$lib/components/ui/button';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
-	import PlusIcon from '@lucide/svelte/icons/plus';
+	import TagChoices from './tag-choices.svelte';
+	import { createModalLayer, modalZIndex } from '$lib/components/ui/dialog/modal-layer';
 	import type { CollectionTag } from '$lib/types';
-
 	let {
 		values = $bindable<string[]>([]),
 		tags,
 		untaggedValue,
 		allowCreation = true,
+		inline = false,
 		onChange,
 		onCreate
 	}: {
@@ -17,91 +20,74 @@
 		tags: CollectionTag[];
 		untaggedValue?: string;
 		allowCreation?: boolean;
+		inline?: boolean;
 		onChange?: () => void;
 		onCreate?: () => void;
 	} = $props();
-
+	let search = $state('');
+	let open = $state(false);
+	const layer = createModalLayer();
 	const options = $derived([
 		...(untaggedValue
 			? [{ id: untaggedValue, name: $_('collection.untagged'), color: '#9cb0bc' }]
 			: []),
 		...tags
 	]);
-
+	const label = $derived(
+		values.length
+			? (options.find((tag) => tag.id === values[0])?.name ?? $_('collection.tags')) +
+					(values.length > 1 ? ' +' + (values.length - 1) : '')
+			: $_('collection.tags')
+	);
 	function toggle(id: string) {
-		values = values.includes(id) ? values.filter((value) => value !== id) : [...values, id];
+		values = values.includes(id)
+			? values.filter((value) => value !== id)
+			: id === untaggedValue
+				? [id]
+				: [...values.filter((value) => value !== untaggedValue), id];
 		onChange?.();
 	}
-
-	function selectionChanged() {
-		if (untaggedValue && values.includes(untaggedValue) && values.length > 1) {
-			const previousHadUntagged = values.length > 1 && values.slice(0, -1).includes(untaggedValue);
-			values = previousHadUntagged
-				? values.filter((value) => value !== untaggedValue)
-				: [untaggedValue];
-		}
-		onChange?.();
+	async function manage() {
+		open = false;
+		await tick();
+		onCreate?.();
 	}
 </script>
 
+{#snippet choices()}
+	<TagChoices tags={options} selected={values} bind:search onSelect={toggle} />
+	{#if values.length}<Button
+			variant="ghost"
+			onclick={() => {
+				values = [];
+				onChange?.();
+			}}>{$_('controls.clearTags')}</Button
+		>{/if}
+	{#if allowCreation && onCreate}<Button variant="outline" onclick={manage}
+			>{$_('collection.editTags')}</Button
+		>{/if}
+{/snippet}
 <div data-testid="tag-filter-selector">
-	<DropdownMenu.Root>
-		<DropdownMenu.Trigger
-			class="forge-control flex cursor-pointer items-center justify-between gap-3"
-		>
-			<span class="truncate">
-				{values.length
-					? $_('collection.selectedTagCount', { values: { count: values.length } })
-					: $_('collection.allTags')}
-			</span>
-			<ChevronDownIcon class="shrink-0 text-primary" />
-		</DropdownMenu.Trigger>
-		<DropdownMenu.Content
-			preventScroll={false}
-			align="start"
-			sideOffset={8}
-			class="max-h-72 border border-primary/35 bg-popover p-2 shadow-2xl"
-		>
-			<DropdownMenu.CheckboxGroup bind:value={values} onValueChange={selectionChanged}>
-				{#each options as option (option.id)}
-					<DropdownMenu.CheckboxItem
-						value={option.id}
-						checked={values.includes(option.id)}
-						closeOnSelect={false}
-						class="min-h-11"
-					>
-						<span
-							class="size-3 shrink-0 border"
-							style={`border-color:${option.color};background:${values.includes(option.id) ? option.color : 'transparent'}`}
-						></span>
-						<span class="truncate">{option.name}</span>
-					</DropdownMenu.CheckboxItem>
-				{/each}
-			</DropdownMenu.CheckboxGroup>
-			{#if allowCreation}
-				<DropdownMenu.Separator />
-				<DropdownMenu.Group>
-					<DropdownMenu.Item onSelect={() => onCreate?.()}>
-						<PlusIcon data-icon="inline-start" />
-						{$_('collection.addTagOption')}
-					</DropdownMenu.Item>
-				</DropdownMenu.Group>
-			{/if}
-		</DropdownMenu.Content>
-	</DropdownMenu.Root>
-	{#if values.length}
-		<div class="mt-2 flex flex-wrap gap-1.5">
-			{#each values as value (value)}
-				{@const tag = options.find((option) => option.id === value)}
-				{#if tag}<button
-						type="button"
-						class="flex min-h-8 items-center gap-2 border border-primary/25 bg-background/65 px-2 text-[10px] font-bold tracking-wide uppercase"
-						onclick={() => toggle(value)}
-						><span class="size-2.5" style={`background:${tag.color}`}></span>{tag.name}<span
-							aria-hidden="true">×</span
-						></button
-					>{/if}
-			{/each}
-		</div>
-	{/if}
+	{#if inline}{@render choices()}{:else}<Popover.Root bind:open>
+			<Popover.Trigger
+				>{#snippet child({ props })}<Button
+						{...props}
+						variant={values.length ? 'default' : 'outline'}
+						class="max-w-full justify-between gap-3"
+						aria-label={$_('collection.tags') + ': ' + label}
+						><span class="truncate">{label}</span><ChevronDownIcon
+							class="size-4 shrink-0"
+						/></Button
+					>{/snippet}</Popover.Trigger
+			>
+			<Popover.Portal
+				><Popover.Content
+					align="start"
+					sideOffset={4}
+					style={modalZIndex(layer + 2)}
+					class="grid w-72 max-w-[calc(100vw-2rem)] gap-2 border border-border bg-card p-3 shadow-xl"
+					>{@render choices()}</Popover.Content
+				></Popover.Portal
+			>
+		</Popover.Root>{/if}
 </div>

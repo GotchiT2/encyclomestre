@@ -8,13 +8,13 @@ import { ApiError } from './client';
 import { deleteAccount, checkDeletion, getDeletionPreview } from './account-deletion';
 describe('account closure contract', () => {
 	beforeEach(() => request.mockReset());
-	it('sends only the password and frozen bearer, without refresh or replay', async () => {
-		await deleteAccount('secret', 'original-token');
+	it('sends only the reauthentication and frozen bearer, without refresh or replay', async () => {
+		await deleteAccount({ recoveryCode: 'secret' }, 'original-token');
 		expect(request).toHaveBeenCalledExactlyOnceWith('/me', {
 			skipAuth: true,
 			headers: { authorization: 'Bearer original-token' },
 			method: 'DELETE',
-			body: { password: 'secret' }
+			body: { recoveryCode: 'secret' }
 		});
 	});
 	it('diagnoses uncertain writes with the same token, without another delete', async () => {

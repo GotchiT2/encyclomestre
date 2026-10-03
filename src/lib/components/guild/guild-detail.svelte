@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { getMyGuild } from '$lib/api/wikiforge';
+	import type { GuildSummary } from '$lib/types';
+	import { operationError } from '$lib/domain/operation-error';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -15,7 +19,21 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { _ } from '$lib/i18n';
 	let { guild, onChanged }: { guild: Guild; onChanged: () => Promise<void> } = $props();
-	const tab = $derived(page.url.searchParams.get('tab') ?? 'overview');
+	let membership = $state<GuildSummary | null>(null);
+	let membershipReady = $state(false);
+	let membershipError = $state('');
+	onMount(() => {
+		void getMyGuild()
+			.then((value) => {
+				membership = value;
+				membershipReady = true;
+			})
+			.catch((cause) => (membershipError = operationError(cause)));
+	});
+	const full = $derived(
+		guild.maxMembers != null && guild.nbMembers != null && guild.nbMembers >= guild.maxMembers
+	);
+	const tab = $derived(page.url.searchParams.get('tab') ?? (guild.member ? 'chat' : 'overview'));
 	const tabs = $derived(
 		guild.member
 			? [
@@ -40,17 +58,17 @@
 </script>
 
 <section class="flex min-w-0 flex-col gap-6">
-	<header class="forge-panel flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-		{#if guild.image}<img src={guild.image} alt="" class="size-24 object-cover" />{/if}
+	<header class="flex flex-wrap items-center gap-4 border-b border-border pb-4">
+		{#if guild.image}<img src={guild.image} alt="" class="size-14 object-cover" />{/if}
 		<div class="flex min-w-0 flex-1 flex-col gap-3">
-			<h1 class="break-words font-title text-3xl">{guild.name}</h1>
+			<h1 class="break-words font-title text-4xl uppercase">{guild.name}</h1>
 			<div class="flex flex-wrap gap-2">
-				<Badge variant="outline">{$_('completion.guild.' + guild.joinPolicy)}</Badge><Badge
-					variant="outline"
-					>{$_('completion.guild.capacity', {
-						values: { count: guild.nbMembers ?? 0, max: guild.maxMembers ?? 0 }
-					})}</Badge
-				>
+				<Badge variant="outline">{$_('completion.guild.' + guild.joinPolicy)}</Badge
+				>{#if guild.nbMembers != null && guild.maxMembers != null}<Badge variant="outline"
+						>{$_('completion.guild.capacity', {
+							values: { count: guild.nbMembers, max: guild.maxMembers }
+						})}</Badge
+					>{/if}
 			</div>
 			{#if guild.owner}<a
 					class="underline"
@@ -64,7 +82,7 @@
 				userId={guild.owner?.id}
 			/>{/if}
 	</header>
-	<nav class="flex flex-wrap gap-2" aria-label={$_('completion.guild.title')}>
+	<nav class="flex gap-2 overflow-x-auto pb-1" aria-label={$_('completion.guild.title')}>
 		{#each tabs as value (value)}<Button
 				variant={tab === value ? 'default' : 'outline'}
 				href={resolve('/guilds/[id]', { id: String(guild.id) }) + '?tab=' + value}
@@ -74,14 +92,22 @@
 	{#if tab === 'members'}<GuildMembers
 			{guild}
 			{onChanged}
-		/>{:else if tab === 'chat' && guild.member}<GuildChat
-			guildId={guild.id}
-		/>{:else if tab === 'wishlists' && guild.member}<GuildWishlists
+		/>{:else if tab === 'chat' && guild.member}<div class="guild-conversation">
+			<GuildChat guildId={guild.id} />
+			<aside class="guild-member-rail"><GuildMembers {guild} {onChanged} /></aside>
+		</div>{:else if tab === 'wishlists' && guild.member}<GuildWishlists
 			guildId={guild.id}
 		/>{:else if tab === 'manage' && guild.member}<GuildManagement {guild} {onChanged} />{:else}<div
 			class="forge-panel flex flex-wrap gap-3 p-5"
 		>
-			{#if !guild.member && guild.joinPolicy === 'PUBLIC'}<ConfirmAction
+			{#if !guild.member && membershipError}<p role="alert">
+					{membershipError}
+				</p>{/if}{#if !guild.member && membership}<p>
+					{$_('plan.guild.alreadyMember', { values: { name: membership.name } })}
+				</p>{/if}{#if !guild.member && full}<p>
+					{$_('plan.guild.full')}
+				</p>{/if}{#if !guild.member && guild.joinPolicy === 'PUBLIC'}<ConfirmAction
+					disabled={!membershipReady || Boolean(membership) || full}
 					label={$_('completion.guild.join')}
 					description={guild.name}
 					onConfirm={() => mutate(() => joinGuild(guild.id))}
@@ -100,3 +126,25 @@
 				</p>{/if}
 		</div>{/if}
 </section>
+
+<style>
+	.guild-conversation {
+		display: grid;
+		gap: 24px;
+		min-width: 0;
+	}
+	.guild-member-rail {
+		display: none;
+		min-width: 0;
+		border-left: 1px solid var(--border);
+		padding-left: 20px;
+	}
+	@media (min-width: 1024px) {
+		.guild-conversation {
+			grid-template-columns: minmax(0, 1fr) 260px;
+		}
+		.guild-member-rail {
+			display: block;
+		}
+	}
+</style>

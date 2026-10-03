@@ -1,4 +1,9 @@
 export type UserRole = 'user' | 'moderator' | 'admin';
+export interface ImageCrop {
+	x: number;
+	y: number;
+	zoom: number;
+}
 export type ProfileVisibility = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
 export type LastConnection = 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'AWAY';
 export type MutedNotificationCategory =
@@ -19,6 +24,8 @@ export interface User {
 	email?: string;
 	avatarUrl?: string | null;
 	imagePageId?: number | null;
+	imageCrop?: ImageCrop;
+	recoveryCodes?: number;
 	nsfwEnabled?: boolean;
 	safeWords?: string[];
 	mutedNotifications?: MutedNotificationCategory[];

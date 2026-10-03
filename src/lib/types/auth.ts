@@ -14,6 +14,7 @@ export interface AuthSession {
 }
 
 export interface OAuth2TokenResponse {
+	recovery_codes?: string[];
 	access_token: string;
 	refresh_token?: string;
 	token_type: string;

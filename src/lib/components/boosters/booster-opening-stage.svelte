@@ -1,673 +1,598 @@
 <script lang="ts">
-	import { onDestroy, onMount, tick, untrack } from 'svelte';
-	import emblaCarouselSvelte from 'embla-carousel-svelte';
-	import type { EmblaCarouselType } from 'embla-carousel';
-	import BoosterRevealCard from './booster-reveal-card.svelte';
-	import BoosterPackArt from './booster-pack-art.svelte';
-	import ForgePanel from '$lib/components/layout/forge-panel.svelte';
-	import HudStat from '$lib/components/layout/hud-stat.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Switch } from '$lib/components/ui/switch';
+	import { tick, untrack, type Snippet } from 'svelte';
 	import { _ } from '$lib/i18n';
-	import { cn } from '$lib/utils';
-	import type { CardRecord } from '$lib/types';
-
-	type BoosterPhase = 'idle' | 'opening' | 'dealing' | 'revealing' | 'complete' | 'error';
-	type BoosterSlot = { card: CardRecord; revealed: boolean };
-
+	import { Button } from '$lib/components/ui/button';
+	import * as Dialog from '$lib/components/ui/dialog';
+	import BoosterScene from './booster-scene.svelte';
+	import BoosterRevealCard from './booster-reveal-card.svelte';
+	import { boosterVisual, openingPageSize } from './booster-visuals';
+	import { arcadePreferences, updateArcadePreferences } from '$lib/arcade/preferences';
+	import type { CardRecord, PackFamily } from '$lib/types';
 	let {
+		openedCount,
+		creditKnown = true,
 		available,
-		maximum,
-		nextDelay,
 		opening,
+		requestPhase = 'verify',
 		openingId = 0,
 		packName,
-		packImage,
-		packRenderKey = 'standard',
+		packRenderKey,
+		packFamily,
 		packCardCount = 5,
 		cards,
-		error = false,
+		error = '',
 		suspended = false,
 		onOpen,
 		onOpenAll = () => undefined,
 		canOpenAll = false,
+		canOpen = true,
 		onReset,
-		onOpenCard = () => undefined
+		onOpenCard = () => undefined,
+		resume = null,
+		onProgress = () => undefined,
+		sceneOpen = $bindable(false),
+		verification
 	}: {
+		openedCount?: number;
+		creditKnown?: boolean;
 		available: number;
-		maximum: number;
-		nextDelay?: string;
 		opening: boolean;
+		requestPhase?: 'verify' | 'request';
 		openingId?: number;
 		packName: string;
-		packImage: string;
 		packRenderKey?: string;
+		packFamily?: PackFamily;
 		packCardCount?: number;
 		cards: CardRecord[] | null;
-		error?: boolean;
+		error?: string;
 		suspended?: boolean;
 		onOpen: () => void;
 		onOpenAll?: () => void;
 		canOpenAll?: boolean;
+		canOpen?: boolean;
 		onReset: () => void;
 		onOpenCard?: (card: CardRecord) => void;
+		resume?: { revealedIds: string[]; page: number } | null;
+		onProgress?: (revealedIds: string[], page: number) => void;
+		sceneOpen?: boolean;
+		verification?: Snippet;
 	} = $props();
-
-	const quickPreferenceKey = 'wikiforge.booster.quick-opening';
-	let phase = $state<BoosterPhase>('idle');
-	let slots = $state<BoosterSlot[]>([]);
-	let landscapeSlots = $state<Record<string, boolean>>({});
-	let handledOpeningId = $state(-1);
-	let mobileIndex = $state(0);
-	let quickOpening = $state(false);
-	let preferenceReady = $state(false);
-	let openRequested = $state(false);
-	let suspensionActive = $state(false);
-	let mobileViewport = $state(false);
-	let deckElement = $state<HTMLDivElement>();
-	let carouselApi = $state<EmblaCarouselType>();
-	const mobileSceneActive = $derived(
-		mobileViewport && ['dealing', 'revealing', 'complete'].includes(phase)
-	);
-	const bulkOpening = $derived(slots.length > 12);
-	const boosterCarouselOptions = $derived({
-		active: (mobileViewport || bulkOpening) && phase === 'complete',
-		align: 'center' as const,
-		containScroll: 'trimSnaps' as const,
-		dragFree: true
+	let phase = $state<'idle' | 'ceremony' | 'discovery'>('idle');
+	let revealedIds = $state<string[]>([]),
+		resultPage = $state(0),
+		progress = $state(0),
+		massReveal = $state(false);
+	let handled = -1;
+	let confirmBatch = $state(false),
+		requested = $state(false);
+	let grid = $state<HTMLDivElement>();
+	let inspectionOrigin: HTMLElement | null = null;
+	$effect(() => {
+		if (suspended || !inspectionOrigin) return;
+		const origin = inspectionOrigin;
+		inspectionOrigin = null;
+		void tick().then(() => {
+			if (sceneOpen && origin.isConnected) origin.focus({ preventScroll: true });
+		});
 	});
-	const awaitingMobileSummary = $derived(
-		mobileViewport &&
-			!quickOpening &&
-			phase === 'revealing' &&
-			slots.length > 0 &&
-			slots.every((slot) => slot.revealed)
+	const complete = $derived(
+		Boolean(cards?.length && revealedIds.length === cards.length && phase === 'discovery')
 	);
-	let timers: number[] = [];
-	function schedule(callback: () => void, delay: number) {
-		const timer = window.setTimeout(callback, delay);
-		timers.push(timer);
-	}
-
-	function clearTimers() {
-		for (const timer of timers) window.clearTimeout(timer);
-		timers = [];
-	}
-
-	function setSlotRevealed(index: number) {
-		if (!slots[index] || slots[index].revealed || phase === 'opening') return;
-		slots[index] = { ...slots[index], revealed: true };
-		const remaining = slots.some((slot) => !slot.revealed);
-		if (!remaining) {
-			mobileIndex = slots.length - 1;
-			if (mobileViewport && !quickOpening) phase = 'revealing';
-			else phase = 'complete';
+	const visible = $derived(
+		cards?.slice(resultPage * openingPageSize, (resultPage + 1) * openingPageSize) ?? []
+	);
+	const pages = $derived(Math.ceil((cards?.length ?? 0) / openingPageSize));
+	const visual = $derived(boosterVisual(packRenderKey, packFamily));
+	$effect(() => {
+		const result = cards,
+			id = openingId,
+			pending = opening;
+		if (!result?.length) {
+			untrack(() => {
+				phase = 'idle';
+				if (!pending) requested = false;
+			});
 			return;
 		}
-		phase = 'revealing';
-		if (index === mobileIndex)
-			schedule(() => (mobileIndex = Math.min(index + 1, slots.length - 1)), 680);
-	}
-
-	function startDeal(nextCards: CardRecord[], nextOpeningId: number) {
-		clearTimers();
-		openRequested = false;
-		handledOpeningId = nextOpeningId;
-		slots = nextCards.map((card) => ({ card, revealed: false }));
-		landscapeSlots = {};
-		mobileIndex = 0;
-		if (nextCards.length > 12) {
-			slots = slots.map((slot) => ({ ...slot, revealed: true }));
-			phase = 'complete';
-			return;
-		}
-		phase = 'dealing';
-		if (suspended) return;
-		if (quickOpening) {
-			slots = slots.map((slot) => ({ ...slot, revealed: true }));
-			phase = 'complete';
-		} else {
-			schedule(() => (phase = 'revealing'), 720);
-		}
-	}
-
-	async function showMobileCard(index: number, behavior: ScrollBehavior = 'smooth') {
-		mobileIndex = Math.max(0, Math.min(index, slots.length - 1));
-		await tick();
-		if (carouselApi) {
-			carouselApi.scrollTo(mobileIndex, behavior !== 'smooth');
-			return;
-		}
-		const target = deckElement?.querySelector<HTMLElement>(`[data-slot-index="${mobileIndex}"]`);
-		target?.scrollIntoView({ behavior, block: 'nearest', inline: 'center' });
-	}
-
-	function handleCarouselInit(event: CustomEvent<EmblaCarouselType>) {
-		carouselApi = event.detail;
-		const updateIndex = () => {
-			if (phase === 'complete') mobileIndex = carouselApi?.selectedScrollSnap() ?? 0;
-		};
-		carouselApi.on('select', updateIndex);
-		carouselApi.on('reInit', updateIndex);
-	}
-
-	function revealNext() {
-		if (phase !== 'revealing') return;
-		const nextIndex = slots.findIndex((slot) => !slot.revealed);
-		if (nextIndex >= 0) setSlotRevealed(nextIndex);
-	}
-
-	function requestOpen(all = false) {
-		if (!available || opening || openRequested || suspended) return;
-		openRequested = true;
+		if (handled === id) return;
+		untrack(() => {
+			handled = id;
+			requested = false;
+			progress = 0;
+			massReveal = false;
+			revealedIds = (resume?.revealedIds ?? []).filter((id) =>
+				result.some((card) => card.id === id)
+			);
+			resultPage = Math.min(resume?.page ?? 0, Math.ceil(result.length / openingPageSize) - 1);
+			if ($arcadePreferences.opening === 'express') {
+				revealedIds = result.map((card) => card.id);
+				massReveal = true;
+				phase = 'discovery';
+				onProgress(revealedIds, resultPage);
+			} else phase = resume ? 'discovery' : 'ceremony';
+		});
+	});
+	function request(all = false) {
+		if (opening || requested || !canOpen || !available || !creditKnown || suspended) return;
+		requested = true;
+		sceneOpen = true;
 		if (all) onOpenAll();
 		else onOpen();
 	}
-
-	function advance() {
-		if (suspended) return;
-		if (phase === 'revealing') {
-			if (awaitingMobileSummary) {
-				phase = 'complete';
-				void showMobileCard(0, 'auto');
-				return;
-			}
-			revealNext();
-			return;
-		}
-		if (phase === 'complete') requestOpen();
+	function reveal(card: CardRecord) {
+		if (suspended || phase !== 'discovery' || revealedIds.includes(card.id)) return;
+		revealedIds = [...revealedIds, card.id];
+		onProgress(revealedIds, resultPage);
 	}
-
-	function isInteractiveTarget(target: EventTarget | null) {
-		return target instanceof Element && Boolean(target.closest('[data-booster-interactive]'));
+	function all() {
+		if (!cards || suspended) return;
+		massReveal = true;
+		phase = 'discovery';
+		revealedIds = cards.map((card) => card.id);
+		onProgress(revealedIds, resultPage);
 	}
-
-	function handleStageClick(event: MouseEvent) {
-		if (suspended) return;
-		if (event.currentTarget !== event.target && isInteractiveTarget(event.target)) return;
-		advance();
-	}
-
-	function handleKeydown(event: KeyboardEvent) {
-		if (suspended) return;
-		if (event.code !== 'Space' || event.repeat || isInteractiveTarget(event.target)) return;
-		if (phase !== 'revealing' && phase !== 'complete') return;
-		event.preventDefault();
-		advance();
-	}
-
-	onMount(() => {
-		quickOpening = localStorage.getItem(quickPreferenceKey) === 'true';
-		preferenceReady = true;
-		const media = window.matchMedia('(max-width: 1023px)');
-		const updateViewport = () => (mobileViewport = media.matches);
-		updateViewport();
-		media.addEventListener('change', updateViewport);
-		return () => media.removeEventListener('change', updateViewport);
-	});
-
-	onDestroy(clearTimers);
-
-	$effect(() => {
-		if (preferenceReady) localStorage.setItem(quickPreferenceKey, String(quickOpening));
-	});
-
-	function resumeAfterSuspension() {
-		const nextIndex = slots.findIndex((slot) => !slot.revealed);
-		mobileIndex = nextIndex >= 0 ? nextIndex : Math.max(0, slots.length - 1);
-		if (nextIndex < 0 && phase === 'revealing' && !awaitingMobileSummary) {
-			phase = 'complete';
-			return;
-		}
-		if (!quickOpening && phase === 'dealing') {
-			phase = 'revealing';
-			return;
-		}
-		if (!quickOpening || nextIndex < 0 || (phase !== 'dealing' && phase !== 'revealing')) return;
-		slots = slots.map((slot) => ({ ...slot, revealed: true }));
-		mobileIndex = 0;
-		phase = 'complete';
-	}
-
-	$effect(() => {
-		if (suspended === suspensionActive) return;
-		suspensionActive = suspended;
-		untrack(() => {
-			if (suspended) clearTimers();
-			else resumeAfterSuspension();
-		});
-	});
-
-	$effect(() => {
-		if (!mobileSceneActive) return;
-		const bodyOverflow = document.body.style.overflow;
-		const htmlOverflow = document.documentElement.style.overflow;
-		document.body.style.overflow = 'hidden';
-		document.documentElement.style.overflow = 'hidden';
-		return () => {
-			document.body.style.overflow = bodyOverflow;
-			document.documentElement.style.overflow = htmlOverflow;
-		};
-	});
-
-	$effect(() => {
-		if (cards?.length) {
-			if (openingId !== handledOpeningId) startDeal(cards, openingId);
-			return;
-		}
-		if (opening) phase = 'opening';
-		else if (error) {
-			openRequested = false;
-			phase = 'error';
-		} else if (!cards && phase !== 'dealing') phase = 'idle';
-	});
-
-	function resetStage() {
-		clearTimers();
-		slots = [];
-		landscapeSlots = {};
-		phase = 'idle';
-		openRequested = false;
-		onReset();
-	}
-
-	function setSlotOrientation(index: number, landscape: boolean) {
-		const id = slots[index]?.card.id;
-		if (!id || Boolean(landscapeSlots[id]) === landscape) return;
-		landscapeSlots[id] = landscape;
+	function movePage(next: number) {
+		resultPage = Math.max(0, Math.min(next, pages - 1));
+		onProgress(revealedIds, resultPage);
+		grid?.scrollTo({ top: 0, behavior: 'instant' });
 	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<div class="opening-controls" data-testid="booster-stage">
+	<div class="opening-mode" aria-label={$_('boosters.quick_mode')}>
+		<Button
+			variant={$arcadePreferences.opening === 'immersive' ? 'secondary' : 'ghost'}
+			aria-pressed={$arcadePreferences.opening === 'immersive'}
+			onclick={() => updateArcadePreferences({ opening: 'immersive' })}
+			disabled={opening}>{$_('arcade.immersive')}</Button
+		><Button
+			variant={$arcadePreferences.opening === 'express' ? 'secondary' : 'ghost'}
+			aria-pressed={$arcadePreferences.opening === 'express'}
+			onclick={() => updateArcadePreferences({ opening: 'express' })}
+			disabled={opening}>{$_('arcade.express')}</Button
+		>
+	</div>
+	<div class="open-buttons">
+		<Button
+			class="open-main"
+			data-testid="booster-open-one"
+			disabled={opening || requested || !canOpen || !available || !creditKnown}
+			onclick={() => request()}
+			><span>{opening ? $_('boosters.opening') : $_('boosters.open')}</span><span aria-hidden="true"
+				>↗</span
+			></Button
+		>{#if canOpenAll && available > 1}<Button
+				variant="outline"
+				disabled={opening || requested || !canOpen || !creditKnown}
+				onclick={() => (confirmBatch = true)}>{$_('arcade.batchConfirm')}</Button
+			>{/if}
+	</div>
+	{#if opening && !sceneOpen}<p role="status" class="pending-hint">
+			{$_('opening.pending')}
+			<Button variant="ghost" onclick={() => (sceneOpen = true)}>{$_('opening.returnScene')}</Button
+			>
+		</p>{/if}
+	{#if error && !sceneOpen}<p role="alert" class="opening-error">{error}</p>{/if}
+</div>
 
-<ForgePanel
-	class={cn(
-		'booster-stage relative isolate flex min-h-[38rem] flex-col overflow-hidden p-4 sm:p-6 lg:min-h-[45rem] lg:p-8',
-		mobileSceneActive && 'booster-mobile-fullscreen'
-	)}
+<Dialog.Root
+	open={sceneOpen}
+	onOpenChange={(value) => {
+		if (!value && !suspended) {
+			sceneOpen = false;
+			onReset();
+		}
+	}}
 >
-	<div class="booster-stage-energy" aria-hidden="true"></div>
-	<div
-		class="relative z-20 flex flex-wrap items-start justify-between gap-3"
-		data-booster-interactive
+	<Dialog.Content
+		fullscreen
+		class="booster-theatre p-0 sm:p-0 overflow-hidden"
+		showCloseButton={false}
 	>
-		<div class="flex flex-wrap gap-2">
-			<HudStat label={$_('boosters.reserve')} value={`${available} / ${maximum}`} accent />
-			{#if nextDelay}<HudStat label={$_('boosters.nextCharge')} value={nextDelay} />{/if}
-		</div>
-		<label class="booster-quick-toggle" data-booster-interactive>
-			<span>
-				<strong>{$_('boosters.quick_mode')}</strong>
-				<small>{$_('boosters.quick_mode_hint')}</small>
-			</span>
-			<Switch bind:checked={quickOpening} aria-label={$_('boosters.quick_mode')} />
-		</label>
-	</div>
-
-	<div
-		class="booster-stage-content relative z-10"
-		data-phase={phase}
-		onclick={handleStageClick}
-		role="presentation"
-	>
-		{#if phase === 'idle' || phase === 'opening' || phase === 'error'}
-			<div class="mx-auto flex max-w-xl flex-col items-center py-6 text-center sm:py-10">
-				<p class="forge-label">
-					{phase === 'opening'
-						? $_('boosters.opening')
-						: phase === 'error'
-							? $_('boosters.opening_error')
-							: $_('boosters.chamberReady')}
-				</p>
-				<h2 class="mt-3 text-3xl font-bold sm:text-4xl">{packName}</h2>
-				<button
-					class="forge-energy-orbit mt-4 flex w-56 cursor-pointer flex-col items-center border-0 bg-transparent p-4 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45 sm:w-72"
-					disabled={!available || opening}
-					onclick={(event) => {
-						event.stopPropagation();
-						requestOpen();
-					}}
-					aria-label={phase === 'error'
-						? $_('boosters.retry')
-						: opening
-							? $_('boosters.opening')
-							: $_('boosters.open')}
-					data-booster-interactive
+		<Dialog.Header class="theatre-header"
+			><div>
+				<p class="theatre-overline">{$_('opening.room')}</p>
+				<Dialog.Title>{packName}</Dialog.Title><Dialog.Description
+					>{cards?.length
+						? complete
+							? $_('opening.complete')
+							: $_('arcade.revealed', {
+									values: { count: revealedIds.length, total: cards.length }
+								})
+						: $_(
+								requestPhase === 'verify' ? 'opening.verifying' : 'opening.requesting'
+							)}</Dialog.Description
 				>
-					<span
-						class="block w-full drop-shadow-[0_0_2rem_rgb(253_121_12_/_38%)]"
-						class:forge-booster-idle={phase === 'idle'}
-						class:booster-pack-opening={phase === 'opening'}
-					>
-						<BoosterPackArt
-							name={packName}
-							renderKey={packRenderKey}
-							cardCount={packCardCount}
-							imageUrl={packImage}
-						/>
-					</span>
-					<span class="booster-open-label">
-						{phase === 'error'
-							? $_('boosters.retry')
-							: opening
-								? $_('boosters.opening')
-								: $_('boosters.open')}
-					</span>
-				</button>
-				{#if canOpenAll && available > 1}
-					<Button
-						variant="outline"
-						disabled={opening}
-						onclick={(event) => {
-							event.stopPropagation();
-							requestOpen(true);
-						}}
-						data-booster-interactive
-					>
-						{$_('boosters.open_all', { values: { count: available } })}
-					</Button>
-				{/if}
-				{#if !available}<p class="mt-4 text-sm text-muted-foreground">
-						{$_('boosters.emptyReserve')}
-					</p>{/if}
 			</div>
-		{:else}
-			<div class="flex min-h-0 flex-1 flex-col items-center justify-center py-4">
-				<p class="forge-label text-center">
-					{phase === 'complete' ? $_('boosters.complete') : $_('boosters.reveal_instruction')}
-				</p>
+			<Button
+				variant="ghost"
+				aria-label={$_('arcade.leaveDiscovery')}
+				onclick={() => {
+					sceneOpen = false;
+					onReset();
+				}}
+				disabled={suspended}>{$_('boosters.close')} <span aria-hidden="true">×</span></Button
+			></Dialog.Header
+		>
+		<div class="theatre-main" class:ceremony={phase === 'ceremony'} class:summary={complete}>
+			{#if cards?.length && (phase === 'discovery' || progress >= 0.73)}
 				<div
-					bind:this={deckElement}
-					class={cn('booster-deck mt-5', bulkOpening && 'bulk-opening')}
-					data-phase={phase}
-					aria-label={$_('boosters.revealed_title')}
-					use:emblaCarouselSvelte={{ options: boosterCarouselOptions, plugins: [] }}
-					onemblaInit={handleCarouselInit}
+					class="discovery-board"
+					class:dealing={phase === 'ceremony'}
+					class:mass={massReveal}
+					bind:this={grid}
+					data-testid="discovery-board"
 				>
-					{#each slots as slot, index (slot.card.id)}
-						<div
-							class="booster-slot"
-							class:landscape={landscapeSlots[slot.card.id] && slot.revealed}
-							class:mobile-current={index === mobileIndex}
-							data-slot-index={index}
-							style={`--slot-index:${index};--slot-offset:${index - (slots.length - 1) / 2};--slot-arc:${Math.abs(index - (slots.length - 1) / 2) * 0.75}rem`}
-						>
-							<BoosterRevealCard
-								card={slot.card}
-								revealed={slot.revealed}
-								interactive={phase === 'revealing' && !suspended}
-								detailsEnabled={!suspended}
-								onReveal={() => setSlotRevealed(index)}
-								onOpenDetail={() => onOpenCard(slot.card)}
-								onOrientationChange={(landscape) => setSlotOrientation(index, landscape)}
-							/>
-						</div>
-					{/each}
-				</div>
-				{#if phase === 'complete' && mobileViewport && slots.length > 1}
-					<div class="booster-mobile-navigation" data-booster-interactive>
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={mobileIndex === 0}
-							onclick={() => showMobileCard(mobileIndex - 1)}
-						>
-							{$_('boosters.previous')}
-						</Button>
-						<p class="forge-label">
-							{$_('boosters.reveal_progress', {
-								values: { current: mobileIndex + 1, total: slots.length }
-							})}
-						</p>
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={mobileIndex === slots.length - 1}
-							onclick={() => showMobileCard(mobileIndex + 1)}
-						>
-							{$_('boosters.next')}
-						</Button>
+					<div
+						class="board-grid"
+						style={`--large-cols:${Math.min(visible.length, 8)};--desktop-cols:${Math.min(visible.length, 6)};--tablet-cols:${Math.min(visible.length, 4)};--phone-cols:${Math.min(visible.length, 2)}`}
+					>
+						{#each visible as card, i (card.id)}<div
+								class="board-slot"
+								style={`--slot:${i};--flight-x:${((i % 6) - 2.5) * 22}px;--flight-angle:${((i % 5) - 2) * 5}deg`}
+							>
+								<BoosterRevealCard
+									{card}
+									{visual}
+									revealed={revealedIds.includes(card.id)}
+									{massReveal}
+									interactive={phase === 'discovery' && !suspended}
+									detailsEnabled={!suspended}
+									onReveal={() => reveal(card)}
+									onOpenDetail={() => {
+										inspectionOrigin =
+											document.activeElement instanceof HTMLElement ? document.activeElement : null;
+										onOpenCard(card);
+									}}
+								/>
+							</div>{/each}
 					</div>
-				{/if}
-				<div
-					class="mt-5 flex min-h-11 flex-wrap items-center justify-center gap-2"
-					data-booster-interactive
-				>
-					{#if phase === 'complete'}
-						<Button variant="outline" onclick={resetStage}>{$_('boosters.close')}</Button>
-						{#if available}<Button onclick={() => requestOpen()}>{$_('boosters.open_next')}</Button
-							>{/if}
-					{:else if awaitingMobileSummary}
-						<Button onclick={advance}>{$_('boosters.show_summary')}</Button>
-					{:else}
-						<p class="text-center text-xs text-muted-foreground sm:text-sm">
-							{$_('boosters.advance_instruction')}
-						</p>
-					{/if}
 				</div>
-			</div>
-		{/if}
-	</div>
-</ForgePanel>
+			{/if}
+			{#if phase === 'ceremony' || !cards?.length}<div
+					class="theatre-scene"
+					class:departing={progress >= 0.73}
+				>
+					<BoosterScene
+						name={packName}
+						renderKey={packRenderKey}
+						family={packFamily}
+						count={packCardCount}
+						active={sceneOpen}
+						playing={phase === 'ceremony'}
+						waiting={!cards?.length && opening}
+						onProgress={(value) => (progress = value)}
+						onComplete={() => {
+							if (phase === 'ceremony') phase = 'discovery';
+						}}
+					/>
+				</div>{/if}
+			{#if !cards?.length}<div class="verification-slot">
+					{#if opening}<p class="waiting-label" role="status">
+							<span></span>{$_(
+								requestPhase === 'verify' ? 'opening.verifying' : 'opening.requesting'
+							)}
+						</p>{/if}{#if verification}{@render verification()}{/if}{#if error}<p
+							role="alert"
+							class="opening-error"
+						>
+							{error}
+						</p>{/if}
+				</div>{/if}
+		</div>
+		<footer class="theatre-footer">
+			{#if phase === 'ceremony'}<p>{$_('opening.sealBroken')}</p>
+				<Button variant="outline" onclick={() => (phase = 'discovery')} disabled={suspended}
+					>{$_('arcade.skipAnimation')}</Button
+				>
+			{:else if cards?.length}<div class="board-information">
+					{#if complete}<p role="status">{$_('arcade.summary')}</p>
+						{#if openedCount != null}<p class="summary-count">
+								{$_(creditKnown ? 'plan.boosters.opened' : 'plan.boosters.openedUnknownCredits', {
+									values: { count: openedCount, remaining: available }
+								})}
+							</p>{/if}
+						<p>{$_('opening.manageHint')}</p>{:else}<p>{$_('opening.revealHint')}</p>{/if}
+				</div>
+				<div class="board-commands">
+					{#if pages > 1}<div class="board-pagination" aria-label={$_('opening.resultPages')}>
+							<Button
+								variant="ghost"
+								size="icon"
+								disabled={!resultPage || suspended}
+								onclick={() => movePage(resultPage - 1)}
+								aria-label={$_('opening.previousPage')}>←</Button
+							><span>{resultPage + 1} / {pages}</span><Button
+								variant="ghost"
+								size="icon"
+								disabled={resultPage === pages - 1 || suspended}
+								onclick={() => movePage(resultPage + 1)}
+								aria-label={$_('opening.nextPage')}>→</Button
+							>
+						</div>{/if}{#if !complete}<Button disabled={suspended} onclick={all}
+							>{$_('arcade.revealAll')}</Button
+						>{:else if canOpen && available && !opening && creditKnown}<Button
+							onclick={() => request()}
+							disabled={suspended}>{$_('boosters.open_next')}</Button
+						>{/if}
+				</div>
+			{:else}<p>{$_('opening.waitHint')}</p>{/if}
+		</footer>
+	</Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={confirmBatch}
+	><Dialog.Content class="max-w-md p-4 sm:p-5"
+		><Dialog.Header
+			><Dialog.Title>{$_('arcade.batchConfirm')}</Dialog.Title><Dialog.Description
+				>{$_('arcade.batchHint')}</Dialog.Description
+			></Dialog.Header
+		><Dialog.Footer
+			><Button variant="outline" onclick={() => (confirmBatch = false)}
+				>{$_('common.cancel')}</Button
+			><Button
+				onclick={() => {
+					confirmBatch = false;
+					request(true);
+				}}>{$_('completion.confirm')}</Button
+			></Dialog.Footer
+		></Dialog.Content
+	></Dialog.Root
+>
 
 <style>
-	.booster-stage-energy {
-		position: absolute;
-		inset: 1px;
-		background:
-			radial-gradient(circle at 50% 58%, rgb(25 167 170 / 24%), transparent 24rem),
-			conic-gradient(
-				from 45deg at 50% 55%,
-				transparent 0 12%,
-				rgb(254 184 35 / 8%) 12.5% 13%,
-				transparent 13.5% 37%
-			);
-		animation: booster-stage-rotation 24s linear infinite;
-	}
-
-	.booster-stage-content {
-		display: flex;
-		min-height: 31rem;
-		min-width: 0;
-		flex: 1;
-		flex-direction: column;
-	}
-
-	.booster-mobile-navigation {
-		display: flex;
-		width: min(100%, 28rem);
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-	}
-
-	.booster-quick-toggle {
-		display: flex;
-		min-height: 44px;
-		align-items: center;
-		gap: 0.75rem;
-		border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent);
-		background: rgb(8 15 25 / 82%);
-		padding: 0.45rem 0.65rem;
-		cursor: pointer;
-	}
-
-	.booster-quick-toggle span {
+	.opening-controls {
 		display: grid;
-		gap: 0.1rem;
+		gap: 8px;
+		min-width: 0;
 	}
-	.booster-quick-toggle strong {
-		font-size: 0.65rem;
-		letter-spacing: 0.12em;
-		color: var(--primary);
-		text-transform: uppercase;
-	}
-	.booster-quick-toggle small {
-		font-size: 0.68rem;
-		color: var(--muted-foreground);
-	}
-
-	.booster-open-label {
-		margin-top: 0.75rem;
-		border: 1px solid var(--accent);
-		background: linear-gradient(to bottom, var(--primary), var(--accent));
-		padding: 0.75rem 1.5rem;
-		font-size: 0.7rem;
-		font-weight: 700;
-		letter-spacing: 0.12em;
-		color: var(--primary-foreground);
-		text-transform: uppercase;
-	}
-
-	.booster-pack-opening {
-		animation: booster-pack-opening 780ms ease-in-out infinite alternate;
-	}
-
-	.booster-deck {
+	.opening-mode {
 		display: flex;
-		width: 100%;
-		min-height: 20rem;
+		gap: 4px;
+		justify-content: end;
+	}
+	.open-buttons {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+	:global(.opening-controls .open-main) {
+		min-width: 220px;
+		justify-content: space-between;
+		gap: 30px;
+		min-height: 52px;
+	}
+	.pending-hint {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		font-size: 12px;
+	}
+	.opening-error {
+		font-size: 14px;
+		color: var(--destructive);
+	}
+	:global(.booster-theatre) {
+		border: 0;
+		background: #10120f;
+		display: flex;
+		flex-direction: column;
+		gap: 0;
+	}
+	:global(.booster-theatre .theatre-header) {
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		gap: 12px;
+		padding: max(16px, env(safe-area-inset-top)) clamp(16px, 4vw, 56px) 16px;
+		border-bottom: 1px solid #efebd924;
+		z-index: 5;
+	}
+	.theatre-overline {
+		font-size: 10px;
+		letter-spacing: 0.14em;
+		color: #e8ef42;
+		text-transform: uppercase;
+		margin-bottom: 2px;
+	}
+	.theatre-main {
+		position: relative;
+		flex: 1;
+		min-height: 0;
+		overflow: hidden;
+		display: grid;
+		background: radial-gradient(ellipse at 50% 60%, #e8ef4209, transparent 60%);
+	}
+	.theatre-scene {
+		position: absolute;
+		inset: 0;
+		transition: opacity 700ms;
+	}
+	.theatre-scene.departing {
+		opacity: 0;
+		pointer-events: none;
+	}
+	.verification-slot {
+		z-index: 4;
+		align-self: end;
+		justify-self: center;
+		width: min(100% - 32px, 360px);
+		margin-bottom: 16px;
+		text-align: center;
+	}
+	.waiting-label {
+		display: flex;
+		gap: 8px;
 		align-items: center;
 		justify-content: center;
-		padding: 1.25rem 0;
+		font-size: 13px;
+		color: #efebd9a6;
 	}
-
-	.booster-slot {
+	.waiting-label span {
+		width: 6px;
+		height: 6px;
+		background: #e8ef42;
+		border-radius: 50%;
+	}
+	.discovery-board {
 		position: relative;
-		flex: 0 0 auto;
-		margin-inline: -1rem;
-		transform: translateY(var(--slot-arc)) rotate(calc(var(--slot-offset) * 3deg));
-		animation: booster-card-deal 620ms cubic-bezier(0.16, 0.82, 0.25, 1.12) both;
-		animation-delay: calc(var(--slot-index) * 90ms);
+		padding: clamp(20px, 4vw, 48px);
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		z-index: 3;
+		display: grid;
+		align-items: center;
+		min-height: 0;
 	}
-
-	.booster-slot.landscape {
-		z-index: 2;
-		margin-inline: 0;
+	.board-grid {
+		display: grid;
+		grid-template-columns: repeat(var(--desktop-cols), minmax(0, 144px));
+		justify-content: center;
+		align-items: start;
+		gap: 22px 24px;
 	}
-
-	.booster-deck.bulk-opening {
-		justify-content: flex-start;
-		gap: 0.75rem;
-		overflow-x: auto;
-		padding-inline: 1rem;
-		scroll-snap-type: x mandatory;
+	.board-slot {
+		width: 100%;
+		max-width: 144px;
+		justify-self: center;
+		min-width: 0;
 	}
-
-	.booster-deck.bulk-opening .booster-slot {
-		margin-inline: 0;
-		transform: none;
-		animation: none;
-		scroll-snap-align: center;
+	.dealing .board-slot {
+		animation: cards-deal 800ms cubic-bezier(0.16, 0.74, 0.18, 1) both;
+		animation-delay: calc(var(--slot) * 18ms);
 	}
-
-	@keyframes booster-card-deal {
+	.mass .board-grid {
+		animation: acquired 180ms ease-out;
+	}
+	.theatre-footer {
+		z-index: 5;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 16px clamp(16px, 4vw, 56px) max(16px, env(safe-area-inset-bottom));
+		border-top: 1px solid #efebd924;
+		background: #171918;
+		min-height: 76px;
+	}
+	.theatre-footer p {
+		font-size: 13px;
+		color: #efebd9b3;
+	}
+	.board-information p:last-child {
+		font-size: 11px;
+	}
+	.board-information p:first-child {
+		color: #efebd9;
+		font-weight: 600;
+	}
+	.summary-count {
+		font-variant-numeric: tabular-nums;
+	}
+	.board-commands {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		align-items: center;
+	}
+	.board-pagination {
+		display: flex;
+		gap: 4px;
+		align-items: center;
+	}
+	.board-pagination span {
+		font-size: 12px;
+		font-variant-numeric: tabular-nums;
+	}
+	@keyframes cards-deal {
 		from {
-			transform: translateY(9rem) scale(0.5) rotate(0);
 			opacity: 0;
-		}
-	}
-
-	@keyframes booster-pack-opening {
-		from {
-			transform: scale(0.96) rotate(-1deg);
-			filter: brightness(1);
+			transform: perspective(600px) translate(var(--flight-x), 100px) rotateZ(var(--flight-angle))
+				rotateY(25deg) scale(0.75);
 		}
 		to {
-			transform: scale(1.04) rotate(1deg);
-			filter: brightness(1.45);
-		}
-	}
-
-	@keyframes booster-stage-rotation {
-		to {
-			transform: rotate(360deg) scale(1.2);
-		}
-	}
-
-	@media (min-width: 1024px) {
-		.booster-slot :global(.booster-reveal-card) {
-			width: 10rem;
-		}
-		.booster-slot :global(.booster-reveal-card.is-landscape) {
-			width: 14rem;
-		}
-		.booster-slot.landscape {
-			margin-inline: 0.5rem;
-		}
-	}
-
-	@media (max-width: 1023px) {
-		:global(.booster-mobile-fullscreen) {
-			position: fixed;
-			inset: 0;
-			z-index: 80;
-			height: 100dvh;
-			min-height: 0;
-			max-width: 100vw;
-			padding: max(0.75rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
-				max(0.75rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
-			overflow: hidden;
-			clip-path: none;
-		}
-		.booster-stage-content {
-			min-height: 0;
-			overflow: hidden;
-		}
-		.booster-deck {
-			min-width: 0;
-			min-height: 0;
-			max-width: 100%;
-			flex: 1;
-			overflow-x: auto;
-			overflow-y: hidden;
-			justify-content: flex-start;
-			overscroll-behavior-x: contain;
-			scrollbar-width: none;
-			scroll-snap-type: x mandatory;
-			touch-action: pan-x;
-		}
-		.booster-deck::-webkit-scrollbar {
-			display: none;
-		}
-		.booster-deck:not([data-phase='complete']) {
-			justify-content: center;
-			overflow: visible;
-		}
-		.booster-deck:not([data-phase='complete']) .booster-slot:not(.mobile-current) {
-			display: none;
-		}
-		.booster-deck[data-phase='complete'] {
-			gap: 0.8rem;
-			padding-inline: max(0px, calc(50% - min(29vw, 6.5rem)));
-		}
-		.booster-slot {
-			margin-inline: 0;
+			opacity: 1;
 			transform: none;
-			scroll-snap-align: center;
-		}
-		.booster-slot :global(.booster-reveal-card) {
-			width: min(58vw, 13rem, calc((100dvh - 15rem) * 0.706));
-		}
-		.booster-slot :global(.booster-reveal-card.is-landscape) {
-			width: min(86vw, 19rem, calc((100dvh - 15rem) * 1.416));
-		}
-		.booster-slot.landscape {
-			flex-basis: min(86vw, 19rem, calc((100dvh - 15rem) * 1.416));
-		}
-		:global(.booster-mobile-fullscreen) .booster-stage-energy {
-			inset: 0;
-		}
-		:global(.booster-mobile-fullscreen) .booster-quick-toggle small {
-			display: none;
 		}
 	}
-
+	@keyframes acquired {
+		from {
+			opacity: 0.7;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+	@media (min-width: 1280px) {
+		.board-grid {
+			grid-template-columns: repeat(var(--large-cols), minmax(0, 144px));
+		}
+	}
+	@media (max-width: 1023px) {
+		.board-grid {
+			grid-template-columns: repeat(var(--tablet-cols), minmax(0, 144px));
+			gap: 22px 18px;
+		}
+	}
+	@media (max-width: 600px) {
+		.board-grid {
+			grid-template-columns: repeat(var(--phone-cols), minmax(0, 144px));
+			gap: 18px 20px;
+		}
+		.discovery-board {
+			padding: 20px 20px 24px;
+			align-items: start;
+		}
+		.opening-mode {
+			justify-content: center;
+		}
+		.open-buttons {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.open-buttons :global(button:only-child) {
+			grid-column: 1 / -1;
+		}
+		.open-buttons :global(button) {
+			white-space: normal;
+			font-size: 13px;
+		}
+		:global(.opening-controls .open-main) {
+			width: 100%;
+			min-width: 0;
+		}
+		.theatre-footer {
+			padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+			gap: 8px;
+		}
+		.board-information {
+			width: 100%;
+		}
+		.board-commands {
+			width: 100%;
+			justify-content: space-between;
+		}
+		:global(.booster-theatre .theatre-header) {
+			padding-inline: 16px;
+		}
+		:global(.booster-theatre .theatre-header [data-slot='dialog-title']) {
+			font-size: 24px;
+			overflow-wrap: anywhere;
+		}
+	}
+	:global(html[data-motion='reduce'] .booster-theatre *) {
+		animation: none !important;
+		transition: none !important;
+	}
 	@media (prefers-reduced-motion: reduce) {
-		.booster-stage-energy,
-		.booster-pack-opening,
-		.booster-slot {
-			animation: none;
+		.board-slot,
+		.mass .board-grid {
+			animation: none !important;
+		}
+		.theatre-scene {
+			transition: none;
 		}
 	}
 </style>

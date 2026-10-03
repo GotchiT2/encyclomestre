@@ -1,12 +1,49 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
+	import { untrack } from 'svelte';
+	import { getPacks } from '$lib/api/boosters';
+	import { packNameKey } from '$lib/components/boosters/pack-labels';
 	import { _ } from '$lib/i18n';
+	import { articleContexts } from '$lib/arcade/article-context';
 	import { cardNumberLabel, type CardRecord } from '$lib/types';
 	let { card, publicView = false }: { card: CardRecord; publicView?: boolean } = $props();
+	let packName = $state('');
+	$effect(() => {
+		const id = card.packId;
+		packName = '';
+		let alive = true;
+		if (id != null)
+			untrack(
+				() =>
+					void getPacks()
+						.then((packs) => {
+							const pack = packs.find((p) => p.id === id);
+							if (alive && pack) {
+								const key = packNameKey(pack.name);
+								packName = key ? $_(key) : pack.name;
+							}
+						})
+						.catch(() => undefined)
+			);
+		return () => {
+			alive = false;
+		};
+	});
+	const articleContext = $derived(
+		$articleContexts[String(card.baseCardId ?? card.catalogueId ?? card.id)]
+	);
 	const facts = $derived([
 		{ label: $_('collection.variants'), value: card.variant.name },
-		{ label: $_('auctionHub.attack'), value: card.attack },
-		...(!publicView ? [{ label: $_('codex.owned'), value: card.ownedCount }] : []),
-		...(card.packId == null ? [] : [{ label: $_('auctionHub.pack'), value: `#${card.packId}` }]),
+		...(articleContext?.global != null
+			? [{ label: $_('arcade.globalCopies'), value: articleContext.global }]
+			: []),
+		...(!publicView && card.packId == null
+			? [
+					...(articleContext?.owned != null
+						? [{ label: $_('codex.owned'), value: articleContext.owned }]
+						: [])
+				]
+			: []),
 		...(cardNumberLabel(card)
 			? [{ label: $_('auctionHub.number'), value: cardNumberLabel(card) }]
 			: []),
@@ -36,3 +73,9 @@
 			values: { date: new Date(card.createdAt).toLocaleString('fr-FR') }
 		})}
 	</p>{/if}
+
+{#if card.packId != null}<a
+		class="mt-2 block text-sm underline"
+		href={resolve('/packs/[id]', { id: String(card.packId) })}
+		>{packName || $_('plan.boosters.packDetails')}</a
+	>{/if}

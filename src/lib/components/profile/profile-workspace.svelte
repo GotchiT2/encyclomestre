@@ -1,7 +1,8 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import ShowcaseEditor from './showcase-editor.svelte';
-	import ArticlePicker from '$lib/components/selectors/article-picker.svelte';
+	import CollectionVitrine from './collection-vitrine.svelte';
+	import AvatarEditor from '$lib/components/settings/avatar-editor.svelte';
+	import UserAvatar from '$lib/components/users/user-avatar.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import InstantSalesManager from './instant-sales-manager.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -14,8 +15,7 @@
 		getMyShowcase,
 		getUserInstantSales,
 		replaceMyShowcase,
-		wikiForgeApiErrorCode,
-		updateWikiForgeImage
+		wikiForgeApiErrorCode
 	} from '$lib/api';
 	import type { CollectionPageResult } from '$lib/api';
 	import type { CollectionQuery } from '$lib/api';
@@ -40,6 +40,7 @@
 		initialSales: SalesResult;
 	} = $props();
 	let activeTab = $state<'showcase' | 'sales'>('showcase');
+	let managingShowcase = $state(false);
 	let showcase = $state(untrack(() => initialShowcase));
 	let sales = $state(untrack(() => initialSales));
 	let collection = $state(untrack(() => initialCollection.items));
@@ -47,20 +48,20 @@
 	let collectionCursor = $state(untrack(() => initialCollection.nextCursor));
 	let collectionHasNext = $state(untrack(() => initialCollection.hasNext));
 	let collectionLoading = $state(false);
+	let sequence = 0;
+	let collectionTotal = $state(untrack(() => initialCollection.total));
 	let pickerQuery = $state<CollectionQuery>({});
 	let money = $state(untrack(() => user.money ?? 0));
 	let saving = $state(false);
 	let buyingSlot = $state(false);
 	let buySlotOpen = $state(false);
-	let avatarPageId = $state<number | undefined>(untrack(() => user.imagePageId ?? undefined));
 	let salesBusy = $state(false);
 	let avatarPickerOpen = $state(false);
-	let avatarBusy = $state(false);
 	let avatarUrl = $state(untrack(() => user.avatarUrl));
 	let handledRealtimeRevision = 0;
 	const ownedCards = $derived(
-		initialCollection.total >= 0
-			? String(initialCollection.total)
+		collectionTotal >= 0
+			? String(collectionTotal)
 			: `${initialCollection.items.length}${initialCollection.hasNext ? '+' : ''}`
 	);
 
@@ -101,6 +102,7 @@
 		}
 	}
 	async function createSale(cardId: string, price: number) {
+		if (salesBusy) return;
 		salesBusy = true;
 		try {
 			sales = await createInstantSale(cardId, price);
@@ -112,6 +114,7 @@
 		}
 	}
 	async function cancelSale(saleId: string) {
+		if (salesBusy) return;
 		salesBusy = true;
 		try {
 			sales = await cancelInstantSale(saleId);
@@ -133,6 +136,7 @@
 		showcase = nextShowcase;
 		sales = nextSales;
 		collection = nextCollection.items;
+		collectionTotal = nextCollection.total;
 		collectionPage = nextCollection.page;
 		collectionCursor = nextCollection.nextCursor;
 		collectionHasNext = nextCollection.hasNext;
@@ -141,6 +145,10 @@
 	$effect(() => {
 		const refresh = $realtimeRefresh;
 		if (
+			saving ||
+			buyingSlot ||
+			salesBusy ||
+			collectionLoading ||
 			refresh.revision === handledRealtimeRevision ||
 			(!refreshIncludes(refresh, 'profile') && !refreshIncludes(refresh, 'collection'))
 		)
@@ -150,12 +158,14 @@
 	});
 	async function loadMoreCollection() {
 		if (!collectionHasNext || collectionLoading) return;
+		const request = sequence;
 		collectionLoading = true;
 		try {
 			const next = await getWikiForgeCollectionPage({
 				...pickerQuery,
 				...(collectionCursor ? { cursor: collectionCursor } : { page: collectionPage + 1 })
 			});
+			if (request !== sequence) return;
 			const known = new Set(collection.map((card) => card.id));
 			collection = [...collection, ...next.items.filter((card) => !known.has(card.id))];
 			collectionPage = next.page;
@@ -164,15 +174,16 @@
 		} catch {
 			toast.error($_('collection.load_more_error'));
 		} finally {
-			collectionLoading = false;
+			if (request === sequence) collectionLoading = false;
 		}
 	}
 	async function refreshPickerCollection(filters: CollectionQuery) {
-		if (collectionLoading) return;
+		const request = ++sequence;
 		pickerQuery = filters;
 		collectionLoading = true;
 		try {
 			const next = await getWikiForgeCollectionPage(filters);
+			if (request !== sequence) return;
 			collection = next.items;
 			collectionPage = next.page;
 			collectionCursor = next.nextCursor;
@@ -180,49 +191,26 @@
 		} catch {
 			toast.error($_('collection.load_error'));
 		} finally {
-			collectionLoading = false;
-		}
-	}
-	async function updateAvatar() {
-		if (avatarBusy) return;
-		avatarBusy = true;
-		try {
-			const next = await updateWikiForgeImage(avatarPageId ?? null);
-			avatarUrl = next.avatarUrl;
-			const session = $currentSession;
-			if (session)
-				persistSession(localStorage, { ...session, user: { ...session.user, avatarUrl } });
-			avatarPickerOpen = false;
-			toast.success($_('profile.avatar_updated'));
-		} catch {
-			toast.error($_('profile.avatar_error'));
-		} finally {
-			avatarBusy = false;
+			if (request === sequence) collectionLoading = false;
 		}
 	}
 </script>
 
 <section class="flex flex-col gap-6 pb-12 sm:gap-8">
-	<PageHeader
-		eyebrow={$_('profile.title')}
-		title={user.username}
-		description={$_('profile.connected_description')}
-	/>
-	<header
-		class="forge-panel flex flex-col gap-5 overflow-hidden p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6"
-	>
+	<header class="flex items-start gap-4 border-b border-border pb-5">
 		<button
 			type="button"
-			class="group relative size-24 shrink-0 overflow-hidden rounded-full border border-primary/40 shadow-[0_12px_24px_rgb(0_0_0_/_35%)] sm:size-28"
+			class="group relative size-16 shrink-0 overflow-hidden rounded-full border border-primary/40 shadow-[0_12px_24px_rgb(0_0_0_/_35%)]"
 			aria-label={$_('settings.choose_avatar')}
 			onclick={() => (avatarPickerOpen = true)}
 		>
-			{#if avatarUrl}<img src={avatarUrl} alt="" class="size-full object-cover" />{:else}<span
-					class="grid size-full place-items-center bg-background text-3xl font-serif font-bold text-primary"
-					aria-hidden="true"
-				>
-					{user.username.slice(0, 1).toUpperCase()}
-				</span>{/if}
+			<UserAvatar
+				image={avatarUrl}
+				name={user.username}
+				crop={$currentSession?.user.imageCrop}
+				size="lg"
+				class="size-full"
+			/>
 			<span
 				class="absolute inset-x-0 bottom-0 bg-background/80 py-1 text-[9px] font-bold tracking-wider text-primary uppercase opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
 				>{$_('settings.choose_avatar')}</span
@@ -230,18 +218,20 @@
 		</button>
 		<div class="min-w-0 flex-1">
 			<p class="forge-label text-primary">{$_('profile.title')}</p>
-			<h2 class="mt-1 truncate font-serif text-3xl font-bold sm:text-4xl">{user.username}</h2>
-			<div class="mt-4 grid grid-cols-2 gap-2 sm:max-w-md">
-				<div class="border border-primary/25 bg-background/40 px-3 py-2">
+			<h1 class="mt-1 truncate text-3xl">{user.username}</h1>
+			<div class="mt-2 flex flex-wrap gap-4">
+				<div class="text-sm">
 					<p class="forge-label">{$_('profile.cards_owned')}</p>
 					<p class="mt-1 font-heading text-xl tracking-wider">{ownedCards}</p>
 				</div>
-				<div class="border border-primary/25 bg-background/40 px-3 py-2">
+				<div class="text-sm">
 					<p class="forge-label">{$_('profile.member_since')}</p>
 					<p class="mt-1 text-sm font-bold">
-						{new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(
-							new Date(user.createdAt)
-						)}
+						{user.createdAt && Number.isFinite(Date.parse(user.createdAt))
+							? new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(
+									new Date(user.createdAt)
+								)
+							: $_('plan.unknownDate')}
 					</p>
 				</div>
 			</div>
@@ -263,7 +253,7 @@
 		</div>
 	</header>
 	<div
-		class="grid grid-cols-2 border border-primary/30 bg-card p-1"
+		class="flex flex-wrap gap-2 border-b border-border pb-2"
 		role="tablist"
 		aria-label={$_('profile.tabs_aria')}
 	>
@@ -280,20 +270,40 @@
 			onclick={() => (activeTab = 'sales')}>{$_('profile.tab_sales')}</Button
 		>
 	</div>
-	{#if activeTab === 'showcase'}<ShowcaseEditor
-			{showcase}
-			{collection}
-			{tags}
-			{money}
-			{saving}
-			buying={buyingSlot}
-			onSave={saveShowcase}
-			onBuySlot={() => (buySlotOpen = true)}
-			hasMoreCards={collectionHasNext}
-			loadingMoreCards={collectionLoading}
-			onLoadMoreCards={loadMoreCollection}
-			onFiltersChange={refreshPickerCollection}
-		/>{:else}<InstantSalesManager
+	{#if activeTab === 'showcase'}
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<h2 class="text-2xl">{$_('profile.tab_showcase')}</h2>
+			<Button
+				variant={managingShowcase ? 'default' : 'outline'}
+				onclick={() => (managingShowcase = !managingShowcase)}
+				>{$_(managingShowcase ? 'arcade.finishManaging' : 'arcade.manageShowcase')}</Button
+			>
+		</div>
+		{#if !managingShowcase}
+			{#each showcase.lines as line, index (index)}<CollectionVitrine
+					title={line.title}
+					cards={line.cards}
+					owned
+				/>{/each}
+			{#if !showcase.lines.length}<p
+					class="border border-dashed border-border p-8 text-center text-muted-foreground"
+				>
+					{$_('arcade.emptyShowcase')}
+				</p>{/if}
+		{:else}<ShowcaseEditor
+				{showcase}
+				{collection}
+				{tags}
+				{money}
+				{saving}
+				buying={buyingSlot}
+				onSave={saveShowcase}
+				onBuySlot={() => (buySlotOpen = true)}
+				hasMoreCards={collectionHasNext}
+				loadingMoreCards={collectionLoading}
+				onLoadMoreCards={loadMoreCollection}
+				onFiltersChange={refreshPickerCollection}
+			/>{/if}{:else}<InstantSalesManager
 			{sales}
 			{collection}
 			busy={salesBusy}
@@ -305,14 +315,7 @@
 		/>{/if}
 </section>
 
-<Dialog.Root bind:open={avatarPickerOpen}
-	><Dialog.Content class="p-5"
-		><Dialog.Title>{$_('settings.choose_avatar')}</Dialog.Title><ArticlePicker
-			bind:value={avatarPageId}
-		/><Button disabled={avatarBusy} onclick={updateAvatar}>{$_('completion.save')}</Button
-		></Dialog.Content
-	></Dialog.Root
->
+<AvatarEditor bind:open={avatarPickerOpen} onSaved={(next) => (avatarUrl = next.avatarUrl)} />
 <Dialog.Root bind:open={buySlotOpen}
 	><Dialog.Content class="p-5"
 		><Dialog.Title

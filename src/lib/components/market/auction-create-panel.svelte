@@ -1,11 +1,18 @@
 <script lang="ts">
 	import { _ } from '$lib/i18n';
+	import { untrack } from 'svelte';
+	import { currentSession } from '$lib/auth/session';
 	import SanctionNotice from '$lib/components/moderation/sanction-notice.svelte';
 	import { activeRestrictions } from '$lib/moderation/state';
 	import { page } from '$app/state';
 	import type { CardRecord } from '$lib/types';
 	import { createAuction, getAuctionFee, type AuctionFee } from '$lib/api/auctions';
-	import { activeAuctionByCard, personalAuctions, recordOwnAuction } from '$lib/auctions/store';
+	import {
+		activeAuctionByCard,
+		personalAuctions,
+		recordOwnAuction,
+		refreshPersonalAuctions
+	} from '$lib/auctions/store';
 	import { publishRealtimeRefresh } from '$lib/realtime/resource-refresh';
 	import { validAmount, validAuctionPeriod, creationFee } from '$lib/auctions/presentation';
 	import { auctionErrorKey } from '$lib/auctions/errors';
@@ -13,16 +20,40 @@
 	import AuctionConfirmation from './auction-confirmation.svelte';
 	import { toast } from 'svelte-sonner';
 	let { card }: { card: CardRecord } = $props();
+	const fieldId = $props.id();
 	let price = $state<number | undefined>();
-	let startsAt = $state('');
+	let startsAt = $state(localDateTime(Date.now()));
+	let startsNow = $state(true);
 	let endsAt = $state('');
+	let duration = $state<number>();
 	let busy = $state(false);
 	let confirm = $state(false);
 	let quote = $state<AuctionFee>();
 	let error = $state('');
-	const existing = $derived(card.activeAuctionId ?? $activeAuctionByCard.get(card.id));
+	let loading = $state(false);
+	const userId = $derived($currentSession?.user.id);
+	const sameAccount = $derived(Boolean(userId && $personalAuctions.userId === userId));
+	const existing = $derived(
+		card.activeAuctionId ?? (sameAccount ? $activeAuctionByCard.get(card.id) : undefined)
+	);
+	$effect(() => {
+		const id = userId;
+		if (id && (!sameAccount || (!$personalAuctions.loaded && !$personalAuctions.error)))
+			untrack(() => void loadAuctions(id));
+	});
+	async function loadAuctions(id: string) {
+		loading = true;
+		try {
+			await refreshPersonalAuctions(id);
+		} catch {
+			// The shared store exposes the read failure; retry only these reads.
+		} finally {
+			loading = false;
+		}
+	}
 	const available = $derived(
-		$personalAuctions.loaded &&
+		sameAccount &&
+			$personalAuctions.loaded &&
 			!$personalAuctions.error &&
 			!existing &&
 			!card.userProtected &&
@@ -31,16 +62,38 @@
 			!card.saleId &&
 			$personalAuctions.sales.filter((item) => item.status === 'OPEN').length < 3
 	);
+	function localDateTime(timestamp: number) {
+		const date = new Date(timestamp);
+		return new Date(timestamp - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+	}
+	function chooseDuration(minutes: number) {
+		const start = startsNow ? Date.now() : Date.parse(startsAt);
+		if (!Number.isFinite(start)) return;
+		duration = minutes;
+		if (startsNow) startsAt = localDateTime(start);
+		endsAt = localDateTime(start + minutes * 60_000);
+	}
+	function changeStart(value: string) {
+		startsAt = value;
+		startsNow = !value;
+		if (duration !== undefined) chooseDuration(duration);
+	}
+	function startImmediately() {
+		startsNow = true;
+		startsAt = localDateTime(Date.now());
+		if (duration !== undefined) chooseDuration(duration);
+	}
 	function valid() {
+		const now = Date.now();
 		return (
 			available &&
 			price !== undefined &&
 			validAmount(price) &&
 			validAuctionPeriod(
-				startsAt ? Date.parse(startsAt) : Date.now(),
+				startsNow ? now : Date.parse(startsAt),
 				Date.parse(endsAt),
-				Date.now(),
-				Boolean(startsAt)
+				now,
+				!startsNow
 			)
 		);
 	}
@@ -75,7 +128,7 @@
 			const auction = await createAuction({
 				cardId: Number(card.id),
 				startPrice: price!,
-				...(startsAt ? { startsAt: new Date(startsAt).toISOString() } : {}),
+				...(!startsNow ? { startsAt: new Date(startsAt).toISOString() } : {}),
 				endsAt: new Date(endsAt).toISOString()
 			});
 			recordOwnAuction(auction);
@@ -122,21 +175,47 @@
 				/></label
 			>
 			<div class="grid gap-3 xl:grid-cols-2">
-				<label class="grid min-w-0 gap-1 text-sm"
-					>{$_('auctionHub.starts')}<input
+				<div class="grid min-w-0 gap-1 text-sm">
+					<div class="flex min-h-11 items-center justify-between gap-2">
+						<label for={fieldId + '-start'}>{$_('auctionHub.starts')}</label>
+						<Button
+							size="sm"
+							variant={startsNow ? 'default' : 'outline'}
+							aria-pressed={startsNow}
+							onclick={startImmediately}>{$_('auctionHub.startNow')}</Button
+						>
+					</div>
+					<input
+						id={fieldId + '-start'}
 						type="datetime-local"
-						bind:value={startsAt}
+						value={startsAt}
+						oninput={(event) => changeStart(event.currentTarget.value)}
 						class="h-11 min-w-0 max-w-full border border-primary/25 bg-background px-3"
-					/></label
-				>
+					/>
+				</div>
 				<label class="grid min-w-0 gap-1 text-sm"
-					>{$_('auctionHub.ends')}<input
+					><span class="flex min-h-11 items-center">{$_('auctionHub.ends')}</span><input
 						type="datetime-local"
 						required
 						bind:value={endsAt}
+						oninput={() => (duration = undefined)}
 						class="h-11 min-w-0 max-w-full border border-primary/25 bg-background px-3"
 					/></label
 				>
+			</div>
+			<div role="group" aria-label={$_('auctionHub.quickDuration')} class="flex flex-wrap gap-2">
+				{#each [30, 60, 360, 720, 1440] as minutes (minutes)}
+					<Button
+						type="button"
+						size="sm"
+						variant={duration === minutes ? 'default' : 'outline'}
+						aria-pressed={duration === minutes}
+						onclick={() => chooseDuration(minutes)}
+						>{$_(minutes < 60 ? 'auctionHub.durationMinutes' : 'auctionHub.durationHours', {
+							values: { count: minutes < 60 ? minutes : minutes / 60 }
+						})}</Button
+					>
+				{/each}
 			</div>
 			<p class="text-xs text-muted-foreground">{$_('auctionHub.periodError')}</p>
 			<p class="text-sm">
@@ -147,15 +226,21 @@
 				>{$_('market.confirm_sale')}</Button
 			>
 		</form>
-	{:else}<p class="text-sm text-muted-foreground">
+	{:else}<p class="text-sm text-muted-foreground" role="status">
 			{$_(
-				$personalAuctions.error
+				sameAccount && $personalAuctions.error && !loading
 					? 'auctionHub.personalError'
-					: !$personalAuctions.loaded
+					: !sameAccount || !$personalAuctions.loaded || loading
 						? 'auctionHub.loading'
 						: 'market.auction_card_locked'
 			)}
-		</p>{/if}
+		</p>
+		{#if sameAccount && $personalAuctions.error && userId}
+			<Button variant="outline" disabled={loading} onclick={() => userId && loadAuctions(userId)}
+				>{$_('auctionHub.retry')}</Button
+			>
+		{/if}
+	{/if}
 	{#if error}<p role="alert" class="text-sm text-destructive">{error}</p>{/if}
 </section>
 <AuctionConfirmation

@@ -1,4 +1,5 @@
 import { apiRequest, ApiError, type RequestOptions } from './client';
+import type { Reauthentication } from '$lib/passkeys/api';
 export interface DeletionPreview {
 	canDelete: boolean;
 	blockers?: { code: string; guildId?: number; guildName?: string }[];
@@ -24,11 +25,11 @@ const tokenOptions = (token: string, options?: RequestOptions): RequestOptions =
 	skipAuth: true,
 	headers: { authorization: `Bearer ${token}` }
 });
-export const deleteAccount = (password: string, token: string, options?: RequestOptions) =>
+export const deleteAccount = (reauth: Reauthentication, token: string, options?: RequestOptions) =>
 	apiRequest<void>('/me', {
 		...tokenOptions(token, options),
 		method: 'DELETE',
-		body: { password }
+		body: reauth
 	});
 export async function checkDeletion(
 	token: string,

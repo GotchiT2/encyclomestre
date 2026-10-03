@@ -64,6 +64,10 @@ export function passkeyErrorKey(cause: unknown) {
 			'INVALID_CREDENTIALS',
 			'PASSKEY_REJECTED',
 			'PASSKEY_CONFLICT',
+			'ALREADY_EXISTS',
+			'FORBIDDEN_NAME',
+			'INVALID_PARAMETER',
+			'name_taken',
 			'invalid_grant'
 		].includes(code ?? '')
 	)

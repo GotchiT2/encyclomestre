@@ -1,0 +1,777 @@
+[
+	{
+		"width": 360,
+		"route": "/",
+		"authenticated": false
+	},
+	{
+		"width": 360,
+		"route": "/login",
+		"authenticated": false
+	},
+	{
+		"width": 360,
+		"route": "/register",
+		"authenticated": false
+	},
+	{
+		"width": 360,
+		"route": "/recovery",
+		"authenticated": false
+	},
+	{
+		"width": 360,
+		"route": "/legal",
+		"authenticated": false
+	},
+	{
+		"width": 360,
+		"route": "/privacy",
+		"authenticated": false
+	},
+	{
+		"width": 360,
+		"route": "/terms",
+		"authenticated": false
+	},
+	{
+		"width": 360,
+		"route": "/collection",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/cards",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/cards/1",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/boosters",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/packs/1",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/wishlists",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/market",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/market/70",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/trades",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/friends",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/messages",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/guild",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/guilds/1",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/profile",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/users/2",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/settings",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/achievements",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/leaderboard",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/notifications",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/moderation",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/moderation/1",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/welcome",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/arcade/validation",
+		"authenticated": true
+	},
+	{
+		"width": 360,
+		"route": "/boosters/apercu",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/",
+		"authenticated": false
+	},
+	{
+		"width": 390,
+		"route": "/login",
+		"authenticated": false
+	},
+	{
+		"width": 390,
+		"route": "/register",
+		"authenticated": false
+	},
+	{
+		"width": 390,
+		"route": "/recovery",
+		"authenticated": false
+	},
+	{
+		"width": 390,
+		"route": "/legal",
+		"authenticated": false
+	},
+	{
+		"width": 390,
+		"route": "/privacy",
+		"authenticated": false
+	},
+	{
+		"width": 390,
+		"route": "/terms",
+		"authenticated": false
+	},
+	{
+		"width": 390,
+		"route": "/collection",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/cards",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/cards/1",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/boosters",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/packs/1",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/wishlists",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/market",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/market/70",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/trades",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/friends",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/messages",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/guild",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/guilds/1",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/profile",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/users/2",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/settings",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/achievements",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/leaderboard",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/notifications",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/moderation",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/moderation/1",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/welcome",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/arcade/validation",
+		"authenticated": true
+	},
+	{
+		"width": 390,
+		"route": "/boosters/apercu",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/",
+		"authenticated": false
+	},
+	{
+		"width": 768,
+		"route": "/login",
+		"authenticated": false
+	},
+	{
+		"width": 768,
+		"route": "/register",
+		"authenticated": false
+	},
+	{
+		"width": 768,
+		"route": "/recovery",
+		"authenticated": false
+	},
+	{
+		"width": 768,
+		"route": "/legal",
+		"authenticated": false
+	},
+	{
+		"width": 768,
+		"route": "/privacy",
+		"authenticated": false
+	},
+	{
+		"width": 768,
+		"route": "/terms",
+		"authenticated": false
+	},
+	{
+		"width": 768,
+		"route": "/collection",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/cards",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/cards/1",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/boosters",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/packs/1",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/wishlists",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/market",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/market/70",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/trades",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/friends",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/messages",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/guild",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/guilds/1",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/profile",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/users/2",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/settings",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/achievements",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/leaderboard",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/notifications",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/moderation",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/moderation/1",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/welcome",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/arcade/validation",
+		"authenticated": true
+	},
+	{
+		"width": 768,
+		"route": "/boosters/apercu",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/",
+		"authenticated": false
+	},
+	{
+		"width": 1024,
+		"route": "/login",
+		"authenticated": false
+	},
+	{
+		"width": 1024,
+		"route": "/register",
+		"authenticated": false
+	},
+	{
+		"width": 1024,
+		"route": "/recovery",
+		"authenticated": false
+	},
+	{
+		"width": 1024,
+		"route": "/legal",
+		"authenticated": false
+	},
+	{
+		"width": 1024,
+		"route": "/privacy",
+		"authenticated": false
+	},
+	{
+		"width": 1024,
+		"route": "/terms",
+		"authenticated": false
+	},
+	{
+		"width": 1024,
+		"route": "/collection",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/cards",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/cards/1",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/boosters",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/packs/1",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/wishlists",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/market",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/market/70",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/trades",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/friends",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/messages",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/guild",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/guilds/1",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/profile",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/users/2",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/settings",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/achievements",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/leaderboard",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/notifications",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/moderation",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/moderation/1",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/welcome",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/arcade/validation",
+		"authenticated": true
+	},
+	{
+		"width": 1024,
+		"route": "/boosters/apercu",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/",
+		"authenticated": false
+	},
+	{
+		"width": 1440,
+		"route": "/login",
+		"authenticated": false
+	},
+	{
+		"width": 1440,
+		"route": "/register",
+		"authenticated": false
+	},
+	{
+		"width": 1440,
+		"route": "/recovery",
+		"authenticated": false
+	},
+	{
+		"width": 1440,
+		"route": "/legal",
+		"authenticated": false
+	},
+	{
+		"width": 1440,
+		"route": "/privacy",
+		"authenticated": false
+	},
+	{
+		"width": 1440,
+		"route": "/terms",
+		"authenticated": false
+	},
+	{
+		"width": 1440,
+		"route": "/collection",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/cards",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/cards/1",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/boosters",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/packs/1",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/wishlists",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/market",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/market/70",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/trades",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/friends",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/messages",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/guild",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/guilds/1",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/profile",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/users/2",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/settings",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/achievements",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/leaderboard",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/notifications",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/moderation",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/moderation/1",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/welcome",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/arcade/validation",
+		"authenticated": true
+	},
+	{
+		"width": 1440,
+		"route": "/boosters/apercu",
+		"authenticated": true
+	}
+]

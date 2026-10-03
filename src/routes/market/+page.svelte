@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { realtimeRefresh, refreshIncludes } from '$lib/realtime/resource-refresh';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -16,6 +17,13 @@
 	let error = $state('');
 	let now = $state(Date.now());
 	let generation = 0;
+	let revision = 0;
+	$effect(() => {
+		const update = $realtimeRefresh;
+		if (update.revision === revision || !refreshIncludes(update, 'auctions')) return;
+		revision = update.revision;
+		untrack(() => void loadCatalogue(query.page));
+	});
 	let loadedScope = '';
 	let abort: AbortController | undefined;
 	const query = $derived(marketQuery(page.url.searchParams));

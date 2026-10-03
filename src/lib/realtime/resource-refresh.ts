@@ -2,6 +2,9 @@ import { writable } from 'svelte/store';
 import type { AppNotification } from '$lib/types';
 
 export type RealtimeResource =
+	| 'boosters'
+	| 'auctions'
+	| 'catalogue'
 	| 'achievements'
 	| 'collection'
 	| 'friends'
@@ -35,12 +38,19 @@ export function publishNotificationRefresh(notifications: AppNotification[]) {
 		} else if (notification.type.startsWith('TRADE_')) {
 			resources.add('trades');
 			resources.add('collection');
+			resources.add('achievements');
+			resources.add('catalogue');
 			resources.add('profile');
 		} else if (notification.type === 'SALE_SOLD') {
 			resources.add('collection');
+			resources.add('achievements');
+			resources.add('catalogue');
 			resources.add('profile');
 		} else if (notification.type.startsWith('AUCTION_') || notification.type === 'SALE_CANCELLED') {
+			resources.add('auctions');
 			resources.add('collection');
+			resources.add('achievements');
+			resources.add('catalogue');
 			resources.add('profile');
 		} else if (notification.type === 'FRIEND_REQUEST' || notification.type === 'FRIEND_ACCEPTED') {
 			resources.add('friends');

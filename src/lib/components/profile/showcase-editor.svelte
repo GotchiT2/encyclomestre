@@ -231,6 +231,7 @@
 					>
 				</div>
 				<CollectionVitrine
+					owned
 					title={line.title || $_('profile.showcase_line_title')}
 					cards={line.cards}
 					perRow={5}

@@ -487,7 +487,6 @@ Aucun commit, déploiement ou changement backend effectué.
 - Sujet Conventional Commit : `feat(fo): render editable versioned card templates`.
 - Publication demandée par l’utilisateur ; aucun déploiement ni changement backend.
 
-
 ## Synchronisation de la bibliothèque graphique BO
 
 - [x] Douze modèles et vingt-quatre styles explicites synchronisés depuis le moteur canonique BO ; anciennes révisions mock conservées, données réelles de carte prioritaires.
@@ -504,7 +503,6 @@ Aucun commit, push ou déploiement demandé pour cette étape.
 - Sujet Conventional Commit : `feat(cards): sync full-art preset catalogue from backoffice`.
 - Commit local demandé ; aucun push ni déploiement.
 
-
 ## Évolution API — 28 septembre 2026
 
 - [x] Recherche serveur des enchères, pagination et filtres dans l’URL ; vues personnelles, résultats explicites, favoris persistants et devis avant confirmation.
@@ -513,7 +511,6 @@ Aucun commit, push ou déploiement demandé pour cette étape.
 - [x] Engagements DTO des exemplaires, bornes du catalogue, progression à la demande, recherche membres serveur, révocation des invitations et chat SSE avec rattrapage.
 
 Validation : check et ESLint, tests unitaires et build ; parcours navigateur mock aux cinq largeurs 360, 390, 768, 1024 et 1440 px. Aucun appel d’écriture en production, changement backend, déploiement, commit ou push.
-
 
 ## Passkeys — API 1.2.0
 
@@ -527,12 +524,28 @@ Aucun commit, push, déploiement ou changement backend dans cette étape.
 
 Validation finale : check sans erreur ni avertissement, ESLint ciblé, 282 tests FO, build statique et diff validés. Parcours Playwright WebAuthn virtuel en mock aux cinq largeurs ; action Turnstile et jetons renouvelés couverts par test de composant FO.
 
-
 ## Aide de connexion passkey FO
 
 - [x] Précise qu’une passkey doit d’abord être enregistrée dans les paramètres du compte.
 - [x] Remplace le message d’annulation WebAuthn par une aide pour vérifier la passkey disponible sur l’appareil.
 - Sujet Conventional Commit : `feat(auth): add passkey login and management`.
+
+## Plan 1 — bugs, fonctions et parcours de collection — 1er octobre 2026
+
+Plan approuvé par l’utilisateur. Apparence et composition des cartes conservées ; les skills UI/UX sont écartés à sa demande. Les mentions de mots de passe dans les étapes historiques ci-dessus décrivent l’ancien contrat, remplacé par la revérification passkey/code de secours.
+
+- [x] Ensemble 1 : Swagger fourni (134 opérations), types et couverture ; landing et pages de compte/légales publiques ; inscription, récupération, codes éphémères, passkeys et fermeture revérifiée ; navigation et actualisation des données de référence.
+- [x] Ensemble 2 : protection/déprotection et cession depuis la collection ; filtres tri-état, reprise et réponses obsolètes ; catalogue et contexte article/exemplaire ; invitations de wishlist par nom, opérations multiples ; packs, crédits et ouvertures réelles limitées par le stock.
+- [x] Ensemble 3 : filtres d’enchères sans identifiants saisis, union des souhaits, favoris et devis ; ventes immédiates compatibles avec les échanges ; préremplissage d’échange indépendant de la première page, pagination par page et curseur, historique borné.
+- [x] Ensemble 4 : premier message et resynchronisation, relations fiables et confirmations ; guilde et chat visible ; vitrines/profils et avatar recadré commun ; paramètres complets, succès, classements, notifications et dossiers de modération.
+- [x] Mocks étendus au nouveau contrat : compte neuf, collections nombreuses, erreurs, conflits, champs omis, dates relatives, stock limitant l’ouverture et propriété de guilde bloquant la fermeture.
+- [x] Parcours navigateur spécifiques : WebAuthn virtuel, sauvegarde des codes, récupération par code/lien, premier message, protection et vente, pagination, invitation par pseudonyme, avatar et crédits ; cinq largeurs 360, 390, 768, 1024 et 1440 px.
+- [x] Validation finale consolidée : Svelte sans erreur ni avertissement, 295 tests dans 84 fichiers, lint ciblé, revue visuelle et parcours navigateur aux cinq largeurs, build statique et diff validés.
+
+Détail par page et commandes : `docs/plan-1-validation.md`. Les écritures de validation utilisent les mocks ; aucun push, déploiement ou changement backend. Les textes légaux définitifs et la refonte graphique appartiennent aux livraisons ultérieures.
+
+- [x] Livraison du Plan 1 sur la branche `feat/plan-1-collection-parcours` ; commit local demandé par l’utilisateur.
+- Sujet Conventional Commit : `feat(collection): complete player flows and fix usability bugs`.
 
 ## Déploiement sûr et variables publiques figées — 30 septembre 2026
 
@@ -541,3 +554,140 @@ Validation finale : check sans erreur ni avertissement, ESLint ciblé, 282 tests
 
 Validation : check, ESLint, 282 tests (84 fichiers, composants navigateur compris), build sans `_app/env.js`, garde-fous du script testés avec un `.env` factice sans action distante.
 Sujet Conventional Commit proposé : `fix(deploy): inline public env at build time and harden deploy script`.
+
+## Plan 2 — Arcade contemporaine
+
+Plan approuvé : nouveau rendu de toutes les cartes, interface mobile, boosters immersifs silencieux et éditeur BO commun. Skill encyclomestre-ui exclu. Branche feat/arcade-redesign ; aucun déploiement ni publication serveur.
+
+- [x] Identité, composants, rendu commun et éditeur BO.
+- [x] Collection, catalogue, fiches, sélection et filtres compacts.
+- [x] Galerie de boosters, cérémonie, Express et reprise.
+- [x] Transactions, communauté, compte et progression.
+- [x] Mocks, scénarios aux cinq largeurs, contrôles FO/BO et parité du moteur.
+
+Validation finale : checks FO/BO sans diagnostic ; 305 tests FO et 77 tests BO, 62 scénarios BO ; parcours FO aux cinq largeurs, cibles tactiles, texte agrandi, sélection, filtres directs, ouvertures, reprise, conflits, compte et avatar. ESLint ciblé, builds statiques sans mocks, parité du moteur et diff validés. Voir `docs/plan-2-validation.md`.
+
+Les certificats et `vite.config.ts` sont conservés. GitNexus : index FO reconstruit après corruption FTS ; contrôle des changements avant commit. Aucun push, déploiement ou publication réelle de modèle.
+
+Sujet Conventional Commit : `feat(ui): redesign player experience with Arcade identity`.
+
+## Plan 2 révisé — Arcade réinventée
+
+Branche : `feat/arcade-experience`. Le skill encyclomestre-ui est exclu. Validation avec mocks ; configuration HTTPS et certificats locaux conservés.
+
+- [x] Navigation horizontale, cartes standard/full art et moteur partagé ; studio adapté.
+- [x] Album, catalogue, inspection contextuelle, souhaits et filtres compacts.
+- [x] Packs ouvrables prioritaires, cérémonie 3D, Express et reprise.
+- [x] Plateaux d’échange, marché et vitrines.
+- [x] Communauté, compte, progression et notifications recomposés.
+- [x] Validation aux cinq largeurs, clavier, mouvements réduits, checks, tests et builds FO/BO.
+
+Validation : checks FO/BO sans diagnostic ; 307 tests FO, 77 tests BO et 33 scénarios du studio. Parcours aux cinq largeurs, WebGL et repli, compte, transactions, communauté et compteur de notifications concurrent ; lint ciblé, builds sans mocks, parité du moteur et diff validés. Voir `docs/plan-2-revised-validation.md`.
+
+Sujet Conventional Commit : `feat(ui): reinvent Arcade navigation and player journeys`.
+
+## Correctifs UX/UI — WikiForge
+
+Branche : `feat/arcade-experience`. Skill encyclomestre-ui exclu ; certificats et `vite.config.ts` conservés. Validation exclusivement en mocks.
+
+- [x] Modales stables, marges, selects, identité WikiForge et tooltips.
+- [x] Filtres directs, recherche d’étiquettes et création/attribution immédiate FRIENDS.
+- [x] Suppression de la progression, brouillons, Tabs d’échange, vitrines pleine largeur et notifications par famille.
+- [x] Validation des animations, parcours et contrôles techniques FO/BO.
+
+Sujet Conventional Commit : `fix(ui): stabilize dialogs and refine WikiForge controls`.
+
+Validation : 317 tests FO, 77 tests BO, cinq scénarios du studio ; checks sans diagnostic, builds FO/BO, lint ciblé, rendu partagé et diff validés. Soixante ouvertures de dialogue contrôlées sur 1 031 images aux cinq largeurs, mouvements normaux et réduits, sans déplacement du centre. Parcours collection, vente, messages, notifications, échanges et pagination vérifiés en mocks. Voir docs/ui-corrections-validation.md.
+
+## Boosters WikiForge — plateau, dessins et cérémonie ; corrections des compositions
+
+Branche `feat/arcade-experience`. Périmètre FO uniquement ; skill encyclomestre-ui exclu. Configuration HTTPS et certificats locaux conservés. Validation exclusivement avec les mocks sur `https://dev.wikiforge.fr`.
+
+- [x] Plateau de sélection, dock des packs ouvrables, crédits uniques par famille, consultation des autres packs et gestes équivalents aux boutons.
+- [x] Dessins vectoriels Signal/Circuit/Prisme, dos communs, texture typographique et correction des intersections responsables des perforations du booster.
+- [x] Cérémonie Three.js/DOM, commandes HTML, découverte libre, finitions réelles, douze cartes par page, Express et animation passée.
+- [x] Acquisition séparée de la scène, verrou, reprise par identifiants, migration des reçus, réponse incertaine, déconnexion, visibilité et perte WebGL.
+- [x] Corrections supplémentaires demandées : marges des succès, filtres sans barre horizontale et selects harmonisés, recherche/tri pleine largeur et panneau opaque, badge/prix des enchères, demandes d'amis élargies, largeur disponible du site.
+- [x] Svelte sans diagnostic, 328 tests FO (92 fichiers), lint ciblé, build FO sans mocks et contrôle du diff ; 26 scénarios d'ouverture et 30 visites des pages corrigées. Captures aux cinq largeurs cibles, mouvements ordinaires/réduits, vidéo et images intermédiaires ; contrôle supplémentaire à 1920 px.
+
+GitNexus : analyses avant modification et index actualisé avant contrôle des changements. Le routeur des mocks a une portée critique signalée avant intervention ; modifications limitées aux ouvertures et fixtures de validation, suite complète réussie. Aucun changement du BO ni déploiement. Voir `docs/booster-room-validation.md`.
+
+Sujet Conventional Commit : `feat(boosters): rebuild opening room and refine player layouts`.
+
+## Ouverture — supprimer les noms de rareté
+
+- [x] Retirer les noms sous les dos et la légende des finitions ; masquer le nom de variante imprimé sur les rectos uniquement dans le plateau d'ouverture. Titres, couleurs, effets et dimensions conservés, y compris en Express et dans le bilan.
+- [x] Validation en mocks à 360 et 1440 px, Découverte/Express ; dix tests ciblés, Svelte sans diagnostic, lint, build FO et contrôle du diff réussis. GitNexus : impact faible, contrôle des changements avant commit.
+
+Sujet Conventional Commit : `fix(boosters): hide variant names in opening results`.
+
+## Ouverture mobile — ancrer la fenêtre au viewport
+
+- [x] Ajouter un mode plein écran explicite au dialogue et l'utiliser pour l'ouverture. Supprimer l'héritage des translations de centrage et les annulations CSS du plateau ; couvrir la largeur du viewport, y compris en présence d'une gouttière de défilement.
+- [x] Contrôler l'origine et les dimensions de la fenêtre dans le scénario navigateur existant pendant la requête et après la cérémonie. Les 26 scénarios passent aux cinq largeurs ; 348 images contrôlées en émulation mobile Chromium/WebKit après navigation, défilement et rotation, mouvements ordinaires/réduits. Sept tests ciblés, Svelte, lint, formatage, build FO et diff validés. GitNexus avant modification et avant commit.
+
+Sujet Conventional Commit : `fix(boosters): anchor opening dialog to mobile viewport`.
+
+## Enchère depuis une carte et navigation continue des boosters
+
+- [x] Le formulaire charge ses prérequis par compte, indépendamment de la validation globale de la session restaurée. Lectures partagées, reprise explicite des erreurs et garde contre les données d'un autre compte ; frais et confirmation conservés.
+- [x] Remplacer les remontages SVG/WebGL entre packs par un carrousel de dessins persistants avec relief CSS. Déplacement horizontal continu, gestes tactiles, sélection directe, dock et clavier ; arrêt immédiat de l'inertie en mouvements réduits. La cérémonie d'ouverture conserve Three.js.
+- [x] Cinq régressions du formulaire, contrôles navigateur des 20 combinaisons Chromium/WebKit, cinq largeurs et deux modes de mouvement ; aucun saut vertical, objet remplacé ou acquisition pendant la navigation. Création depuis la fiche à 390/1440 px, 26 scénarios d'ouverture et changements rapides à 1868 px validés en mocks.
+- [x] Svelte sans diagnostic, 16 tests ciblés, ESLint et Prettier ciblés, build FO sans mocks et contrôle du diff réussis ; index GitNexus actualisé et changements contrôlés avant commit. 5 791 images du carrousel vérifiées.
+
+Sujet Conventional Commit : `fix(ui): unblock card auctions and smooth booster navigation`.
+
+## Boosters sans crédit, prochaines recharges et numérotation des tirages — 3 octobre 2026
+
+- [x] Conserver tous les packs ouverts dans le carrousel et le dock, même sans crédit connu ou disponible ; permettre leur sélection par lien direct. Le balayage sur la soudure d'un pack vide navigue sans lancer d'acquisition. Le message de réserve vide ne déplace pas le paquet.
+- [x] Afficher les prochaines recharges Premium et Premium+ d'après les dates API, en heures/minutes/secondes pour les délais longs ; une seule réserve par famille. À l'échéance, attendre la confirmation API du nouveau crédit.
+- [x] Numéroter les emplacements de probabilités à partir de 1, en continu entre les groupes de tirage.
+- [x] Validation en mocks : 14 tests ciblés, Svelte sans diagnostic, ESLint/Prettier ciblés, build FO sans mocks et diff validés. Les 26 scénarios d'ouverture et les 20 combinaisons de carrousel Chromium/WebKit passent aux cinq largeurs, mouvements ordinaires/réduits ; contrôle visuel des minuteries et des probabilités à 390/1440 px. GitNexus avant modification et contrôle des changements avant commit.
+
+Sujet Conventional Commit : `fix(boosters): retain empty packs, show recharges and number draws`.
+
+## Enchères — dates préremplies et durées rapides
+
+- [x] Préremplir le début à l'heure locale actuelle et conserver un départ immédiat au moment de la confirmation. Ajouter « Maintenant » pour revenir à ce mode après programmation.
+- [x] Ajouter les durées 30 min, 1 h, 6 h, 12 h et 24 h depuis le début choisi ; recalculer la fin après modification du début. Une fin manuelle désactive la durée sélectionnée. Préserver devis, confirmation et limites serveur.
+- [x] Validation exclusivement en mocks : 13 tests ciblés, départ immédiat après attente, programmation UTC, modification des dates et écriture unique. Création depuis une fiche aux cinq largeurs 360/390/768/1024/1440 px, WebKit mobile et texte agrandi ; aucun débordement ni appel de production. Svelte sans diagnostic, lint/formatage ciblés, build FO et diff réussis. GitNexus avant modification et avant commit ; HTTPS, certificats et BO conservés.
+
+Sujet Conventional Commit : `feat(auctions): prefill dates and add duration shortcuts`.
+
+## Identité WikiForge — flamme Taillée et formats web — 3 octobre 2026
+
+Branche `feat/arcade-experience`. Commit local demandé après validation ; aucun déploiement. Skill encyclomestre-ui exclu. HTTPS, certificats, BO et clés de stockage conservés.
+
+- [x] Reconstruire la proposition 01 en vecteurs et vectoriser le nom WikiForge depuis Barlow Condensed Black ; variantes sombre, claire et monochromes, signatures horizontales/empilées et dessin optique 16 px.
+- [x] Remplacer les anciens monogrammes et logotypes dans l'en-tête, la connexion, l'accueil, les cartes, les boosters/dos et leurs rendus de secours, y compris l'aperçu expérimental. Préserver les logos spécifiques fournis par les données.
+- [x] Préparer 31 SVG, 52 PNG, favicon ICO, icônes Apple/installation/maskable, manifeste et image de partage ; sources de génération, inventaire et licences joints.
+- [x] Centrer verticalement le symbole et le nom dans le header, sans espace de descente typographique ; conserver une cible d'au moins 44 px.
+- [x] Vérifier 155 combinaisons de pages/largeurs en mocks, 26 scénarios d'ouverture, 28 tests ciblés et l'en-tête dans Chromium/WebKit à six largeurs avec texte normal/agrandi. Svelte sans diagnostic, lint/formatage ciblés, syntaxe Python, build FO sans mocks et diff validés.
+
+GitNexus avant les modifications et contrôle des changements : portée faible sur les symboles indexés ; imports Svelte et nouveaux fichiers vérifiés directement. Captures et documentation : `docs/branding/wikiforge-taillee/`. Les modifications préexistantes d'AGENTS.md et les anciens fichiers de proposition restent hors de cette livraison.
+
+Sujet Conventional Commit : `feat(branding): integrate WikiForge flame identity and web assets`.
+
+## Cartes validées — N3 et full art photo dominante — 3 octobre 2026
+
+- [x] Direction validée : N3 normale avec description, full art avec flamme en bas à droite et texte discret en bas à gauche ; numérotation seulement full art.
+- [x] Moteur CSS/JSON v3 partagé FO/BO, styles/calques/animations éditables, lecture v1/v2 et anciennes clés conservée. Sept fichiers du moteur strictement identiques entre les deux projets.
+- [x] N3 et full art, six finitions éditables d'exploration, huit JSON prêts à importer ; studio visuel, variantes JSON, titres longs, orientations 5:7/7:5 et description ajustée aux lignes disponibles. Sources et styles inconnus conservés.
+- [x] Validation exclusivement en mocks : Svelte sans diagnostic ; 361 tests FO, 94 tests BO, 28 scénarios navigateur de compatibilité ; parcours du nouveau studio aux cinq largeurs, texte agrandi, import/export, brouillons invalides, annulation/rétablissement, sauvegarde de variante, mouvements réduits et concordance FO/BO normale/full art portrait/paysage. Lint ciblé, builds FO/BO et diff validés.
+
+HTTPS et certificats conservés ; skill encyclomestre-ui exclu. Aucun déploiement ni publication réelle.
+
+Documentation : `docs/cards/templates-v3.md`. Captures et mesures : `%TEMP%/wikiforge-card-designs/`. GitNexus exécuté avant les changements et en contrôle final : portée élevée FO / critique BO sur les chemins communs de templates, couverts par les validations d'import, chargement, création et sauvegarde en mocks. Aucun commit effectué pour cette étape.
+
+
+## Détail d’enchère et livraison FO — 3 octobre 2026
+
+- [x] Carte inspectable au clic sans bouton redondant ; description puis historique ouvert par défaut, métadonnées répétées retirées.
+- [x] Panneau persistant à droite sur desktop et fixé au-dessus de la navigation mobile, hauteur mesurée et espace réservé ; une seule instance du formulaire conserve sa saisie entre les tailles d’écran.
+- [x] Timer dominant, date exacte en petit dessous, informations secondaires dans un dialogue. Avatars recadrés vendeur/meneur, lecture légère et cache dédupliqué par visite, initiales et meneur masqué conservés.
+- [x] Mise rapide immédiate au minimum serveur, dépassement du plafond personnel, verrou contre double appel. Confirmation manuelle et récupération du surplus maintenues. Saisie vidée après succès, conservée après conflit/actualisation, erreurs locales et serveur actualisées avec la saisie.
+- [x] Validation en mocks : Svelte sans diagnostic, 57 tests ciblés (enchères, cache, JSON et rendu), lint ciblé et build FO. Revue navigateur aux cinq largeurs 360/390/768/1024/1440, texte agrandi, défilement, focus, hauteur réduite, changement de largeur, conflit et phases ; 16 mesures de géométrie, aucune requête de production.
+- [x] Livraison des cartes CSS/JSON précédemment validées avec ces corrections d’enchère. GitNexus contrôlé avant les changements et avant commit : portée élevée sur les treize flux communs du rendu, couverts par les tests ; contrôle manuel des compositions Svelte et du cache d’identités.
+- Sujet Conventional Commit : feat(fo): add configurable cards and persistent auction bidding.
+
+Captures et mesures : %TEMP%/wikiforge-auction-detail/. Vite, certificats, clés de session et préférences préservés. Skill encyclomestre-ui exclu. Commit local demandé ; fichiers IDE, AGENTS généré et outillage .claude hors livraison. Aucun push ni déploiement.

@@ -54,7 +54,7 @@
 
 {#if visible.length}<aside
 		bind:clientHeight={height}
-		class="sticky top-16 z-30 grid max-h-[40dvh] w-full shrink-0 gap-2 overflow-y-auto bg-background p-3 md:top-0 md:pr-44"
+		class="sticky top-16 z-30 grid max-h-[40dvh] w-full shrink-0 gap-2 overflow-y-auto bg-background p-3"
 		aria-label={$_('banners.region')}
 	>
 		{#each visible as banner (banner.id)}<div

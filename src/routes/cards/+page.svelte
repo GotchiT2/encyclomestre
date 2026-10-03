@@ -6,7 +6,6 @@
 	import CardTile from '$lib/components/card-tile.svelte';
 	import CardDetailModal from '$lib/components/cards/card-detail-modal.svelte';
 	import CatalogueFilters from '$lib/components/cards/catalogue-filters.svelte';
-	import FilterShell from '$lib/components/layout/filter-shell.svelte';
 	import CatalogueResultSummary from '$lib/components/cards/catalogue-result-summary.svelte';
 	import CatalogueWishlistSelectionBar from '$lib/components/wishlist/catalogue-wishlist-selection-bar.svelte';
 	import EmptyState from '$lib/components/layout/empty-state.svelte';
@@ -19,6 +18,7 @@
 		getWishlists,
 		toPublicPageCardRecord
 	} from '$lib/api';
+	import { invalidateArticleContexts } from '$lib/arcade/article-context';
 	import { _ } from '$lib/i18n';
 	import { wikiForgeApiErrorCode } from '$lib/api/wikiforge-contract';
 	import { toast } from 'svelte-sonner';
@@ -48,14 +48,14 @@
 				.catch(() => toast.error($_('common.error')));
 		}
 		if (!restoreSession(localStorage)?.accessToken) return;
-		wishlists = await getWishlists();
+		wishlists = await getWishlists().catch(() => []);
 	});
 
 	async function openCard(card: CardRecord) {
 		if (selectionMode) {
 			selectedCardIds = selectedCardIds.includes(card.id)
 				? selectedCardIds.filter((id) => id !== card.id)
-				: [...selectedCardIds, card.id];
+				: [...selectedCardIds, card.id].slice(0, 500);
 			return;
 		}
 		const request = ++detailRequest;
@@ -69,7 +69,7 @@
 	}
 
 	async function addSelectedToWishlist(wishlistId: string) {
-		if (!selectedCardIds.length) return;
+		if (!selectedCardIds.length || wishlistAdding) return;
 		wishlistAdding = true;
 		try {
 			await addWishlistRegistryCards(wishlistId, selectedCardIds);
@@ -77,6 +77,7 @@
 			selectedCardIds = [];
 			selectionMode = false;
 			wishlists = await getWishlists();
+			invalidateArticleContexts();
 		} catch (error) {
 			if (wikiForgeApiErrorCode(error) === 'WISHLIST_FULL') toast.error($_('wishlist.full_error'));
 			else toast.error($_('common.error'));
@@ -103,6 +104,7 @@
 		}
 		toast.success($_('wishlist.card_added_generic'));
 		wishlists = await getWishlists();
+		invalidateArticleContexts();
 	}
 
 	function pageHref(page: number) {
@@ -114,12 +116,6 @@
 		});
 		return `/cards?${parameters}`;
 	}
-
-	const activeFilterCount = $derived(
-		(data.filters.query ? 1 : 0) +
-			(data.filters.sortBy !== 'name' ? 1 : 0) +
-			(data.filters.sortDirection === 'DESC' ? 1 : 0)
-	);
 </script>
 
 <section class="flex flex-col gap-8">
@@ -128,14 +124,14 @@
 		title={$_('codex.title')}
 		description={$_('codex.description')}
 	/>
-	<div class="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
-		<FilterShell activeCount={activeFilterCount}>
+	<div class="grid gap-4">
+		<div class="w-full min-w-0">
 			<CatalogueFilters
 				query={data.filters.query}
 				sortBy={data.filters.sortBy}
 				sortDirection={data.filters.sortDirection}
 			/>
-		</FilterShell>
+		</div>
 
 		<div class="flex min-w-0 flex-col gap-6">
 			{#await data.cards}
@@ -165,10 +161,10 @@
 					/>
 				{/if}
 				{#if result.items.length}
-					<div class="wikiforge-card-grid xl:grid-cols-6">
+					<div class="arcade-card-grid">
 						{#each result.items as card (card.id)}
 							<div class="relative w-full">
-								<CardTile {card} onOpen={openCard} />
+								<CardTile {card} interactive={!selectionMode} onOpen={openCard} />
 								{#if selectionMode}
 									<button
 										class={`absolute inset-0 z-20 flex items-start justify-end bg-primary/10 p-2 outline-none ring-inset ring-energy focus-visible:ring-2 ${selectedCardIds.includes(card.id) ? 'bg-primary/25' : ''}`}

@@ -1,15 +1,35 @@
 import type { CardRecord, VariantDefinition } from '$lib/types';
+import { cardDefinition } from '$lib/card-renderer/card-presets';
+import { serializeRenderKey } from '$lib/card-renderer/render-key';
 
 const mockVariants: VariantDefinition[] = [
-	{ id: 1, name: 'Standard', color: '#b8f2d5', styles: ['NORMAL'], renderKey: 'standard' },
-	{ id: 2, name: 'Full art', color: '#ffe144', styles: ['FULL_ART'], renderKey: 'full-art' },
-	{ id: 3, name: 'Chrome', color: '#b1cff2', styles: ['CHROME'], renderKey: 'chrome' },
+	{
+		id: 1,
+		name: 'Standard',
+		color: '#b8f2d5',
+		styles: ['NORMAL'],
+		renderKey: serializeRenderKey(cardDefinition(false))
+	},
+	{
+		id: 2,
+		name: 'Full art',
+		color: '#ffe144',
+		styles: ['FULL_ART'],
+		renderKey: serializeRenderKey(cardDefinition(true))
+	},
+	{
+		id: 3,
+		name: 'Chrome',
+		color: '#b1cff2',
+		styles: ['CHROME'],
+		renderKey: serializeRenderKey(cardDefinition(false, 'chrome'))
+	},
 	{
 		id: 4,
 		name: 'Chrome full art',
 		color: '#fa9931',
 		styles: ['FULL_ART', 'CHROME'],
-		renderKey: 'chrome'
+		renderKey: serializeRenderKey(cardDefinition(true, 'chrome'))
 	}
 ];
 

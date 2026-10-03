@@ -54,6 +54,7 @@ export interface WikiForgeSimpleUserDto {
 	name: string;
 	imagePageId?: number | null;
 	image?: string | null;
+	imageCrop?: import('$lib/types/user').ImageCrop;
 	createdAt?: string;
 	lastConnection?: LastConnection;
 	sharesWishlist?: boolean;
@@ -90,6 +91,7 @@ export function toWikiForgeUser(user: WikiForgeSimpleUserDto): User {
 		username: user.name,
 		displayName: user.name,
 		avatarUrl: wikiForgeUserImage(user.image),
+		imageCrop: user.imageCrop,
 		role: 'user',
 		createdAt: user.createdAt ? wikiForgeUtcDate(user.createdAt).toISOString() : '',
 		updatedAt: user.createdAt ? wikiForgeUtcDate(user.createdAt).toISOString() : '',
@@ -197,14 +199,15 @@ export const updateWikiForgeMe = async (
 
 export const updateWikiForgeImage = async (
 	imagePageId: number | null,
-	options?: RequestOptions
+	options?: RequestOptions,
+	imageCrop?: import('$lib/types/user').ImageCrop
 ): Promise<User> =>
 	toCurrentUser(
 		await apiRequest<OAuthCurrentUserResponse>('/me/image', {
 			...options,
 			apiTarget: 'wikiforge',
 			method: 'PATCH',
-			body: { imagePageId }
+			body: { imagePageId, ...(imageCrop ? { imageCrop } : {}) }
 		})
 	);
 

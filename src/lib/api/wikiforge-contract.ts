@@ -14,6 +14,13 @@ export function wikiForgeUtcDate(value: string): Date {
 	return new Date(normalized);
 }
 
+/** Missing or invalid optional dates must not discard an otherwise readable API result. */
+export function wikiForgeIsoDate(value?: string | null): string | null {
+	if (!value) return null;
+	const date = wikiForgeUtcDate(value);
+	return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+}
+
 export function wikiForgeApiErrorCode(error: unknown): string | undefined {
 	if (!(error instanceof ApiError) || !error.payload || typeof error.payload !== 'object') return;
 	const payload = error.payload as Record<string, unknown>;

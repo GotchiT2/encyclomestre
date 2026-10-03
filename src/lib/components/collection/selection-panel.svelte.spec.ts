@@ -2,6 +2,8 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import '$lib/i18n';
+import '../../../app.css';
+vi.mock('$env/dynamic/public', () => ({ env: {} }));
 import SelectionPanel from './selection-panel.svelte';
 
 describe('SelectionPanel', () => {
@@ -20,9 +22,12 @@ describe('SelectionPanel', () => {
 		});
 
 		const selector = page.getByTestId('bulk-tag-selector');
-		expect(selector.element().querySelector('.forge-control')).not.toBeNull();
+		await selector.getByRole('button', { name: 'Étiquettes: Étiquettes' }).click();
+		await page.getByRole('searchbox').fill('favorite');
+		await expect.element(page.getByRole('button', { name: /Favorite/ })).toBeVisible();
+		await page.getByRole('button', { name: /Favorite/ }).click();
 		const protect = page.getByTestId('protect-selection');
-		await expect.element(protect).toHaveClass('sm:h-11');
+		expect(protect.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
 		await protect.click();
 		expect(onProtect).toHaveBeenCalledOnce();
 	});

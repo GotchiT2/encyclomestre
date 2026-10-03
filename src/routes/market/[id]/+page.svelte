@@ -82,7 +82,7 @@
 <svelte:head
 	><title>{auction?.card.title ?? $_('market.auction_details')} · WikiForge</title></svelte:head
 >
-<main class="mx-auto max-w-screen-xl space-y-5">
+<main class="flex w-full min-w-0 flex-col gap-5">
 	<div class="flex flex-wrap items-center justify-between gap-3">
 		<Button href={back} variant="outline"
 			>{$_(back.startsWith('/market') ? 'auctionHub.back' : 'auctionHub.backContext')}</Button

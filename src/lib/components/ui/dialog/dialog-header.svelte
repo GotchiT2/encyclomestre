@@ -4,6 +4,6 @@
 	let { class: className, children, ...restProps }: HTMLAttributes<HTMLDivElement> = $props();
 </script>
 
-<div data-slot="dialog-header" class={cn('flex flex-col gap-1.5', className)} {...restProps}>
+<div data-slot="dialog-header" class={cn('flex flex-col gap-1.5 pr-12', className)} {...restProps}>
 	{@render children?.()}
 </div>

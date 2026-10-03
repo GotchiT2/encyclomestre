@@ -1,8 +1,11 @@
 const publicAuthenticationRoutes = new Set([
+	'/',
 	'/login',
 	'/register',
-	'/forgot-password',
-	'/reset-password'
+	'/recovery',
+	'/legal',
+	'/privacy',
+	'/terms'
 ]);
 
 export function isPublicAuthenticationRoute(pathname: string): boolean {

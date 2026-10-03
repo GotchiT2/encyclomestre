@@ -1,6 +1,8 @@
 <script lang="ts">
+	import UserAvatar from '$lib/components/users/user-avatar.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
+	import UserPicker from '$lib/components/selectors/user-picker.svelte';
+	import { operationError } from '$lib/domain/operation-error';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { _ } from '$lib/i18n';
 	import type { WishlistFollower } from '$lib/types';
@@ -18,41 +20,66 @@
 	} = $props();
 
 	let invitedId = $state('');
+	let busy = $state(false);
+	let error = $state('');
+	let invitedName = $state('');
 	const validId = $derived(/^\d+$/.test(invitedId) && Number(invitedId) > 0);
 
 	async function invite() {
-		if (!validId) return;
-		await onInvite(invitedId);
-		invitedId = '';
+		if (!validId || busy) return;
+		busy = true;
+		error = '';
+		try {
+			await onInvite(invitedId);
+			invitedId = '';
+			invitedName = '';
+		} catch (cause) {
+			error = operationError(cause);
+		} finally {
+			busy = false;
+		}
+	}
+	async function revoke(id: string) {
+		if (busy) return;
+		busy = true;
+		error = '';
+		try {
+			await onRevoke(id);
+		} catch (cause) {
+			error = operationError(cause);
+		} finally {
+			busy = false;
+		}
 	}
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="max-w-lg">
+	<Dialog.Content class="max-w-lg p-0 sm:p-0 overflow-hidden">
 		<Dialog.Header class="px-4 pt-4 pr-12 pb-2">
 			<Dialog.Title>{$_('wishlist.manage_access')}</Dialog.Title>
-			<Dialog.Description>{$_('wishlist.invite_id_hint')}</Dialog.Description>
+			<Dialog.Description>{$_('plan.wishlist.inviteHint')}</Dialog.Description>
 		</Dialog.Header>
 		<div class="grid gap-4 px-4 pt-2 pb-4">
-			<div class="flex gap-2">
-				<Input
-					bind:value={invitedId}
-					inputmode="numeric"
-					pattern="[0-9]*"
-					placeholder={$_('wishlist.invite_id_placeholder')}
-					aria-label={$_('wishlist.invite_id_label')}
-				/>
-				<Button disabled={!validId} onclick={() => void invite()}>{$_('wishlist.invite')}</Button>
-			</div>
+			<UserPicker
+				onChoose={(user) => {
+					invitedId = user.id;
+					invitedName = user.username;
+				}}
+			/>
+			{#if invitedId}<p>
+					{$_('completion.selected', { values: { name: invitedName } })}
+				</p>{/if}<Button disabled={!validId || busy} onclick={() => void invite()}
+				>{$_('wishlist.invite')}</Button
+			>{#if error}<p role="alert">{error}</p>{/if}
 			{#if followers.length}
 				<ul class="grid gap-2">
 					{#each followers as follower (follower.id)}
 						<li class="flex items-center gap-3 border border-primary/20 bg-background p-3">
-							{#if follower.imageUrl}<img
-									src={follower.imageUrl}
-									alt=""
-									class="size-10 shrink-0 object-cover"
-								/>{/if}
+							<UserAvatar
+								image={follower.imageUrl}
+								crop={follower.imageCrop}
+								name={follower.name}
+							/>
 							<div class="min-w-0 flex-1">
 								<p class="truncate font-bold">{follower.name}</p>
 								<p class="forge-label">
@@ -61,8 +88,11 @@
 										: $_('wishlist.access_pending')}
 								</p>
 							</div>
-							<Button size="sm" variant="destructive" onclick={() => void onRevoke(follower.id)}
-								>{$_('wishlist.revoke')}</Button
+							<Button
+								size="sm"
+								variant="destructive"
+								disabled={busy}
+								onclick={() => void revoke(follower.id)}>{$_('wishlist.revoke')}</Button
 							>
 						</li>
 					{/each}

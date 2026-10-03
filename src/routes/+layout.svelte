@@ -1,10 +1,9 @@
 <script lang="ts">
+	import IconTooltips from '$lib/components/layout/icon-tooltips.svelte';
 	import '$lib/i18n';
-	import '@fontsource-variable/inter/wght.css';
-	import '@fontsource-variable/source-sans-3/wght.css';
-	import '@fontsource-variable/source-sans-3/wght-italic.css';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import { page } from '$app/state';
 	import {
 		currentSession,
 		hydrateSession,
@@ -14,37 +13,45 @@
 	} from '$lib/auth/session';
 	import { getCurrentUser } from '$lib/api';
 	import { setNsfwFilterSettings } from '$lib/content/nsfw-filter';
-	import AppSidebar from '$lib/components/layout/app-sidebar.svelte';
-	import ForgeStarfield from '$lib/components/layout/forge-starfield.svelte';
 	import MobileTabBar from '$lib/components/layout/mobile-tab-bar.svelte';
 	import MobileTopBar from '$lib/components/layout/mobile-top-bar.svelte';
 	import NotificationStream from '$lib/components/notifications/notification-stream.svelte';
-	import PlayerMoney from '$lib/components/layout/player-money.svelte';
 	import AuctionSession from '$lib/components/market/auction-session.svelte';
 	import CardDetailHost from '$lib/components/cards/card-detail-host.svelte';
 	import GlobalBanners from '$lib/components/layout/global-banners.svelte';
 	import { replaceBanners } from '$lib/banners/store';
-	import * as Sidebar from '$lib/components/ui/sidebar';
-	import { SIDEBAR_COOKIE_NAME } from '$lib/components/ui/sidebar/constants';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import { _ } from '$lib/i18n';
 	import { realtimeRefresh, refreshIncludes } from '$lib/realtime/resource-refresh';
 	import { clearCurrentWelcome, refreshCurrentWelcome } from '$lib/welcome/store';
 	import { onMount } from 'svelte';
+	import { hydrateArcadePreferences } from '$lib/arcade/preferences';
+	import { clearOpeningReceipts } from '$lib/arcade/opening-receipt';
+	import { invalidateArticleContexts } from '$lib/arcade/article-context';
 
 	let { children } = $props();
 
-	// `ssr = false` : le cookie posé par la sidebar est lisible dès l'initialisation.
-	let sidebarOpen = $state(
-		!document.cookie.split('; ').some((entry) => entry === `${SIDEBAR_COOKIE_NAME}=false`)
-	);
 	let handledWelcomeRevision = 0;
+	let lastReceiptAccount: string | null = null;
+	let contextRevision = 0;
+	$effect(() => {
+		const account = $currentSession?.user.id ?? null;
+		if (lastReceiptAccount && lastReceiptAccount !== account) clearOpeningReceipts(sessionStorage);
+		lastReceiptAccount = account;
+	});
+	$effect(() => {
+		const refresh = $realtimeRefresh;
+		if (refresh.revision === contextRevision) return;
+		contextRevision = refresh.revision;
+		if (refreshIncludes(refresh, 'collection')) invalidateArticleContexts();
+	});
 	let welcomeLoadedForUserId: string | null = null;
 
-	async function refreshWelcomeForSession() {
-		const welcome = await refreshCurrentWelcome();
+	async function refreshWelcomeForSession(force = false) {
+		const account = $currentSession?.user.id;
+		const welcome = await refreshCurrentWelcome(force);
 		const session = $currentSession;
-		if (!session) return;
+		if (!session || session.user.id !== account) return;
 		persistSession(localStorage, {
 			...session,
 			user: { ...session.user, money: welcome.money, rank: welcome.rank }
@@ -52,6 +59,7 @@
 	}
 
 	onMount(() => {
+		hydrateArcadePreferences(localStorage);
 		const session = hydrateSession(localStorage);
 		if (!session) return;
 		void getCurrentUser()
@@ -87,35 +95,48 @@
 		)
 			return;
 		handledWelcomeRevision = refresh.revision;
-		void refreshWelcomeForSession().catch(() => undefined);
+		void refreshWelcomeForSession(true).catch(() => undefined);
 	});
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
-	<meta name="theme-color" content="#071638" />
+	<link rel="icon" type="image/svg+xml" href={favicon} />
+	<link rel="icon" type="image/png" sizes="32x32" href="/brand/v1/favicon-32.png" />
+	<link rel="icon" type="image/png" sizes="16x16" href="/brand/v1/favicon-16.png" />
+	<link rel="apple-touch-icon" sizes="180x180" href="/brand/v1/icon-180.png" />
+	<link rel="mask-icon" href="/brand/v1/pinned-tab.svg" color="#E8EF42" />
+	<link rel="manifest" href="/site.webmanifest" />
+	<meta name="theme-color" content="#171918" />
+	<meta name="application-name" content={$_('navigation.brand')} />
+	<meta name="apple-mobile-web-app-title" content={$_('navigation.brand')} />
+	<meta name="description" content={$_('landing.manifest')} />
+	<meta property="og:site_name" content={$_('navigation.brand')} />
+	<meta property="og:title" content={$_('app.title')} />
+	<meta property="og:description" content={$_('landing.manifest')} />
+	<meta property="og:image" content={new URL('/brand/v1/social-card.png', page.url).href} />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:image:alt" content={$_('navigation.brand')} />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:image" content={new URL('/brand/v1/social-card.png', page.url).href} />
 	<title>{$_('app.title')}</title>
 </svelte:head>
 
-<Sidebar.Provider bind:open={sidebarOpen}>
+<div class="app-frame">
 	<AuctionSession />
-	{#if $currentSession}<AppSidebar />{/if}
 	{#if $currentSession}<NotificationStream />{/if}
-	<MobileTopBar />
 
-	<Sidebar.Inset class="forge-scene bg-transparent">
-		<ForgeStarfield />
+	<main class="forge-scene min-w-0 bg-transparent">
+		<MobileTopBar />
 		<GlobalBanners />
-		<div class="pointer-events-none fixed top-4 right-5 z-30 hidden md:block lg:right-8">
-			<div class="pointer-events-auto"><PlayerMoney /></div>
-		</div>
-		<div class="mx-auto w-full max-w-screen-2xl px-4 pt-20 pb-28 sm:px-5 md:pt-8 md:pb-10 lg:px-8">
+		<div class="arcade-page">
 			{@render children()}
 		</div>
-	</Sidebar.Inset>
+	</main>
 
 	{#if $currentSession}<MobileTabBar />{/if}
-</Sidebar.Provider>
+</div>
 
 <CardDetailHost />
+<IconTooltips />
 <Toaster richColors />

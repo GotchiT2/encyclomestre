@@ -1,4 +1,12 @@
 <script lang="ts">
+	import * as Dialog from '$lib/components/ui/dialog';
+	import { page } from '$app/state';
+	import {
+		realtimeRefresh,
+		refreshIncludes,
+		publishRealtimeRefresh
+	} from '$lib/realtime/resource-refresh';
+	import { operationError } from '$lib/domain/operation-error';
 	import SanctionNotice from '$lib/components/moderation/sanction-notice.svelte';
 	import { activeRestrictions } from '$lib/moderation/state';
 	import { onMount, untrack } from 'svelte';
@@ -11,7 +19,6 @@
 	import CollectionVitrine from './collection-vitrine.svelte';
 	import CardGrid from '$lib/components/collection/card-grid.svelte';
 	import FilterControls from '$lib/components/collection/filter-controls.svelte';
-	import FilterShell from '$lib/components/layout/filter-shell.svelte';
 	import PlayerRelationshipControl from '$lib/components/friends/player-relationship-control.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import UserAvatar from '$lib/components/users/user-avatar.svelte';
@@ -46,6 +53,11 @@
 	let relationship = $state<PlayerRelationshipStatus | null>(null);
 	let inviting = $state(false);
 	let buyingId = $state<string | null>(null);
+	let purchase = $state<SalesResult['instantSales'][number] | null>(null);
+	let collectionError = $state('');
+	let generation = 0;
+	let revision = 0;
+	let wanted = $state(Boolean(page.url.searchParams.get('wishlist')));
 	let sales = $state(untrack(() => initialSales));
 	let friendCards = $state<CardRecord[]>([]);
 	let collectionLoading = $state(false);
@@ -61,7 +73,9 @@
 	let friendHasNext = $state(false);
 	let friendFilterTimer: number | undefined;
 	let friendFilterKey = $state('');
-	let activeTab = $state<'showcase' | 'sales' | 'collection'>('showcase');
+	let activeTab = $state<'showcase' | 'sales' | 'collection'>(
+		page.url.searchParams.get('tab') === 'collection' ? 'collection' : 'showcase'
+	);
 
 	onMount(() => void loadRelationship());
 
@@ -81,7 +95,8 @@
 					friendVariantIds,
 					friendTagIds,
 					friendDuplicate,
-					friendProtection
+					friendProtection,
+					wanted
 				]);
 			}
 		} catch {
@@ -97,27 +112,31 @@
 			tagIds: friendTagIds,
 			duplicate: friendDuplicate,
 			protected: friendProtection,
+			wishlistOwnerId: wanted ? $currentSession?.user.id : undefined,
 			...(position?.cursor ? { cursor: position.cursor } : { page: position?.page })
 		};
 	}
 	async function loadCollection(append = false) {
-		if (collectionLoading) return;
+		if (append && collectionLoading) return;
+		const request = ++generation;
+		collectionError = '';
 		collectionLoading = true;
 		try {
 			const page = await getFriendCollectionPage(
 				profile.id,
 				friendCollectionQuery(append ? { page: friendPage + 1, cursor: friendCursor } : undefined)
 			);
+			if (request !== generation) return;
 			friendCards = append
 				? [...new Map([...friendCards, ...page.items].map((card) => [card.id, card])).values()]
 				: page.items;
 			friendPage = page.page;
 			friendCursor = page.nextCursor;
 			friendHasNext = page.hasNext;
-		} catch {
-			friendCards = [];
+		} catch (cause) {
+			if (request === generation) collectionError = operationError(cause);
 		} finally {
-			collectionLoading = false;
+			if (request === generation) collectionLoading = false;
 		}
 	}
 
@@ -129,7 +148,8 @@
 			friendVariantIds,
 			friendTagIds,
 			friendDuplicate,
-			friendProtection
+			friendProtection,
+			wanted
 		]);
 		if (key === friendFilterKey) return;
 		window.clearTimeout(friendFilterTimer);
@@ -162,6 +182,8 @@
 			if (session && typeof money === 'number') {
 				persistSession(localStorage, { ...session, user: { ...session.user, money } });
 			}
+			purchase = null;
+			publishRealtimeRefresh(['collection', 'profile', 'achievements']);
 			await invalidateAll();
 			toast.success($_('profile.sale_bought'));
 		} catch (error) {
@@ -174,40 +196,47 @@
 			buyingId = null;
 		}
 	}
+	$effect(() => {
+		const refresh = $realtimeRefresh;
+		if (revision === refresh.revision || !refreshIncludes(refresh, 'friends')) return;
+		revision = refresh.revision;
+		void loadRelationship();
+	});
 </script>
 
 <SanctionNotice kind="TRADE" />
 
 <section class="flex flex-col gap-6 pb-12">
-	<header
-		class="forge-panel flex flex-col gap-5 overflow-hidden p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6"
-	>
+	<header class="flex flex-wrap items-start gap-4 border-b border-border pb-5">
 		<UserAvatar
 			image={profile.image}
+			crop={profile.imageCrop}
 			name={profile.name}
 			lastConnection={profile.lastConnection}
 			presenceSize="lg"
 			size="lg"
-			class="size-24 text-3xl sm:size-28"
+			class="size-16 text-2xl"
 		/>
-		<div class="min-w-0 flex-1">
+		<div class="min-w-0 flex-[1_1_180px]">
 			<p class="forge-label text-primary">{$_('friends.profile')}</p>
 			<h1 class="mt-1 truncate font-serif text-3xl font-bold sm:text-4xl">{profile.name}</h1>
 			{#if profile.guild}<a
 					class="underline text-primary"
 					href={resolve('/guilds/[id]', { id: String(profile.guild.id) })}>{profile.guild.name}</a
 				>{/if}
-			<div class="mt-4 grid grid-cols-2 gap-2 sm:max-w-md">
-				<div class="border border-primary/25 bg-background/40 px-3 py-2">
+			<div class="mt-2 flex flex-wrap gap-4">
+				<div class="text-sm">
 					<p class="forge-label">{$_('profile.cards_owned')}</p>
 					<p class="mt-1 font-heading text-xl tracking-wider">{profile.nbCards}</p>
 				</div>
-				<div class="border border-primary/25 bg-background/40 px-3 py-2">
+				<div class="text-sm">
 					<p class="forge-label">{$_('profile.member_since')}</p>
 					<p class="mt-1 text-sm font-bold">
-						{new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(
-							new Date(`${profile.joinedAt}-01T00:00:00Z`)
-						)}
+						{profile.joinedAt && Number.isFinite(Date.parse(profile.joinedAt + '-01T00:00:00Z'))
+							? new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(
+									new Date(profile.joinedAt + '-01T00:00:00Z')
+								)
+							: $_('plan.unknownDate')}
 					</p>
 				</div>
 			</div>
@@ -223,12 +252,14 @@
 					</ul>
 				</div>{/if}
 		</div>
-		<PlayerRelationshipControl status={relationship} busy={inviting} onInvite={invite} />
-		<ReportDialog
-			target={{ type: 'USER', id: Number(profile.id) }}
-			title={profile.name}
-			userId={Number(profile.id)}
-		/>
+		<div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+			<PlayerRelationshipControl status={relationship} busy={inviting} onInvite={invite} />
+			<ReportDialog
+				target={{ type: 'USER', id: Number(profile.id) }}
+				title={profile.name}
+				userId={Number(profile.id)}
+			/>
+		</div>
 	</header>
 
 	<div
@@ -292,7 +323,7 @@
 									disabled={buyingId !== null ||
 										profile.id === $currentSession?.user.id ||
 										$activeRestrictions.includes('TRADE')}
-									onclick={() => buy(sale.id)}>{$_('profile.buy_action')}</Button
+									onclick={() => (purchase = sale)}>{$_('profile.buy_action')}</Button
 								>
 							</div>
 						</article>{/snippet}</ContextualCardRail
@@ -308,8 +339,11 @@
 		</section>{/if}
 
 	{#if relationship === 'friend' && activeTab === 'collection'}
-		<section class="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
-			<FilterShell description={$_('collection.filtersDescription')}>
+		<section class="grid gap-6">
+			<div>
+				<label class="mb-3 flex items-start gap-2 text-sm"
+					><input type="checkbox" bind:checked={wanted} />{$_('plan.profile.wanted')}</label
+				>
 				<FilterControls
 					bind:query={friendQuery}
 					bind:sortBy={friendSort}
@@ -328,12 +362,15 @@
 						friendTagIds = [];
 						friendDuplicate = 'all';
 						friendProtection = 'all';
+						wanted = false;
 					}}
 				/>
-			</FilterShell>
+			</div>
 			<div class="min-w-0">
 				{#if collectionLoading}<p class="forge-label text-primary">{$_('friends.loading')}</p>
-				{:else if friendCards.length}
+				{:else if collectionError}<p role="alert">{collectionError}</p>
+					<Button onclick={() => void loadCollection()}>{$_('completion.retry')}</Button
+					>{:else if friendCards.length}
 					<CardGrid
 						cards={friendCards}
 						tags={friendTags}
@@ -354,3 +391,26 @@
 		</section>
 	{/if}
 </section>
+
+<Dialog.Root
+	open={Boolean(purchase)}
+	onOpenChange={(value) => {
+		if (!value && !buyingId) purchase = null;
+	}}
+	><Dialog.Content
+		><Dialog.Header class="pr-12"
+			><Dialog.Title>{$_('plan.profile.confirmBuy')}</Dialog.Title><Dialog.Description
+				>{$_('plan.profile.purchase', {
+					values: { title: purchase?.card.title ?? '', price: purchase?.price ?? 0 }
+				})}</Dialog.Description
+			></Dialog.Header
+		>
+		<div class="flex flex-wrap gap-2">
+			<Button disabled={Boolean(buyingId)} onclick={() => purchase && void buy(purchase.id)}
+				>{$_('completion.confirm')}</Button
+			><Button disabled={Boolean(buyingId)} variant="outline" onclick={() => (purchase = null)}
+				>{$_('completion.cancel')}</Button
+			>
+		</div></Dialog.Content
+	></Dialog.Root
+>

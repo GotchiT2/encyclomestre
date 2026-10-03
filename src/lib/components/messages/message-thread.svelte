@@ -135,7 +135,9 @@
 						</p>
 					{/if}
 					<time class="mt-1 block text-right font-mono text-[8px] text-muted-foreground">
-						{new Date(message.createdAt).toLocaleString('fr-FR')}
+						{Number.isFinite(Date.parse(message.createdAt))
+							? new Date(message.createdAt).toLocaleString('fr-FR')
+							: $_('common.unknown')}
 					</time>
 					{#if message.senderId !== userId}<ReportDialog
 							target={{ type: 'MESSAGE', id: Number(message.id) }}
@@ -147,11 +149,6 @@
 		{/if}
 	</div>
 
-	<LocalDraft
-		target={`message:${conversation.id}`}
-		value={draft}
-		onRestore={(value) => (draft = value.slice(0, 2000))}
-	/>
 	<form
 		class="shrink-0 border-t border-primary/20 bg-card p-2.5 sm:p-3"
 		onsubmit={(event) => {
@@ -187,5 +184,10 @@
 			</Button>
 		</div>
 		<p class="mt-1 text-right font-mono text-[9px] text-muted-foreground">{draft.length}/2000</p>
+		<LocalDraft
+			target={`message:${conversation.id}`}
+			value={draft}
+			onRestore={(value) => (draft = value.slice(0, 2000))}
+		/>
 	</form>
 </section>

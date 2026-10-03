@@ -41,7 +41,9 @@
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger>
 		{#snippet child({ props })}
-			<Button {...props}>{$_('cardDetail.add_wishlist')}</Button>
+			<Button {...props} class="h-auto min-h-11 min-w-0 whitespace-normal px-2 text-center"
+				>{$_('cardDetail.add_wishlist')}</Button
+			>
 		{/snippet}
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content

@@ -1,0 +1,106 @@
+[
+  {
+    "label": "layout-360-no-preference",
+    "posts": 1
+  },
+  {
+    "label": "layout-360-reduce",
+    "posts": 1
+  },
+  {
+    "label": "layout-390-no-preference",
+    "posts": 1
+  },
+  {
+    "label": "layout-390-reduce",
+    "posts": 1
+  },
+  {
+    "label": "layout-768-no-preference",
+    "posts": 1
+  },
+  {
+    "label": "layout-768-reduce",
+    "posts": 1
+  },
+  {
+    "label": "layout-1024-no-preference",
+    "posts": 1
+  },
+  {
+    "label": "layout-1024-reduce",
+    "posts": 1
+  },
+  {
+    "label": "layout-1440-no-preference",
+    "posts": 1
+  },
+  {
+    "label": "layout-1440-reduce",
+    "posts": 1
+  },
+  {
+    "label": "pending-close-resume-migration",
+    "posts": 0
+  },
+  {
+    "label": "batch-pages-skip-all",
+    "posts": 1
+  },
+  {
+    "label": "conflict",
+    "posts": 1
+  },
+  {
+    "label": "uncertain-opening",
+    "posts": 1
+  },
+  {
+    "label": "uncertain-opening-read-error",
+    "posts": 1
+  },
+  {
+    "label": "stock-limited",
+    "posts": 1
+  },
+  {
+    "label": "model-circuit-express",
+    "posts": 1
+  },
+  {
+    "label": "model-prism-express",
+    "posts": 1
+  },
+  {
+    "label": "webgl-absent",
+    "posts": 1
+  },
+  {
+    "label": "webgl-lost",
+    "posts": 1
+  },
+  {
+    "label": "webgl-slow",
+    "posts": 1
+  },
+  {
+    "label": "swipe-dock-tear",
+    "posts": 1
+  },
+  {
+    "label": "visibility-resume",
+    "posts": 1
+  },
+  {
+    "label": "logout-pending",
+    "posts": 1
+  },
+  {
+    "label": "express-preference",
+    "posts": 1
+  },
+  {
+    "label": "text-enlarged",
+    "posts": 1
+  }
+]

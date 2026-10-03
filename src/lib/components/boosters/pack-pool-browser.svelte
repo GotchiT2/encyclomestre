@@ -161,6 +161,9 @@
 
 <div class="space-y-8" class:mt-8={pool.length > 0}>
 	{#each details.drawGroups as group, index (index)}
+		{@const offset = details.drawGroups
+			.slice(0, index)
+			.reduce((total, item) => total + item.count, 0)}
 		<section>
 			<div class="mb-4 flex items-end justify-between gap-4 border-b border-border pb-3">
 				<div>
@@ -180,7 +183,7 @@
 						class="flex h-16 w-11 items-center justify-center border border-primary/40 bg-card text-primary"
 						aria-hidden="true"
 					>
-						{slot + 1}
+						{offset + slot}
 					</div>{/each}
 			</div>
 			<p class="mb-3 text-xs text-muted-foreground">{$_('ux.chance')}</p>

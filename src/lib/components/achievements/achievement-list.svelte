@@ -16,6 +16,17 @@
 		onClaim: (achievement: Achievement) => void;
 	} = $props();
 
+	let showCompleted = $state(false);
+	const completed = $derived(achievements.filter((item) => achievementState(item) === 'DONE'));
+	const ordered = $derived(
+		achievements
+			.filter((item) => achievementState(item) !== 'DONE')
+			.sort(
+				(a, b) =>
+					Number(achievementState(b) === 'CLAIMABLE') - Number(achievementState(a) === 'CLAIMABLE')
+			)
+	);
+
 	function progress(achievement: Achievement) {
 		return achievement.threshold > 0
 			? Math.min(100, Math.max(0, (achievement.progress / achievement.threshold) * 100))
@@ -30,12 +41,13 @@
 	}
 </script>
 
-<div class="grid gap-3 lg:grid-cols-2">
-	{#each achievements as achievement (achievement.code)}
+<div class="achievement-track">
+	{#each [...ordered, ...(showCompleted ? completed : [])] as achievement (achievement.code)}
 		{@const state = achievementState(achievement)}
 		<article
 			class:opacity-70={state === 'LOCKED'}
-			class="forge-panel-flat relative overflow-hidden p-4"
+			class="achievement-row relative overflow-hidden py-4"
+			data-reward-state={state}
 		>
 			<div class="flex items-start gap-3">
 				<span
@@ -47,7 +59,7 @@
 				</span>
 				<div class="min-w-0 flex-1">
 					<p class="forge-label">{categoryLabel(achievement.category)}</p>
-					<h2 class="mt-1 font-title text-lg leading-tight">{achievement.name}</h2>
+					<h2 class="mt-1 font-title text-2xl leading-tight">{achievement.name}</h2>
 					{#if achievement.description}<p class="mt-1 text-sm text-muted-foreground">
 							{achievement.description}
 						</p>{/if}
@@ -65,7 +77,7 @@
 					aria-label={$_('achievements.progress')}
 					aria-valuemin="0"
 					aria-valuemax={achievement.threshold}
-					aria-valuenow={achievement.progress}
+					aria-valuenow={Math.min(achievement.threshold, Math.max(0, achievement.progress))}
 				>
 					<div
 						class="h-full bg-primary transition-[width]"
@@ -91,7 +103,7 @@
 				{/if}
 				{#if state === 'CLAIMABLE'}
 					<button
-						class="ml-auto min-h-9 border border-primary bg-primary px-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
+						class="ml-auto min-h-11 border border-primary bg-primary px-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
 						disabled={Boolean(claimingCode)}
 						onclick={() => onClaim(achievement)}
 					>
@@ -104,3 +116,32 @@
 		</article>
 	{/each}
 </div>
+
+{#if completed.length}<button
+		class="mt-6 min-h-11 border border-border px-4"
+		aria-expanded={showCompleted}
+		onclick={() => (showCompleted = !showCompleted)}
+		>{$_('arcade.completedGoals', { values: { count: completed.length } })}</button
+	>{/if}
+
+<style>
+	.achievement-track {
+		display: grid;
+		gap: 8px;
+	}
+	.achievement-row {
+		border-bottom: 1px solid var(--border);
+		padding-inline: 16px;
+	}
+	.achievement-row[data-reward-state='CLAIMABLE'] {
+		border-left: 3px solid var(--primary);
+		padding-left: 13px;
+		background: var(--card);
+	}
+	@media (min-width: 768px) {
+		.achievement-track {
+			grid-template-columns: 1fr 1fr;
+			column-gap: 32px;
+		}
+	}
+</style>

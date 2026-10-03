@@ -1,3 +1,4 @@
+vi.mock('$env/dynamic/public', () => ({ env: {} }));
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';

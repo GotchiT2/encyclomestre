@@ -1,4 +1,4 @@
-const defaultRedirect = '/';
+const defaultRedirect = '/collection';
 
 /** Retourne uniquement un chemin interne pour éviter les redirections ouvertes. */
 export function getSafeRedirectTarget(value: string | null, fallback = defaultRedirect): string {
