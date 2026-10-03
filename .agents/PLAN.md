@@ -702,3 +702,14 @@ Captures et mesures : %TEMP%/wikiforge-auction-detail/. Vite, certificats, clés
 - [x] GitNexus avant modification : portée critique identifiée sur le convertisseur de cartes, laissé intact ; composants Svelte non indexés vérifiés directement. Contrôle final des chemins attendus et absence de changement d’API.
 
 Captures : C:/Users/benja/.codex/artifacts/fo-card-avatar-corrections/. BO, Vite et certificats préservés ; skill encyclomestre-ui exclu. Livraison par commit local demandé sur feat/arcade-experience. Sujet Conventional Commit : fix(fo): brand missing illustrations and show bid history avatars. Aucun push ni déploiement.
+
+## Cartes Prestige signées — 3 octobre 2026
+
+- [x] Moteur v4 : signatures SVG natives teintées par les propriétés du calque, géométrie validée, compatibilité v1–v3 et anciennes clés conservée ; adaptations FO existantes préservées.
+- [x] Templates Rosé — Champagne et Karina — Platinum, aperçus dans la validation des cartes, traductions, documentation et captures livrés ; photos, titres et numéros restent dans les données des cartes.
+- [x] Validation antérieure exclusivement en mocks : 38 tests de définitions, 12 contrôles navigateur Prestige avec titres longs, images absentes et mouvements réduits à 144/220/380 px ; deux parcours d'import/export BO/FO concordants. Svelte sans diagnostic, lint ciblé et diff validés ; compatibilité des validateurs partagés à risque HIGH couverte.
+- [x] Commit demandé sans relancer les tests ; contrôle GitNexus du périmètre effectué avant commit. Aucun push, déploiement ou changement d'API.
+
+Sujet Conventional Commit : `feat(cards): render signed Prestige templates`.
+
+Contrôle GitNexus avant commit : risque global HIGH sur les 13 flux attendus des validateurs partagés ; les corrections FO indépendantes restent hors commit.

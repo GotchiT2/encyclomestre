@@ -1,6 +1,6 @@
 import { defaultLayout, validateLayout, type Layout } from './layout';
 import { validateBlueprint, type CardBlueprint } from './blueprint';
-export const ENGINE_VERSION = 3;
+export const ENGINE_VERSION = 4;
 export const themes = ['classic', 'cyberpunk', 'space', 'comics', 'kawaii', 'japanese'] as const;
 export type Theme = (typeof themes)[number];
 export interface Design {
@@ -44,8 +44,8 @@ export interface Visual {
 	y: number;
 }
 export interface TemplateDefinition {
-	schemaVersion: 1 | 2 | 3;
-	minEngineVersion: 1 | 2 | 3;
+	schemaVersion: 1 | 2 | 3 | 4;
+	minEngineVersion: 1 | 2 | 3 | 4;
 	presentation?: CardBlueprint;
 	layout?: Layout;
 	visual: Visual;
@@ -168,14 +168,17 @@ export const colorValid = (v: unknown): v is string =>
 export function validateDefinition(input: unknown): TemplateDefinition {
 	if (!input || typeof input !== 'object') throw new Error('INVALID_TEMPLATE');
 	const d = input as TemplateDefinition;
-	if (d.schemaVersion === 3) {
-		if (d.minEngineVersion !== 3) throw new Error('UNSUPPORTED_TEMPLATE_VERSION');
+	if (d.schemaVersion === 3 || d.schemaVersion === 4) {
+		if (d.minEngineVersion !== d.schemaVersion) throw new Error('UNSUPPORTED_TEMPLATE_VERSION');
 		const legacy = validateDefinition({ ...d, schemaVersion: 2, minEngineVersion: 2 });
+		const presentation = validateBlueprint(d.presentation);
+		if (d.schemaVersion === 3 && presentation.layers.some((layer) => layer.content === 'signature'))
+			throw new Error('UNSUPPORTED_TEMPLATE_VERSION');
 		return {
 			...legacy,
-			schemaVersion: 3,
-			minEngineVersion: 3,
-			presentation: validateBlueprint(d.presentation)
+			schemaVersion: d.schemaVersion,
+			minEngineVersion: d.schemaVersion,
+			presentation
 		};
 	}
 	if (

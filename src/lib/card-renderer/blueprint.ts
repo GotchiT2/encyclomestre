@@ -8,9 +8,15 @@ export const contents = [
 	'collection',
 	'serial',
 	'logo',
+	'signature',
 	'decoration'
 ] as const;
 export type CardContent = (typeof contents)[number];
+export interface CardSignature {
+	viewBox: [number, number, number, number];
+	paths: string[];
+	transform?: [number, number, number, number, number, number];
+}
 export interface CardMotion {
 	trigger: 'active' | 'pointer' | 'reveal';
 	duration: number;
@@ -26,6 +32,7 @@ export interface CardLayer {
 	landscape?: CardStyle;
 	compact?: CardStyle;
 	motion?: CardMotion;
+	signature?: CardSignature;
 }
 export interface CardBlueprint {
 	version: 1;
@@ -122,6 +129,67 @@ const allowed = new Set<string>(cardProperties);
 function record(value: unknown): value is Record<string, unknown> {
 	return !!value && typeof value === 'object' && !Array.isArray(value);
 }
+/** Accept vector geometry only, never SVG markup or resource references. */
+export function validateSignature(value: unknown): CardSignature {
+	const tuple = (raw: unknown, length: number): raw is number[] =>
+		Array.isArray(raw) &&
+		raw.length === length &&
+		raw.every((n) => typeof n === 'number' && Number.isFinite(n) && Math.abs(n) <= 1e7);
+	if (
+		!record(value) ||
+		Object.keys(value).some((key) => !['viewBox', 'paths', 'transform'].includes(key)) ||
+		!tuple(value.viewBox, 4) ||
+		value.viewBox[2] <= 0 ||
+		value.viewBox[3] <= 0 ||
+		!Array.isArray(value.paths) ||
+		!value.paths.length ||
+		value.paths.length > 16 ||
+		(value.transform !== undefined && !tuple(value.transform, 6))
+	)
+		throw new Error('INVALID_CARD_SIGNATURE');
+	const arity: Record<string, number> = {
+		m: 2,
+		l: 2,
+		h: 1,
+		v: 1,
+		c: 6,
+		s: 4,
+		q: 4,
+		t: 2,
+		a: 7,
+		z: 0
+	};
+	const token = /[mlhvcsqtaz]|[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi;
+	const paths = value.paths.map((raw) => {
+		if (
+			typeof raw !== 'string' ||
+			!raw.trim() ||
+			raw.length > 32768 ||
+			raw.replace(token, '').replace(/[\s,]/g, '')
+		)
+			throw new Error('INVALID_CARD_SIGNATURE');
+		const tokens = raw.match(token)!;
+		if (!tokens || !/^[mM]$/.test(tokens[0])) throw new Error('INVALID_CARD_SIGNATURE');
+		for (let i = 0; i < tokens.length;) {
+			const count = arity[tokens[i++].toLowerCase()];
+			if (count === undefined) throw new Error('INVALID_CARD_SIGNATURE');
+			let numbers = 0;
+			while (i < tokens.length && !/^[mlhvcsqtaz]$/i.test(tokens[i])) {
+				const n = Number(tokens[i++]);
+				if (!Number.isFinite(n) || Math.abs(n) > 1e7) throw new Error('INVALID_CARD_SIGNATURE');
+				numbers++;
+			}
+			if (count === 0 ? numbers !== 0 : !numbers || numbers % count !== 0)
+				throw new Error('INVALID_CARD_SIGNATURE');
+		}
+		return raw.trim();
+	});
+	return {
+		viewBox: [...value.viewBox] as CardSignature['viewBox'],
+		paths,
+		...(value.transform ? { transform: [...value.transform] as CardSignature['transform'] } : {})
+	};
+}
 export function validateCardStyle(value: unknown): CardStyle {
 	if (!record(value) || Object.keys(value).length > 64) throw new Error('INVALID_CARD_CSS');
 	const result: CardStyle = {};
@@ -187,6 +255,8 @@ export function validateBlueprint(value: unknown): CardBlueprint {
 		)
 			throw new Error('INVALID_CARD_LAYER');
 		ids.add(raw.id);
+		if (raw.content !== 'signature' && raw.signature !== undefined)
+			throw new Error('INVALID_CARD_SIGNATURE');
 		let motion: CardMotion | undefined;
 		if (raw.motion !== undefined) {
 			const m = raw.motion;
@@ -237,9 +307,12 @@ export function validateBlueprint(value: unknown): CardBlueprint {
 			...(raw.parent !== undefined ? { parent: raw.parent as string } : {}),
 			...(raw.landscape !== undefined ? { landscape: validateCardStyle(raw.landscape) } : {}),
 			...(raw.compact !== undefined ? { compact: validateCardStyle(raw.compact) } : {}),
-			...(motion ? { motion } : {})
+			...(motion ? { motion } : {}),
+			...(raw.content === 'signature' ? { signature: validateSignature(raw.signature) } : {})
 		};
 	});
+	if (layers.filter((layer) => layer.content === 'signature').length > 1)
+		throw new Error('INVALID_CARD_SIGNATURE');
 	for (const layer of layers) {
 		const visited = new Set([layer.id]);
 		let parent = layer.parent;

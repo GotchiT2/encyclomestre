@@ -3,6 +3,7 @@
 	import TemplateCard from '$lib/card-renderer/template-card.svelte';
 	import { cardDefinition, effectPresets } from '$lib/card-renderer/card-presets';
 	import { Button } from '$lib/components/ui/button';
+	import PrestigeCardPreviews from './prestige-card-previews.svelte';
 	let reveal = $state(false);
 	const examples = [
 		{ id: 'normal-long', fullArt: false, image: '/images/booster-preview/karina.jpg', long: true },
@@ -68,6 +69,7 @@
 				<figcaption>{$_('cardDesigns.cases.' + example.id)}</figcaption>
 			</figure>{/each}
 	</div>
+	<PrestigeCardPreviews {reveal} />
 	<div class="effects">
 		{#each effectPresets.filter((e) => e !== 'none') as effect (effect)}<figure
 				data-design-case={effect}

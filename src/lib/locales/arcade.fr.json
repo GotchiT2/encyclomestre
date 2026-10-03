@@ -175,6 +175,14 @@
 		"conflict": "La disponibilité du paquet a changé. Vos crédits ont été actualisés ; vérifiez-les avant une nouvelle ouverture."
 	},
 	"cardDesigns": {
+		"prestige": {
+			"rose": "Rosé",
+			"karina": "Karina",
+			"blackpink": "BLACKPINK",
+			"aespa": "aespa",
+			"roseCaption": "Prestige Rosé · Champagne",
+			"karinaCaption": "Prestige Karina · Platinum"
+		},
 		"title": "Cartes WikiForge",
 		"description": "N3 et full art : titre long, illustration portrait ou paysage, description et finitions éditables.",
 		"longTitle": "Ministre de l'Éducation nationale (France)",

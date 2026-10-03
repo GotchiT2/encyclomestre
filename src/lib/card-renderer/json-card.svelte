@@ -250,6 +250,20 @@
 							fill="currentColor"
 							aria-hidden="true"><path d={flame} /></svg
 						>
+					{:else if layer.content === 'signature' && layer.signature}<svg
+							viewBox={layer.signature.viewBox.join(' ')}
+							preserveAspectRatio="xMidYMid meet"
+							fill="currentColor"
+							aria-hidden="true"
+						>
+							<g
+								transform={layer.signature.transform
+									? `matrix(${layer.signature.transform.join(' ')})`
+									: undefined}
+							>
+								{#each layer.signature.paths as d, index (index)}<path {d} />{/each}
+							</g>
+						</svg>
 					{:else if layer.content === 'description'}<span class="description-text">{value}</span>
 					{:else if layer.content !== 'decoration'}{value}{/if}
 				</div>
